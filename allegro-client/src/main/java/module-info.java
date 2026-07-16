@@ -14,8 +14,21 @@
  */
 module io.github.mgrtomaszzurawski.allegro {
 
-    // SDK public API — entry point (only export in the bootstrap scaffold).
+    // SDK public API — entry point.
     exports io.github.mgrtomaszzurawski.allegro.sdk;
+
+    // Configuration: environment + client options.
+    exports io.github.mgrtomaszzurawski.allegro.sdk.config;
+    // Sealed OAuth2 credential hierarchy (three grant types).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.config.credentials;
+    // Policy knobs: retry.
+    exports io.github.mgrtomaszzurawski.allegro.sdk.config.policy;
+    // Remediation-grouped exception hierarchy.
+    exports io.github.mgrtomaszzurawski.allegro.sdk.exception;
+
+    // [append point: domain exports] Each domain bucket appends its
+    // `exports ...sdk.domain.<feature>...` lines below this marker, one block
+    // per bucket, in BACKLOG order.
 
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
