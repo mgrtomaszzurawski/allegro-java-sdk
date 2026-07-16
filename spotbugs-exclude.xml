@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Generated OpenAPI code lives in a separate module, but exclude the
+         package pattern defensively in case a generated tree ever compiles here. -->
+    <Match>
+        <Package name="~io\.github\.mgrtomaszzurawski\.allegro\.client\..*"/>
+    </Match>
+    <!-- AllegroClient intentionally shares internal SDK components (ObjectMapper,
+         token manager) with domain clients. These are non-user-facing plumbing,
+         not exposed mutable state; the package is JPMS-non-exported for internals. -->
+    <Match>
+        <Class name="io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- Internal transport runtime adapter — its accessors exist to share the
+         same ObjectMapper / token manager across domain clients within the SDK
+         module. Non-exported via JPMS. Pattern covers nested records. -->
+    <Match>
+        <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.runtime\.transport\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- PagedSpliterator.{Page,CursorPage} are internal records that briefly hold
+         a List returned by a server page fetch. The list is consumed once by the
+         spliterator's buffer and never escapes the SDK; defensive copy on every
+         page (potentially thousands) would be wasteful. -->
+    <Match>
+        <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.runtime\.pagination\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- Domain model records under sdk.domain.<feature>.model.* are immutable by
+         intent — their from() factories store unmodifiable List via
+         List.copyOf()/.toList(). SpotBugs cannot detect the defensive copy inside
+         a record's compact constructor and flags the auto-generated accessor. -->
+    <Match>
+        <Package name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.domain\..*\.model"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- Configuration records (credentials hold OAuth client secret / refresh
+         token by design — identity values that cannot be meaningfully copied)
+         and policy/core value objects. -->
+    <Match>
+        <Package name="io.github.mgrtomaszzurawski.allegro.sdk.config"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Package name="io.github.mgrtomaszzurawski.allegro.sdk.config.credentials"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Package name="io.github.mgrtomaszzurawski.allegro.sdk.config.policy"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Package name="io.github.mgrtomaszzurawski.allegro.sdk.core"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>
