@@ -39,15 +39,22 @@ public final class AllegroClient implements AutoCloseable {
     }
 
     /**
-     * The SDK artefact version, read from the JAR manifest
-     * ({@code Implementation-Version}, populated by the build from the single
-     * version source in {@code gradle.properties}).
+     * The SDK artefact version. Read from the module descriptor first (stamped
+     * by the build via {@code javaModuleVersion} — the only source visible to
+     * module-path consumers), falling back to the JAR manifest
+     * ({@code Implementation-Version}) for classpath use. Both are populated
+     * from the single version source in {@code gradle.properties}.
      *
      * @return the semantic version of this SDK build (e.g. {@code 0.1.0-preview}),
      *     or {@code unversioned} when running outside a packaged JAR
      */
     public static String sdkVersion() {
-        String implementationVersion = AllegroClient.class.getPackage().getImplementationVersion();
+        var moduleDescriptor = AllegroClient.class.getModule().getDescriptor();
+        if (moduleDescriptor != null && moduleDescriptor.version().isPresent()) {
+            return moduleDescriptor.version().get().toString();
+        }
+        Package sdkPackage = AllegroClient.class.getPackage();
+        String implementationVersion = sdkPackage != null ? sdkPackage.getImplementationVersion() : null;
         return implementationVersion != null ? implementationVersion : VERSION_UNAVAILABLE;
     }
 

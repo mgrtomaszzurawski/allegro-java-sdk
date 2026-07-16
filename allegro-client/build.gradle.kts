@@ -79,6 +79,13 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
+// Stamp the module descriptor with the project version so module-path consumers
+// (the flagship JPMS mode) can read it — Package.getImplementationVersion()
+// returns null for named modules, so the manifest alone is not enough.
+tasks.compileJava {
+    options.javaModuleVersion.set(provider { project.version.toString() })
+}
+
 tasks.test {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
