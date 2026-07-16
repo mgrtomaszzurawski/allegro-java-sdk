@@ -10,7 +10,7 @@ import org.apiguardian.api.API;
  * Single entry point of the Allegro Java SDK.
  *
  * <p><strong>Bootstrap scaffold.</strong> This is a placeholder entry point: it
- * establishes the module surface and version constant so downstream modules and
+ * establishes the module surface so downstream modules and
  * consumers compile against a stable type. The builder, OAuth2 credential
  * configuration, transport runtime, and domain accessors (offers, orders,
  * fulfillment, billing, …) are added per the accepted task-division plan — see
@@ -26,8 +26,12 @@ import org.apiguardian.api.API;
 @API(status = API.Status.EXPERIMENTAL, since = "0.1.0")
 public final class AllegroClient implements AutoCloseable {
 
-    /** Current SDK artefact version — mirrors {@code gradle.properties}. */
-    public static final String SDK_VERSION = "0.1.0-preview";
+    /**
+     * Returned by {@link #sdkVersion()} when no JAR manifest is present, i.e.
+     * when the SDK classes run from a classes directory (IDE, unit tests)
+     * instead of the published artefact.
+     */
+    private static final String VERSION_UNAVAILABLE = "unversioned";
 
     private AllegroClient() {
         // Instances are created via a builder introduced with the transport/auth
@@ -35,12 +39,16 @@ public final class AllegroClient implements AutoCloseable {
     }
 
     /**
-     * The SDK artefact version string.
+     * The SDK artefact version, read from the JAR manifest
+     * ({@code Implementation-Version}, populated by the build from the single
+     * version source in {@code gradle.properties}).
      *
-     * @return the semantic version of this SDK build (e.g. {@code 0.1.0-preview})
+     * @return the semantic version of this SDK build (e.g. {@code 0.1.0-preview}),
+     *     or {@code unversioned} when running outside a packaged JAR
      */
     public static String sdkVersion() {
-        return SDK_VERSION;
+        String implementationVersion = AllegroClient.class.getPackage().getImplementationVersion();
+        return implementationVersion != null ? implementationVersion : VERSION_UNAVAILABLE;
     }
 
     /**

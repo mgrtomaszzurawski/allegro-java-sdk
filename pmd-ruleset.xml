@@ -10,7 +10,8 @@
         <exclude name="GuardLogStatement"/>
         <!-- char[] params for passwords/keys are standard Java security API convention -->
         <exclude name="UseVarargs"/>
-        <!-- AES key + IV are package-internal crypto material; defensive copy adds noise without security gain. -->
+        <!-- Internal handoff records may hold byte[] payloads (e.g. downloaded images);
+             the SDK is the sole owner for the call's lifetime — defensive copies add noise. -->
         <exclude name="ArrayIsStoredDirectly"/>
         <!-- Exception unwrapping pattern wraps non-runtime causes; PMD's stack-trace heuristic is too narrow. -->
         <exclude name="PreserveStackTrace"/>
@@ -37,10 +38,9 @@
         <!-- Style preference; switch with two cases is fine. -->
         <!-- LinguisticNaming flags semantic naming we use intentionally (e.g. 'is...' returning enums). -->
         <exclude name="LinguisticNaming"/>
-        <!-- FieldDeclarationsShouldBeAtStartOfClass forces a strict ordering that conflicts with
-             "static helper field colocated with its consumer methods" patterns (e.g. JAXB
-             DATATYPE_FACTORY held next to its private helper methods). Placement is a style
-             preference; ordering is uniform within each class. -->
+        <!-- FieldDeclarationsShouldBeAtStartOfClass forces a strict ordering that conflicts
+             with the "static helper field colocated with its consumer methods" pattern.
+             Placement is a style preference; ordering is uniform within each class. -->
         <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
     </rule>
 
@@ -64,16 +64,21 @@
         <exclude name="ExceptionAsFlowControl"/>
     </rule>
 
-    <!-- Coupling threshold raised to 80: domain clients importing many generated model types
-         is inherent to an API client SDK; AllegroClient as the facade aggregates the domains and
-         the InvoicingMappers class collects all invoicing record + builder mappings. -->
+    <!-- Coupling threshold raised to 40 (default 20): an API-client SDK inherently
+         couples wide — the AllegroClient facade aggregates ~11 domain accessors plus
+         config types, and per-feature mapper classes import many generated *Raw model
+         types. 40 covers that structural pattern; anything above it deserves a look.
+         Raise further only per-case, citing the concrete class in this comment. -->
     <rule ref="category/java/design.xml/CouplingBetweenObjects">
         <properties>
-            <property name="threshold" value="80"/>
+            <property name="threshold" value="40"/>
         </properties>
     </rule>
 
-    <!-- Complexity thresholds: default 15 is too tight for retry/handler patterns -->
+    <!-- Complexity thresholds: default 15 is too tight for retry/handler patterns.
+         Class-level cyclomatic complexity stays at the PMD default — no class in
+         this codebase has earned an escalation yet; raise per-case with the concrete
+         class cited here. -->
     <rule ref="category/java/design.xml/CognitiveComplexity">
         <properties>
             <property name="reportLevel" value="20"/>
@@ -82,20 +87,6 @@
     <rule ref="category/java/design.xml/CyclomaticComplexity">
         <properties>
             <property name="methodReportLevel" value="20"/>
-            <!-- PreparedInvoiceExport aggregates the entire export workflow
-                 (poll, download, AES-decrypt, hash-verify, ZIP-unpack); its
-                 per-method CC is already capped at the method threshold via
-                 helper extraction. Class-level CC scales with the number of
-                 helpers, not their individual complexity. The streaming
-                 download/decrypt/verify pipeline (Codex F5) added three
-                 helpers, pushing aggregate CC just past the original 120.
-                 R1 /review iteration: BatchSubmissionFlow gained
-                 fetchUposInParallel + awaitFuture helpers to honour the
-                 BatchOptions.parallelism() knob on UPO retrieval (perf
-                 finding — 10K-invoice batches drop from 8 min serial to
-                 bounded by configured parallelism); helpers pushed the
-                 aggregate from 140 to 144. -->
-            <property name="classReportLevel" value="150"/>
         </properties>
     </rule>
 
@@ -141,14 +132,15 @@
         <exclude name="AvoidInstantiatingObjectsInLoops"/>
     </rule>
 
-    <!-- Short variable names: replaces the stock ShortVariable with an XPath
-         rule that exempts domain-meaningful abbreviations:
+    <!-- Short variable names: replaces the stock ShortVariable with an XPath rule
+         whose exemption list is EXACTLY the one documented in the repo CLAUDE.md
+         ("Rules" section) — keep both in sync when changing either:
          - raw: OpenAPI generated *Raw type instances (idiomatic SDK plumbing)
          - ean / sku / vat: marketplace product / tax identifiers
-         - id / pkg / url / uri / in / out / obj / zip / seq / key: standard
-           short names ('zip' covers both archives and postal codes)
-         - i / j / k / to / off / len / dir / all: standard loop / range /
-           counter names (per project CLAUDE.md) -->
+         - id / url / uri / zip / key / xml / seq: established short names
+           ('zip' covers both archives and postal codes)
+         - i / j / k loop counters and e / ex catch parameters (also exempted
+           structurally via the ancestor:: exclusions below) -->
     <rule name="ShortVariableWithDomainExceptions"
           language="java"
           message="Avoid variables with short names like {0}"
@@ -162,9 +154,8 @@
 <![CDATA[
 //VariableId[
     string-length(@Name) < 4
-    and not(@Name = ('raw','ean','sku','vat','VAT','id','pkg','url','uri','in',
-                     'out','obj','zip','seq','key','xml','sum','ASC','DESC',
-                     'i','j','k','to','off','len','dir','all','e','ex'))
+    and not(@Name = ('raw','ean','sku','vat','VAT','id','url','uri','zip',
+                     'key','xml','seq','i','j','k','e','ex'))
     and not(ancestor::ForStatement)
     and not(ancestor::ForInit)
     and not(ancestor::CatchParameter)

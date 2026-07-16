@@ -40,13 +40,8 @@ sonar {
 // tries to analyse its own tree and fails when the auto-detected binaries path
 // is missing. Only allegro-client is hand-written library code worth scanning.
 gradle.projectsEvaluated {
-    subprojects.filter {
-        it.name in setOf(
-            "allegro-rest-models", "allegro-demo",
-            "allegro-examples", "allegro-jpms-consumer"
-        )
-    }.forEach { sp ->
-        sp.extensions.findByType(org.sonarqube.gradle.SonarExtension::class.java)?.isSkipProject = true
+    subprojects.filter { it.name != "allegro-client" }.forEach { subproject ->
+        subproject.extensions.findByType(org.sonarqube.gradle.SonarExtension::class.java)?.isSkipProject = true
     }
 }
 

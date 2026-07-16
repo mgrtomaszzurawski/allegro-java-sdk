@@ -30,5 +30,8 @@ module io.github.mgrtomaszzurawski.allegro {
     requires static org.jspecify;
 
     // apiguardian @API EXPERIMENTAL marker on AllegroClient (preview release).
-    requires static org.apiguardian.api;
+    // transitive so consumers reading the RUNTIME-retained annotation resolve
+    // it without declaring apiguardian themselves; static keeps it optional
+    // at run time.
+    requires static transitive org.apiguardian.api;
 }

@@ -29,8 +29,11 @@ task-division plan in the shared context (`/workspace/shared/context/TASK-DIVISI
 - **No AI attribution anywhere** (commits, PRs, code, docs).
 - Branch from `develop`; PR to `develop`; squash-merge keep-branch. Never commit to
   `main`/`develop` directly. `/review` gates every PR (after open + before merge).
-- No 1–3 char names (exceptions: `i`/`j`/`k` loops, `e` catch, domain abbreviations like
-  `id`, `ean`, `sku`, `url`); no magic numbers/strings — `private static final` constants.
+- No 1–3 char names. Exceptions (the EXACT list enforced by the PMD
+  `ShortVariableWithDomainExceptions` rule — keep both in sync): `i`/`j`/`k` loops,
+  `e`/`ex` catch, and the domain abbreviations `raw`, `ean`, `sku`, `vat`, `id`, `url`,
+  `uri`, `zip`, `key`, `xml`, `seq`. No magic numbers/strings — `private static final`
+  constants.
 - Spec files under `allegro-rest-models/openapi/` must NEVER appear in a diff. Check
   `git diff --name-only` before committing.
 - Javadoc every public API whose name doesn't carry the meaning.

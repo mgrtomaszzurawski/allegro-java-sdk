@@ -21,41 +21,36 @@ java {
     modularity.inferModulePath.set(true)
 }
 
-val slf4jVersion = "2.0.16"
-val jspecifyVersion = "1.0.0"
-val apiguardianVersion = "1.1.2"
-val jacksonVersion = "2.18.2"
-val junitVersion = "5.11.4"
-val wiremockVersion = "3.12.1"
-val mockitoVersion = "5.14.2"
-
 dependencies {
     // Generated REST models — *Raw DTOs are internal (Layer 1); a public-API
     // surface test will enforce zero leakage into the exported surface.
     implementation(project(":allegro-rest-models"))
 
-    // Jackson — the SDK maps *Raw DTOs to immutable domain records and needs
-    // the mapper directly. api so the transitive DTO deps resolve for tests.
-    api("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+    // Jackson — used internally to map *Raw DTOs to immutable domain records.
+    // implementation scope keeps it off consumers' compile classpath, matching
+    // the plain (non-transitive) `requires` in module-info.java.
+    implementation(libs.jackson.databind)
+    implementation(libs.jackson.datatype.jsr310)
 
-    // Logging — api so consumers configure their own SLF4J backend without
-    // re-declaring the API dependency.
-    api("org.slf4j:slf4j-api:$slf4jVersion")
+    // Logging — internal facade only; no SLF4J type appears on the public
+    // surface, so implementation scope. Consumers bind their own backend.
+    implementation(libs.slf4j.api)
 
     // Null-safety annotations (JSpecify) — compile-time only.
-    compileOnly("org.jspecify:jspecify:$jspecifyVersion")
-    testCompileOnly("org.jspecify:jspecify:$jspecifyVersion")
+    compileOnly(libs.jspecify)
+    testCompileOnly(libs.jspecify)
 
-    // apiguardian @API EXPERIMENTAL marker on AllegroClient — preview signal.
-    api("org.apiguardian:apiguardian-api:$apiguardianVersion")
+    // apiguardian @API EXPERIMENTAL marker is RUNTIME-retained on the exported
+    // AllegroClient — api scope + `requires static transitive` in module-info
+    // so consumers can read the annotation without declaring it themselves.
+    api(libs.apiguardian.api)
 
     // Test
-    testImplementation(platform("org.junit:junit-bom:$junitVersion"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
-    testImplementation("org.mockito:mockito-core:$mockitoVersion")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.wiremock.standalone)
+    testImplementation(libs.mockito.core)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // Bundle license + third-party notices into the published JAR (AGPL 5(a)).
@@ -63,6 +58,17 @@ tasks.named<ProcessResources>("processResources") {
     from(layout.projectDirectory.dir("..")) {
         into("META-INF")
         include("LICENSE.txt", "THIRD-PARTY-NOTICES.md")
+    }
+}
+
+// Implementation-Version drives AllegroClient.sdkVersion() — the version is
+// maintained ONLY in gradle.properties and flows here via project.version.
+tasks.jar {
+    manifest {
+        attributes(
+            "Implementation-Title" to "allegro-client",
+            "Implementation-Version" to project.version.toString(),
+        )
     }
 }
 
@@ -96,16 +102,20 @@ spotless {
 
 // ---------- Static analysis ----------
 
+// Static gates analyse main source only — test files use a different style.
 checkstyle {
     toolVersion = "10.20.1"
     configFile = rootProject.file("checkstyle.xml")
-    sourceSets = listOf(
-        project.sourceSets.main.get(),
-        project.sourceSets.test.get(),
-    )
+    sourceSets = listOf(project.sourceSets.main.get())
 }
 
 tasks.withType<Checkstyle>().configureEach {
+    exclude("**/module-info.java")
+}
+
+// PMD 7.7 cannot parse some JLS-valid module directives (`requires static
+// transitive`); module descriptors carry no logic worth analysing anyway.
+tasks.withType<Pmd>().configureEach {
     exclude("**/module-info.java")
 }
 
@@ -116,10 +126,8 @@ pmd {
     isIgnoreFailures = false
 }
 
-// Static gates analyse main source only — test files use a different style.
 tasks.named("pmdTest") { enabled = false }
 tasks.named("spotbugsTest") { enabled = false }
-tasks.named("checkstyleTest") { enabled = false }
 
 spotbugs {
     toolVersion.set("4.8.6")
@@ -197,9 +205,13 @@ tasks.javadoc {
             "implSpec:a:Implementation Requirements:",
             "implNote:a:Implementation Note:",
         )
-        addStringOption("Xdoclint:none", "-quiet")
+        // Full doclint except `missing` — syntax/reference/html errors in the
+        // hand-written published surface must fail the build (broken docs would
+        // otherwise ship silently); missing @param/@return tags stay non-fatal
+        // because names often carry the meaning (see CLAUDE.md javadoc rule).
+        addStringOption("Xdoclint:all,-missing", "-quiet")
     }
-    isFailOnError = false
+    isFailOnError = true
 }
 
 // ---------- Maven Central publication ----------

@@ -28,17 +28,13 @@ java {
     modularity.inferModulePath.set(true)
 }
 
-val jacksonVersion = "2.18.2"
-val jacksonNullableVersion = "0.2.6"
-val jakartaAnnotationVersion = "2.1.1"
-
 dependencies {
-    api("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-    api("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
-    api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
-    api("org.openapitools:jackson-databind-nullable:$jacksonNullableVersion")
-    api("jakarta.annotation:jakarta.annotation-api:$jakartaAnnotationVersion")
+    api(libs.jackson.databind)
+    api(libs.jackson.core)
+    api(libs.jackson.annotations)
+    api(libs.jackson.datatype.jsr310)
+    api(libs.jackson.databind.nullable)
+    api(libs.jakarta.annotation.api)
 }
 
 val specFile = layout.projectDirectory.file("openapi/allegro-openapi.yaml")
