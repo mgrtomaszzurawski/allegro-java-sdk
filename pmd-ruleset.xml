@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<ruleset name="KSeF SDK PMD Rules"
+<ruleset name="Allegro SDK PMD Rules"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
 
-    <description>PMD ruleset for KSeF Java SDK hand-written code</description>
+    <description>PMD ruleset for Allegro Java SDK hand-written code</description>
 
     <rule ref="category/java/bestpractices.xml">
         <exclude name="GuardLogStatement"/>
@@ -57,7 +57,7 @@
         <exclude name="DataClass"/>
         <!-- NPathComplexity overlaps with cognitive/cyclomatic; same justification as those exclusions. -->
         <exclude name="NPathComplexity"/>
-        <!-- KsefClient is the SDK facade: aggregating 11 domain clients is its purpose. -->
+        <!-- AllegroClient is the SDK facade: aggregating the domain clients is its purpose. -->
         <exclude name="GodClass"/>
         <!-- Exception translation (catch + wrap in domain exception type) is the
              recommended pattern; PMD's heuristic mistakes it for flow control. -->
@@ -65,7 +65,7 @@
     </rule>
 
     <!-- Coupling threshold raised to 80: domain clients importing many generated model types
-         is inherent to an API client SDK; KsefClient as the facade aggregates 11 domains and
+         is inherent to an API client SDK; AllegroClient as the facade aggregates the domains and
          the InvoicingMappers class collects all invoicing record + builder mappings. -->
     <rule ref="category/java/design.xml/CouplingBetweenObjects">
         <properties>
@@ -124,9 +124,9 @@
         <exclude name="DoNotUseThreads"/>
         <!-- AvoidUsingVolatile: volatile boolean for close-guard is standard pattern. -->
         <exclude name="AvoidUsingVolatile"/>
-        <!-- synchronized methods on KsefClient are intentional — guards single-flight auth. -->
+        <!-- synchronized methods on AllegroClient are intentional — guards single-flight auth. -->
         <exclude name="AvoidSynchronizedAtMethodLevel"/>
-        <!-- synchronized blocks on KsefXmlValidator.CUSTOM_SCHEMA_CACHE are intentional —
+        <!-- synchronized blocks guarding shared caches are intentional —
              make the IdentityHashMap get-or-load atomic. ReentrantLock would add ceremony
              without behavioural gain (single-FormCode lock taken once per schema). -->
         <exclude name="AvoidSynchronizedStatement"/>
