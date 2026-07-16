@@ -1,0 +1,30 @@
+# Version catalog — single source of truth for dependency versions shared
+# across modules (review R1 finding: jacksonVersion was declared independently
+# in two build scripts, risking cross-module drift).
+
+[versions]
+jackson = "2.18.2"
+jacksonNullable = "0.2.6"
+jakartaAnnotation = "2.1.1"
+slf4j = "2.0.16"
+jspecify = "1.0.0"
+apiguardian = "1.1.2"
+junit = "5.11.4"
+wiremock = "3.12.1"
+mockito = "5.14.2"
+
+[libraries]
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version.ref = "jacksonNullable" }
+jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api", version.ref = "jakartaAnnotation" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+apiguardian-api = { module = "org.apiguardian:apiguardian-api", version.ref = "apiguardian" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
