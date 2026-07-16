@@ -35,7 +35,6 @@
         <exclude name="UseExplicitTypes"/>
         <!-- Underscores in numeric literals: optional readability — we already use them where helpful. -->
         <exclude name="UseUnderscoresInNumericLiterals"/>
-        <!-- Style preference; switch with two cases is fine. -->
         <!-- LinguisticNaming flags semantic naming we use intentionally (e.g. 'is...' returning enums). -->
         <exclude name="LinguisticNaming"/>
         <!-- FieldDeclarationsShouldBeAtStartOfClass forces a strict ordering that conflicts
@@ -117,9 +116,9 @@
         <exclude name="AvoidUsingVolatile"/>
         <!-- synchronized methods on AllegroClient are intentional — guards single-flight auth. -->
         <exclude name="AvoidSynchronizedAtMethodLevel"/>
-        <!-- synchronized blocks guarding shared caches are intentional —
-             make the IdentityHashMap get-or-load atomic. ReentrantLock would add ceremony
-             without behavioural gain (single-FormCode lock taken once per schema). -->
+        <!-- synchronized blocks guarding shared caches are intentional — the OAuth2
+             token manager's get-or-refresh must be atomic (single-flight refresh).
+             ReentrantLock would add ceremony without behavioural gain. -->
         <exclude name="AvoidSynchronizedStatement"/>
         <!-- UseConcurrentHashMap is overly aggressive: it flags every HashMap usage,
              including single-threaded local maps. SDK records use HashMap for short-lived
@@ -139,8 +138,10 @@
          - ean / sku / vat: marketplace product / tax identifiers
          - id / url / uri / zip / key / xml / seq: established short names
            ('zip' covers both archives and postal codes)
-         - i / j / k loop counters and e / ex catch parameters (also exempted
-           structurally via the ancestor:: exclusions below) -->
+         - i / j / k loop counters and e / ex catch parameters
+         The allowlist is the ONLY exemption mechanism — no structural
+         (ancestor::) carve-outs, so a stray 2-char lambda parameter is
+         flagged the same as anywhere else. -->
     <rule name="ShortVariableWithDomainExceptions"
           language="java"
           message="Avoid variables with short names like {0}"
@@ -154,13 +155,8 @@
 <![CDATA[
 //VariableId[
     string-length(@Name) < 4
-    and not(@Name = ('raw','ean','sku','vat','VAT','id','url','uri','zip',
+    and not(@Name = ('raw','ean','sku','vat','id','url','uri','zip',
                      'key','xml','seq','i','j','k','e','ex'))
-    and not(ancestor::ForStatement)
-    and not(ancestor::ForInit)
-    and not(ancestor::CatchParameter)
-    and not(ancestor::LambdaExpression)
-    and not(ancestor::CatchClause)
 ]
 ]]>
                 </value>
