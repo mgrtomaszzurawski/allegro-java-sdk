@@ -53,6 +53,13 @@ sections. Empty subsections are dropped by the release engineer when folding
 ### C — shipping
 ### D — account-meta
 ### E — catalog-products
+
+- Starter slice: `client.catalog().categories()` — the category tree
+  (`roots()`, `childrenOf(parentId)`, `get(categoryId)`) with the immutable
+  `Category` / `CategoryOptions` records. Read-only, works with an app-only
+  client-credentials token. Includes the `catalog-categories` sandbox
+  shape-verification demo scenario. Products and compatibility follow in the
+  same bucket.
 ### F — offers-extras
 ### G — pricing
 ### H — campaigns
