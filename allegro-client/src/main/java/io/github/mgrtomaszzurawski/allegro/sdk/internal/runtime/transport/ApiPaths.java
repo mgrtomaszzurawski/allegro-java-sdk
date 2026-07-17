@@ -54,6 +54,10 @@ public final class ApiPaths {
     /** Seller's points of service (personal-collection locations). */
     public static final String POINTS_OF_SERVICE = "/points-of-service";
 
+    // ---- fulfillment (bucket I) ----
+    /** Seller's active removal preference for One Fulfillment goods. */
+    public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.
