@@ -1,0 +1,44 @@
+{
+  "marketplaces": [
+    {
+      "id": "allegro-pl",
+      "languages": {
+        "offerCreation": [
+          { "code": "pl-PL" },
+          { "code": "en-US" }
+        ],
+        "offerDisplay": [
+          { "code": "pl-PL" },
+          { "code": "en-US" },
+          { "code": "uk-UA" }
+        ]
+      },
+      "currencies": {
+        "base": { "code": "PLN" },
+        "additional": []
+      },
+      "shippingCountries": [
+        { "code": "PL" },
+        { "code": "CZ" }
+      ]
+    },
+    {
+      "id": "allegro-cz",
+      "languages": {
+        "offerCreation": [
+          { "code": "cs-CZ" }
+        ],
+        "offerDisplay": [
+          { "code": "cs-CZ" }
+        ]
+      },
+      "currencies": {
+        "base": { "code": "CZK" },
+        "additional": []
+      },
+      "shippingCountries": [
+        { "code": "CZ" }
+      ]
+    }
+  ]
+}
