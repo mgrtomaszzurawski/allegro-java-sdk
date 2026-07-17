@@ -43,6 +43,30 @@ task-division plan in the shared context (`/workspace/shared/context/TASK-DIVISI
   (never touch another bucket's subsection or the section order). PRs follow
   `.github/PULL_REQUEST_TEMPLATE.md`.
 
+## Project documents map — what to read and when
+
+In this repo (canonical, versioned with the code):
+
+| File | What it is | Read it when |
+|---|---|---|
+| `CLAUDE.md` | THIS file — binding conventions, collision rules, gates | always, before touching the tree |
+| `ARCHITECTURE.md` | design: layers, OAuth lifecycle, transport, observability (AWS-model §11), quality stack | before any design/impl work |
+| `API-SURFACE.md` | proposed consumer method layout for all 267 ops — your bucket's naming contract | before designing your facade |
+| `TESTING.md` | BINDING test conventions + the live-layer write→read exploration rules | before writing any test |
+| `KNOWN-SERVER-BEHAVIORS.md` | live-verified server quirks (dated) | before wrapping an endpoint; ADD entries from your exploration |
+| `ADR/` | immutable decisions ADR-001.. — supersede, never edit | before changing anything they cover; new decision = new ADR in the same PR |
+| `CHANGELOG.md` | Keep-a-Changelog; write ONLY in your bucket's subsection | every PR |
+| `README.md` | consumer-facing (what/why/how to use) — NOT an agent doc | when your bucket adds its `docs/<feature>.md` + link |
+| `docs/<feature>.md` | per-bucket consumer usage guide (bucket-owned) | ships with your bucket PR |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR checklist (bucket, append points, TESTING.md, demo) | every PR |
+
+On the shared volume (`/workspace/shared/`, agent coordination — never committed to this repo):
+`CLAUDE.md` (common rules, credentials location) · `context/BACKLOG.md` (assignment board +
+phase status — re-read before EVERY PR) · `context/TASK-DIVISION-PLAN.md` (accepted plan,
+DoD) · `context/ALLEGRO-API-RESEARCH.md` (platform facts) ·
+`context/RISKS-MULTIAGENT-PREMORTEM.md` (failure modes) · `context/RAG-PLAN.md` (doc corpus
++ RAG phases) · `context/REPORT-*.md` (session reports).
+
 ## Build and test commands
 
 ```bash
