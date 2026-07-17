@@ -22,6 +22,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   vendor media types, equal-jitter retry, typed `errors[]` mapping; lazy
   Stream pagination; remediation-grouped exception hierarchy.
 - `AllegroClient` entry point with `user().me()` vertical slice.
+- Observability (AWS-SDK model): named SLF4J debug channels
+  (`request`/`auth`/`retry`), `traceId()` on every exception (wire-verified
+  `trace-id` header), `AllegroExecutionInterceptor` SPI with per-attempt
+  callbacks.
+- JaCoCo coverage gate active in `check` (85%/84% at activation); 39-test
+  WireMock suite per TESTING.md.
+- `allegro-demo` probe runner (`auth-bootstrap`, `me`) + flock-guarded shared
+  token store (ADR-008); live sandbox verification caught and fixed a
+  JsonNullable deserialization defect on `/me`.
 
 ### A — offers-core
 ### B — orders-payments
