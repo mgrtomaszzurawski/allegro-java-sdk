@@ -38,6 +38,7 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
   - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
     rating, and bundles (bucket F)
+- [`docs/campaigns.md`](docs/campaigns.md) — badge campaigns, Allegro Prices, AlleDiscount
 
 ## Quick start
 
