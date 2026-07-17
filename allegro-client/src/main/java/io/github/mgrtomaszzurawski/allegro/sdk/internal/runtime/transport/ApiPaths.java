@@ -58,6 +58,10 @@ public final class ApiPaths {
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
 
+    // ---- contacts (bucket J) ----
+    /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
+    public static final String OFFER_CONTACTS = "/sale/offer-contacts";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.
