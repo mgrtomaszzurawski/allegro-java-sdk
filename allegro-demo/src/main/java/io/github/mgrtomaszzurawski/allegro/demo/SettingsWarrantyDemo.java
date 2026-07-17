@@ -13,6 +13,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.W
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyPeriod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantySummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyType;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -52,16 +54,26 @@ final class SettingsWarrantyDemo {
                 ignored -> System.out.println(MSG_TOKEN_EXPIRED),
                 storedRefreshToken);
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-            AfterSaleConditions afterSale = client.settings().afterSale();
-            Warranty written = createOrUpdateDemoWarranty(afterSale);
-            // Read-back through the SDK and assert the round-trip.
-            Warranty readBack = afterSale.warranty(written.id());
-            boolean roundTrip = DEMO_WARRANTY_NAME.equals(readBack.name())
-                    && readBack.type() == WarrantyType.SELLER;
-            System.out.println("read-back: id=" + readBack.id()
-                    + ", type=" + readBack.type()
-                    + ", round-trip-ok=" + roundTrip);
-            rotateStoredToken(tokenStore, account, client);
+            try {
+                AfterSaleConditions afterSale = client.settings().afterSale();
+                Warranty written = createOrUpdateDemoWarranty(afterSale);
+                Warranty readBack = afterSale.warranty(written.id());
+                boolean roundTrip = DEMO_WARRANTY_NAME.equals(readBack.name())
+                        && readBack.type() == WarrantyType.SELLER;
+                System.out.println("read-back: id=" + readBack.id()
+                        + ", type=" + readBack.type()
+                        + ", round-trip-ok=" + roundTrip);
+            } catch (AllegroBadRequestException rejection) {
+                // Surface the server's field-level reasons — this is how the
+                // exploration pass learns what the wire actually requires.
+                printFieldErrors(rejection);
+                throw rejection;
+            } finally {
+                // Allegro rotates the refresh token on EVERY refresh; persist the
+                // rotated token even when the probe fails, or the shared store is
+                // left holding a dead token for every other agent (pre-mortem B1).
+                persistRotatedToken(tokenStore, account, client);
+            }
         }
     }
 
@@ -87,7 +99,15 @@ final class SettingsWarrantyDemo {
         return created;
     }
 
-    private static void rotateStoredToken(SharedTokenStore tokenStore, String account,
+    private static void printFieldErrors(AllegroBadRequestException rejection) {
+        for (AllegroFieldError fieldError : rejection.errors()) {
+            System.out.println("field-error: code=" + fieldError.code()
+                    + ", path=" + fieldError.path()
+                    + ", message=" + fieldError.message());
+        }
+    }
+
+    private static void persistRotatedToken(SharedTokenStore tokenStore, String account,
             AllegroClient client) throws IOException {
         String rotatedRefreshToken = client.refreshToken();
         if (rotatedRefreshToken != null) {
