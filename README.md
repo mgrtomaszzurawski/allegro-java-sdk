@@ -35,6 +35,8 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
   domain lands
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
   - [`docs/catalog.md`](docs/catalog.md) — categories, products, compatibility (`client.catalog()`)
+  - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
+    rating, and bundles (bucket F)
 
 ## Quick start
 
