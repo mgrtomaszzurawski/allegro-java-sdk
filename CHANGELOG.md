@@ -49,6 +49,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   bucket I (PDF, `If-Match`) and bucket J (attachment downloads).
 
 ### A — offers-core
+
+- `client.offers()` starter slice: `get(offerId)` (full product-offer read → immutable
+  `Offer` record with `OfferFormat`/`OfferStatus` enums and the shared `Money` Buy Now price)
+  and `changeBuyNowPrice(offerId, Money)` (single-offer price-change command). `docs/offers.md`
+  + compiled example + `offer` demo scenario (write→read on the sandbox).
+
 ### B — orders-payments
 
 - Orders facade (`AllegroClient.orders()`) starter slice: `get(orderId)` fetches a
