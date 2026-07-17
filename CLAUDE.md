@@ -32,7 +32,8 @@ task-division plan in the shared context (`/workspace/shared/context/TASK-DIVISI
   releases with `v<version>` tags (operator merges). `/review` gates every PR (after
   open + before merge).
 - License is AGPL-3.0-only ON PURPOSE (ADR-009: poison pill + commercial dual-licensing).
-  Do not accept external contributions without operator sign-off.
+  Do not accept external contributions without operator sign-off AND a copyright assignment
+  (dual-licensing depends on clean single-party ownership).
 - No 1–3 char names. Exceptions (the EXACT list enforced by the PMD
   `ShortVariableWithDomainExceptions` rule — keep both in sync): `i`/`j`/`k` loops,
   `e`/`ex` catch, and the domain abbreviations `raw`, `ean`, `sku`, `vat`, `id`, `url`,
