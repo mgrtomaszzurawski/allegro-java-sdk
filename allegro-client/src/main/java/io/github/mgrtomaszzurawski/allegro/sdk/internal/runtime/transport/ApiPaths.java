@@ -16,6 +16,8 @@ public final class ApiPaths {
     // ---- account (bucket D) ----
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
+    /** Details for all marketplaces on the platform ({@code /marketplaces}). */
+    public static final String MARKETPLACES = "/marketplaces";
 
     // ---- orders (bucket B) ----
     /** Seller's orders collection; append the order id for a single order. */
