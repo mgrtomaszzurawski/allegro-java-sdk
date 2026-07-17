@@ -13,6 +13,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceAuthoriz
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAuthException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.SdkLoggers;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -92,6 +93,18 @@ public final class OAuth2TokenManager {
     private static final String ERR_CODE_CONSUMED =
             "Refresh failed and the one-time authorization code was already used - re-authorize the user";
 
+    private static final String LOG_REFRESHING = "refreshing access token";
+    private static final String LOG_REFRESH_REJECTED = "stored refresh token rejected - falling back to initial grant";
+    private static final String LOG_INITIAL_GRANT = "acquiring token via {}";
+    private static final String LOG_DEVICE_STARTED = "device flow started - waiting for user confirmation (poll every {} s)";
+    private static final String LOG_DEVICE_PENDING = "device authorization pending";
+    private static final String LOG_TOKEN_STORED = "access token acquired (expires in {} s, refresh token {})";
+    private static final String LOG_INVALIDATED = "access token invalidated - next call re-acquires";
+    private static final String GRANT_LABEL_CLIENT = "client_credentials";
+    private static final String GRANT_LABEL_CODE = "authorization_code";
+    private static final String REFRESH_PRESENT = "rotated";
+    private static final String REFRESH_ABSENT = "absent";
+
     private final AllegroCredentials credentials;
     private final AllegroEnvironment environment;
     private final HttpClient httpClient;
@@ -138,6 +151,7 @@ public final class OAuth2TokenManager {
      * re-acquires — the transport's single-attempt recovery hook for HTTP 401.
      */
     public void invalidate() {
+        SdkLoggers.AUTH.debug(LOG_INVALIDATED);
         accessToken = null;
     }
 
@@ -154,12 +168,14 @@ public final class OAuth2TokenManager {
         String currentRefresh = refreshToken;
         if (currentRefresh != null) {
             try {
+                SdkLoggers.AUTH.debug(LOG_REFRESHING);
                 storeTokens(tokenRequest(GRANT_REFRESH_TOKEN
                         + '&' + PARAM_REFRESH_TOKEN + '=' + urlEncode(currentRefresh)));
                 return;
             } catch (AllegroAuthException e) {
                 // Stored/rotated refresh token revoked or expired — fall through
                 // to a fresh initial grant where the credential type allows one.
+                SdkLoggers.AUTH.warn(LOG_REFRESH_REJECTED);
                 refreshToken = null;
             }
         }
@@ -170,10 +186,12 @@ public final class OAuth2TokenManager {
         // Sealed hierarchy walked with instanceof patterns — switch patterns
         // are preview-only on the Java 17 baseline.
         if (credentials instanceof AuthorizationCodeCredentials authorizationCode) {
+            SdkLoggers.AUTH.debug(LOG_INITIAL_GRANT, GRANT_LABEL_CODE);
             initialAuthorizationCode(authorizationCode);
         } else if (credentials instanceof DeviceCodeCredentials deviceCode) {
             deviceFlow(deviceCode);
         } else {
+            SdkLoggers.AUTH.debug(LOG_INITIAL_GRANT, GRANT_LABEL_CLIENT);
             storeTokens(tokenRequest(GRANT_CLIENT_CREDENTIALS));
         }
     }
@@ -207,6 +225,7 @@ public final class OAuth2TokenManager {
                 deviceResponse.path(FIELD_VERIFICATION_URI_COMPLETE).asText(),
                 Duration.ofSeconds(expiresInSeconds)));
 
+        SdkLoggers.AUTH.debug(LOG_DEVICE_STARTED, pollSeconds);
         Instant deadline = Instant.now().plusSeconds(expiresInSeconds);
         String pollForm = GRANT_DEVICE_CODE + '&' + PARAM_DEVICE_CODE + '=' + urlEncode(deviceCode);
         while (Instant.now().isBefore(deadline)) {
@@ -220,6 +239,7 @@ public final class OAuth2TokenManager {
             String oauthError = parseJson(response.body()).path(FIELD_ERROR).asText();
             if (response.statusCode() == HTTP_BAD_REQUEST
                     && ERROR_AUTHORIZATION_PENDING.equals(oauthError)) {
+                SdkLoggers.AUTH.debug(LOG_DEVICE_PENDING);
                 continue;
             }
             if (response.statusCode() == HTTP_BAD_REQUEST && ERROR_SLOW_DOWN.equals(oauthError)) {
@@ -276,9 +296,11 @@ public final class OAuth2TokenManager {
         if (!rotatedRefresh.isMissingNode() && !rotatedRefresh.asText().isEmpty()) {
             refreshToken = rotatedRefresh.asText();
         }
-        expiresAt = Instant.now().plusSeconds(
-                tokenResponse.path(FIELD_EXPIRES_IN).asLong(DEFAULT_EXPIRES_IN_SECONDS));
+        long expiresInSeconds = tokenResponse.path(FIELD_EXPIRES_IN).asLong(DEFAULT_EXPIRES_IN_SECONDS);
+        expiresAt = Instant.now().plusSeconds(expiresInSeconds);
         accessToken = tokenNode.asText();
+        SdkLoggers.AUTH.debug(LOG_TOKEN_STORED, expiresInSeconds,
+                refreshToken != null ? REFRESH_PRESENT : REFRESH_ABSENT);
     }
 
     private JsonNode parseJson(String body) {

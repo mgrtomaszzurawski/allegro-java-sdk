@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import java.time.Duration;
 
@@ -23,14 +24,17 @@ public final class AllegroHttpRuntime implements HttpRuntime {
     private final ObjectMapper objectMapper;
     private final Duration readTimeout;
     private final OAuth2TokenManager tokenManager;
+    private final AllegroExecutionInterceptor executionInterceptor;
 
     public AllegroHttpRuntime(String baseUrl, RetryHandler retryHandler,
-            ObjectMapper objectMapper, Duration readTimeout, OAuth2TokenManager tokenManager) {
+            ObjectMapper objectMapper, Duration readTimeout, OAuth2TokenManager tokenManager,
+            AllegroExecutionInterceptor executionInterceptor) {
         this.baseUrl = baseUrl;
         this.retryHandler = retryHandler;
         this.objectMapper = objectMapper;
         this.readTimeout = readTimeout;
         this.tokenManager = tokenManager;
+        this.executionInterceptor = executionInterceptor;
     }
 
     @Override
@@ -51,6 +55,11 @@ public final class AllegroHttpRuntime implements HttpRuntime {
     @Override
     public Duration readTimeout() {
         return readTimeout;
+    }
+
+    @Override
+    public AllegroExecutionInterceptor executionInterceptor() {
+        return executionInterceptor;
     }
 
     @Override

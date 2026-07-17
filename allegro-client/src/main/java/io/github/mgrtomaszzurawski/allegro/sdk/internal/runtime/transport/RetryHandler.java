@@ -4,6 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.CallContext;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import java.io.IOException;
@@ -33,6 +35,8 @@ public final class RetryHandler {
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_SERVER_ERROR_MIN = 500;
     private static final String POST_METHOD = "POST";
+    private static final String LOG_ATTEMPT = "{}: {} {} -> {} (attempt {}/{}, {} ms)";
+    private static final String LOG_BACKOFF = "{}: retrying in {} ms (attempt {}/{})";
     private static final String ERR_NETWORK = "Network failure calling Allegro";
     private static final String ERR_INTERRUPTED = "Interrupted while calling Allegro";
 
@@ -50,25 +54,39 @@ public final class RetryHandler {
      * exceptions; throws {@link AllegroServerException} only when the network
      * itself failed on the final attempt.
      */
-    public HttpResponse<String> send(HttpRequest request) {
+    public HttpResponse<String> send(HttpRequest request, String operationName,
+            AllegroExecutionInterceptor interceptor) {
         int attemptsAllowed = policy.enabled() ? policy.maxAttempts() : 1;
         boolean retryableMethod = policy.retryPost() || !POST_METHOD.equals(request.method());
+        String path = request.uri().getPath();
         IOException lastNetworkFailure = null;
         for (int attempt = 1; attempt <= attemptsAllowed; attempt++) {
             boolean lastAttempt = attempt == attemptsAllowed;
+            long attemptStart = System.nanoTime();
             try {
                 HttpResponse<String> response =
                         httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                long elapsedMillis = elapsedMillis(attemptStart);
+                interceptor.afterAttempt(new CallContext(operationName, request.method(), path,
+                        attempt, response.statusCode(), elapsedMillis));
+                SdkLoggers.RETRY.debug(LOG_ATTEMPT, operationName, request.method(), path,
+                        response.statusCode(), attempt, attemptsAllowed, elapsedMillis);
                 if (lastAttempt || !retryableMethod || !isRetryableStatus(response.statusCode())) {
                     return response;
                 }
-                sleep(backoffMillis(attempt, retryAfterMillis(response)));
+                long backoff = backoffMillis(attempt, retryAfterMillis(response));
+                SdkLoggers.RETRY.warn(LOG_BACKOFF, operationName, backoff, attempt, attemptsAllowed);
+                sleep(backoff);
             } catch (IOException e) {
                 lastNetworkFailure = e;
+                interceptor.afterAttempt(new CallContext(operationName, request.method(), path,
+                        attempt, 0, elapsedMillis(attemptStart)));
                 if (lastAttempt || !retryableMethod || !policy.retryOn5xx()) {
                     throw new AllegroServerException(ERR_NETWORK, e);
                 }
-                sleep(backoffMillis(attempt, 0L));
+                long backoff = backoffMillis(attempt, 0L);
+                SdkLoggers.RETRY.warn(LOG_BACKOFF, operationName, backoff, attempt, attemptsAllowed);
+                sleep(backoff);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new AllegroServerException(ERR_INTERRUPTED, e);
@@ -76,6 +94,10 @@ public final class RetryHandler {
         }
         // Unreachable: the loop always returns or throws on the last attempt.
         throw new AllegroServerException(ERR_NETWORK, lastNetworkFailure);
+    }
+
+    private static long elapsedMillis(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 
     private boolean isRetryableStatus(int status) {

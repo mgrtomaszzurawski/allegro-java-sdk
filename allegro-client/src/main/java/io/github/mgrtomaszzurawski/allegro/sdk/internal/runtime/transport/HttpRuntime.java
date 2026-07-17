@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import java.time.Duration;
 
 /**
@@ -21,6 +22,9 @@ public interface HttpRuntime {
 
     /** Retry executor for HTTP calls. */
     RetryHandler retryHandler();
+
+    /** Consumer-registered execution interceptor (no-op by default). */
+    AllegroExecutionInterceptor executionInterceptor();
 
     /** Jackson mapper configured for Allegro request/response shapes. */
     ObjectMapper objectMapper();

@@ -22,4 +22,9 @@ public class AllegroNotFoundException extends AllegroException {
     public AllegroNotFoundException(String message, int statusCode, @Nullable String responseBody) {
         super(message, statusCode, responseBody);
     }
+
+    public AllegroNotFoundException(String message, int statusCode, @Nullable String responseBody,
+            @Nullable String traceId) {
+        super(message, null, statusCode, responseBody, traceId);
+    }
 }

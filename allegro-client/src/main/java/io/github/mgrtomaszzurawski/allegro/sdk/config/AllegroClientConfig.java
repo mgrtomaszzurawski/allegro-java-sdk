@@ -16,6 +16,8 @@ import java.util.Objects;
  * @param retryPolicy retry behaviour for transient failures
  * @param connectTimeout TCP/TLS connection establishment timeout
  * @param readTimeout per-request response timeout
+ * @param executionInterceptor hook around every SDK HTTP execution (metrics
+ *     seam; defaults to a no-op)
  *
  * @since 0.1.0
  */
@@ -23,7 +25,8 @@ public record AllegroClientConfig(
         AllegroEnvironment environment,
         RetryPolicy retryPolicy,
         Duration connectTimeout,
-        Duration readTimeout) {
+        Duration readTimeout,
+        AllegroExecutionInterceptor executionInterceptor) {
 
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(30);
@@ -31,6 +34,7 @@ public record AllegroClientConfig(
     private static final String ERR_RETRY_POLICY_NULL = "retryPolicy must not be null";
     private static final String ERR_CONNECT_TIMEOUT_INVALID = "connectTimeout must be positive, got: ";
     private static final String ERR_READ_TIMEOUT_INVALID = "readTimeout must be positive, got: ";
+    private static final String ERR_INTERCEPTOR_NULL = "executionInterceptor must not be null";
 
     public AllegroClientConfig {
         Objects.requireNonNull(environment, ERR_ENVIRONMENT_NULL);
@@ -41,6 +45,7 @@ public record AllegroClientConfig(
         if (readTimeout == null || readTimeout.isNegative() || readTimeout.isZero()) {
             throw new IllegalArgumentException(ERR_READ_TIMEOUT_INVALID + readTimeout);
         }
+        Objects.requireNonNull(executionInterceptor, ERR_INTERCEPTOR_NULL);
     }
 
     /** Configuration with all defaults for the given environment. */
@@ -58,6 +63,7 @@ public record AllegroClientConfig(
         private RetryPolicy retryPolicy = RetryPolicy.defaults();
         private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
         private Duration readTimeout = DEFAULT_READ_TIMEOUT;
+        private AllegroExecutionInterceptor executionInterceptor = AllegroExecutionInterceptor.noop();
 
         private Builder(AllegroEnvironment environment) {
             this.environment = Objects.requireNonNull(environment, ERR_ENVIRONMENT_NULL);
@@ -78,8 +84,14 @@ public record AllegroClientConfig(
             return this;
         }
 
+        public Builder executionInterceptor(AllegroExecutionInterceptor executionInterceptor) {
+            this.executionInterceptor = executionInterceptor;
+            return this;
+        }
+
         public AllegroClientConfig build() {
-            return new AllegroClientConfig(environment, retryPolicy, connectTimeout, readTimeout);
+            return new AllegroClientConfig(environment, retryPolicy, connectTimeout, readTimeout,
+                    executionInterceptor);
         }
     }
 }

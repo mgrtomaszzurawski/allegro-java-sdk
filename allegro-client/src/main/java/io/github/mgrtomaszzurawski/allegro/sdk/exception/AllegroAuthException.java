@@ -23,6 +23,11 @@ public class AllegroAuthException extends AllegroException {
         super(message, statusCode, responseBody);
     }
 
+    public AllegroAuthException(String message, int statusCode, @Nullable String responseBody,
+            @Nullable String traceId) {
+        super(message, null, statusCode, responseBody, traceId);
+    }
+
     public AllegroAuthException(String message, @Nullable Throwable cause) {
         super(message, cause);
     }

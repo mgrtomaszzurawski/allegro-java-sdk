@@ -36,6 +36,7 @@ public final class ServerErrorParser {
     private static final int HTTP_SERVER_ERROR_MIN = 500;
 
     private static final String RETRY_AFTER_HEADER = "Retry-After";
+    private static final String TRACE_ID_HEADER = "trace-id";
     private static final String ERRORS_FIELD = "errors";
     private static final String CODE_FIELD = "code";
     private static final String MESSAGE_FIELD = "message";
@@ -68,23 +69,26 @@ public final class ServerErrorParser {
         int status = response.statusCode();
         String body = response.body();
         String suffix = OPERATION_PREFIX + operationName;
+        String traceId = traceId(response);
         if (status == HTTP_BAD_REQUEST || status == HTTP_UNPROCESSABLE) {
-            return new AllegroBadRequestException(MSG_BAD_REQUEST + suffix, status, body, parseErrors(body));
+            return new AllegroBadRequestException(MSG_BAD_REQUEST + suffix, status, body,
+                    parseErrors(body), traceId);
         }
         if (status == HTTP_UNAUTHORIZED || status == HTTP_FORBIDDEN) {
-            return new AllegroAuthException(MSG_AUTH + suffix, status, body);
+            return new AllegroAuthException(MSG_AUTH + suffix, status, body, traceId);
         }
         if (status == HTTP_NOT_FOUND) {
-            return new AllegroNotFoundException(MSG_NOT_FOUND + suffix, status, body);
+            return new AllegroNotFoundException(MSG_NOT_FOUND + suffix, status, body, traceId);
         }
         if (status == HTTP_TOO_MANY_REQUESTS) {
             return new AllegroRateLimitException(MSG_RATE_LIMIT + suffix, status, body,
-                    parseRetryAfterSeconds(response));
+                    parseRetryAfterSeconds(response), traceId);
         }
         if (status >= HTTP_SERVER_ERROR_MIN) {
-            return new AllegroServerException(MSG_SERVER + suffix, status, body);
+            return new AllegroServerException(MSG_SERVER + suffix, status, body, traceId);
         }
-        return new AllegroException(MSG_UNEXPECTED + " (" + status + ")" + suffix, status, body);
+        return new AllegroException(MSG_UNEXPECTED + " (" + status + ")" + suffix, null,
+                status, body, traceId);
     }
 
     /** Parse the {@code errors[]} payload; empty list when absent/malformed. */
@@ -110,6 +114,11 @@ public final class ServerErrorParser {
             return fieldErrors;
         }
         return fieldErrors;
+    }
+
+    /** The {@code trace-id} header Allegro attaches to error responses, or {@code null}. */
+    public static @Nullable String traceId(HttpResponse<String> response) {
+        return response.headers().firstValue(TRACE_ID_HEADER).orElse(null);
     }
 
     /** {@code Retry-After} header in seconds; {@code 0} when absent/invalid. */

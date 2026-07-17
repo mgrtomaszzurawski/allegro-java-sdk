@@ -24,6 +24,11 @@ public class AllegroServerException extends AllegroException {
         super(message, statusCode, responseBody);
     }
 
+    public AllegroServerException(String message, int statusCode, @Nullable String responseBody,
+            @Nullable String traceId) {
+        super(message, null, statusCode, responseBody, traceId);
+    }
+
     public AllegroServerException(String message, @Nullable Throwable cause) {
         super(message, cause);
     }

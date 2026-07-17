@@ -5,14 +5,13 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
 import com.fasterxml.jackson.core.JacksonException;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.CallContext;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Shared HTTP plumbing for domain clients: builds authenticated requests with
@@ -30,8 +29,12 @@ public final class HttpSupport {
     /** Allegro versions resources via this vendor media type, not URL paths. */
     public static final String VND_ALLEGRO_V1 = "application/vnd.allegro.public.v1+json";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HttpSupport.class);
-    private static final String LOG_CALL = "[{}] {} {} -> {}";
+    private static final String LOG_SERIALIZED = "{}: request body serialized ({} B)";
+    private static final String LOG_SENDING = "{}: {} {} - sending";
+    private static final String LOG_RESPONSE = "{}: response {} in {} ms{}";
+    private static final String LOG_MAPPED = "response deserialized to {}";
+    private static final String LOG_TRACE_ID_PREFIX = " (trace-id ";
+    private static final String WARN_REPLAY_401 = "{}: 401 received - re-authenticating and replaying once";
 
     private static final String ACCEPT_HEADER = "Accept";
     private static final String CONTENT_TYPE_HEADER = "Content-Type";
@@ -109,23 +112,41 @@ public final class HttpSupport {
     private HttpResponse<String> exchange(Supplier<HttpRequest.Builder> requestBuilder,
             String operationName) {
         HttpRequest request = requestBuilder.get().build();
-        HttpResponse<String> response = runtime.retryHandler().send(request);
+        String path = request.uri().getPath();
+        var interceptor = runtime.executionInterceptor();
+        interceptor.beforeExecution(new CallContext(operationName, request.method(), path, 0, 0, 0L));
+        SdkLoggers.REQUEST.debug(LOG_SENDING, operationName, request.method(), path);
+        long executionStart = System.nanoTime();
+        HttpResponse<String> response = runtime.retryHandler().send(request, operationName, interceptor);
         if (response.statusCode() == HTTP_UNAUTHORIZED) {
             // Single attempt: token may simply have been revoked server-side;
             // re-acquire once and replay. A second 401 is a real auth failure.
+            SdkLoggers.AUTH.warn(WARN_REPLAY_401, operationName);
             runtime.reauthenticate();
-            response = runtime.retryHandler().send(requestBuilder.get().build());
+            response = runtime.retryHandler().send(requestBuilder.get().build(), operationName,
+                    interceptor);
         }
-        LOGGER.debug(LOG_CALL, operationName, request.method(), request.uri(), response.statusCode());
+        long durationMillis = (System.nanoTime() - executionStart) / 1_000_000L;
+        String traceIdSuffix = ServerErrorParser.traceId(response) == null ? ""
+                : LOG_TRACE_ID_PREFIX + ServerErrorParser.traceId(response) + ')';
+        SdkLoggers.REQUEST.debug(LOG_RESPONSE, operationName, response.statusCode(),
+                durationMillis, traceIdSuffix);
+        CallContext finalContext = new CallContext(operationName, request.method(), path, 1,
+                response.statusCode(), durationMillis);
         if (response.statusCode() < HTTP_OK_MIN || response.statusCode() > HTTP_OK_MAX) {
-            throw errorParser.toException(response, operationName);
+            AllegroException failure = errorParser.toException(response, operationName);
+            interceptor.onExecutionFailure(finalContext, failure);
+            throw failure;
         }
+        interceptor.afterExecution(finalContext);
         return response;
     }
 
     private String serialize(Object body) {
         try {
-            return runtime.objectMapper().writeValueAsString(body);
+            String json = runtime.objectMapper().writeValueAsString(body);
+            SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
+            return json;
         } catch (JacksonException e) {
             throw new AllegroException(ERR_SERIALIZE, e);
         }
@@ -133,7 +154,9 @@ public final class HttpSupport {
 
     private <T> T deserialize(HttpResponse<String> response, Class<T> responseType) {
         try {
-            return runtime.objectMapper().readValue(response.body(), responseType);
+            T mapped = runtime.objectMapper().readValue(response.body(), responseType);
+            SdkLoggers.REQUEST.debug(LOG_MAPPED, responseType.getSimpleName());
+            return mapped;
         } catch (JacksonException e) {
             throw new AllegroServerException(ERR_DESERIALIZE, e);
         }

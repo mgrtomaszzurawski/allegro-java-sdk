@@ -26,7 +26,13 @@ public class AllegroRateLimitException extends AllegroException {
 
     public AllegroRateLimitException(String message, int statusCode,
             @Nullable String responseBody, long retryAfterSeconds) {
-        super(message, statusCode, responseBody);
+        this(message, statusCode, responseBody, retryAfterSeconds, null);
+    }
+
+    public AllegroRateLimitException(String message, int statusCode,
+            @Nullable String responseBody, long retryAfterSeconds,
+            @Nullable String traceId) {
+        super(message, null, statusCode, responseBody, traceId);
         this.retryAfterSeconds = retryAfterSeconds;
     }
 

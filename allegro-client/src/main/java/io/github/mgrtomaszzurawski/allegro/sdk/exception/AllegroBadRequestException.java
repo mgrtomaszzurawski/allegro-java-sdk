@@ -24,7 +24,13 @@ public class AllegroBadRequestException extends AllegroException {
 
     public AllegroBadRequestException(String message, int statusCode,
             @Nullable String responseBody, List<AllegroFieldError> errors) {
-        super(message, statusCode, responseBody);
+        this(message, statusCode, responseBody, errors, null);
+    }
+
+    public AllegroBadRequestException(String message, int statusCode,
+            @Nullable String responseBody, List<AllegroFieldError> errors,
+            @Nullable String traceId) {
+        super(message, null, statusCode, responseBody, traceId);
         this.errors = List.copyOf(errors);
     }
 

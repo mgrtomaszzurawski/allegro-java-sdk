@@ -77,7 +77,8 @@ public final class AllegroClient implements AutoCloseable {
                 new RetryHandler(httpClient, config.retryPolicy()),
                 objectMapper,
                 config.readTimeout(),
-                tokenManager);
+                tokenManager,
+                config.executionInterceptor());
         this.userAccount = new UserAccountImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.

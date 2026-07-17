@@ -42,12 +42,19 @@ public class AllegroException extends RuntimeException {
 
     private final int statusCode;
     private final @Nullable String responseBody;
+    private final @Nullable String traceId;
 
     public AllegroException(String message, @Nullable Throwable cause, int statusCode,
-            @Nullable String responseBody) {
+            @Nullable String responseBody, @Nullable String traceId) {
         super(message, cause);
         this.statusCode = statusCode;
         this.responseBody = responseBody;
+        this.traceId = traceId;
+    }
+
+    public AllegroException(String message, @Nullable Throwable cause, int statusCode,
+            @Nullable String responseBody) {
+        this(message, cause, statusCode, responseBody, null);
     }
 
     public AllegroException(String message, int statusCode, @Nullable String responseBody) {
@@ -61,6 +68,15 @@ public class AllegroException extends RuntimeException {
     /** HTTP status of the failed call, or {@code 0} for non-HTTP failures. */
     public int statusCode() {
         return statusCode;
+    }
+
+    /**
+     * The {@code trace-id} header Allegro attaches to error responses, or
+     * {@code null} for failures without a server response. Quote it in
+     * Allegro support tickets — it is how their team locates the request.
+     */
+    public @Nullable String traceId() {
+        return traceId;
     }
 
     /**
