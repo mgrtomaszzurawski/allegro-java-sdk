@@ -116,7 +116,12 @@ per-class METHOD = 1.00 on `domain.*.builder.*Builder` + `domain.*.*Client`) is 
 `allegro-client/build.gradle.kts` and attaches to `check` with the first domain PR.
 Sonar at PR-ready: `./gradlew sonar --no-configuration-cache -Dsonar.host.url=$SONAR_HOST_URL
 -Dsonar.login=$SONAR_LOGIN -Dsonar.password=$SONAR_PASSWORD` (after `build`).
-OWASP `dependencyCheckAggregate`: release-only.
+Release boundary (`develop`→`main`) only: OWASP `dependencyCheckAggregate` (fails on CVSS ≥ 7)
++ **PIT mutation testing** (report-only, hand-written `allegro-client` code, target band
+~70–85% — surviving mutants in token manager / retry / error parser are missing tests, fix
+before tagging). Live sandbox demo scenarios (`allegro-demo`) per bucket at PR DoD; the
+Playwright buyer-bot (`tools/buyer-bot/`, experiment) seeds web-only flows — see
+`ARCHITECTURE.md` §10.
 
 ## Allegro API facts the code relies on
 
