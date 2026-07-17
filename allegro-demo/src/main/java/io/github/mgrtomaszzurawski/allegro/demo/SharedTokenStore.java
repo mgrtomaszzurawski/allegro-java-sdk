@@ -75,8 +75,13 @@ final class SharedTokenStore {
     /** Open (creating if absent) with owner-only permissions — tokens at rest. */
     private RandomAccessFile openSecured() throws IOException {
         RandomAccessFile file = new RandomAccessFile(storePath.toFile(), READ_WRITE_MODE);
-        Files.setPosixFilePermissions(storePath,
-                Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+        try {
+            Files.setPosixFilePermissions(storePath,
+                    Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+        } catch (IOException e) {
+            file.close();
+            throw e;
+        }
         return file;
     }
 

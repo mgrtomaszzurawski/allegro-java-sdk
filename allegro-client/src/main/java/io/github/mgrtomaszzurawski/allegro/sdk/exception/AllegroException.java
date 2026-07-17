@@ -41,7 +41,7 @@ public class AllegroException extends RuntimeException {
     private static final String BEARER_TOKEN_REPLACEMENT = "eyJ***";
     /** Opaque token values in JSON fields (refresh tokens are not JWT-shaped). */
     private static final Pattern TOKEN_JSON_FIELD = Pattern.compile(
-            "(\"(?:access|refresh)_token\"\s*:\s*\")[^\"]+(\")");
+            "(\"(?:access|refresh)_token\"\\s*:\\s*\")[^\"]+(\")");
     private static final String TOKEN_JSON_REPLACEMENT = "$1***$2";
 
     private final int statusCode;
