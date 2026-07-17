@@ -18,6 +18,30 @@ public final class ApiPaths {
     public static final String CURRENT_USER = "/me";
     /** Details for all marketplaces on the platform ({@code /marketplaces}). */
     public static final String MARKETPLACES = "/marketplaces";
+    /** User's additional e-mail addresses ({@code /account/additional-emails}). */
+    public static final String ADDITIONAL_EMAILS = "/account/additional-emails";
+    /** Seller sales-quality report ({@code /sale/quality}). */
+    public static final String SALES_QUALITY = "/sale/quality";
+    /** Smart! seller classification report ({@code /sale/smart}). */
+    public static final String SMART_CLASSIFICATION = "/sale/smart";
+    /** The authenticated user's received ratings ({@code /sale/user-ratings}). */
+    public static final String USER_RATINGS = "/sale/user-ratings";
+    /** Public per-user resources root ({@code /users}); build with {@link #subPath}. */
+    public static final String USERS = "/users";
+    /** Auction bids root ({@code /bidding/offers}); build with {@link #subPath}. */
+    public static final String BIDDING_OFFERS = "/bidding/offers";
+    /** Charity fundraising-campaign search ({@code /charity/fundraising-campaigns}). */
+    public static final String CHARITY_CAMPAIGNS = "/charity/fundraising-campaigns";
+    /** CPS affiliate conversions ({@code /affiliate/conversions/cps}). */
+    public static final String AFFILIATE_CPS_CONVERSIONS = "/affiliate/conversions/cps";
+    /** {@code ratings-summary} sub-resource segment (under {@link #USERS}). */
+    public static final String RATINGS_SUMMARY_SEGMENT = "ratings-summary";
+    /** {@code bid} sub-resource segment (under {@link #BIDDING_OFFERS}). */
+    public static final String BID_SEGMENT = "bid";
+    /** {@code answer} sub-resource segment (under {@link #USER_RATINGS}). */
+    public static final String ANSWER_SEGMENT = "answer";
+    /** {@code removal} sub-resource segment (under {@link #USER_RATINGS}). */
+    public static final String REMOVAL_SEGMENT = "removal";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

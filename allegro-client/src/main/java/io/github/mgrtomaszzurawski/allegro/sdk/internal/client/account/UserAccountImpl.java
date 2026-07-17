@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.MeResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.AdditionalEmails;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CurrentUser;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
@@ -21,14 +22,21 @@ public final class UserAccountImpl implements UserAccount {
     private static final String OP_ME = "get current user";
 
     private final HttpSupport http;
+    private final AdditionalEmails additionalEmails;
 
     public UserAccountImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
+        this.additionalEmails = new AdditionalEmailsImpl(runtime);
     }
 
     @Override
     public CurrentUser me() {
         return CurrentUser.from(
                 http.getAuthenticated(ApiPaths.CURRENT_USER, MeResponseRaw.class, OP_ME));
+    }
+
+    @Override
+    public AdditionalEmails additionalEmails() {
+        return additionalEmails;
     }
 }
