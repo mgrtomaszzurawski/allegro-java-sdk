@@ -19,6 +19,10 @@ public final class ApiPaths {
     /** Details for all marketplaces on the platform ({@code /marketplaces}). */
     public static final String MARKETPLACES = "/marketplaces";
 
+    // ---- offers-extras + classifieds (bucket F) ----
+    /** Classifieds (advertisement) package configurations, filtered by category. */
+    public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

@@ -34,6 +34,8 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
   domain lands
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
+  - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
+    rating, and bundles (bucket F)
 
 ## Quick start
 
