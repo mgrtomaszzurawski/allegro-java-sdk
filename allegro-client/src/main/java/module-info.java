@@ -30,6 +30,11 @@ module io.github.mgrtomaszzurawski.allegro {
     // `exports ...sdk.domain.<feature>...` lines below this marker, one block
     // per bucket, in BACKLOG order.
 
+    // Shipping facade (bucket C): shipments, delivery, points of service.
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder;
+
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;

@@ -55,6 +55,7 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_ME, DemoApp::currentUser);
         // [append point: demo scenarios] One line per bucket, append-only:
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
+        SCENARIOS.put("pos-roundtrip", PointsOfServiceDemo::run);
     }
 
     private DemoApp() {
