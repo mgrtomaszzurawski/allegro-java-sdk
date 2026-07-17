@@ -34,8 +34,10 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
 
     private static final String PARAM_OFFSET = "offset";
     private static final String PARAM_LIMIT = "limit";
-    /** Page size when streaming; the max the endpoint accepts is 100. */
-    private static final int PAGE_LIMIT = 100;
+    /** Spec cap on {@code limit} for this endpoint (also its default). */
+    private static final int PAGE_LIMIT = 60;
+    /** Spec cap on {@code offset}: the endpoint serves a single page, not deep pagination. */
+    private static final int MAX_OFFSET = 59;
 
     private static final String ERR_WARRANTY_ID_NULL = "warrantyId must not be null";
     private static final String ERR_REQUEST_NULL = "request must not be null";
@@ -52,17 +54,20 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
     }
 
     private PagedSpliterator.Page<WarrantySummary> fetchWarrantyPage(int pageIndex) {
+        int offset = pageIndex * PAGE_LIMIT;
         WarrantiesListWarrantyBasicRaw page = http.request(OP_STREAM_WARRANTIES)
                 .get(ApiPaths.AFTER_SALES_WARRANTIES)
                 .query(Query.create()
-                        .add(PARAM_OFFSET, pageIndex * PAGE_LIMIT)
+                        .add(PARAM_OFFSET, offset)
                         .add(PARAM_LIMIT, PAGE_LIMIT))
                 .fetch(WarrantiesListWarrantyBasicRaw.class);
         List<WarrantyBasicRaw> items = page.getWarranties() == null ? List.of() : page.getWarranties();
         List<WarrantySummary> summaries = items.stream().map(WarrantySummary::from).toList();
-        // The list response carries no totalCount, so "there is another page"
-        // is inferred from a full page — a short/empty page ends the walk.
-        boolean hasMore = summaries.size() == PAGE_LIMIT;
+        // This endpoint caps offset at 59, so a page-aligned next offset is out
+        // of range: stop after the first full page rather than send a request the
+        // server would reject. A short page (no totalCount in the body) also ends
+        // the walk.
+        boolean hasMore = summaries.size() == PAGE_LIMIT && offset + PAGE_LIMIT <= MAX_OFFSET;
         return new PagedSpliterator.Page<>(summaries, hasMore);
     }
 

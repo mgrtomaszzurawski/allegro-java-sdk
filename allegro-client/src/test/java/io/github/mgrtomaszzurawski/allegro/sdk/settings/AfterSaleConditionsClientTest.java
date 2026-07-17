@@ -36,7 +36,6 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.W
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyPeriod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantySummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyType;
-import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAuthException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
@@ -68,11 +67,12 @@ class AfterSaleConditionsClientTest {
     private static final String PARAM_OFFSET = "offset";
     private static final String PARAM_LIMIT = "limit";
     private static final String OFFSET_PAGE_0 = "0";
-    private static final String OFFSET_PAGE_1 = "100";
-    private static final String OFFSET_PAGE_2 = "200";
-    private static final String LIMIT_VALUE = "100";
-    private static final int FULL_PAGE = 100;
-    private static final int SECOND_PAGE_SIZE = 3;
+    // The endpoint caps offset at 59, so a page-aligned next offset (60) is out
+    // of range and must never be requested.
+    private static final String OFFSET_OUT_OF_RANGE = "60";
+    private static final String LIMIT_VALUE = "60";
+    private static final int FULL_PAGE = 60;
+    private static final int PARTIAL_PAGE = 2;
 
     private static final String WARRANTY_ID_PREFIX = "w-";
     private static final String WARRANTY_NAME_PREFIX = "Warranty ";
@@ -232,82 +232,72 @@ class AfterSaleConditionsClientTest {
     // ---- pagination ----
 
     @Test
-    void streamWarranties_whenSinglePartialPage_mapsSummariesAndStops(WireMockRuntimeInfo wmInfo) {
+    void streamWarranties_whenPartialPage_mapsSummariesAndStops(WireMockRuntimeInfo wmInfo) {
         // given — a short page ends the walk (size < requested limit)
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
                 .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
                 .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(warrantiesPage(2))));
+                        .withBody(warrantiesPage(PARTIAL_PAGE))));
 
         try (AllegroClient allegro = client(wmInfo)) {
             // when
             List<WarrantySummary> warranties = allegro.settings().afterSale()
                     .streamWarranties().toList();
 
-            // then
-            assertEquals(2, warranties.size());
+            // then — summaries map and the walk stops
+            assertEquals(PARTIAL_PAGE, warranties.size());
             assertEquals(WARRANTY_ID_PREFIX + "0", warranties.get(0).id());
             verify(1, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
                     .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
             verify(0, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
-                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_1)));
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_OUT_OF_RANGE)));
         }
     }
 
     @Test
-    void streamWarranties_whenFirstPageFull_doesNotFetchSecondPageUntilNeeded(WireMockRuntimeInfo wmInfo) {
-        // given — a full first page implies "there may be more"
+    void streamWarranties_whenFullPage_stopsAtOffsetCeiling(WireMockRuntimeInfo wmInfo) {
+        // given — a full page of 60; the endpoint's offset max is 59, so there is
+        // no legal next page to request
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
                 .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(warrantiesPage(FULL_PAGE))));
-        stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
-                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_1))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(warrantiesPage(SECOND_PAGE_SIZE))));
-
-        try (AllegroClient allegro = client(wmInfo)) {
-            // when — consumer takes a single element only
-            List<WarrantySummary> firstOnly = allegro.settings().afterSale()
-                    .streamWarranties().limit(1).toList();
-
-            // then — page two was never requested
-            assertEquals(1, firstOnly.size());
-            verify(1, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
-                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
-            verify(0, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
-                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_1)));
-        }
-    }
-
-    @Test
-    void streamWarranties_whenTwoPages_fetchesBothWithAdvancingOffset(WireMockRuntimeInfo wmInfo) {
-        // given
-        stubToken(TEST_TOKEN);
-        stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
-                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(warrantiesPage(FULL_PAGE))));
-        stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
-                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_1))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(warrantiesPage(SECOND_PAGE_SIZE))));
 
         try (AllegroClient allegro = client(wmInfo)) {
             // when
             long total = allegro.settings().afterSale().streamWarranties().count();
 
-            // then — both pages walked, offset advanced, no phantom third page
-            assertEquals(FULL_PAGE + SECOND_PAGE_SIZE, total);
+            // then — the full page is returned but no out-of-range offset is sent
+            assertEquals(FULL_PAGE, total);
             verify(1, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
                     .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
-            verify(1, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
-                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_1)));
             verify(0, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
-                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_2)));
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_OUT_OF_RANGE)));
+        }
+    }
+
+    @Test
+    void streamWarranties_whenNotConsumed_deferstheFetch(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(warrantiesPage(PARTIAL_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — building the stream must not touch the wire
+            var stream = allegro.settings().afterSale().streamWarranties();
+            verify(0, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH)));
+
+            // then — the first page is fetched only on terminal consumption
+            stream.findFirst();
+            verify(1, getRequestedFor(urlPathEqualTo(WARRANTIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
         }
     }
 

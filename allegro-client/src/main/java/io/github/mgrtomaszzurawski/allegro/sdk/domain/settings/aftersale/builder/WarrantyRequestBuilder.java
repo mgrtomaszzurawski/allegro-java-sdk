@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builde
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyPeriod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyType;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,6 +29,8 @@ public final class WarrantyRequestBuilder {
     private static final String ERR_TYPE_REQUIRED = "Warranty type is required";
     private static final String ERR_DESCRIPTION_TOO_LONG =
             "Warranty description exceeds the " + MAX_DESCRIPTION_LENGTH + "-character limit";
+    private static final String ERR_ATTACHMENT_ID_INVALID =
+            "Attachment id must be a valid UUID returned by the attachment upload";
 
     private @Nullable String name;
     private @Nullable WarrantyType type;
@@ -102,7 +105,19 @@ public final class WarrantyRequestBuilder {
         if (description != null && description.length() > MAX_DESCRIPTION_LENGTH) {
             throw new IllegalStateException(ERR_DESCRIPTION_TOO_LONG);
         }
+        validateAttachmentId();
         return new WarrantyRequest(name, type, individual, corporate, attachmentId,
                 attachmentName, description);
+    }
+
+    private void validateAttachmentId() {
+        if (attachmentId == null) {
+            return;
+        }
+        try {
+            UUID.fromString(attachmentId);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(ERR_ATTACHMENT_ID_INVALID, e);
+        }
     }
 }

@@ -32,6 +32,9 @@ class WarrantyRequestBuilderTest {
     private static final String FIELD_NAME = "name";
     private static final String FIELD_TYPE = "type";
     private static final String FIELD_DESCRIPTION = "description";
+    private static final String LENGTH_WORD = "exceeds";
+    private static final String UUID_WORD = "UUID";
+    private static final String MALFORMED_ATTACHMENT_ID = "not-a-uuid";
 
     @Test
     void build_whenRequiredFieldsOnly_succeeds() {
@@ -63,6 +66,7 @@ class WarrantyRequestBuilderTest {
                 .build();
 
         // then
+        assertEquals(NAME, request.name());
         assertEquals(WarrantyType.SELLER, request.type());
         assertEquals(INDIVIDUAL_PERIOD, request.individual().period());
         assertTrue(request.corporate().lifetime());
@@ -120,7 +124,19 @@ class WarrantyRequestBuilderTest {
                 .name("a".repeat(OVER_NAME_LIMIT))
                 .type(WarrantyType.SELLER);
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        // Pin the length branch, not the required-field branch (both mention "name").
         assertTrue(failure.getMessage().contains(FIELD_NAME));
+        assertTrue(failure.getMessage().contains(LENGTH_WORD));
+    }
+
+    @Test
+    void build_whenAttachmentIdMalformed_throws() {
+        var builder = WarrantyRequest.builder()
+                .name(NAME)
+                .type(WarrantyType.SELLER)
+                .attachment(MALFORMED_ATTACHMENT_ID, ATTACHMENT_NAME);
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(UUID_WORD));
     }
 
     @Test
