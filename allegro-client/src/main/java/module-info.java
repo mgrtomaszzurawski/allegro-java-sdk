@@ -21,6 +21,8 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.config.credentials;
     // Policy knobs: retry.
     exports io.github.mgrtomaszzurawski.allegro.sdk.config.policy;
+    // Shared cross-bucket value types (Money, ...).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.core;
     // Remediation-grouped exception hierarchy.
     exports io.github.mgrtomaszzurawski.allegro.sdk.exception;
 

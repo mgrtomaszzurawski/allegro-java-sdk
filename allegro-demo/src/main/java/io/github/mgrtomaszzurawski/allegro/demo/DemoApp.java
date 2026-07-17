@@ -9,6 +9,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CurrentUser;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Live sandbox probe runner — the exploration and verification tool
@@ -40,6 +42,21 @@ public final class DemoApp {
     private static final String ERR_NO_STORED_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
 
+    /**
+     * Scenario registry — the demo's single dispatch point. Each domain bucket
+     * adds ONE append-only {@code SCENARIOS.put(...)} line below the marker,
+     * pointing at its own {@code <Feature>Demo} class, so buckets extend the
+     * verification tool without colliding on a shared switch.
+     */
+    private static final Map<String, DemoScenario> SCENARIOS = new LinkedHashMap<>();
+
+    static {
+        SCENARIOS.put(SCENARIO_AUTH_BOOTSTRAP, DemoApp::authBootstrap);
+        SCENARIOS.put(SCENARIO_ME, DemoApp::currentUser);
+        // [append point: demo scenarios] One line per bucket, append-only:
+        //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
+    }
+
     private DemoApp() {
     }
 
@@ -54,16 +71,14 @@ public final class DemoApp {
             System.out.println(ERR_NO_CREDENTIALS.formatted(CLIENT_ID_ENV, CLIENT_SECRET_ENV));
             System.exit(2);
         }
-        String scenario = args[0];
         String account = System.getProperty(ACCOUNT_PROPERTY, DEFAULT_ACCOUNT);
-        switch (scenario) {
-            case SCENARIO_AUTH_BOOTSTRAP -> authBootstrap(clientId, clientSecret, account);
-            case SCENARIO_ME -> currentUser(clientId, clientSecret, account);
-            default -> {
-                System.out.println(ERR_UNKNOWN_SCENARIO + scenario);
-                System.exit(2);
-            }
+        DemoScenario scenario = SCENARIOS.get(args[0]);
+        if (scenario == null) {
+            System.out.println(ERR_UNKNOWN_SCENARIO + args[0]);
+            System.exit(2);
+            return;
         }
+        scenario.run(clientId, clientSecret, account);
     }
 
     /**

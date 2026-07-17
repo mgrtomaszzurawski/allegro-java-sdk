@@ -31,6 +31,12 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `allegro-demo` probe runner (`auth-bootstrap`, `me`) + flock-guarded shared
   token store (ADR-008); live sandbox verification caught and fixed a
   JsonNullable deserialization defect on `/me`.
+- Cross-bucket transport capabilities via the fluent `HttpCall` builder: encoded
+  query parameters (`Query`), PATCH, no-content/void writes, beta vendor media
+  type, `Accept-Language`, conditional `If-Match`, and binary request bodies.
+- Shared value type `sdk.core.Money` (exact-string amount + ISO-4217 currency).
+- `allegro-demo` scenario-registration seam (`DemoScenario` + append point) so
+  every bucket adds probes without colliding on a shared dispatch.
 
 ### A — offers-core
 ### B — orders-payments

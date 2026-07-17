@@ -28,6 +28,8 @@ public final class HttpSupport {
 
     /** Allegro versions resources via this vendor media type, not URL paths. */
     public static final String VND_ALLEGRO_V1 = "application/vnd.allegro.public.v1+json";
+    /** Beta resources (e.g. charity, bulk price/stock) use the beta variant. */
+    public static final String VND_ALLEGRO_BETA_V1 = "application/vnd.allegro.beta.v1+json";
 
     private static final String LOG_SERIALIZED = "{}: request body serialized ({} B)";
     private static final String LOG_SENDING = "{}: {} {} - sending";
@@ -39,10 +41,6 @@ public final class HttpSupport {
     /** Execution-level interceptor callbacks carry attempt 0 (per-attempt numbering lives in afterAttempt). */
     private static final int EXECUTION_LEVEL_ATTEMPT = 0;
 
-    private static final String ACCEPT_HEADER = "Accept";
-    private static final String CONTENT_TYPE_HEADER = "Content-Type";
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String BEARER_PREFIX = "Bearer ";
     private static final int HTTP_OK_MIN = 200;
     private static final int HTTP_OK_MAX = 299;
     private static final int HTTP_UNAUTHORIZED = 401;
@@ -62,49 +60,40 @@ public final class HttpSupport {
         return URI.create(runtime.baseUrl() + path);
     }
 
+    /**
+     * Start a fluent request for {@code operationName}. All new domain verbs
+     * (query parameters, PATCH, void writes, beta media type, binary bodies,
+     * conditional writes) go through the returned {@link HttpCall}.
+     */
+    public HttpCall request(String operationName) {
+        return new HttpCall(this, operationName);
+    }
+
     /** Authenticated GET, response deserialized to {@code responseType}. */
     public <T> T getAuthenticated(String path, Class<T> responseType, String operationName) {
-        HttpResponse<String> response = exchange(() -> HttpRequest.newBuilder(uri(path))
-                .timeout(runtime.readTimeout())
-                .header(ACCEPT_HEADER, VND_ALLEGRO_V1)
-                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + runtime.requireToken())
-                .GET(), operationName);
-        return deserialize(response, responseType);
+        return request(operationName).get(path).fetch(responseType);
     }
 
     /** Authenticated POST with a JSON body, response deserialized. */
     public <T> T postJsonAuthenticated(String path, Object body, Class<T> responseType,
             String operationName) {
-        String json = serialize(body);
-        HttpResponse<String> response = exchange(() -> HttpRequest.newBuilder(uri(path))
-                .timeout(runtime.readTimeout())
-                .header(ACCEPT_HEADER, VND_ALLEGRO_V1)
-                .header(CONTENT_TYPE_HEADER, VND_ALLEGRO_V1)
-                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + runtime.requireToken())
-                .POST(HttpRequest.BodyPublishers.ofString(json)), operationName);
-        return deserialize(response, responseType);
+        return request(operationName).post(path).jsonBody(body).fetch(responseType);
     }
 
     /** Authenticated PUT with a JSON body, response deserialized. */
     public <T> T putJsonAuthenticated(String path, Object body, Class<T> responseType,
             String operationName) {
-        String json = serialize(body);
-        HttpResponse<String> response = exchange(() -> HttpRequest.newBuilder(uri(path))
-                .timeout(runtime.readTimeout())
-                .header(ACCEPT_HEADER, VND_ALLEGRO_V1)
-                .header(CONTENT_TYPE_HEADER, VND_ALLEGRO_V1)
-                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + runtime.requireToken())
-                .PUT(HttpRequest.BodyPublishers.ofString(json)), operationName);
-        return deserialize(response, responseType);
+        return request(operationName).put(path).jsonBody(body).fetch(responseType);
     }
 
     /** Authenticated DELETE expecting no content. */
     public void deleteAuthenticated(String path, String operationName) {
-        exchange(() -> HttpRequest.newBuilder(uri(path))
-                .timeout(runtime.readTimeout())
-                .header(ACCEPT_HEADER, VND_ALLEGRO_V1)
-                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + runtime.requireToken())
-                .DELETE(), operationName);
+        request(operationName).delete(path).send();
+    }
+
+    /** The runtime backing this support instance (token, timeout, mapper). */
+    HttpRuntime runtime() {
+        return runtime;
     }
 
     /**
@@ -112,7 +101,7 @@ public final class HttpSupport {
      * The request builder is a supplier because the retry-after-reauth attempt
      * must re-read the (new) access token.
      */
-    private HttpResponse<String> exchange(Supplier<HttpRequest.Builder> requestBuilder,
+    HttpResponse<String> exchange(Supplier<HttpRequest.Builder> requestBuilder,
             String operationName) {
         HttpRequest request = requestBuilder.get().build();
         String path = request.uri().getPath();
@@ -161,7 +150,7 @@ public final class HttpSupport {
         }
     }
 
-    private String serialize(Object body) {
+    String serialize(Object body) {
         try {
             String json = runtime.objectMapper().writeValueAsString(body);
             SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
@@ -171,7 +160,7 @@ public final class HttpSupport {
         }
     }
 
-    private <T> T deserialize(HttpResponse<String> response, Class<T> responseType) {
+    <T> T deserialize(HttpResponse<String> response, Class<T> responseType) {
         try {
             T mapped = runtime.objectMapper().readValue(response.body(), responseType);
             SdkLoggers.REQUEST.debug(LOG_MAPPED, responseType.getSimpleName());
