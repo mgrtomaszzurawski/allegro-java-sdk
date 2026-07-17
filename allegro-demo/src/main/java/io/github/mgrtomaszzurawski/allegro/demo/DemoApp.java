@@ -32,6 +32,7 @@ public final class DemoApp {
     private static final String SCENARIO_ME = "me";
     private static final String SCENARIO_ORDERS_GET = "orders-get";
     private static final String SCENARIO_MARKETPLACES = "marketplaces";
+    private static final String SCENARIO_CLASSIFIEDS = "classifieds";
     private static final String CLIENT_ID_ENV = "ALLEGRO_SANDBOX_CLIENT_ID";
     private static final String CLIENT_SECRET_ENV = "ALLEGRO_SANDBOX_CLIENT_SECRET";
     private static final String ACCOUNT_PROPERTY = "demo.account";
@@ -60,6 +61,7 @@ public final class DemoApp {
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
         SCENARIOS.put(SCENARIO_ORDERS_GET, OrdersDemo::run);
         SCENARIOS.put(SCENARIO_MARKETPLACES, MarketplacesDemo::run);
+        SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
     }
 
     private DemoApp() {

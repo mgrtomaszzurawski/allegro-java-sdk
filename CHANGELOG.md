@@ -66,6 +66,13 @@ sections. Empty subsections are dropped by the release engineer when folding
 
 ### E — catalog-products
 ### F — offers-extras
+
+- `client.classifieds()` accessor with `availablePackages(categoryId)` — read the
+  advertisement package configurations available in a category
+  (`GET /sale/classifieds-packages`). Starter slice of bucket F; immutable
+  `ClassifiedPackage` records, WireMock error-path coverage, and a live
+  read-shape demo scenario (`-Pdemo.scenario=classifieds`).
+
 ### G — pricing
 ### H — campaigns
 ### I — fulfillment
