@@ -246,38 +246,50 @@ public final class OAuth2TokenManager {
         String pollForm = GRANT_DEVICE_CODE + '&' + PARAM_DEVICE_CODE + '=' + urlEncode(deviceCode);
         while (Instant.now().isBefore(deadline)) {
             sleepSeconds(pollSeconds);
-            HttpResponse<String> response;
-            try {
-                response = send(tokenEndpointRequest(
-                        oauthBaseUrl + TOKEN_ENDPOINT_SUFFIX, pollForm));
-            } catch (AllegroServerException e) {
-                // A transient network/5xx blip must not abort the interactive
-                // flow the user is mid-way through - the deadline bounds us.
-                SdkLoggers.AUTH.warn(WARN_DEVICE_TRANSIENT, e.getMessage());
-                continue;
-            }
-            if (response.statusCode() == HTTP_OK) {
-                return storeTokens(parseJson(response.body()));
-            }
-            if (response.statusCode() >= HTTP_SERVER_ERROR_MIN) {
-                SdkLoggers.AUTH.warn(WARN_DEVICE_TRANSIENT, response.statusCode());
-                continue;
-            }
-            String oauthError = parseJson(response.body()).path(FIELD_ERROR).asText();
-            boolean pending = response.statusCode() == HTTP_BAD_REQUEST
-                    && ERROR_AUTHORIZATION_PENDING.equals(oauthError);
-            boolean slowDown = response.statusCode() == HTTP_BAD_REQUEST
-                    && ERROR_SLOW_DOWN.equals(oauthError);
-            if (!pending && !slowDown) {
-                throw new AllegroAuthException(ERR_DEVICE_DENIED, response.statusCode(), response.body());
-            }
-            if (pending) {
-                SdkLoggers.AUTH.debug(LOG_DEVICE_PENDING);
-            } else {
-                pollSeconds = Math.min(pollSeconds + SLOW_DOWN_INCREMENT_SECONDS, MAX_DEVICE_POLL_SECONDS);
+            HttpResponse<String> response = pollOnce(pollForm);
+            if (response != null) {
+                if (response.statusCode() == HTTP_OK) {
+                    return storeTokens(parseJson(response.body()));
+                }
+                pollSeconds = handleDevicePollRejection(response, pollSeconds);
             }
         }
         throw new AllegroAuthException(ERR_DEVICE_TIMEOUT, null);
+    }
+
+    /** One token-endpoint poll; {@code null} on a transient network/5xx blip. */
+    private @Nullable HttpResponse<String> pollOnce(String pollForm) {
+        try {
+            HttpResponse<String> response = send(tokenEndpointRequest(
+                    oauthBaseUrl + TOKEN_ENDPOINT_SUFFIX, pollForm));
+            if (response.statusCode() >= HTTP_SERVER_ERROR_MIN) {
+                // A transient 5xx must not abort the interactive flow the user
+                // is mid-way through - the deadline bounds the walk.
+                SdkLoggers.AUTH.warn(WARN_DEVICE_TRANSIENT, response.statusCode());
+                return null;
+            }
+            return response;
+        } catch (AllegroServerException e) {
+            SdkLoggers.AUTH.warn(WARN_DEVICE_TRANSIENT, e.getMessage());
+            return null;
+        }
+    }
+
+    /** Non-200, non-5xx poll answer: pending/slow_down continue, anything else is terminal. */
+    private long handleDevicePollRejection(HttpResponse<String> response, long pollSeconds) {
+        String oauthError = parseJson(response.body()).path(FIELD_ERROR).asText();
+        boolean pending = response.statusCode() == HTTP_BAD_REQUEST
+                && ERROR_AUTHORIZATION_PENDING.equals(oauthError);
+        boolean slowDown = response.statusCode() == HTTP_BAD_REQUEST
+                && ERROR_SLOW_DOWN.equals(oauthError);
+        if (!pending && !slowDown) {
+            throw new AllegroAuthException(ERR_DEVICE_DENIED, response.statusCode(), response.body());
+        }
+        if (pending) {
+            SdkLoggers.AUTH.debug(LOG_DEVICE_PENDING);
+            return pollSeconds;
+        }
+        return Math.min(pollSeconds + SLOW_DOWN_INCREMENT_SECONDS, MAX_DEVICE_POLL_SECONDS);
     }
 
     // ---- token endpoint plumbing ----
