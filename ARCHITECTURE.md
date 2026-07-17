@@ -269,47 +269,62 @@ Feature branch → PR to `develop` → `/review` gate (after open + again before
 squash-merge keep-branch. OWASP `dependencyCheckAggregate` (CVSS ≥ 7 fails) + PIT at release
 boundaries only.
 
-## 11. Observability — three legs, in priority order
+## 11. Observability — the AWS SDK v2 model, mapped 1:1
 
-**Leg 1 — internal execution trace (DEBUG).** If the SDK dies BEFORE sending, Allegro
-returns nothing — the only diagnostics is the SDK's own step trace. Every operation logs its
-pipeline steps at DEBUG with a per-call correlation id (short hex, generated per facade
-call), so the last line always pinpoints where execution stopped:
+AWS SDK v2 separates three independent mechanisms — logging, exception diagnosability, and
+an interceptor SPI — and none of them substitutes for another. This SDK mirrors that split.
 
-```
-DEBUG [a3f19c] create offers: invoked (product=12345, parameters=8)
-DEBUG [a3f19c] create offers: request record built and validated
-DEBUG [a3f19c] create offers: mapped to raw DTO
-DEBUG [a3f19c] create offers: body serialized (1 412 B)
-DEBUG [a3f19c] auth: token cache hit (expires in 8 h)
-DEBUG [a3f19c] create offers: POST /sale/product-offers — sending (attempt 1/3)
-DEBUG [a3f19c] create offers: response 201 in 145 ms (trace-id 4631702648f0524e)
-DEBUG [a3f19c] create offers: response deserialized, mapped to domain record
-```
+### 11.1 Logging — named SLF4J channels (AWS: `software.amazon.awssdk.request`)
 
-Step points, in every layer: facade entry (operation + SAFE params: ids/counts, never
-values/PII/tokens) → builder validation → mapper → serialization → token manager (cache
-hit / refresh / device flow states) → retry handler (attempt n/m, backoff, Retry-After) →
-response status + duration + server trace-id → deserialization → domain mapping. Level
-discipline for a library: DEBUG = step markers; WARN = self-healed anomalies (retry fired,
-401 replay); INFO and ERROR are never used by the SDK — it throws, the application decides
-severity. Bodies and tokens are never logged at any level.
+The SDK logs its own execution lifecycle at DEBUG on dedicated logger channels, so a
+consumer enables exactly the concern they are debugging in their logging config:
 
-**Leg 2 — the server's answer is never thrown away.** Every non-2xx response lands in the
-typed exception WITH its payload: `statusCode()`, full `responseBody()` (redacted
-`safeResponseBody()` for logs), parsed `errors[]` → `AllegroFieldError` list, `Retry-After`
-→ `retryAfterSeconds()`, and the server's **`trace-id` header → `traceId()`** (verified
-live: Allegro returns it on every error — quote it in support tickets). Transport failures
-(nothing sent/received) are distinguishable from server-reported errors: `statusCode() == 0`
-+ cause, vs real status + body. The internal call id is also carried by the exception,
-linking it to the DEBUG trace.
+| Channel (`io.github.mgrtomaszzurawski.allegro.`) | DEBUG content |
+|---|---|
+| `request` | operation invoked (safe params: ids/counts), request composed, serialized size, sent (attempt n/m), status + duration + server `trace-id`, deserialized, mapped |
+| `auth` | token cache hit/miss, proactive refresh, rotation, device-flow states, 401 replay |
+| `retry` | attempt n/m, backoff delay, `Retry-After` honoured/capped |
 
-**Leg 3 — metrics seam (`AllegroCallListener` SPI).** Optional consumer hook in config
-(no-op default): `onCall(CallEvent)` after every exchange — operation, method+path, attempts,
-duration, status (0 for transport failure), and on failure the typed exception itself (which
-carries body/trace-id per leg 2, so the listener needs no body plumbing of its own).
-Micrometer/OTel pluggable without any SDK dependency. The SPI is the seam — legs 1 and 2 are
-the observability.
+A crash BEFORE the request is sent leaves its breadcrumb on the `request` channel — the last
+line names the step reached; that is the diagnostic when Allegro never saw the call.
+Level discipline for a library: DEBUG = lifecycle, WARN = self-healed anomalies (retry
+fired, 401 replay), never INFO/ERROR — the SDK throws, the application decides severity.
+Correlation in concurrent apps rides on the logging pattern's thread name (standard
+practice); the server `trace-id` is logged as soon as it is known.
+
+**Deliberate divergence from AWS: no wire/body logging, not even opt-in.** AWS offers
+wire-level body logging behind an explicit flag; here order/messaging payloads carry buyer
+PII (names, addresses, phones — RODO) and reliable redaction of arbitrary JSON is not a
+promise we can keep. Bodies and tokens never hit any log at any level. Error-body access is
+the exception object's job (11.2).
+
+### 11.2 Diagnosability without logs — the decisive test
+
+Switch ALL logging off; the SDK must remain diagnosable — AWS achieves this via
+`AwsServiceException`, and this SDK holds the same parity:
+
+| AWS SDK v2 | Allegro SDK |
+|---|---|
+| `AwsServiceException.awsErrorDetails()` (code, message) | typed `errors[]` → `AllegroFieldError` list (code, message, userMessage, path, details) |
+| `.requestId()` / `.extendedRequestId()` | `traceId()` — the `trace-id` header Allegro returns on every error (live-verified) |
+| `.statusCode()` + raw response | `statusCode()` + `responseBody()` (+ `safeResponseBody()` JWT-redacted) |
+| retryable info | `AllegroRateLimitException.retryAfterSeconds()` |
+| transport vs service error distinction | `statusCode() == 0` + cause (nothing sent/received) vs real status + body |
+
+Where the error body lands: `ServerErrorParser.toException(...)` passes `response.body()`
+into every exception and parses `errors[]` into the typed list — the server's answer is
+never thrown away, no matter what a catch block renames the failure to.
+
+### 11.3 Interceptor SPI (AWS: `ExecutionInterceptor`)
+
+`AllegroExecutionInterceptor`, registered on the client config (no-op default, zero
+dependencies): `beforeExecution(ctx)`, `afterAttempt(ctx)`, `afterExecution(ctx)`,
+`onExecutionFailure(ctx, exception)` — context carries operation, method+path, attempt,
+status, duration; failure hands over the typed exception (which already carries
+body/trace-id per 11.2, so the interceptor needs no body plumbing). Consumers build metrics
+(Micrometer/OTel) on this seam; a dedicated MetricPublisher-style SPI (AWS's third
+mechanism) is deferred until someone needs aggregated publishing — the interceptor
+subsumes it for 0.x.
 
 ## 12. Environments
 
