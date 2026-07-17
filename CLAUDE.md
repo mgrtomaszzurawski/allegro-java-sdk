@@ -179,8 +179,10 @@ Release boundary (`develop`→`main`) only: OWASP `dependencyCheckAggregate` (fa
 + **PIT mutation testing** (report-only, hand-written `allegro-client` code, target band
 ~70–85% — surviving mutants in token manager / retry / error parser are missing tests, fix
 before tagging). Live sandbox demo scenarios (`allegro-demo`) per bucket at PR DoD; the
-Playwright buyer-bot (`tools/buyer-bot/`, experiment) seeds web-only flows — see
-`ARCHITECTURE.md` §10.
+Playwright buyer-bot (`tools/buyer-bot/` — Node/Playwright, NOT a Gradle module, not published)
+seeds web-only flows (device-flow consent click for a buyer token; buy-now/disputes). PROVEN
+viable 2026-07-17 (full Chromium under Xvfb beats DataDome; headless is blocked) — recipe +
+run instructions in `tools/buyer-bot/README.md`, design in `ARCHITECTURE.md` §10.6.
 
 ## Allegro API facts the code relies on
 
