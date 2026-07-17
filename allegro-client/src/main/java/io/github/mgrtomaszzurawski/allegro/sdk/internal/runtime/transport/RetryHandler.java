@@ -60,6 +60,17 @@ public final class RetryHandler {
      */
     public HttpResponse<String> send(HttpRequest request, String operationName,
             AllegroExecutionInterceptor interceptor) {
+        return send(request, operationName, interceptor, HttpResponse.BodyHandlers.ofString());
+    }
+
+    /**
+     * Same retry/backoff semantics as {@link #send(HttpRequest, String,
+     * AllegroExecutionInterceptor)} but with a caller-chosen body handler, so a
+     * binary download reads bytes while error/backoff decisions still act only
+     * on the status code and headers.
+     */
+    public <B> HttpResponse<B> send(HttpRequest request, String operationName,
+            AllegroExecutionInterceptor interceptor, HttpResponse.BodyHandler<B> bodyHandler) {
         int attemptsAllowed = policy.enabled() ? policy.maxAttempts() : 1;
         boolean retryableMethod = policy.retryPost() || !POST_METHOD.equals(request.method());
         String path = request.uri().getPath();
@@ -68,8 +79,7 @@ public final class RetryHandler {
             boolean lastAttempt = attempt == attemptsAllowed;
             long attemptStart = System.nanoTime();
             try {
-                HttpResponse<String> response =
-                        httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<B> response = httpClient.send(request, bodyHandler);
                 recordAttempt(interceptor, attemptsAllowed, new CallContext(operationName,
                         request.method(), path, attempt, response.statusCode(),
                         elapsedMillis(attemptStart)));
@@ -125,7 +135,7 @@ public final class RetryHandler {
         return status >= HTTP_SERVER_ERROR_MIN && policy.retryOn5xx();
     }
 
-    private long retryAfterMillis(HttpResponse<String> response) {
+    private long retryAfterMillis(HttpResponse<?> response) {
         if (response.statusCode() != HTTP_TOO_MANY_REQUESTS) {
             return 0L;
         }

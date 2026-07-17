@@ -20,13 +20,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Etagged;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
@@ -49,6 +55,12 @@ class HttpCallTest {
     private static final String ETAG = "\"v3\"";
     private static final String IMAGE_CONTENT_TYPE = "image/png";
     private static final byte[] IMAGE_BYTES = {1, 2, 3, 4};
+    private static final String PDF_MEDIA_TYPE = "application/pdf";
+    private static final byte[] PDF_BYTES = {37, 80, 68, 70, 45, 49, 46, 52};
+    private static final String ETAG_HEADER = "ETag";
+    private static final String ETAG_VALUE = "\"rev-42\"";
+    private static final String NOT_FOUND_BODY =
+            "{\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"no such attachment\"}]}";
 
     private static HttpSupport support(WireMockRuntimeInfo wmInfo) {
         var mapper = new ObjectMapper();
@@ -196,6 +208,67 @@ class HttpCallTest {
         // then
         verify(1, putRequestedFor(urlEqualTo(PATH))
                 .withHeader(TestHttpConstants.IF_MATCH_HEADER, equalTo(ETAG)));
+    }
+
+    @Test
+    void fetchBytes_whenBinaryResponse_returnsRawBytesWithAcceptHeader(WireMockRuntimeInfo wmInfo) {
+        // given — an attachment/PDF download returns bytes, not vendor JSON
+        stubFor(get(urlEqualTo(PATH))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(PDF_MEDIA_TYPE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PDF_BYTES)));
+
+        // when
+        byte[] downloaded = support(wmInfo).request(OPERATION).get(PATH)
+                .accept(PDF_MEDIA_TYPE).fetchBytes();
+
+        // then — exact bytes returned, negotiated media type on the wire
+        assertArrayEquals(PDF_BYTES, downloaded);
+        verify(1, getRequestedFor(urlEqualTo(PATH))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(PDF_MEDIA_TYPE)));
+    }
+
+    @Test
+    void fetchBytes_whenErrorStatus_mapsVendorJsonErrorToTypedException(WireMockRuntimeInfo wmInfo) {
+        // given — the success body would be bytes, but a 404 carries the vendor
+        // JSON error, which the binary path must still decode and map
+        stubFor(get(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withBody(NOT_FOUND_BODY)));
+
+        // then — the decoded error body reaches the typed exception, proving the
+        // bytes→String error path ran (not just status-code inference)
+        AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
+                () -> support(wmInfo).request(OPERATION).get(PATH).accept(PDF_MEDIA_TYPE).fetchBytes());
+        assertTrue(failure.responseBody().contains("no such attachment"));
+    }
+
+    @Test
+    void fetchWithETag_whenResponseCarriesEtag_returnsValueAndEtag(WireMockRuntimeInfo wmInfo) {
+        // given — a resource read whose ETag guards a later conditional write
+        stubFor(get(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withHeader(ETAG_HEADER, ETAG_VALUE).withBody(OK_BODY)));
+
+        // when
+        Etagged<Map> result = support(wmInfo).request(OPERATION).get(PATH).fetchWithETag(Map.class);
+
+        // then — both the deserialized body and the ETag are captured
+        assertEquals(OK_VALUE, result.value().get("value"));
+        assertEquals(ETAG_VALUE, result.etag());
+    }
+
+    @Test
+    void fetchWithETag_whenNoEtagHeader_returnsNullEtag(WireMockRuntimeInfo wmInfo) {
+        // given — the server sent no ETag (the resource is not conditionally guardable)
+        stubFor(get(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        Etagged<Map> result = support(wmInfo).request(OPERATION).get(PATH).fetchWithETag(Map.class);
+
+        // then — value is still deserialized, etag is null
+        assertEquals(OK_VALUE, result.value().get("value"));
+        assertNull(result.etag());
     }
 
     @Test

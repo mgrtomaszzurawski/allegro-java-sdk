@@ -67,8 +67,16 @@ public final class ServerErrorParser {
      * @param operationName human-readable operation label for the message
      */
     public AllegroException toException(HttpResponse<String> response, String operationName) {
-        int status = response.statusCode();
-        String body = response.body();
+        return toException(response.statusCode(), response.body(), response, operationName);
+    }
+
+    /**
+     * Build the typed exception from a status, an already-extracted body string,
+     * and the response for header lookups — used by the binary-download path,
+     * whose success body is bytes but whose error body is still the vendor JSON.
+     */
+    public AllegroException toException(int status, String body, HttpResponse<?> response,
+            String operationName) {
         String suffix = OPERATION_PREFIX + operationName;
         String traceId = traceId(response);
         if (status == HTTP_BAD_REQUEST || status == HTTP_UNPROCESSABLE) {
@@ -118,12 +126,12 @@ public final class ServerErrorParser {
     }
 
     /** The {@code trace-id} header Allegro attaches to error responses, or {@code null}. */
-    public static @Nullable String traceId(HttpResponse<String> response) {
+    public static @Nullable String traceId(HttpResponse<?> response) {
         return response.headers().firstValue(TRACE_ID_HEADER).orElse(null);
     }
 
     /** {@code Retry-After} header in seconds; {@code 0} when absent/invalid. */
-    public static long parseRetryAfterSeconds(HttpResponse<String> response) {
+    public static long parseRetryAfterSeconds(HttpResponse<?> response) {
         return response.headers().firstValue(RETRY_AFTER_HEADER)
                 .map(ServerErrorParser::parseLongOrZero)
                 .orElse(0L);
