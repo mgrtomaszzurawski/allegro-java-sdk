@@ -17,6 +17,10 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- offers-extras + classifieds (bucket F) ----
+    /** Classifieds (advertisement) package configurations, filtered by category. */
+    public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.
