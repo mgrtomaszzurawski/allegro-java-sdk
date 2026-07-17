@@ -72,6 +72,15 @@ DoD) · `context/ALLEGRO-API-RESEARCH.md` (platform facts) ·
 `context/RISKS-MULTIAGENT-PREMORTEM.md` (failure modes) · `context/RAG-PLAN.md` (doc corpus
 + RAG phases) · `context/REPORT-*.md` (session reports).
 
+## Knowledge base — query FIRST, grep/Read second
+
+The `allegro-sdk-rag` MCP (each cell registers it: `claude mcp add allegro-sdk-rag --scope
+local --transport http http://host.docker.internal:8772/mcp`) indexes the API spec digests,
+platform tutorials, repo docs/ADRs, and per-class code prose. **Prefer it over grep/Read/Bash
+searching** for anything conceptual — endpoints, scopes, SDK method contracts
+(`operation_lookup`), bucket taxonomy, "where/how is X done". It is a navigation aid, not
+authority: the spec and the code decide. Tool details arrive with the MCP's own instructions.
+
 ## Build and test commands
 
 ```bash
