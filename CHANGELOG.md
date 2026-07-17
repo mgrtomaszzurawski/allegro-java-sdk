@@ -58,4 +58,9 @@ sections. Empty subsections are dropped by the release engineer when folding
 ### H — campaigns
 ### I — fulfillment
 ### J — post-sale-comms
+
+- Contacts facade (`client.contacts()`) — starter slice: list, get, create and update
+  seller contact cards (`/sale/offer-contacts`) with a fluent, fail-fast `ContactRequest`
+  builder, immutable `Contact` records, and a `contacts` sandbox write→read demo scenario.
+
 ### K — sale-settings

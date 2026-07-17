@@ -17,6 +17,10 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- contacts (bucket J) ----
+    /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
+    public static final String OFFER_CONTACTS = "/sale/offer-contacts";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

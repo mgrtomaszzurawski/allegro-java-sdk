@@ -34,6 +34,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
+    // Seller contact cards (bucket J — post-sale-comms).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.model;
+
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 
