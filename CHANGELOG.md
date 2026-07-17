@@ -6,8 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 (pre-1.0: breaking changes may occur between 0.x releases).
 
-Every merged PR appends its entries under `[Unreleased]` in its own bucket
-subsection (append-only; bucket letter order). The release engineer folds
+Every merged PR appends its entries ONLY inside its own pre-created bucket subsection
+under `[Unreleased]` below — never in another bucket's subsection, never reordering
+sections. Empty subsections are dropped by the release engineer when folding
 `[Unreleased]` into a version section at tag time.
 
 ## [Unreleased]
@@ -21,3 +22,15 @@ subsection (append-only; bucket letter order). The release engineer folds
   vendor media types, equal-jitter retry, typed `errors[]` mapping; lazy
   Stream pagination; remediation-grouped exception hierarchy.
 - `AllegroClient` entry point with `user().me()` vertical slice.
+
+### A — offers-core
+### B — orders-payments
+### C — shipping
+### D — account-meta
+### E — catalog-products
+### F — offers-extras
+### G — pricing
+### H — campaigns
+### I — fulfillment
+### J — post-sale-comms
+### K — sale-settings

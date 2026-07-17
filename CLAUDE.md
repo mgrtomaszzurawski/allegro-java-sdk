@@ -39,7 +39,8 @@ task-division plan in the shared context (`/workspace/shared/context/TASK-DIVISI
 - Javadoc every public API whose name doesn't carry the meaning.
 - **ADRs (`ADR/`) are immutable and BINDING** — consult before changing any design they
   cover; supersede with a new ADR, never edit a decision. Every merged PR appends its
-  CHANGELOG entries under `[Unreleased]` in its bucket subsection. PRs follow
+  CHANGELOG entries ONLY inside its own pre-created bucket subsection under `[Unreleased]`
+  (never touch another bucket's subsection or the section order). PRs follow
   `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## Build and test commands
@@ -90,10 +91,13 @@ Each domain bucket is owned by exactly one agent (assignment in shared `BACKLOG.
 Exclusively owned by the bucket owner (no one else touches them):
 - `sdk/domain/<feature>/**`, `sdk/internal/client/<feature>/**`
 - that feature's tests + WireMock fixtures (`src/test/resources/__files/<feature>/`)
-- that feature's README section
+- that feature's consumer usage doc `docs/<feature>.md` (linked from README's Documentation
+  list) + its CHANGELOG subsection under `[Unreleased]`
 
-Shared APPEND POINTS — append-only edits, one small block per bucket, rebase on `develop`
-before opening the PR:
+Shared APPEND POINTS — append-only edits, one small block per bucket. Before opening the
+PR (and again if `develop` moved before your merge): `git merge origin/develop` into YOUR
+feature branch, resolve the conflicts there, push. Squash-merge to `develop` flattens the
+history, so merge-based updates are safe — never rebase-force-push a shared branch:
 1. `allegro-client/src/main/java/module-info.java` — your `exports sdk.domain.<feature>...` lines
 2. `AllegroClient` — your accessor (`public <Feature> <feature>()`) + field + wiring
 3. `ApiPaths` — your feature's path-constant section
