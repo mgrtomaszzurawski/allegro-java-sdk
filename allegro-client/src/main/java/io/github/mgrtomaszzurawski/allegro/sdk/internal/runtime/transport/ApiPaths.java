@@ -43,6 +43,45 @@ public final class ApiPaths {
     /** {@code removal} sub-resource segment (under {@link #USER_RATINGS}). */
     public static final String REMOVAL_SEGMENT = "removal";
 
+    // ---- offers (bucket A) ----
+    private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
+    private static final String OFFERS = "/offers";
+    private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
+
+    /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
+    public static String productOffer(String offerId) {
+        return subPath(SALE_PRODUCT_OFFERS, offerId);
+    }
+
+    /** Single-offer Buy Now price change command ({@code /offers/{offerId}/change-price-commands/{commandId}}). */
+    public static String changePriceCommand(String offerId, String commandId) {
+        return subPath(OFFERS, offerId, CHANGE_PRICE_COMMANDS, commandId);
+    }
+
+    // ---- orders (bucket B) ----
+    /** Seller's orders collection; append the order id for a single order. */
+    public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
+
+    // ---- catalog (bucket E) ----
+    /** Category tree; {@code parent.id} filters to one node's direct children. */
+    public static final String CATEGORIES = "/sale/categories";
+
+    // ---- offers-extras + classifieds (bucket F) ----
+    /** Classifieds (advertisement) package configurations, filtered by category. */
+    public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
+
+    // ---- campaigns (bucket H) ----
+    /** Available badge campaigns ({@code /sale/badge-campaigns}). */
+    public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+
+    // ---- shipping (bucket C) ----
+    /** Seller's points of service (personal-collection locations). */
+    public static final String POINTS_OF_SERVICE = "/points-of-service";
+
+    // ---- fulfillment (bucket I) ----
+    /** Seller's active removal preference for One Fulfillment goods. */
+    public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) 2026 Tomasz Zurawski
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+package io.github.mgrtomaszzurawski.allegro.examples;
+
+import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogCategories;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import java.util.List;
+
+/**
+ * Compile-only twin of the {@code docs/catalog.md} snippet — if the documented
+ * catalogue API stops compiling, this module breaks the build.
+ */
+public final class CatalogExample {
+
+    private CatalogExample() {
+    }
+
+    static long leafRootCount(String clientId, String clientSecret) {
+        // Category reads are public data: an app-only client-credentials token is enough.
+        try (AllegroClient client = AllegroClient.create(
+                new ClientCredentials(clientId, clientSecret), AllegroEnvironment.SANDBOX)) {
+            CatalogCategories categories = client.catalog().categories();
+
+            List<Category> roots = categories.roots();
+            Category first = roots.get(0);
+            List<Category> children = categories.childrenOf(first.id());
+            Category category = categories.get(first.id());
+
+            boolean canCreateProduct = category.options() != null
+                    && category.options().productCreationEnabled();
+            System.out.println(category.name() + " canCreateProduct=" + canCreateProduct
+                    + " children=" + children.size());
+
+            return roots.stream().filter(Category::leaf).count();
+        }
+    }
+}

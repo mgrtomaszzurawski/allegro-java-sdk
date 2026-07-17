@@ -30,10 +30,40 @@ module io.github.mgrtomaszzurawski.allegro {
     // `exports ...sdk.domain.<feature>...` lines below this marker, one block
     // per bucket, in BACKLOG order.
 
+    // Orders, payments and billing (bucket B).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
+
+    // Shipping facade (bucket C): shipments, delivery, points of service.
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder;
+
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.builder;
+
+    // Offer lifecycle (bucket A).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
+
+    // Product catalogue: categories, products, compatibility (bucket E).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
+
+    // Classifieds (advertisement) packages and statistics (bucket F).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
+
+    // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
+
+    // One Fulfillment by Allegro (bucket I).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder;
 
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
