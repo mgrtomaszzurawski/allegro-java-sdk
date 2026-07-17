@@ -288,9 +288,18 @@ class HttpSupportAndErrorsTest {
     }
 
     @Test
-    void subPath_whenJoiningSegments_normalizesSeparators() {
+    void subPath_whenJoiningSegments_normalizesSeparatorsAndEncodes() {
         // then
         assertEquals("/sale/offers/123", ApiPaths.subPath("/sale/offers", "123"));
         assertEquals("/sale/offers/123/tags", ApiPaths.subPath("/sale/offers/", "123", "tags"));
+        assertEquals("/sale/offers/a%2Fb%3Fc%20d", ApiPaths.subPath("/sale/offers", "a/b?c d"));
+    }
+
+    @Test
+    void subPath_whenDotSegmentsOrEmpty_rejectsFailFast() {
+        // then — ".." survives percent-encoding, so it must be rejected outright
+        assertThrows(IllegalArgumentException.class, () -> ApiPaths.subPath("/sale/offers", ".."));
+        assertThrows(IllegalArgumentException.class, () -> ApiPaths.subPath("/sale/offers", "."));
+        assertThrows(IllegalArgumentException.class, () -> ApiPaths.subPath("/sale/offers", ""));
     }
 }

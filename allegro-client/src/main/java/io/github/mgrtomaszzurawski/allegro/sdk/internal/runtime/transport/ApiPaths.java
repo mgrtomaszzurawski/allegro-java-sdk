@@ -26,6 +26,9 @@ public final class ApiPaths {
 
     private static final char PATH_SEPARATOR = '/';
     private static final String ENCODED_SPACE = "%20";
+    private static final String CURRENT_DIR_SEGMENT = ".";
+    private static final String PARENT_DIR_SEGMENT = "..";
+    private static final String ERR_UNSAFE_SEGMENT = "Unsafe path segment: ";
 
     /**
      * Join a base path with dynamic segments, guaranteeing exactly one
@@ -36,6 +39,12 @@ public final class ApiPaths {
     public static String subPath(String basePath, String... segments) {
         StringBuilder joined = new StringBuilder(basePath);
         for (String segment : segments) {
+            if (segment.isEmpty() || CURRENT_DIR_SEGMENT.equals(segment)
+                    || PARENT_DIR_SEGMENT.equals(segment)) {
+                // URLEncoder leaves dots alone, so ".." would survive encoding
+                // and server-side normalization could re-route the call.
+                throw new IllegalArgumentException(ERR_UNSAFE_SEGMENT + segment);
+            }
             if (joined.charAt(joined.length() - 1) != PATH_SEPARATOR) {
                 joined.append(PATH_SEPARATOR);
             }
