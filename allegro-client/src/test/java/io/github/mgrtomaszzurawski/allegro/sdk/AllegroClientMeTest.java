@@ -13,6 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -178,6 +179,28 @@ class AllegroClientMeTest {
             assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
             assertEquals(TEST_TRACE_ID, failure.traceId());
             assertTrue(failure.responseBody().contains("NotFoundException"));
+        }
+    }
+
+    @Test
+    void sdkVersion_whenRunFromClassesDirectory_reportsUnversioned() {
+        // then — no JAR manifest and no module-descriptor version in test runs
+        assertEquals("unversioned", AllegroClient.sdkVersion());
+    }
+
+    @Test
+    void refreshToken_whenClientCredentialsGrant_returnsNull(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(ME_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ME_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            allegro.user().me();
+
+            // then — app-only grant issues no refresh token
+            assertNull(allegro.refreshToken());
         }
     }
 

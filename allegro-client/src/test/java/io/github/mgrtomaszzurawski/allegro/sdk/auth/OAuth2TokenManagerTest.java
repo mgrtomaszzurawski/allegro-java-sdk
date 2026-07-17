@@ -219,6 +219,23 @@ class OAuth2TokenManagerTest {
     }
 
     @Test
+    void requireToken_whenAuthCodeRefreshDiesAndCodeConsumed_demandsReauthorization(
+            WireMockRuntimeInfo wmInfo) {
+        // given — stored refresh token rejected; an authorization-code credential
+        // has no repeatable initial grant, so only the user can fix this
+        stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withBody(INVALID_GRANT_RESPONSE)));
+        OAuth2TokenManager tokenManager = manager(AuthorizationCodeCredentials.ofRefreshToken(
+                TEST_CLIENT_ID, TEST_CLIENT_SECRET, TEST_REFRESH_TOKEN), wmInfo);
+
+        // then
+        AllegroAuthException failure =
+                assertThrows(AllegroAuthException.class, tokenManager::requireToken);
+        assertTrue(failure.getMessage().contains("re-authorize"));
+    }
+
+    @Test
     void requireToken_whenTokenEndpointRejects_throwsAuthExceptionWithBody(WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
