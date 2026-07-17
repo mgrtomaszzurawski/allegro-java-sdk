@@ -6,4 +6,5 @@ include(
     "allegro-demo",
     "allegro-examples",
     "allegro-jpms-consumer",
+    "allegro-e2e",
 )
