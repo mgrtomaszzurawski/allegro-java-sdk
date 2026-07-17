@@ -33,12 +33,16 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
 - [`docs/offers.md`](docs/offers.md) — offers: read an offer, change the Buy Now price
 - [`docs/orders.md`](docs/orders.md) — orders, payments and billing
-- `docs/<domain>.md` — per-domain usage guides (shipping, …), added as each
+- [`docs/shipping.md`](docs/shipping.md) — shipping domain (points of service; more to come)
+- `docs/<domain>.md` — per-domain usage guides, added as each
   domain lands
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
+  - [`docs/catalog.md`](docs/catalog.md) — categories, products, compatibility (`client.catalog()`)
   - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
     rating, and bundles (bucket F)
   - [`docs/pricing.md`](docs/pricing.md) — automatic pricing rules (promotions, deposits to follow)
+  - [`docs/fulfillment.md`](docs/fulfillment.md) — One Fulfillment by Allegro (removal preferences, …)
+- [`docs/campaigns.md`](docs/campaigns.md) — badge campaigns, Allegro Prices, AlleDiscount
 
 ## Quick start
 

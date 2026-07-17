@@ -64,6 +64,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   a compiled example, and the `orders-get` sandbox probe.
 
 ### C — shipping
+
+- `shipping()` facade with the points-of-service sub-facade (starter slice):
+  `points().create(PointOfServiceRequest)`, `points().get(id)` and
+  `points().delete(id)`, immutable `PointOfService` records with fluent builders
+  (fail-fast required fields, replicated length limits) and read-only enum
+  fallbacks.
+
 ### D — account-meta
 
 - `client.marketplaces().list()` — the platform's marketplaces with their
@@ -71,6 +78,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   works with an app-only token). Bucket D starter slice.
 
 ### E — catalog-products
+
+- Starter slice: `client.catalog().categories()` — the category tree
+  (`roots()`, `childrenOf(parentId)`, `get(categoryId)`) with the immutable
+  `Category` / `CategoryOptions` records. Read-only, works with an app-only
+  client-credentials token. Includes the `catalog-categories` sandbox
+  shape-verification demo scenario. Products and compatibility follow in the
+  same bucket.
 ### F — offers-extras
 
 - `client.classifieds()` accessor with `availablePackages(categoryId)` — read the
@@ -88,6 +102,18 @@ sections. Empty subsections are dropped by the release engineer when folding
   performing a live sandbox write→read→teardown.
 
 ### H — campaigns
+
+- `client.campaigns().badges().availableCampaigns()` — list badge campaigns available to the
+  authenticated seller (GET `/sale/badge-campaigns`), with an optional per-marketplace overload.
+  Immutable `BadgeCampaign` model with eligibility, refusal reasons and the application/visibility/
+  publication schedules. Starter slice of bucket H.
+
 ### I — fulfillment
+
+- Add `client.fulfillment()` (One Fulfillment by Allegro) with the removal-preference starter
+  slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
+  `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
+  enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+
 ### J — post-sale-comms
 ### K — sale-settings

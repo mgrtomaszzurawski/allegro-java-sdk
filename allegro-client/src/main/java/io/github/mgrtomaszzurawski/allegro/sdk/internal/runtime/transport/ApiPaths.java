@@ -38,6 +38,10 @@ public final class ApiPaths {
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
 
+    // ---- catalog (bucket E) ----
+    /** Category tree; {@code parent.id} filters to one node's direct children. */
+    public static final String CATEGORIES = "/sale/categories";
+
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
@@ -45,6 +49,17 @@ public final class ApiPaths {
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
+    // ---- campaigns (bucket H) ----
+    /** Available badge campaigns ({@code /sale/badge-campaigns}). */
+    public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+
+    // ---- shipping (bucket C) ----
+    /** Seller's points of service (personal-collection locations). */
+    public static final String POINTS_OF_SERVICE = "/points-of-service";
+
+    // ---- fulfillment (bucket I) ----
+    /** Seller's active removal preference for One Fulfillment goods. */
+    public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
