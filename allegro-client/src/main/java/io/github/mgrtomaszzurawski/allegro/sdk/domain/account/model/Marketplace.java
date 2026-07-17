@@ -11,6 +11,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.MarketplaceItemLanguages
 import io.github.mgrtomaszzurawski.allegro.client.model.MarketplaceItemRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MarketplaceItemShippingCountryRaw;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -64,7 +65,8 @@ public record Marketplace(
     private static List<String> languageCodes(@Nullable List<MarketplaceItemLanguageRaw> languages) {
         return languages == null
                 ? List.of()
-                : languages.stream().map(MarketplaceItemLanguageRaw::getCode).toList();
+                : languages.stream().map(MarketplaceItemLanguageRaw::getCode)
+                        .filter(Objects::nonNull).toList();
     }
 
     private static @Nullable String baseCurrencyCode(@Nullable MarketplaceItemCurrenciesRaw currencies) {
@@ -77,12 +79,14 @@ public record Marketplace(
     private static List<String> currencyCodes(@Nullable List<MarketplaceItemCurrencyRaw> currencies) {
         return currencies == null
                 ? List.of()
-                : currencies.stream().map(MarketplaceItemCurrencyRaw::getCode).toList();
+                : currencies.stream().map(MarketplaceItemCurrencyRaw::getCode)
+                        .filter(Objects::nonNull).toList();
     }
 
     private static List<String> countryCodes(@Nullable List<MarketplaceItemShippingCountryRaw> countries) {
         return countries == null
                 ? List.of()
-                : countries.stream().map(MarketplaceItemShippingCountryRaw::getCode).toList();
+                : countries.stream().map(MarketplaceItemShippingCountryRaw::getCode)
+                        .filter(Objects::nonNull).toList();
     }
 }

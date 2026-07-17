@@ -65,6 +65,9 @@ class MarketplacesClientTest {
     private static final String CURRENCY_PLN = "PLN";
     private static final String LANGUAGE_PL = "pl-PL";
     private static final String LANGUAGE_EN = "en-US";
+    private static final String LANGUAGE_UK = "uk-UA";
+    private static final String SHIPPING_COUNTRY_PL = "PL";
+    private static final String SHIPPING_COUNTRY_CZ = "CZ";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -74,6 +77,14 @@ class MarketplacesClientTest {
     private static final String MINIMAL_MARKETPLACE_RESPONSE = """
             {"marketplaces":[{"id":"%s"}]}
             """.formatted(MARKETPLACE_MINIMAL);
+    // A defensive shape: nested language/currency/country objects with an
+    // absent code. The mapper must skip them, not fail the whole listing.
+    private static final String CODELESS_ENTRY_RESPONSE = """
+            {"marketplaces":[{"id":"%s",
+              "languages":{"offerCreation":[{"code":"%s"},{}]},
+              "currencies":{"base":{"code":"%s"},"additional":[{}]},
+              "shippingCountries":[{},{"code":"%s"}]}]}
+            """.formatted(MARKETPLACE_PL, LANGUAGE_PL, CURRENCY_PLN, SHIPPING_COUNTRY_PL);
     // spec-derived: not yet wire-verified (errors[] contract shape; a live 404
     // capture during the bucket exploration pass will confirm or correct it)
     private static final String NOT_FOUND_RESPONSE = """
@@ -124,9 +135,9 @@ class MarketplacesClientTest {
             assertEquals(MARKETPLACE_PL, poland.id());
             assertEquals(CURRENCY_PLN, poland.baseCurrency());
             assertEquals(List.of(LANGUAGE_PL, LANGUAGE_EN), poland.offerCreationLanguages());
-            assertTrue(poland.offerDisplayLanguages().contains("uk-UA"));
+            assertEquals(List.of(LANGUAGE_PL, LANGUAGE_EN, LANGUAGE_UK), poland.offerDisplayLanguages());
             assertTrue(poland.additionalCurrencies().isEmpty());
-            assertTrue(poland.shippingCountries().contains("PL"));
+            assertEquals(List.of(SHIPPING_COUNTRY_PL, SHIPPING_COUNTRY_CZ), poland.shippingCountries());
             verify(1, getRequestedFor(urlEqualTo(MARKETPLACES_PATH)));
         }
     }
@@ -152,6 +163,27 @@ class MarketplacesClientTest {
             assertTrue(minimal.offerDisplayLanguages().isEmpty());
             assertTrue(minimal.additionalCurrencies().isEmpty());
             assertTrue(minimal.shippingCountries().isEmpty());
+        }
+    }
+
+    @Test
+    void list_whenNestedCodeMissing_skipsThatEntryWithoutFailing(WireMockRuntimeInfo wmInfo) {
+        // given — a marketplace whose nested objects include a code-less entry
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(MARKETPLACES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(CODELESS_ENTRY_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Marketplace marketplace = allegro.marketplaces().list().get(0);
+
+            // then — the code-less nested objects are dropped, not mapped to null
+            assertEquals(List.of(LANGUAGE_PL), marketplace.offerCreationLanguages());
+            assertEquals(CURRENCY_PLN, marketplace.baseCurrency());
+            assertTrue(marketplace.additionalCurrencies().isEmpty());
+            assertEquals(List.of(SHIPPING_COUNTRY_PL), marketplace.shippingCountries());
         }
     }
 

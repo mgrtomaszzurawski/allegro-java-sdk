@@ -30,9 +30,8 @@ public final class MarketplacesImpl implements Marketplaces {
 
     @Override
     public List<Marketplace> list() {
-        AllegroMarketplacesRaw response = http.request(OP_LIST)
-                .get(ApiPaths.MARKETPLACES)
-                .fetch(AllegroMarketplacesRaw.class);
+        AllegroMarketplacesRaw response =
+                http.getAuthenticated(ApiPaths.MARKETPLACES, AllegroMarketplacesRaw.class, OP_LIST);
         List<MarketplaceItemRaw> items = response.getMarketplaces();
         if (items == null) {
             return List.of();
