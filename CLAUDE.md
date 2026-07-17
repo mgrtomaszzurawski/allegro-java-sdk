@@ -93,6 +93,9 @@ before opening the PR:
 1. `allegro-client/src/main/java/module-info.java` — your `exports sdk.domain.<feature>...` lines
 2. `AllegroClient` — your accessor (`public <Feature> <feature>()`) + field + wiring
 3. `ApiPaths` — your feature's path-constant section
+4. `Offers` root interface (owned by bucket A) — bucket F appends its sub-accessor lines
+   (`tags()`, `translations()`, `bundles()`, `flexibleBundles()`, `rating()`) under the same
+   append-only regime; see `API-SURFACE.md`.
 
 FROZEN for domain agents: `sdk/internal/runtime/**`, `sdk/{config,core,exception}` root types,
 build files, quality configs. A needed core change = BACKLOG item for the core owner, never a
