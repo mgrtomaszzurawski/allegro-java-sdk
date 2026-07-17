@@ -53,6 +53,7 @@ public final class DemoApp {
     static {
         SCENARIOS.put(SCENARIO_AUTH_BOOTSTRAP, DemoApp::authBootstrap);
         SCENARIOS.put(SCENARIO_ME, DemoApp::currentUser);
+        SCENARIOS.put("pricing", PricingDemo::run);
         // [append point: demo scenarios] One line per bucket, append-only:
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
     }

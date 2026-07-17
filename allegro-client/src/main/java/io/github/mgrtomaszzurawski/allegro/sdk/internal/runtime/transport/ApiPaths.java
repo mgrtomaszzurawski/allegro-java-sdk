@@ -17,6 +17,10 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- pricing (bucket G) ----
+    /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
+    public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

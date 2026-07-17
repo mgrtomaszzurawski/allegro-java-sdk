@@ -34,6 +34,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
+    // Pricing: automatic pricing rules, promotions, deposits (bucket G).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.builder;
+
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 
