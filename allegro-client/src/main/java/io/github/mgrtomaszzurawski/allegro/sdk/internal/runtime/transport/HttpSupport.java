@@ -119,18 +119,22 @@ public final class HttpSupport {
         long executionStart = System.nanoTime();
         HttpResponse<String> response = runtime.retryHandler().send(request, operationName, interceptor);
         if (response.statusCode() == HTTP_UNAUTHORIZED) {
-            // Single attempt: token may simply have been revoked server-side;
-            // re-acquire once and replay. A second 401 is a real auth failure.
+            // Single-attempt recovery: the token may simply have been revoked
+            // server-side, so re-acquire once and replay; a second rejection is
+            // a real authentication failure.
             SdkLoggers.AUTH.warn(WARN_REPLAY_401, operationName);
             runtime.reauthenticate();
             response = runtime.retryHandler().send(requestBuilder.get().build(), operationName,
                     interceptor);
         }
         long durationMillis = (System.nanoTime() - executionStart) / 1_000_000L;
-        String traceIdSuffix = ServerErrorParser.traceId(response) == null ? ""
-                : LOG_TRACE_ID_PREFIX + ServerErrorParser.traceId(response) + ')';
-        SdkLoggers.REQUEST.debug(LOG_RESPONSE, operationName, response.statusCode(),
-                durationMillis, traceIdSuffix);
+        if (SdkLoggers.REQUEST.isDebugEnabled()) {
+            String serverTraceId = ServerErrorParser.traceId(response);
+            String traceIdSuffix = serverTraceId == null ? ""
+                    : LOG_TRACE_ID_PREFIX + serverTraceId + ')';
+            SdkLoggers.REQUEST.debug(LOG_RESPONSE, operationName, response.statusCode(),
+                    durationMillis, traceIdSuffix);
+        }
         CallContext finalContext = new CallContext(operationName, request.method(), path, 1,
                 response.statusCode(), durationMillis);
         if (response.statusCode() < HTTP_OK_MIN || response.statusCode() > HTTP_OK_MAX) {

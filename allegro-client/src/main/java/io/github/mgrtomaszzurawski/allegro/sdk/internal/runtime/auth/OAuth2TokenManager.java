@@ -239,16 +239,18 @@ public final class OAuth2TokenManager {
                 return;
             }
             String oauthError = parseJson(response.body()).path(FIELD_ERROR).asText();
-            if (response.statusCode() == HTTP_BAD_REQUEST
-                    && ERROR_AUTHORIZATION_PENDING.equals(oauthError)) {
+            boolean pending = response.statusCode() == HTTP_BAD_REQUEST
+                    && ERROR_AUTHORIZATION_PENDING.equals(oauthError);
+            boolean slowDown = response.statusCode() == HTTP_BAD_REQUEST
+                    && ERROR_SLOW_DOWN.equals(oauthError);
+            if (!pending && !slowDown) {
+                throw new AllegroAuthException(ERR_DEVICE_DENIED, response.statusCode(), response.body());
+            }
+            if (pending) {
                 SdkLoggers.AUTH.debug(LOG_DEVICE_PENDING);
-                continue;
-            }
-            if (response.statusCode() == HTTP_BAD_REQUEST && ERROR_SLOW_DOWN.equals(oauthError)) {
+            } else {
                 pollSeconds += SLOW_DOWN_INCREMENT_SECONDS;
-                continue;
             }
-            throw new AllegroAuthException(ERR_DEVICE_DENIED, response.statusCode(), response.body());
         }
         throw new AllegroAuthException(ERR_DEVICE_TIMEOUT, null);
     }

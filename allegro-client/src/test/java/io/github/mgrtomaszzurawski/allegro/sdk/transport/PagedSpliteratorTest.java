@@ -54,12 +54,11 @@ class PagedSpliteratorTest {
     @Test
     void stream_whenServerKeepsReturningEmptyPagesWithHasMore_abortsWithGuard() {
         // given — a misbehaving pager: always empty, always hasMore
-        Stream<String> runawayStream = PagedSpliterator.stream(ignored ->
-                new PagedSpliterator.Page<>(List.of(), true));
+        Stream<String> runawayStream = PagedSpliterator.<String>stream(ignored ->
+                new PagedSpliterator.Page<>(List.of(), true)).limit(GUARD_TRIP_LIMIT);
 
         // then — the defensive cap turns a hung walk into a loud failure
-        assertThrows(IllegalStateException.class,
-                () -> runawayStream.limit(GUARD_TRIP_LIMIT).toList());
+        assertThrows(IllegalStateException.class, runawayStream::toList);
     }
 
     @Test

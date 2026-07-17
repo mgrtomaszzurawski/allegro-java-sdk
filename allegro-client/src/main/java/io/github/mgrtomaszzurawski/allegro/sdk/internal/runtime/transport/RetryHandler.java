@@ -69,8 +69,10 @@ public final class RetryHandler {
                 long elapsedMillis = elapsedMillis(attemptStart);
                 interceptor.afterAttempt(new CallContext(operationName, request.method(), path,
                         attempt, response.statusCode(), elapsedMillis));
-                SdkLoggers.RETRY.debug(LOG_ATTEMPT, operationName, request.method(), path,
-                        response.statusCode(), attempt, attemptsAllowed, elapsedMillis);
+                if (SdkLoggers.RETRY.isDebugEnabled()) {
+                    SdkLoggers.RETRY.debug(LOG_ATTEMPT, operationName, request.method(), path,
+                            response.statusCode(), attempt, attemptsAllowed, elapsedMillis);
+                }
                 if (lastAttempt || !retryableMethod || !isRetryableStatus(response.statusCode())) {
                     return response;
                 }

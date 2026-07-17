@@ -140,10 +140,11 @@ class HttpSupportAndErrorsTest {
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
                         .withBody(VALIDATION_BODY)));
         HttpSupport support = new HttpSupport(runtime(wmInfo));
+        Map<String, String> emptyPayload = Map.of();
 
         // then — both errors parsed, dot-paths preserved, null userMessage legal
         AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
-                () -> support.postJsonAuthenticated(TEST_PATH, Map.of(), Map.class, OPERATION_PUT));
+                () -> support.postJsonAuthenticated(TEST_PATH, emptyPayload, Map.class, OPERATION_PUT));
         List<AllegroFieldError> errors = failure.errors();
         assertEquals(2, errors.size());
         assertEquals("VALIDATION_ERROR", errors.get(0).code());

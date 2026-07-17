@@ -131,10 +131,11 @@ class RetryHandlerTest {
                 URI.create("http://127.0.0.1:1/never")).GET().build();
         RetryHandler singleAttempt = new RetryHandler(HttpClient.newHttpClient(),
                 RetryPolicy.builder().enabled(false).build());
+        AllegroExecutionInterceptor noopInterceptor = AllegroExecutionInterceptor.noop();
 
         // then — transport failure is distinguishable: status 0, cause present
         AllegroServerException failure = assertThrows(AllegroServerException.class,
-                () -> singleAttempt.send(unroutable, OPERATION, AllegroExecutionInterceptor.noop()));
+                () -> singleAttempt.send(unroutable, OPERATION, noopInterceptor));
         assertEquals(0, failure.statusCode());
     }
 

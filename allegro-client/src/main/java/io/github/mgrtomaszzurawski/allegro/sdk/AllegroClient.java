@@ -134,8 +134,11 @@ public final class AllegroClient implements AutoCloseable {
      */
     public static String sdkVersion() {
         var moduleDescriptor = AllegroClient.class.getModule().getDescriptor();
-        if (moduleDescriptor != null && moduleDescriptor.version().isPresent()) {
-            return moduleDescriptor.version().get().toString();
+        if (moduleDescriptor != null) {
+            var descriptorVersion = moduleDescriptor.version();
+            if (descriptorVersion.isPresent()) {
+                return descriptorVersion.get().toString();
+            }
         }
         Package sdkPackage = AllegroClient.class.getPackage();
         String implementationVersion = sdkPackage != null ? sdkPackage.getImplementationVersion() : null;

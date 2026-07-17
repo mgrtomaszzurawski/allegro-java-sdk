@@ -64,9 +64,11 @@ class CredentialsAndConfigTest {
 
     @Test
     void retryPolicy_whenInvalidAttempts_rejected() {
+        // given
+        RetryPolicy.Builder invalidBuilder = RetryPolicy.builder().maxAttempts(INVALID_ATTEMPTS);
+
         // then
-        assertThrows(IllegalArgumentException.class,
-                () -> RetryPolicy.builder().maxAttempts(INVALID_ATTEMPTS).build());
+        assertThrows(IllegalArgumentException.class, invalidBuilder::build);
     }
 
     @Test
@@ -82,10 +84,12 @@ class CredentialsAndConfigTest {
 
     @Test
     void clientConfig_whenNonPositiveTimeout_rejected() {
+        // given
+        AllegroClientConfig.Builder invalidBuilder =
+                AllegroClientConfig.builder(AllegroEnvironment.SANDBOX).readTimeout(Duration.ZERO);
+
         // then
-        assertThrows(IllegalArgumentException.class,
-                () -> AllegroClientConfig.builder(AllegroEnvironment.SANDBOX)
-                        .readTimeout(Duration.ZERO).build());
+        assertThrows(IllegalArgumentException.class, invalidBuilder::build);
     }
 
     @Test

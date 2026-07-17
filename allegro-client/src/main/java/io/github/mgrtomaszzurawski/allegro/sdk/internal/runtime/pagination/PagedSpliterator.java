@@ -130,11 +130,9 @@ public final class PagedSpliterator {
 
         protected abstract boolean fetchUntilNonEmptyOrEnd();
 
-        /*
-         * Sequential by design — page fetching is I/O-bound and ordered;
-         * returning null from trySplit means single-threaded traversal
-         * (the Spliterator contract, not an unfinished method).
-         */
+        // Sequential by design: page fetching is I/O-bound and ordered, so
+        // this spliterator refuses to split, which per the Spliterator
+        // contract signals single-threaded traversal.
         @Override
         @SuppressWarnings("PMD.EmptyMethodInAbstractClassShouldBeAbstract")
         public final @Nullable Spliterator<T> trySplit() {
