@@ -43,6 +43,25 @@ The spec declares no `required` fields on `CategoryDto`, but on the wire `id`, `
 is present on children / absent on roots. The SDK's `Category` record therefore treats
 `id`/`name`/`leaf` as always-present and `parentId`/`options` as nullable.
 
+## Account & meta (bucket D)
+
+### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)
+
+`GET /sale/user-ratings` (`UserRatingListResponse`) and `GET /affiliate/conversions/cps`
+(`CpsConversionResponse`) return a bare array (`ratings` / `conversions`) with no
+`count`/`totalCount` field — unlike the offer/order collections. The SDK therefore paginates
+these streams by the full-page heuristic: it keeps requesting pages until one comes back
+shorter than the requested `limit`. Cost: when the total is an exact multiple of the page
+size, one extra empty request is made at the boundary. `user-ratings` additionally caps
+`offset` at 20000 (spec), so a stream over an account with more than ~20100 ratings will 400
+on the page past the cap. To be confirmed live once a valid seller token is restored.
+
+### CPS conversion prices are nullable leaves (spec-derived)
+
+On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commission.allegro`
+objects may be present while their `amount`/`currency` are absent. The SDK maps such an
+incomplete price to a `null` `Money` rather than failing the stream.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer

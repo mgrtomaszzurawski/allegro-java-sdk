@@ -42,6 +42,7 @@ module io.github.mgrtomaszzurawski.allegro {
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.builder;
 
     // Offer lifecycle (bucket A).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;

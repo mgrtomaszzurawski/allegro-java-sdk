@@ -12,6 +12,9 @@ import org.openapitools.jackson.nullable.JsonNullableModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Affiliate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Bidding;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Charity;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Marketplaces;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Campaigns;
@@ -23,6 +26,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.AffiliateImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.BiddingImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.CharityImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns.CampaignsImpl;
@@ -87,6 +93,9 @@ public final class AllegroClient implements AutoCloseable {
     private final Offers offers;
     private final Orders orders;
     private final Marketplaces marketplaces;
+    private final Bidding bidding;
+    private final Charity charity;
+    private final Affiliate affiliate;
     private final Catalog catalog;
     private final Classifieds classifieds;
     private final Pricing pricing;
@@ -125,6 +134,9 @@ public final class AllegroClient implements AutoCloseable {
         this.offers = new OffersImpl(runtime);
         this.orders = new OrdersImpl(runtime);
         this.marketplaces = new MarketplacesImpl(runtime);
+        this.bidding = new BiddingImpl(runtime);
+        this.charity = new CharityImpl(runtime);
+        this.affiliate = new AffiliateImpl(runtime);
         this.catalog = new CatalogImpl(runtime);
         this.classifieds = new ClassifiedsImpl(runtime);
         this.pricing = new PricingImpl(runtime);
@@ -171,6 +183,24 @@ public final class AllegroClient implements AutoCloseable {
     public Marketplaces marketplaces() {
         ensureOpen();
         return marketplaces;
+    }
+
+    /** Auction bidding (buyer side; needs a buyer user-token). */
+    public Bidding bidding() {
+        ensureOpen();
+        return bidding;
+    }
+
+    /** Charity fundraising-campaign search (beta). */
+    public Charity charity() {
+        ensureOpen();
+        return charity;
+    }
+
+    /** Affiliate CPS conversions (beta; needs the affiliate:read scope). */
+    public Affiliate affiliate() {
+        ensureOpen();
+        return affiliate;
     }
 
     /** Product catalogue: categories, products, and compatibility (bucket E). */

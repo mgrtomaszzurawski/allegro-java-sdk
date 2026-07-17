@@ -33,6 +33,7 @@ public final class DemoApp {
     private static final String SCENARIO_OFFER = "offer";
     private static final String SCENARIO_ORDERS_GET = "orders-get";
     private static final String SCENARIO_MARKETPLACES = "marketplaces";
+    private static final String SCENARIO_ACCOUNT = "account";
     private static final String SCENARIO_CLASSIFIEDS = "classifieds";
     private static final String SCENARIO_PRICING = "pricing";
     private static final String SCENARIO_CAMPAIGNS = "campaigns";
@@ -68,6 +69,7 @@ public final class DemoApp {
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
         SCENARIOS.put(SCENARIO_ORDERS_GET, OrdersDemo::run);
         SCENARIOS.put(SCENARIO_MARKETPLACES, MarketplacesDemo::run);
+        SCENARIOS.put(SCENARIO_ACCOUNT, AccountDemo::run);
         SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
         SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);

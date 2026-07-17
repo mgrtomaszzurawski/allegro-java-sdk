@@ -76,6 +76,21 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `client.marketplaces().list()` — the platform's marketplaces with their
   languages, currencies and shipping countries (`GET /marketplaces`; public,
   works with an app-only token). Bucket D starter slice.
+- `client.user()` reports: `salesQuality()` (`GET /sale/quality`) and
+  `smartClassification()[(marketplaceId)]` (`GET /sale/smart`).
+- `client.user().ratings()`: lazy `stream(RatingFilter)` (`GET /sale/user-ratings`,
+  short-page termination), `get`, `answer` (`PUT …/answer`), `requestRemoval`
+  (`PUT …/removal`) and `summaryOf(userId)` (`GET /users/{userId}/ratings-summary`).
+- `client.user().additionalEmails()`: `list`/`get`/`add`/`delete`
+  (`/account/additional-emails`).
+- `client.bidding()`: `myBid` and `placeBid` (`/bidding/offers/{offerId}/bid`),
+  using the shared `sdk.core.Money`.
+- `client.charity().searchCampaigns(CharitySearch)`
+  (`GET /charity/fundraising-campaigns`, beta).
+- `client.affiliate().streamCpsConversions(ConversionFilter)`
+  (`GET /affiliate/conversions/cps`, beta, lazy stream).
+- New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
+  `RatingFilter`, `CharitySearch`, `ConversionFilter`.
 
 ### E — catalog-products
 
