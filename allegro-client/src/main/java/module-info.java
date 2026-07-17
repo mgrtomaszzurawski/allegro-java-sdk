@@ -30,9 +30,29 @@ module io.github.mgrtomaszzurawski.allegro {
     // `exports ...sdk.domain.<feature>...` lines below this marker, one block
     // per bucket, in BACKLOG order.
 
+    // Orders, payments and billing (bucket B).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
+
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
+
+    // Offer lifecycle (bucket A).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
+
+    // Product catalogue: categories, products, compatibility (bucket E).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
+
+    // Classifieds (advertisement) packages and statistics (bucket F).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
+
+    // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
 
     // One Fulfillment by Allegro (bucket I).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;

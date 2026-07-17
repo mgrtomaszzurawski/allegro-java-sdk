@@ -120,7 +120,7 @@ flexible.delete(bundleId)                         // DELETE /sale/flexible-bundl
 
 // Classifieds (advertisements) — own top-level accessor
 Classifieds classifieds = client.classifieds();
-classifieds.availablePackages()                   // GET /sale/classifieds-packages
+classifieds.availablePackages(categoryId)         // GET /sale/classifieds-packages (category.id required)
 classifieds.getPackage(packageId)                 // GET /sale/classifieds-packages/{packageId}
 classifieds.packagesOfOffer(offerId)              // GET /sale/offer-classifieds-packages/{offerId}
 classifieds.assignPackages(offerId, packageIds...)// PUT /sale/offer-classifieds-packages/{offerId}
