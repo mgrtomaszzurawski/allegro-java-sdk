@@ -35,7 +35,7 @@ public final class DemoApp {
     private static final String ERR_NO_SCENARIO =
             "Usage: run -Pdemo.scenario=<auth-bootstrap|me> [-Pdemo.account=seller|buyer]";
     private static final String ERR_NO_CREDENTIALS =
-            "Missing env vars %s / %s - source /workspace/shared/allegro-sandbox.env first";
+            "Missing env vars %s / %s - source /workspace/shared/secrets/allegro-sandbox.env first";
     private static final String ERR_UNKNOWN_SCENARIO = "Unknown scenario: ";
     private static final String ERR_NO_STORED_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";

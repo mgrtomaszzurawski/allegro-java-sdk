@@ -25,3 +25,10 @@ auth (WireMock). Credentials themselves stay in `/workspace/shared/allegro-sandb
 - A crashed writer self-heals on the next bootstrap run.
 - Production consumers are unaffected — this is agent-infrastructure, not SDK behaviour;
   the SDK's own persistence hook is `AllegroClient.refreshToken()`.
+
+## Amendment (2026-07-17)
+
+Operator decision: all agent-side secrets moved under a single 700-mode directory so the RAG
+scribe excludes exactly one path. The store now lives at
+`/workspace/shared/secrets/allegro-sandbox-tokens.properties` and the credentials env file at
+`/workspace/shared/secrets/allegro-sandbox.env`. The decision and its rationale are unchanged.
