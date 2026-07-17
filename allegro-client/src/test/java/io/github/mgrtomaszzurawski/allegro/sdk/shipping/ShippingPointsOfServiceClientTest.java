@@ -39,19 +39,23 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosType;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
  * WireMock contract tests for the points-of-service facade (bucket C starter
- * slice): the create/get happy paths (request-body pinning, full field mapping,
- * read-only enum fallback) and the mandatory error-path table (400 typed field
- * errors, 401 replay, 404, 429 exhaustion, 5xx retry vs POST-not-retried).
+ * slice): the create/get/delete happy paths (request-body pinning, full field
+ * mapping incl. nested Address/Coordinates/OpenHour + enum fallback) and the
+ * mandatory error-path table (400 typed field errors, 401 replay, 404, 429
+ * exhaustion, 5xx retry vs POST-not-retried).
  *
  * <p>Response fixtures are {@code spec-derived}: not yet wire-verified. The
  * sandbox {@code pos-roundtrip} demo scenario confirms them before the bucket's
- * final PR (TESTING.md §2).
+ * final PR (TESTING.md §2). The shared address / open-hours / coordinate values
+ * used both to build the request and to assert the fixtures are hoisted into
+ * {@code TEST_*}-style constants so the two never drift.
  */
 @WireMockTest
 class ShippingPointsOfServiceClientTest {
@@ -69,12 +73,38 @@ class ShippingPointsOfServiceClientTest {
     private static final String POS_EXTERNAL_ID = "agent-c-demo-001";
     private static final String SELLER_ID = "111332841";
 
+    // Address / open-hours / contact payload — shared by sampleRequest() and the
+    // pos-get.json fixture assertions so the request and the fixture never drift.
+    private static final String STREET = "Grunwaldzka 100";
+    private static final String CITY = "Gdansk";
+    private static final String ZIP_CODE = "80-244";
+    private static final String STATE = "pomorskie";
+    private static final String COUNTRY_CODE = "PL";
+    private static final String PHONE_NUMBER = "+48111222333";
+    private static final String EMAIL = "pickup@example.com";
+    private static final String SERVICE_TIME = "PT24H";
+    private static final String OPEN_DAY = "MONDAY";
+    private static final String OPEN_DAY_SECOND = "TUESDAY";
+    private static final String OPEN_FROM = "08:00";
+    private static final String OPEN_TO = "16:00";
+    private static final double LATITUDE = 54.372158;
+    private static final double LONGITUDE = 18.638306;
+    private static final String LOCATION_ID = "d5178eed-ccb6-473d-844b-d27764297d56";
+    private static final String PAYMENT_CASH = "CASH";
+
+    // Enum wire values pinned in the create request body.
+    private static final String TYPE_PICKUP_POINT = "PICKUP_POINT";
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String CONFIRMATION_CONTACT_NOT_REQUIRED = "CONTACT_NOT_REQUIRED";
+
     private static final String CREATED_FIXTURE = "shipping/pos-created.json";
     private static final String GET_FIXTURE = "shipping/pos-get.json";
 
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final String SCENARIO_RETRY_5XX = "retry-5xx";
+    private static final String STATE_RECOVERED = "recovered";
     private static final String RETRY_AFTER_SECONDS = "7";
     private static final int MAX_ATTEMPTS_FAST = 2;
 
@@ -122,19 +152,19 @@ class ShippingPointsOfServiceClientTest {
                 .status(PosStatus.ACTIVE)
                 .confirmationType(ConfirmationType.CONTACT_NOT_REQUIRED)
                 .address(Address.builder()
-                        .street("Grunwaldzka 100")
-                        .city("Gdansk")
-                        .zipCode("80-244")
-                        .state("pomorskie")
-                        .countryCode("PL")
-                        .coordinates(new Coordinates(54.372158, 18.638306))
+                        .street(STREET)
+                        .city(CITY)
+                        .zipCode(ZIP_CODE)
+                        .state(STATE)
+                        .countryCode(COUNTRY_CODE)
+                        .coordinates(new Coordinates(LATITUDE, LONGITUDE))
                         .build())
                 .openHours(List.of(OpenHour.builder()
-                        .dayOfWeek("MONDAY").fromTime("08:00").toTime("16:00").build()))
+                        .dayOfWeek(OPEN_DAY).fromTime(OPEN_FROM).toTime(OPEN_TO).build()))
                 .externalId(POS_EXTERNAL_ID)
-                .phoneNumber("+48111222333")
-                .email("pickup@example.com")
-                .serviceTime("PT24H")
+                .phoneNumber(PHONE_NUMBER)
+                .email(EMAIL)
+                .serviceTime(SERVICE_TIME)
                 .build();
     }
 
@@ -148,14 +178,14 @@ class ShippingPointsOfServiceClientTest {
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(matchingJsonPath("$.name", equalTo(POS_NAME)))
-                .withRequestBody(matchingJsonPath("$.type", equalTo("PICKUP_POINT")))
-                .withRequestBody(matchingJsonPath("$.status", equalTo("ACTIVE")))
+                .withRequestBody(matchingJsonPath("$.type", equalTo(TYPE_PICKUP_POINT)))
+                .withRequestBody(matchingJsonPath("$.status", equalTo(STATUS_ACTIVE)))
                 .withRequestBody(matchingJsonPath("$.confirmationType",
-                        equalTo("CONTACT_NOT_REQUIRED")))
-                .withRequestBody(matchingJsonPath("$.address.city", equalTo("Gdansk")))
+                        equalTo(CONFIRMATION_CONTACT_NOT_REQUIRED)))
+                .withRequestBody(matchingJsonPath("$.address.city", equalTo(CITY)))
                 .withRequestBody(matchingJsonPath("$.address.coordinates.lat"))
-                .withRequestBody(matchingJsonPath("$.phoneNumber", equalTo("+48111222333")))
-                .withRequestBody(matchingJsonPath("$.openHours[0].dayOfWeek", equalTo("MONDAY")))
+                .withRequestBody(matchingJsonPath("$.phoneNumber", equalTo(PHONE_NUMBER)))
+                .withRequestBody(matchingJsonPath("$.openHours[0].dayOfWeek", equalTo(OPEN_DAY)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBodyFile(CREATED_FIXTURE)));
 
@@ -170,7 +200,7 @@ class ShippingPointsOfServiceClientTest {
             assertEquals(PosType.PICKUP_POINT, created.type());
             assertEquals(PosStatus.ACTIVE, created.status());
             assertEquals(POS_EXTERNAL_ID, created.externalId());
-            assertEquals("Gdansk", created.address().city());
+            assertEquals(CITY, created.address().city());
             verify(1, postRequestedFor(urlEqualTo(POS_PATH)));
         }
     }
@@ -198,17 +228,17 @@ class ShippingPointsOfServiceClientTest {
             assertEquals(PosType.PICKUP_POINT, point.type());
             assertEquals(ConfirmationType.CONTACT_NOT_REQUIRED, point.confirmationType());
             assertEquals(PosStatus.ACTIVE, point.status());
-            assertEquals("+48111222333", point.phoneNumber());
-            assertEquals("pickup@example.com", point.email());
-            assertEquals("PT24H", point.serviceTime());
-            assertEquals("Grunwaldzka 100", point.address().street());
-            assertEquals("PL", point.address().countryCode());
-            assertEquals(54.372158, point.address().coordinates().latitude());
-            assertEquals(18.638306, point.address().coordinates().longitude());
+            assertEquals(PHONE_NUMBER, point.phoneNumber());
+            assertEquals(EMAIL, point.email());
+            assertEquals(SERVICE_TIME, point.serviceTime());
+            assertEquals(STREET, point.address().street());
+            assertEquals(COUNTRY_CODE, point.address().countryCode());
+            assertEquals(LATITUDE, point.address().coordinates().latitude());
+            assertEquals(LONGITUDE, point.address().coordinates().longitude());
             assertEquals(2, point.openHours().size());
-            assertEquals("TUESDAY", point.openHours().get(1).dayOfWeek());
-            assertEquals(List.of("d5178eed-ccb6-473d-844b-d27764297d56"), point.locationIds());
-            assertEquals(List.of("CASH"), point.payments());
+            assertEquals(OPEN_DAY_SECOND, point.openHours().get(1).dayOfWeek());
+            assertEquals(List.of(LOCATION_ID), point.locationIds());
+            assertEquals(List.of(PAYMENT_CASH), point.payments());
             verify(1, getRequestedFor(urlEqualTo(POS_BY_ID_PATH)));
         }
     }
@@ -339,12 +369,12 @@ class ShippingPointsOfServiceClientTest {
     void get_when500ThenOk_retriesAndSucceeds(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
-        stubFor(get(urlEqualTo(POS_BY_ID_PATH)).inScenario(SCENARIO_REPLAY)
+        stubFor(get(urlEqualTo(POS_BY_ID_PATH)).inScenario(SCENARIO_RETRY_5XX)
                 .whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR))
-                .willSetStateTo(STATE_REAUTHED));
-        stubFor(get(urlEqualTo(POS_BY_ID_PATH)).inScenario(SCENARIO_REPLAY)
-                .whenScenarioStateIs(STATE_REAUTHED)
+                .willSetStateTo(STATE_RECOVERED));
+        stubFor(get(urlEqualTo(POS_BY_ID_PATH)).inScenario(SCENARIO_RETRY_5XX)
+                .whenScenarioStateIs(STATE_RECOVERED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(GET_FIXTURE)));
 
@@ -370,9 +400,8 @@ class ShippingPointsOfServiceClientTest {
             var points = allegro.shipping().points();
             PointOfServiceRequest request = sampleRequest();
 
-            // then — a single POST, surfaced as a server exception (asserted via type)
-            assertThrows(io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException.class,
-                    () -> points.create(request));
+            // then — a single POST, surfaced as a server exception
+            assertThrows(AllegroServerException.class, () -> points.create(request));
             verify(1, postRequestedFor(urlEqualTo(POS_PATH)));
         }
     }

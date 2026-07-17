@@ -53,9 +53,10 @@ sections. Empty subsections are dropped by the release engineer when folding
 ### C — shipping
 
 - `shipping()` facade with the points-of-service sub-facade (starter slice):
-  `points().create(PointOfServiceRequest)` and `points().get(id)`, immutable
-  `PointOfService` records with fluent builders (fail-fast required fields,
-  replicated length limits) and read-only enum fallbacks.
+  `points().create(PointOfServiceRequest)`, `points().get(id)` and
+  `points().delete(id)`, immutable `PointOfService` records with fluent builders
+  (fail-fast required fields, replicated length limits) and read-only enum
+  fallbacks.
 
 ### D — account-meta
 ### E — catalog-products

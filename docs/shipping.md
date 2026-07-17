@@ -6,7 +6,8 @@ configuration, and points of service. This starter slice ships the
 bucket's volume PR.
 
 Points of service are a seller's personal-collection locations (click &amp;
-collect). They require a user-context token with the `sale:settings` scope.
+collect). They require a user-context token with `sale:settings:read` (to read)
+and `sale:settings:write` (to create or delete).
 
 ## Create a point of service
 

@@ -10,7 +10,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServ
 /**
  * Points of service — a seller's personal-collection locations (click &amp;
  * collect). Reached via {@code AllegroClient.shipping().points()}. Requires a
- * user-context token with the {@code sale:settings} scope.
+ * user-context token with {@code sale:settings:read} (for {@link #get}) and
+ * {@code sale:settings:write} (for {@link #create} and {@link #delete}).
  *
  * @since 0.2.0
  */

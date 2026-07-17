@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OpenHourRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PaymentRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PosLocationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PosRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerRaw;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -64,7 +65,7 @@ public record PointOfService(
                 raw.getId(),
                 raw.getExternalId(),
                 raw.getName(),
-                raw.getSeller() == null ? null : raw.getSeller().getId(),
+                sellerId(raw.getSeller()),
                 PosType.fromWire(raw.getType()),
                 Address.from(raw.getAddress()),
                 raw.getPhoneNumber(),
@@ -77,6 +78,10 @@ public record PointOfService(
                 PosStatus.fromWire(raw.getStatus()),
                 raw.getCreatedAt(),
                 raw.getUpdatedAt());
+    }
+
+    private static @Nullable String sellerId(@Nullable SellerRaw seller) {
+        return seller == null ? null : seller.getId();
     }
 
     private static List<String> locationIds(@Nullable List<PosLocationRaw> raw) {

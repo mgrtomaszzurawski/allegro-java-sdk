@@ -36,9 +36,9 @@ class ShippingBuildersTest {
     private static final String EXTERNAL_ID = "agent-c-demo-001";
     private static final String PHONE = "+48111222333";
     private static final String EMAIL = "pickup@example.com";
-    private static final String DAY = "MONDAY";
-    private static final String FROM = "08:00";
-    private static final String TO = "16:00";
+    private static final String DAY_OF_WEEK = "MONDAY";
+    private static final String OPEN_FROM = "08:00";
+    private static final String OPEN_TO = "16:00";
     private static final String FILLER = "x";
 
     private static final int MAX_NAME = 80;
@@ -57,7 +57,7 @@ class ShippingBuildersTest {
     }
 
     private static OpenHour openHour() {
-        return OpenHour.builder().dayOfWeek(DAY).fromTime(FROM).toTime(TO).build();
+        return OpenHour.builder().dayOfWeek(DAY_OF_WEEK).fromTime(OPEN_FROM).toTime(OPEN_TO).build();
     }
 
     private static String tooLong(int maxLength) {
@@ -171,9 +171,9 @@ class ShippingBuildersTest {
         OpenHour hour = openHour();
 
         // then
-        assertEquals(DAY, hour.dayOfWeek());
-        assertEquals(FROM, hour.fromTime());
-        assertEquals(TO, hour.toTime());
+        assertEquals(DAY_OF_WEEK, hour.dayOfWeek());
+        assertEquals(OPEN_FROM, hour.fromTime());
+        assertEquals(OPEN_TO, hour.toTime());
     }
 
     @Test
@@ -190,21 +190,21 @@ class ShippingBuildersTest {
 
     @Test
     void openHourBuilder_whenDayOfWeekMissing_throws() {
-        var builder = OpenHour.builder().fromTime(FROM).toTime(TO);
+        var builder = OpenHour.builder().fromTime(OPEN_FROM).toTime(OPEN_TO);
         assertMessage("OpenHour.dayOfWeek is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
 
     @Test
     void openHourBuilder_whenFromTimeMissing_throws() {
-        var builder = OpenHour.builder().dayOfWeek(DAY).toTime(TO);
+        var builder = OpenHour.builder().dayOfWeek(DAY_OF_WEEK).toTime(OPEN_TO);
         assertMessage("OpenHour.fromTime is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
 
     @Test
     void openHourBuilder_whenToTimeMissing_throws() {
-        var builder = OpenHour.builder().dayOfWeek(DAY).fromTime(FROM);
+        var builder = OpenHour.builder().dayOfWeek(DAY_OF_WEEK).fromTime(OPEN_FROM);
         assertMessage("OpenHour.toTime is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
