@@ -1,0 +1,13 @@
+{
+  "name": "allegro-buyer-bot",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Sandbox buyer-side automation probe (experiment) — headless login to allegro sandbox web UI",
+  "scripts": {
+    "probe": "node probe.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}
