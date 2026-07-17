@@ -21,6 +21,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.Contacts;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
@@ -31,6 +32,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.contacts.Contacts
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.FulfillmentImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing.PricingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
@@ -87,6 +89,7 @@ public final class AllegroClient implements AutoCloseable {
     private final Marketplaces marketplaces;
     private final Catalog catalog;
     private final Classifieds classifieds;
+    private final Pricing pricing;
     private final Campaigns campaigns;
     private final Shipping shipping;
     private final Fulfillment fulfillment;
@@ -124,6 +127,7 @@ public final class AllegroClient implements AutoCloseable {
         this.marketplaces = new MarketplacesImpl(runtime);
         this.catalog = new CatalogImpl(runtime);
         this.classifieds = new ClassifiedsImpl(runtime);
+        this.pricing = new PricingImpl(runtime);
         this.fulfillment = new FulfillmentImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
@@ -179,6 +183,12 @@ public final class AllegroClient implements AutoCloseable {
     public Classifieds classifieds() {
         ensureOpen();
         return classifieds;
+    }
+
+    /** Pricing tools: automatic pricing rules, promotions, deposits (bucket G). */
+    public Pricing pricing() {
+        ensureOpen();
+        return pricing;
     }
 
     /** One Fulfillment by Allegro — removal preferences (and, per the plan,

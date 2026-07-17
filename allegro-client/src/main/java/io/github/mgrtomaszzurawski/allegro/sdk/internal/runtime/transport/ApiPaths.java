@@ -46,6 +46,9 @@ public final class ApiPaths {
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
 
+    // ---- pricing (bucket G) ----
+    /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
+    public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";

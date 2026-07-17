@@ -94,6 +94,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   read-shape demo scenario (`-Pdemo.scenario=classifieds`).
 
 ### G — pricing
+- Automatic pricing rules starter slice: `client.pricing().automation()` with
+  `create` / `get` / `delete`, the immutable `PricingRule` record (sealed
+  `PricingRuleConfiguration` for amount/percentage adjustments, shared `Money`),
+  and the fail-fast `PricingRuleRequest` fluent builder. WireMock-covered
+  (request shape, oneOf mapping, full error-path table) with the `pricing` demo
+  performing a live sandbox write→read→teardown.
+
 ### H — campaigns
 
 - `client.campaigns().badges().availableCampaigns()` — list badge campaigns available to the
