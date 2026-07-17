@@ -52,23 +52,20 @@ public record Order(
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
     public static Order from(CheckoutFormRaw raw) {
-        var summary = raw.getSummary().getTotalToPay();
+        var totalToPay = raw.getSummary().getTotalToPay();
+        var fulfillment = raw.getFulfillment();
+        var marketplace = raw.getMarketplace();
         return new Order(
                 raw.getId().toString(),
                 OrderStatus.from(raw.getStatus()),
-                SellerStatus.from(raw.getFulfillment() == null ? null : raw.getFulfillment().getStatus()),
+                SellerStatus.from(fulfillment == null ? null : fulfillment.getStatus()),
                 Buyer.from(raw.getBuyer()),
-                mapLineItems(raw),
-                Money.of(summary.getAmount(), summary.getCurrency()),
+                raw.getLineItems().stream().map(LineItem::from).toList(),
+                Money.of(totalToPay.getAmount(), totalToPay.getCurrency()),
                 raw.getMessageToSeller(),
-                raw.getMarketplace() == null ? null : raw.getMarketplace().getId(),
+                marketplace == null ? null : marketplace.getId(),
                 parseTimestamp(raw.getUpdatedAt()),
                 raw.getRevision());
-    }
-
-    private static List<LineItem> mapLineItems(CheckoutFormRaw raw) {
-        return raw.getLineItems() == null ? List.of()
-                : raw.getLineItems().stream().map(LineItem::from).toList();
     }
 
     private static @Nullable OffsetDateTime parseTimestamp(@Nullable String value) {

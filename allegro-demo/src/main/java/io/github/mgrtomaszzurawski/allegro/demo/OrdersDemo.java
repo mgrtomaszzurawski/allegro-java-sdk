@@ -65,12 +65,13 @@ public final class OrdersDemo {
             if (rotatedRefreshToken != null) {
                 tokenStore.store(account, rotatedRefreshToken);
             }
-            // Status-level output only — no buyer name/email/phone (PII/RODO).
+            // Status-level output only — no buyer name/email/phone (personal data).
             System.out.println("orders().get(): id=" + order.id()
                     + ", status=" + order.status()
                     + ", sellerStatus=" + order.sellerStatus()
                     + ", lineItems=" + order.lineItems().size()
-                    + ", totalToPay=" + order.totalToPay().currency());
+                    + ", totalToPay=" + order.totalToPay().amount()
+                    + " " + order.totalToPay().currency());
             if (!order.id().equals(orderId)) {
                 throw new IllegalStateException("Round-trip id mismatch: asked "
                         + orderId + ", got " + order.id());

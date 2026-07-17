@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 class OrderMappingTest {
 
     @Test
-    void orderStatusFrom_mapsEveryRawValue() {
+    void from_whenEveryOrderStatusRawValue_mapsToMatchingStatus() {
         // then
         assertEquals(OrderStatus.BOUGHT, OrderStatus.from(CheckoutFormStatusRaw.BOUGHT));
         assertEquals(OrderStatus.FILLED_IN, OrderStatus.from(CheckoutFormStatusRaw.FILLED_IN));
@@ -31,7 +31,7 @@ class OrderMappingTest {
     }
 
     @Test
-    void sellerStatusFrom_mapsEveryRawValue() {
+    void from_whenEveryFulfillmentStatusRawValue_mapsToMatchingStatus() {
         // then
         assertEquals(SellerStatus.NEW, SellerStatus.from(CheckoutFormFulfillmentStatusRaw.NEW));
         assertEquals(SellerStatus.PROCESSING,
@@ -52,7 +52,7 @@ class OrderMappingTest {
     }
 
     @Test
-    void sellerStatusFrom_whenRawNull_returnsNull() {
+    void from_whenFulfillmentStatusRawNull_returnsNull() {
         // then — an order with no seller status yet maps to null, not a default
         assertNull(SellerStatus.from(null));
     }

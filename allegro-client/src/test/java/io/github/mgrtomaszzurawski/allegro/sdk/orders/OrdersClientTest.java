@@ -75,6 +75,9 @@ class OrdersClientTest {
 
     private static final long RETRY_AFTER_SECONDS = 120L;
     private static final int FAST_MAX_ATTEMPTS = 2;
+    // Original request + one transparent replay/retry = two wire requests.
+    private static final int EXPECTED_REQUESTS_WITH_ONE_REPLAY = 2;
+    private static final int EXPECTED_REQUESTS_WITH_ONE_RETRY = 2;
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -92,6 +95,15 @@ class OrdersClientTest {
             """;
     private static final String RATE_LIMIT_BODY = """
             {"errors":[{"code":"TooManyRequests","message":"Slow down"}]}
+            """;
+    // spec-derived: not yet wire-verified. Confirms null-safety of optional
+    // fields (no fulfillment, no marketplace, no optional buyer fields, empty
+    // line items).
+    private static final String LEAN_ORDER_BODY = """
+            {"id":"a8f6c3e2-1111-2222-3333-444455556666","status":"BOUGHT",
+             "buyer":{"id":"44556677","email":"buyer@example.com","login":"test-buyer"},
+             "lineItems":[],
+             "summary":{"totalToPay":{"amount":"0.00","currency":"PLN"}}}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -186,7 +198,7 @@ class OrdersClientTest {
 
             // then — replayed exactly once, the replay carried the FRESH token
             assertEquals(ORDER_ID, order.id());
-            verify(2, getRequestedFor(urlEqualTo(ORDER_PATH)));
+            verify(EXPECTED_REQUESTS_WITH_ONE_REPLAY, getRequestedFor(urlEqualTo(ORDER_PATH)));
             verify(1, getRequestedFor(urlEqualTo(ORDER_PATH))
                     .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                             equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_2)));
@@ -283,7 +295,7 @@ class OrdersClientTest {
 
             // then — the retry recovered the call
             assertEquals(ORDER_ID, order.id());
-            verify(2, getRequestedFor(urlEqualTo(ORDER_PATH)));
+            verify(EXPECTED_REQUESTS_WITH_ONE_RETRY, getRequestedFor(urlEqualTo(ORDER_PATH)));
         }
     }
 
@@ -298,8 +310,9 @@ class OrdersClientTest {
     }
 
     @Test
-    void get_whenBuyerFieldsAbsent_leavesRecordFieldsNull(WireMockRuntimeInfo wmInfo) {
-        // given — a leaner order to confirm optional fields map to null, not crash
+    void get_whenOptionalFieldsAbsent_leavesThemNull(WireMockRuntimeInfo wmInfo) {
+        // given — a leaner order: no fulfillment, marketplace, message, or
+        // optional buyer fields, and no line items
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(ORDER_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -310,20 +323,17 @@ class OrdersClientTest {
             // when
             Order order = allegro.orders().get(ORDER_ID);
 
-            // then
+            // then — optional order fields map to null / empty, not to a crash
             assertNull(order.sellerStatus());
             assertNull(order.marketplaceId());
             assertNull(order.messageToSeller());
             assertTrue(order.lineItems().isEmpty());
+            // and optional buyer fields map to null, guest defaults to false
+            assertNull(order.buyer().firstName());
+            assertNull(order.buyer().lastName());
+            assertNull(order.buyer().companyName());
+            assertNull(order.buyer().phoneNumber());
+            assertFalse(order.buyer().guest());
         }
     }
-
-    // spec-derived: not yet wire-verified. Confirms null-safety of optional
-    // fields (no fulfillment, no marketplace, empty line items).
-    private static final String LEAN_ORDER_BODY = """
-            {"id":"a8f6c3e2-1111-2222-3333-444455556666","status":"BOUGHT",
-             "buyer":{"id":"44556677","email":"buyer@example.com","login":"test-buyer"},
-             "lineItems":[],
-             "summary":{"totalToPay":{"amount":"0.00","currency":"PLN"}}}
-            """;
 }

@@ -8,9 +8,10 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormFulfillmentS
 import org.jspecify.annotations.Nullable;
 
 /**
- * Seller handling status of an order — the value the seller advances through
- * {@code Orders.markStatus(...)} as the order is prepared and shipped. Distinct
- * from the buyer-side {@link OrderStatus}.
+ * Seller handling status of an order — the value the seller advances as the
+ * order is prepared and shipped, distinct from the buyer-side
+ * {@link OrderStatus}. Updating it lands with the order write endpoints in the
+ * orders bucket body.
  *
  * @since 0.3.0
  */
