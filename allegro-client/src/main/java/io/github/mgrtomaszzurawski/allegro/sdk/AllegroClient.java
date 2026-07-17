@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
@@ -66,8 +67,12 @@ public final class AllegroClient implements AutoCloseable {
                 .connectTimeout(config.connectTimeout())
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
+        // JsonNullableModule is REQUIRED: generated *Raw DTOs wrap optional
+        // fields in JsonNullable (live-probe finding 2026-07-17 — /me with a
+        // company deserializes only with this module registered).
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
+                .registerModule(new JsonNullableModule())
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         this.tokenManager = new OAuth2TokenManager(credentials, config.oauthBaseUrl(),

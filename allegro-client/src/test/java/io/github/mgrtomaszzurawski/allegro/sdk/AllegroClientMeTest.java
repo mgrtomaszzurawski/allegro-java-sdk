@@ -49,9 +49,13 @@ class AllegroClientMeTest {
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
             """;
+    // Wire-verified shape (sandbox 2026-07-17): company fields arrive as plain
+    // JSON but the generated DTO wraps them in JsonNullable — deserialization
+    // fails unless the SDK mapper registers JsonNullableModule (regression).
     private static final String ME_RESPONSE = """
             {"id":"123","login":"seller-login","firstName":"Jan","lastName":"Tester",
-             "email":"seller@example.com","features":["feature-a"]}
+             "email":"seller@example.com","features":["feature-a"],
+             "company":{"name":"test"},"baseMarketplace":{"id":"allegro-pl"}}
             """;
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFoundException","message":"User not found",

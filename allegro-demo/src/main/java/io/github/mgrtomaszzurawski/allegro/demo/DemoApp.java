@@ -86,10 +86,18 @@ public final class DemoApp {
                     System.out.println();
                 });
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-            CurrentUser user = client.user().me();
-            tokenStore.store(account, client.refreshToken());
-            System.out.println("Authorized as: " + user.login() + " (id " + user.id() + ")");
-            System.out.println("Refresh token stored for account '" + account + "'.");
+            try {
+                CurrentUser user = client.user().me();
+                System.out.println("Authorized as: " + user.login() + " (id " + user.id() + ")");
+            } finally {
+                // The user's one-time authorization must survive any downstream
+                // failure — persist the refresh token as soon as it exists.
+                String issuedRefreshToken = client.refreshToken();
+                if (issuedRefreshToken != null) {
+                    tokenStore.store(account, issuedRefreshToken);
+                    System.out.println("Refresh token stored for account '" + account + "'.");
+                }
+            }
         }
     }
 
