@@ -34,6 +34,7 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - [`docs/fulfillment.md`](docs/fulfillment.md) — One Fulfillment by Allegro (removal preferences, …)
 - `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
   domain lands
+  - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
 
 ## Quick start
 
