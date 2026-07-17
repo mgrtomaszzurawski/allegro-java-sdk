@@ -5,8 +5,10 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.fulfillment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.WithdrawalAddressBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.PhoneNumber;
@@ -25,6 +27,15 @@ class WithdrawalAddressBuilderTest {
     private static final int MAX_STREET_LENGTH = 150;
     private static final int MAX_POSTAL_CODE_LENGTH = 12;
     private static final int MAX_CITY_LENGTH = 50;
+    private static final int MAX_ADDITIONAL_INFO_LENGTH = 300;
+
+    private static final String FIELD_COMPANY = "company";
+    private static final String FIELD_STREET = "street";
+    private static final String FIELD_POSTAL_CODE = "postalCode";
+    private static final String FIELD_CITY = "city";
+    private static final String FIELD_COUNTRY_CODE = "countryCode";
+    private static final String FIELD_PHONE = "phone";
+    private static final String FIELD_ADDITIONAL_INFO = "additionalInfo";
 
     private static PhoneNumber phone() {
         return PhoneNumber.of("48", "123123123");
@@ -38,6 +49,13 @@ class WithdrawalAddressBuilderTest {
                 .city(CITY)
                 .countryCode(COUNTRY_CODE)
                 .phone(phone());
+    }
+
+    /** Build must fail with a message that names the offending field. */
+    private static void assertBuildRejects(WithdrawalAddressBuilder builder, String fieldToken) {
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(fieldToken),
+                () -> "message should identify '" + fieldToken + "' but was: " + failure.getMessage());
     }
 
     @Test
@@ -65,7 +83,7 @@ class WithdrawalAddressBuilderTest {
     }
 
     @Test
-    void toBuilder_preservesAllFields() {
+    void toBuilder_whenAllFieldsSet_preservesThem() {
         // given
         WithdrawalAddress original = required().additionalInfo(ADDITIONAL_INFO).build();
 
@@ -90,51 +108,51 @@ class WithdrawalAddressBuilderTest {
     }
 
     @Test
-    void build_whenCompanyMissing_throws() {
+    void build_whenCompanyMissing_throwsIdentifyingCompany() {
         WithdrawalAddressBuilder builder = new WithdrawalAddressBuilder()
                 .street(STREET).postalCode(POSTAL_CODE).city(CITY)
                 .countryCode(COUNTRY_CODE).phone(phone());
-        assertThrows(IllegalStateException.class, builder::build);
+        assertBuildRejects(builder, FIELD_COMPANY);
     }
 
     @Test
-    void build_whenStreetMissing_throws() {
+    void build_whenStreetMissing_throwsIdentifyingStreet() {
         WithdrawalAddressBuilder builder = new WithdrawalAddressBuilder()
                 .company(COMPANY).postalCode(POSTAL_CODE).city(CITY)
                 .countryCode(COUNTRY_CODE).phone(phone());
-        assertThrows(IllegalStateException.class, builder::build);
+        assertBuildRejects(builder, FIELD_STREET);
     }
 
     @Test
-    void build_whenPostalCodeMissing_throws() {
+    void build_whenPostalCodeMissing_throwsIdentifyingPostalCode() {
         WithdrawalAddressBuilder builder = new WithdrawalAddressBuilder()
                 .company(COMPANY).street(STREET).city(CITY)
                 .countryCode(COUNTRY_CODE).phone(phone());
-        assertThrows(IllegalStateException.class, builder::build);
+        assertBuildRejects(builder, FIELD_POSTAL_CODE);
     }
 
     @Test
-    void build_whenCityMissing_throws() {
+    void build_whenCityMissing_throwsIdentifyingCity() {
         WithdrawalAddressBuilder builder = new WithdrawalAddressBuilder()
                 .company(COMPANY).street(STREET).postalCode(POSTAL_CODE)
                 .countryCode(COUNTRY_CODE).phone(phone());
-        assertThrows(IllegalStateException.class, builder::build);
+        assertBuildRejects(builder, FIELD_CITY);
     }
 
     @Test
-    void build_whenCountryCodeMissing_throws() {
+    void build_whenCountryCodeMissing_throwsIdentifyingCountryCode() {
         WithdrawalAddressBuilder builder = new WithdrawalAddressBuilder()
                 .company(COMPANY).street(STREET).postalCode(POSTAL_CODE).city(CITY)
                 .phone(phone());
-        assertThrows(IllegalStateException.class, builder::build);
+        assertBuildRejects(builder, FIELD_COUNTRY_CODE);
     }
 
     @Test
-    void build_whenPhoneMissing_throws() {
+    void build_whenPhoneMissing_throwsIdentifyingPhone() {
         WithdrawalAddressBuilder builder = new WithdrawalAddressBuilder()
                 .company(COMPANY).street(STREET).postalCode(POSTAL_CODE).city(CITY)
                 .countryCode(COUNTRY_CODE);
-        assertThrows(IllegalStateException.class, builder::build);
+        assertBuildRejects(builder, FIELD_PHONE);
     }
 
     @Test
@@ -144,26 +162,40 @@ class WithdrawalAddressBuilderTest {
     }
 
     @Test
-    void build_whenCompanyExceedsMaxLength_throws() {
-        WithdrawalAddressBuilder builder = required().company("a".repeat(MAX_COMPANY_LENGTH + 1));
-        assertThrows(IllegalStateException.class, builder::build);
+    void build_whenCompanyExceedsMaxLength_throwsIdentifyingCompany() {
+        assertBuildRejects(required().company("a".repeat(MAX_COMPANY_LENGTH + 1)), FIELD_COMPANY);
     }
 
     @Test
-    void build_whenStreetExceedsMaxLength_throws() {
-        WithdrawalAddressBuilder builder = required().street("a".repeat(MAX_STREET_LENGTH + 1));
-        assertThrows(IllegalStateException.class, builder::build);
+    void build_whenStreetExceedsMaxLength_throwsIdentifyingStreet() {
+        assertBuildRejects(required().street("a".repeat(MAX_STREET_LENGTH + 1)), FIELD_STREET);
     }
 
     @Test
-    void build_whenPostalCodeExceedsMaxLength_throws() {
-        WithdrawalAddressBuilder builder = required().postalCode("a".repeat(MAX_POSTAL_CODE_LENGTH + 1));
-        assertThrows(IllegalStateException.class, builder::build);
+    void build_whenPostalCodeExceedsMaxLength_throwsIdentifyingPostalCode() {
+        assertBuildRejects(required().postalCode("a".repeat(MAX_POSTAL_CODE_LENGTH + 1)), FIELD_POSTAL_CODE);
     }
 
     @Test
-    void build_whenCityExceedsMaxLength_throws() {
-        WithdrawalAddressBuilder builder = required().city("a".repeat(MAX_CITY_LENGTH + 1));
-        assertThrows(IllegalStateException.class, builder::build);
+    void build_whenCityExceedsMaxLength_throwsIdentifyingCity() {
+        assertBuildRejects(required().city("a".repeat(MAX_CITY_LENGTH + 1)), FIELD_CITY);
+    }
+
+    @Test
+    void build_whenAdditionalInfoAtMaxLength_succeeds() {
+        WithdrawalAddress address =
+                required().additionalInfo("a".repeat(MAX_ADDITIONAL_INFO_LENGTH)).build();
+        assertEquals(MAX_ADDITIONAL_INFO_LENGTH, address.additionalInfo().length());
+    }
+
+    @Test
+    void build_whenAdditionalInfoExceedsMaxLength_throwsIdentifyingAdditionalInfo() {
+        assertBuildRejects(required().additionalInfo("a".repeat(MAX_ADDITIONAL_INFO_LENGTH + 1)),
+                FIELD_ADDITIONAL_INFO);
+    }
+
+    @Test
+    void toString_doesNotLeakPersonalData() {
+        assertFalse(required().build().toString().contains(COMPANY));
     }
 }

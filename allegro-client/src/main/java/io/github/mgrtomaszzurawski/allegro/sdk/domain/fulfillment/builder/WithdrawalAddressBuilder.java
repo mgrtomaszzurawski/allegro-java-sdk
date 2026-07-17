@@ -22,6 +22,7 @@ public final class WithdrawalAddressBuilder {
     private static final int MAX_STREET_LENGTH = 150;
     private static final int MAX_POSTAL_CODE_LENGTH = 12;
     private static final int MAX_CITY_LENGTH = 50;
+    private static final int MAX_ADDITIONAL_INFO_LENGTH = 300;
 
     private static final String ERR_COMPANY = lengthConstraint("company", MAX_COMPANY_LENGTH);
     private static final String ERR_STREET = lengthConstraint("street", MAX_STREET_LENGTH);
@@ -29,6 +30,8 @@ public final class WithdrawalAddressBuilder {
     private static final String ERR_CITY = lengthConstraint("city", MAX_CITY_LENGTH);
     private static final String ERR_COUNTRY_CODE = "countryCode is required";
     private static final String ERR_PHONE = "phone is required";
+    private static final String ERR_ADDITIONAL_INFO =
+            "additionalInfo must be at most " + MAX_ADDITIONAL_INFO_LENGTH + " characters";
 
     private static String lengthConstraint(String field, int maxLength) {
         return field + " is required (1-" + maxLength + " chars)";
@@ -98,11 +101,19 @@ public final class WithdrawalAddressBuilder {
                 bounded(city, MAX_CITY_LENGTH, ERR_CITY),
                 required(countryCode, ERR_COUNTRY_CODE),
                 required(phone, ERR_PHONE),
-                additionalInfo);
+                boundedOptional(additionalInfo, MAX_ADDITIONAL_INFO_LENGTH, ERR_ADDITIONAL_INFO));
     }
 
     private static String bounded(@Nullable String value, int maxLength, String message) {
         if (value == null || value.isBlank() || value.length() > maxLength) {
+            throw new IllegalStateException(message);
+        }
+        return value;
+    }
+
+    private static @Nullable String boundedOptional(@Nullable String value, int maxLength,
+            String message) {
+        if (value != null && value.length() > maxLength) {
             throw new IllegalStateException(message);
         }
         return value;

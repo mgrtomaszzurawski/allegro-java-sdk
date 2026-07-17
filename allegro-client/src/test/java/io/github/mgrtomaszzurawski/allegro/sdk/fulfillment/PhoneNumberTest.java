@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.fulfillment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.PhoneNumber;
@@ -49,5 +50,10 @@ class PhoneNumberTest {
     void of_whenNumberAtMaxLength_succeeds() {
         PhoneNumber phone = PhoneNumber.of("48", "1".repeat(MAX_NUMBER_LENGTH));
         assertEquals(MAX_NUMBER_LENGTH, phone.number().length());
+    }
+
+    @Test
+    void toString_doesNotLeakTheNumber() {
+        assertFalse(PhoneNumber.of("48", "123123123").toString().contains("123123123"));
     }
 }

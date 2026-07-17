@@ -19,7 +19,7 @@ class RemovalOperationTest {
     }
 
     @Test
-    void wireValue_matchesTheServerToken() {
+    void wireValue_returnsServerToken() {
         assertEquals("WITHDRAWAL", RemovalOperation.WITHDRAWAL.wireValue());
         assertEquals("DISPOSAL", RemovalOperation.DISPOSAL.wireValue());
     }

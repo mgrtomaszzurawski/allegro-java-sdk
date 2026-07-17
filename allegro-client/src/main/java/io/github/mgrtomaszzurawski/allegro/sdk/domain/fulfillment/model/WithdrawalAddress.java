@@ -81,4 +81,13 @@ public record WithdrawalAddress(
                 PhoneNumber.from(raw.getPhone()),
                 raw.getAdditionalInfo());
     }
+
+    /**
+     * Redacted on purpose: an address is personal data, and the SDK never lets
+     * buyer/seller PII reach a log or exception message.
+     */
+    @Override
+    public String toString() {
+        return "WithdrawalAddress[redacted]";
+    }
 }

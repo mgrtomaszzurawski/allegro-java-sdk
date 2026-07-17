@@ -46,4 +46,13 @@ public record PhoneNumber(String countryCode, String number) {
             throw new IllegalArgumentException(message);
         }
     }
+
+    /**
+     * Redacted on purpose: a phone number is personal data, and the SDK never
+     * lets buyer/seller PII reach a log or exception message.
+     */
+    @Override
+    public String toString() {
+        return "PhoneNumber[redacted]";
+    }
 }

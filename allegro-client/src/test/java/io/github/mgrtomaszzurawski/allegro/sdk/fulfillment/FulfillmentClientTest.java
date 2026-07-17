@@ -18,7 +18,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -56,8 +55,19 @@ class FulfillmentClientTest {
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final String SCENARIO_RETRY = "retry-then-recover";
+    private static final String STATE_RECOVERED = "recovered";
     private static final long EXPIRY_SECONDS = 3600L;
     private static final long RETRY_AFTER_SECONDS = 7L;
+    private static final long RETRY_AFTER_IMMEDIATE = 0L;
+
+    private static final String WIRE_WITHDRAWAL = RemovalOperation.WITHDRAWAL.wireValue();
+    private static final String WIRE_DISPOSAL = RemovalOperation.DISPOSAL.wireValue();
+    private static final String JSON_PATH_OPERATION = "$.operation";
+    private static final String JSON_PATH_ADDRESS_COMPANY = "$.address.company";
+    private static final String JSON_PATH_ADDRESS_PHONE_NUMBER = "$.address.phone.number";
+    private static final String TEST_ERROR_CODE = "ValidationException";
+    private static final String TEST_ERROR_PATH = "operation";
 
     private static final String TEST_COMPANY = "Warehouse Sp. z o.o.";
     private static final String TEST_STREET = "Uliczna 7";
@@ -84,9 +94,9 @@ class FulfillmentClientTest {
             """.formatted(TEST_COMPANY, TEST_STREET, TEST_POSTAL_CODE, TEST_CITY,
             TEST_COUNTRY_CODE, TEST_PHONE_COUNTRY, TEST_PHONE_NUMBER, TEST_ADDITIONAL_INFO);
     private static final String BAD_REQUEST_RESPONSE = """
-            {"errors":[{"code":"ValidationException","message":"operation is required",
-              "userMessage":"Niepoprawne dane","path":"operation"}]}
-            """;
+            {"errors":[{"code":"%s","message":"operation is required",
+              "userMessage":"Niepoprawne dane","path":"%s"}]}
+            """.formatted(TEST_ERROR_CODE, TEST_ERROR_PATH);
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFoundException","message":"Not found","path":null}]}
             """;
@@ -171,10 +181,10 @@ class FulfillmentClientTest {
 
     @Test
     void setRemovalPreference_whenWithdrawal_putsVendorBodyAndReturnsStored(WireMockRuntimeInfo wmInfo) {
-        // given
+        // given — the spec documents 201 Created for this write
         stubToken(TEST_TOKEN);
         stubFor(put(urlEqualTo(REMOVAL_PATH))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(WITHDRAWAL_RESPONSE)));
         RemovalPreference request = RemovalPreference.builder()
                 .operation(RemovalOperation.WITHDRAWAL)
@@ -192,9 +202,9 @@ class FulfillmentClientTest {
             verify(1, putRequestedFor(urlEqualTo(REMOVAL_PATH))
                     .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                             equalTo(TestHttpConstants.VND_ALLEGRO_V1))
-                    .withRequestBody(matchingJsonPath("$.operation", equalTo("WITHDRAWAL")))
-                    .withRequestBody(matchingJsonPath("$.address.company", equalTo(TEST_COMPANY)))
-                    .withRequestBody(matchingJsonPath("$.address.phone.number",
+                    .withRequestBody(matchingJsonPath(JSON_PATH_OPERATION, equalTo(WIRE_WITHDRAWAL)))
+                    .withRequestBody(matchingJsonPath(JSON_PATH_ADDRESS_COMPANY, equalTo(TEST_COMPANY)))
+                    .withRequestBody(matchingJsonPath(JSON_PATH_ADDRESS_PHONE_NUMBER,
                             equalTo(TEST_PHONE_NUMBER))));
         }
     }
@@ -204,7 +214,7 @@ class FulfillmentClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(put(urlEqualTo(REMOVAL_PATH))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(DISPOSAL_RESPONSE)));
         RemovalPreference request = RemovalPreference.builder()
                 .operation(RemovalOperation.DISPOSAL)
@@ -218,7 +228,7 @@ class FulfillmentClientTest {
             assertEquals(RemovalOperation.DISPOSAL, stored.operation());
             assertNull(stored.withdrawalAddress());
             verify(1, putRequestedFor(urlEqualTo(REMOVAL_PATH))
-                    .withRequestBody(matchingJsonPath("$.operation", equalTo("DISPOSAL"))));
+                    .withRequestBody(matchingJsonPath(JSON_PATH_OPERATION, equalTo(WIRE_DISPOSAL))));
         }
     }
 
@@ -274,8 +284,8 @@ class FulfillmentClientTest {
             AllegroBadRequestException failure =
                     assertThrows(AllegroBadRequestException.class, fulfillment::removalPreference);
             assertEquals(1, failure.errors().size());
-            assertEquals("ValidationException", failure.errors().get(0).code());
-            assertEquals("operation", failure.errors().get(0).path());
+            assertEquals(TEST_ERROR_CODE, failure.errors().get(0).code());
+            assertEquals(TEST_ERROR_PATH, failure.errors().get(0).path());
         }
     }
 
@@ -320,15 +330,41 @@ class FulfillmentClientTest {
     }
 
     @Test
+    void removalPreference_whenRateLimitedThenOk_retriesAndSucceeds(WireMockRuntimeInfo wmInfo) {
+        // given — retry enabled: a 429 (Retry-After: 0) then 200; the SDK honours
+        // Retry-After and replays the idempotent GET.
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(REMOVAL_PATH))
+                .inScenario(SCENARIO_RETRY).whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER,
+                                Long.toString(RETRY_AFTER_IMMEDIATE)))
+                .willSetStateTo(STATE_RECOVERED));
+        stubFor(get(urlEqualTo(REMOVAL_PATH))
+                .inScenario(SCENARIO_RETRY).whenScenarioStateIs(STATE_RECOVERED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(DISPOSAL_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo, RetryPolicy.builder().maxAttempts(2).build())) {
+            // when
+            RemovalPreference preference = allegro.fulfillment().removalPreference();
+
+            // then — the retry fired and the second attempt returned the body
+            assertEquals(RemovalOperation.DISPOSAL, preference.operation());
+            verify(2, getRequestedFor(urlEqualTo(REMOVAL_PATH)));
+        }
+    }
+
+    @Test
     void removalPreference_whenServerErrorThenOk_retriesAndSucceeds(WireMockRuntimeInfo wmInfo) {
         // given — retry enabled: first 500, then 200 on the idempotent GET.
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(REMOVAL_PATH))
-                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(Scenario.STARTED)
+                .inScenario(SCENARIO_RETRY).whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR))
-                .willSetStateTo(STATE_REAUTHED));
+                .willSetStateTo(STATE_RECOVERED));
         stubFor(get(urlEqualTo(REMOVAL_PATH))
-                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(STATE_REAUTHED)
+                .inScenario(SCENARIO_RETRY).whenScenarioStateIs(STATE_RECOVERED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(DISPOSAL_RESPONSE)));
 
@@ -343,7 +379,8 @@ class FulfillmentClientTest {
     }
 
     @Test
-    void removalPreference_whenServerErrorPersists_throwsServerException(WireMockRuntimeInfo wmInfo) {
+    void removalPreference_whenServerErrorPersists_throwsServerExceptionWithTraceId(
+            WireMockRuntimeInfo wmInfo) {
         // given — retry disabled, so a persistent 5xx maps straight through.
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(REMOVAL_PATH))
@@ -353,11 +390,11 @@ class FulfillmentClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
             var fulfillment = allegro.fulfillment();
 
-            // then
+            // then — status and the server trace id survive onto the exception
             AllegroServerException failure =
                     assertThrows(AllegroServerException.class, fulfillment::removalPreference);
             assertEquals(TestHttpConstants.HTTP_SERVER_ERROR, failure.statusCode());
-            assertTrue(failure.traceId() == null || TEST_TRACE_ID.equals(failure.traceId()));
+            assertEquals(TEST_TRACE_ID, failure.traceId());
         }
     }
 }

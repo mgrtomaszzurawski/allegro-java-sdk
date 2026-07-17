@@ -39,19 +39,17 @@ public final class FulfillmentImpl implements Fulfillment {
     @Override
     public RemovalPreference removalPreference() {
         return RemovalPreference.from(
-                http.request(OP_GET_REMOVAL_PREFERENCE)
-                        .get(ApiPaths.FULFILLMENT_REMOVAL_PREFERENCES)
-                        .fetch(FulfillmentRemovalPreferenceRaw.class));
+                http.getAuthenticated(ApiPaths.FULFILLMENT_REMOVAL_PREFERENCES,
+                        FulfillmentRemovalPreferenceRaw.class, OP_GET_REMOVAL_PREFERENCE));
     }
 
     @Override
     public RemovalPreference setRemovalPreference(RemovalPreference preference) {
         Objects.requireNonNull(preference, ERR_PREFERENCE_NULL);
         return RemovalPreference.from(
-                http.request(OP_SET_REMOVAL_PREFERENCE)
-                        .put(ApiPaths.FULFILLMENT_REMOVAL_PREFERENCES)
-                        .jsonBody(toRaw(preference))
-                        .fetch(FulfillmentRemovalPreferenceRaw.class));
+                http.putJsonAuthenticated(ApiPaths.FULFILLMENT_REMOVAL_PREFERENCES,
+                        toRaw(preference), FulfillmentRemovalPreferenceRaw.class,
+                        OP_SET_REMOVAL_PREFERENCE));
     }
 
     private static FulfillmentRemovalPreferenceRaw toRaw(RemovalPreference preference) {

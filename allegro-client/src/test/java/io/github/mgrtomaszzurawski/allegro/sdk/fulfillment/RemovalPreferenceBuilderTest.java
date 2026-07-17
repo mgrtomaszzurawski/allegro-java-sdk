@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.WithdrawalAddressBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.PhoneNumber;
@@ -58,9 +59,10 @@ class RemovalPreferenceBuilderTest {
     }
 
     @Test
-    void build_whenOperationMissing_throws() {
+    void build_whenOperationMissing_throwsIdentifyingOperation() {
         var builder = RemovalPreference.builder();
-        assertThrows(IllegalStateException.class, builder::build);
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains("operation"));
     }
 
     @Test
