@@ -57,5 +57,11 @@ sections. Empty subsections are dropped by the release engineer when folding
 ### G — pricing
 ### H — campaigns
 ### I — fulfillment
+
+- Add `client.fulfillment()` (One Fulfillment by Allegro) with the removal-preference starter
+  slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
+  `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
+  enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+
 ### J — post-sale-comms
 ### K — sale-settings

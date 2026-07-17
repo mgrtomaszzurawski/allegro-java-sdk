@@ -34,6 +34,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
+    // One Fulfillment by Allegro (bucket I).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder;
+
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 

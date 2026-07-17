@@ -17,6 +17,10 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- fulfillment (bucket I) ----
+    /** Seller's active removal preference for One Fulfillment goods. */
+    public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

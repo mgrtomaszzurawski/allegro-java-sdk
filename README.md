@@ -31,6 +31,7 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — design, layers, auth lifecycle
 - [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
+- [`docs/fulfillment.md`](docs/fulfillment.md) — One Fulfillment by Allegro (removal preferences, …)
 - `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
   domain lands
 
