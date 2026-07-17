@@ -111,13 +111,14 @@ class PricingRuleRequestBuilderTest {
     @Test
     void build_whenNameAtMaxLength_succeeds() {
         // given — 33 characters is the server limit and must be accepted
+        String maxLengthName = "a".repeat(NAME_MAX_LENGTH);
         PricingRuleRequest request = PricingRuleRequest.builder()
-                .name("a".repeat(NAME_MAX_LENGTH))
+                .name(maxLengthName)
                 .type(PricingRuleType.FOLLOW_BY_ALLEGRO_MIN_PRICE)
                 .build();
 
-        // then
-        assertEquals(NAME_MAX_LENGTH, request.name().length());
+        // then — the full name survives at the boundary, not just its length
+        assertEquals(maxLengthName, request.name());
     }
 
     @Test

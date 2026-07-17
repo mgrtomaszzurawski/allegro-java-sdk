@@ -53,6 +53,8 @@ final class PricingMapper {
     private static final String FIELD_VALUE = "value";
     private static final String FIELD_AMOUNT = "amount";
     private static final String FIELD_CURRENCY = "currency";
+    private static final String ERR_UNKNOWN_CONFIGURATION =
+            "Unknown pricing rule configuration variant: ";
 
     private PricingMapper() {
     }
@@ -99,6 +101,8 @@ final class PricingMapper {
                     operationFrom(percentageNode.get(FIELD_OPERATION)),
                     percentageNode.get(FIELD_VALUE).asText());
         }
+        // Forward-compat: a configuration shape the SDK does not model yet is
+        // surfaced as "no adjustment" rather than failing the whole read.
         return null;
     }
 
@@ -126,8 +130,12 @@ final class PricingMapper {
             return new AutomaticPricingRuleConfigurationRaw(
                     new AutomaticPricingRuleConfigurationChangeByAmountRaw().changeByAmount(amountInner));
         }
-        PricingRuleConfiguration.ChangeByPercentage percentage =
-                (PricingRuleConfiguration.ChangeByPercentage) configuration;
+        if (!(configuration instanceof PricingRuleConfiguration.ChangeByPercentage percentage)) {
+            // Unreachable while the sealed hierarchy has two variants; guards a
+            // future variant with a clear failure instead of an unchecked cast.
+            throw new IllegalStateException(
+                    ERR_UNKNOWN_CONFIGURATION + configuration.getClass().getName());
+        }
         AutomaticPricingRuleConfigurationChangeByPercentageChangeByPercentageRaw percentageInner =
                 new AutomaticPricingRuleConfigurationChangeByPercentageChangeByPercentageRaw()
                         .operation(AutomaticPricingRuleConfigurationChangeByPercentageChangeByPercentageRaw

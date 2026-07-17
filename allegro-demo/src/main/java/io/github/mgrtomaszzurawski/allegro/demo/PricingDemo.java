@@ -67,10 +67,10 @@ public final class PricingDemo {
 
             // 2. read it back and assert the round-trip
             PricingRule fetched = automation.get(created.id());
-            boolean roundTrip = fetched.name().equals(created.name())
+            boolean matchesCreated = fetched.name().equals(created.name())
                     && fetched.type() == created.type()
                     && fetched.configuration() instanceof PricingRuleConfiguration.ChangeByPercentage;
-            System.out.println("read-back matches: " + roundTrip);
+            System.out.println("read-back matches: " + matchesCreated);
 
             // 3. tear down
             automation.delete(created.id());

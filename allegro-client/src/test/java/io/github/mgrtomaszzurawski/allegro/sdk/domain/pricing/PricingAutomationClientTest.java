@@ -189,6 +189,8 @@ class PricingAutomationClientTest {
                         equalTo(PricingRuleConfiguration.Operation.SUBTRACT.name())))
                 .withRequestBody(matchingJsonPath(
                         "$.configuration.changeByAmount.values[0].currency", equalTo(TEST_CURRENCY)))
+                .withRequestBody(matchingJsonPath(
+                        "$.configuration.changeByAmount.values[0].amount", equalTo(TEST_AMOUNT)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(AMOUNT_RULE_RESPONSE.formatted(TEST_RULE_ID, TEST_RULE_NAME))));
 

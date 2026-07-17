@@ -4,10 +4,13 @@
  */
 
 /**
- * Immutable request and response records for the pricing facade. Response
- * records expose {@code from(Raw)} factories that map the generated Layer-1
- * DTOs; request records are assembled by the fluent builders in the sibling
- * {@code builder} package.
+ * Immutable request and response records for the pricing facade. Request records
+ * are assembled by the fluent builders in the sibling {@code builder} package.
+ * Response records are mapped from the wire by the package-private
+ * {@code internal.client.pricing.PricingMapper}; the rule response is mapped from
+ * a {@code JsonNode} rather than a {@code from(Raw)} factory because the generated
+ * {@code native} oneOf deserializer for the configuration over-matches (see
+ * {@code PricingMapper}).
  *
  * @since 0.2.0
  */

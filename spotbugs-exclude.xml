@@ -28,16 +28,17 @@
         <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.runtime\.pagination\..*"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
-    <!-- Domain facade implementations under sdk.internal.client.<feature>.* hold
-         their sub-facade singletons and share the same HttpRuntime/HttpSupport
-         plumbing across a bucket (the sub-facade a root impl hands out via an
-         accessor, e.g. pricing().automation()). Same rationale as the
-         internal.runtime.* and AllegroClient exclusions: this is non-user-facing
-         shared plumbing, not exposed mutable state, and JPMS-non-exported;
-         defensive copies would defeat its purpose. Added by bucket G (first
-         sub-facade impl); see the shared BACKLOG core note. -->
+    <!-- Domain facade IMPLEMENTATIONS (sdk.internal.client.**.*Impl) hold their
+         sub-facade singletons and share the same HttpRuntime/HttpSupport plumbing
+         across a bucket (the sub-facade a root impl hands out via an accessor,
+         e.g. pricing().automation()). Same rationale as the internal.runtime.*
+         and AllegroClient exclusions: non-user-facing shared plumbing, not
+         exposed mutable state, JPMS-non-exported; defensive copies would defeat
+         its purpose. Scoped to *Impl (not the whole package) so mappers and other
+         internal.client classes keep full EI analysis. Added by bucket G (first
+         sub-facade impl); flagged for the core owner in BACKLOG Phase 1.1. -->
     <Match>
-        <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.client\..*"/>
+        <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.client\..*Impl"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
     <!-- Domain model records under sdk.domain.<feature>.model.* are immutable by
