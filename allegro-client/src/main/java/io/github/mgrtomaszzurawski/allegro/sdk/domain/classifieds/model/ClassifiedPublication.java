@@ -18,6 +18,6 @@ public record ClassifiedPublication(Duration duration) {
 
     /** Map the generated Layer-1 DTO to the public record. */
     static ClassifiedPublication from(ClassifiedPublicationRaw raw) {
-        return new ClassifiedPublication(Duration.parse(raw.getDuration()));
+        return new ClassifiedPublication(ClassifiedDurations.parse(raw.getDuration()));
     }
 }

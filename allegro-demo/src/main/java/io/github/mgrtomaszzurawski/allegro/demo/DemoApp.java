@@ -36,7 +36,7 @@ public final class DemoApp {
     private static final String ACCOUNT_PROPERTY = "demo.account";
     private static final String DEFAULT_ACCOUNT = "seller";
     private static final String ERR_NO_SCENARIO =
-            "Usage: run -Pdemo.scenario=<auth-bootstrap|me> [-Pdemo.account=seller|buyer]";
+            "Usage: run -Pdemo.scenario=<auth-bootstrap|me|classifieds> [-Pdemo.account=seller|buyer]";
     private static final String ERR_NO_CREDENTIALS =
             "Missing env vars %s / %s - source /workspace/shared/secrets/allegro-sandbox.env first";
     private static final String ERR_UNKNOWN_SCENARIO = "Unknown scenario: ";

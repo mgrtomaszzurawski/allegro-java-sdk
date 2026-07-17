@@ -6,7 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.examples;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
-import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
 import java.util.List;
 
@@ -20,11 +20,13 @@ public final class ClassifiedsExample {
     }
 
     static int countPackages(String clientId, String clientSecret, String categoryId) {
-        var credentials = new ClientCredentials(clientId, clientSecret);
+        // The endpoint needs a user (seller) token — see docs/offers-extras.md.
+        var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
+                auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             List<ClassifiedPackage> packages = client.classifieds().availablePackages(categoryId);
-            for (ClassifiedPackage pkg : packages) {
-                System.out.println(pkg.name() + " (" + pkg.type() + ")");
+            for (ClassifiedPackage classifiedPackage : packages) {
+                System.out.println(classifiedPackage.name() + " (" + classifiedPackage.type() + ")");
             }
             return packages.size();
         }

@@ -31,6 +31,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestExcept
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.Duration;
 import java.util.List;
@@ -55,6 +56,8 @@ class ClassifiedsClientTest {
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final String SCENARIO_5XX_RECOVERY = "5xx-recovery";
+    private static final String STATE_RECOVERED = "recovered";
     private static final long EXPIRY_SECONDS = 3600L;
     private static final long RETRY_AFTER_SECONDS = 1L;
     private static final int FAST_MAX_ATTEMPTS = 2;
@@ -82,9 +85,18 @@ class ClassifiedsClientTest {
               "message":"category.id is required","userMessage":"Wymagane","path":"category.id",
               "details":null}]}
             """;
+    // spec-derived: not yet wire-verified (errors[] contract shape).
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFoundException","message":"Category not found",
               "userMessage":"Nie znaleziono","path":null}]}
+            """;
+    // spec-derived: a malformed duration must surface as a typed SDK exception.
+    private static final String MALFORMED_DURATION_RESPONSE = """
+            {"packages":[
+              {"id":"bad","name":"Bad","type":"BASE","extensions":[],
+               "promotions":[{"name":"emphasized","duration":"not-a-duration"}],
+               "publication":null}
+            ]}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -267,11 +279,11 @@ class ClassifiedsClientTest {
         // given — first 500, retry returns 200
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(PACKAGES_PATH))
-                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(Scenario.STARTED)
+                .inScenario(SCENARIO_5XX_RECOVERY).whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR))
-                .willSetStateTo(STATE_REAUTHED));
+                .willSetStateTo(STATE_RECOVERED));
         stubFor(get(urlPathEqualTo(PACKAGES_PATH))
-                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(STATE_REAUTHED)
+                .inScenario(SCENARIO_5XX_RECOVERY).whenScenarioStateIs(STATE_RECOVERED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(PACKAGES_RESPONSE)));
 
@@ -283,6 +295,23 @@ class ClassifiedsClientTest {
             // then — the retry recovered the call
             assertEquals(2, packages.size());
             verify(FAST_MAX_ATTEMPTS, getRequestedFor(urlPathEqualTo(PACKAGES_PATH)));
+        }
+    }
+
+    @Test
+    void availablePackages_whenDurationMalformed_throwsServerException(WireMockRuntimeInfo wmInfo) {
+        // given — a package whose promotion carries an unparseable duration
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(PACKAGES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(MALFORMED_DURATION_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — a raw DateTimeParseException never escapes the SDK surface
+            assertThrows(AllegroServerException.class,
+                    () -> classifieds.availablePackages(TEST_CATEGORY_ID));
         }
     }
 }

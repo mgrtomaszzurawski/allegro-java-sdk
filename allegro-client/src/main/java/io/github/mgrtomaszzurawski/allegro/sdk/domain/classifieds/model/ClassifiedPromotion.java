@@ -19,6 +19,6 @@ public record ClassifiedPromotion(String name, Duration duration) {
 
     /** Map the generated Layer-1 DTO to the public record. */
     static ClassifiedPromotion from(ClassifiedPromotionRaw raw) {
-        return new ClassifiedPromotion(raw.getName(), Duration.parse(raw.getDuration()));
+        return new ClassifiedPromotion(raw.getName(), ClassifiedDurations.parse(raw.getDuration()));
     }
 }

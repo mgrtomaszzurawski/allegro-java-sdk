@@ -21,9 +21,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
 
 try (AllegroClient client = AllegroClient.create(credentials, environment)) {
-    for (ClassifiedPackage pkg : client.classifieds().availablePackages(categoryId)) {
-        System.out.println(pkg.name() + " (" + pkg.type() + ")");
-        pkg.promotions().forEach(promo ->
+    for (ClassifiedPackage classifiedPackage : client.classifieds().availablePackages(categoryId)) {
+        System.out.println(classifiedPackage.name() + " (" + classifiedPackage.type() + ")");
+        classifiedPackage.promotions().forEach(promo ->
                 System.out.println("  promotion " + promo.name() + " for " + promo.duration()));
     }
 }
@@ -31,6 +31,8 @@ try (AllegroClient client = AllegroClient.create(credentials, environment)) {
 
 Each `ClassifiedPackage` exposes its `id`, `name`, `type`
 (`BASE` or `EXTRA`), the bundled `extensions` and `promotions`, and the
-`publication` terms (each duration is a `java.time.Duration`). Package
-configurations are public reference data, so an app-only client-credentials
-grant is sufficient — no user context is required.
+`publication` terms (each duration is a `java.time.Duration`). The endpoint
+requires a **user (seller) access token** with the `sale:offers:read` scope
+(the spec declares it `bearer-token-for-user`), so authenticate with an
+authorization-code or device grant — an app-only client-credentials token is
+not sufficient.
