@@ -17,6 +17,10 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- campaigns (bucket H) ----
+    /** Available badge campaigns ({@code /sale/badge-campaigns}). */
+    public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.
