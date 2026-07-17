@@ -64,6 +64,7 @@ public final class DemoApp {
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
         SCENARIOS.put(SCENARIO_ORDERS_GET, OrdersDemo::run);
         SCENARIOS.put(SCENARIO_MARKETPLACES, MarketplacesDemo::run);
+        SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
         SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);
     }

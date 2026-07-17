@@ -38,6 +38,10 @@ public final class ApiPaths {
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
 
+    // ---- catalog (bucket E) ----
+    /** Category tree; {@code parent.id} filters to one node's direct children. */
+    public static final String CATEGORIES = "/sale/categories";
+
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
