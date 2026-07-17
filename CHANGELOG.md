@@ -102,6 +102,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   publication schedules. Starter slice of bucket H.
 
 ### I — fulfillment
+
+- Add `client.fulfillment()` (One Fulfillment by Allegro) with the removal-preference starter
+  slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
+  `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
+  enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+
 ### J — post-sale-comms
 
 - Contacts facade (`client.contacts()`) — starter slice: list, get, create and update

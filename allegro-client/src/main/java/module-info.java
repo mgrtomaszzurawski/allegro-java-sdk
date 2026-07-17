@@ -59,6 +59,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
 
+    // One Fulfillment by Allegro (bucket I).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder;
+
     // Seller contact cards (bucket J — post-sale-comms).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.builder;
