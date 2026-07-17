@@ -12,11 +12,12 @@
         <Class name="io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
-    <!-- Internal transport runtime adapter — its accessors exist to share the
-         same ObjectMapper / token manager across domain clients within the SDK
-         module. Non-exported via JPMS. Pattern covers nested records. -->
+    <!-- Internal transport/auth runtime — these classes exist to share the
+         same HttpClient / ObjectMapper / token manager across domain clients
+         within the SDK module. Non-exported via JPMS; defensive copies of
+         shared plumbing would defeat their purpose. -->
     <Match>
-        <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.runtime\.transport\..*"/>
+        <Class name="~io\.github\.mgrtomaszzurawski\.allegro\.sdk\.internal\.runtime\.(transport|auth)\..*"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
     <!-- PagedSpliterator.{Page,CursorPage} are internal records that briefly hold

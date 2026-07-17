@@ -30,6 +30,10 @@ module io.github.mgrtomaszzurawski.allegro {
     // `exports ...sdk.domain.<feature>...` lines below this marker, one block
     // per bucket, in BACKLOG order.
 
+    // Account and user information (bucket D; me() ships with the core PR).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
+
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 
