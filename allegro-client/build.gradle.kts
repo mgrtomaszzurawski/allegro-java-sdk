@@ -51,6 +51,10 @@ dependencies {
     testImplementation(libs.wiremock.standalone)
     testImplementation(libs.mockito.core)
     testRuntimeOnly(libs.junit.platform.launcher)
+    // Real logging backend in tests, tuned to DEBUG for the SDK channels
+    // (src/test/resources/simplelogger.properties) - the guarded logging
+    // branches execute under test instead of dead-ending on a NOP logger.
+    testRuntimeOnly(libs.slf4j.simple)
 }
 
 // Bundle license + third-party notices into the published JAR (AGPL 5(a)).
