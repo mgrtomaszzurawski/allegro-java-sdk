@@ -30,6 +30,7 @@ public final class DemoApp {
 
     private static final String SCENARIO_AUTH_BOOTSTRAP = "auth-bootstrap";
     private static final String SCENARIO_ME = "me";
+    private static final String SCENARIO_OFFER = "offer";
     private static final String SCENARIO_MARKETPLACES = "marketplaces";
     private static final String CLIENT_ID_ENV = "ALLEGRO_SANDBOX_CLIENT_ID";
     private static final String CLIENT_SECRET_ENV = "ALLEGRO_SANDBOX_CLIENT_SECRET";
@@ -55,7 +56,7 @@ public final class DemoApp {
     static {
         SCENARIOS.put(SCENARIO_AUTH_BOOTSTRAP, DemoApp::authBootstrap);
         SCENARIOS.put(SCENARIO_ME, DemoApp::currentUser);
-        SCENARIOS.put("offer", OffersDemo::run);
+        SCENARIOS.put(SCENARIO_OFFER, OffersDemo::run);
         // [append point: demo scenarios] One line per bucket, append-only:
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
         SCENARIOS.put(SCENARIO_MARKETPLACES, MarketplacesDemo::run);

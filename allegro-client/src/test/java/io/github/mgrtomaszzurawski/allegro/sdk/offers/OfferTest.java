@@ -41,4 +41,24 @@ class OfferTest {
         assertNull(offer.buyNowPrice());
         assertNull(offer.availableStock());
     }
+
+    @Test
+    void from_whenNestedObjectsAbsent_toleratesWithoutNullPointer() {
+        // given — a payload with no selling mode, category or publication at all
+        // (the spec marks none of them required, so mapping must not dereference)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name("Bare");
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — every optional projection degrades to null/UNKNOWN, no NPE
+        assertEquals(OFFER_ID, offer.id());
+        assertNull(offer.categoryId());
+        assertEquals(OfferFormat.UNKNOWN, offer.format());
+        assertEquals(OfferStatus.UNKNOWN, offer.status());
+        assertNull(offer.buyNowPrice());
+        assertNull(offer.availableStock());
+    }
 }
