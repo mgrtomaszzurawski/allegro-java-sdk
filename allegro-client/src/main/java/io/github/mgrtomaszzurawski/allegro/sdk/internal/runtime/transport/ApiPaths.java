@@ -50,6 +50,10 @@ public final class ApiPaths {
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
 
+    // ---- shipping (bucket C) ----
+    /** Seller's points of service (personal-collection locations). */
+    public static final String POINTS_OF_SERVICE = "/points-of-service";
+
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
