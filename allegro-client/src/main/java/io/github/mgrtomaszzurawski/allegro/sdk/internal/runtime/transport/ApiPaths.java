@@ -17,6 +17,21 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- offers (bucket A) ----
+    private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
+    private static final String OFFERS = "/offers";
+    private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
+
+    /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
+    public static String productOffer(String offerId) {
+        return subPath(SALE_PRODUCT_OFFERS, offerId);
+    }
+
+    /** Single-offer Buy Now price change command ({@code /offers/{offerId}/change-price-commands/{commandId}}). */
+    public static String changePriceCommand(String offerId, String commandId) {
+        return subPath(OFFERS, offerId, CHANGE_PRICE_COMMANDS, commandId);
+    }
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

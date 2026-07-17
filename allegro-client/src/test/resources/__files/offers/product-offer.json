@@ -1,0 +1,12 @@
+{
+  "__provenance": "spec-derived: not yet wire-verified (SaleProductOfferResponseV1 subset per the vendored spec; confirm against a live sandbox GET /sale/product-offers/{id} before the bucket-final PR)",
+  "id": "13579",
+  "name": "Mechaniczna klawiatura RGB — test SDK",
+  "category": { "id": "257" },
+  "sellingMode": {
+    "format": "BUY_NOW",
+    "price": { "amount": "199.99", "currency": "PLN" }
+  },
+  "stock": { "available": 7, "unit": "UNIT" },
+  "publication": { "status": "ACTIVE" }
+}

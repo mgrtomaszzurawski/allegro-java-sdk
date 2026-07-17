@@ -34,6 +34,10 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
+    // Offer lifecycle (bucket A).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
+
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 

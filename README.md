@@ -31,7 +31,8 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — design, layers, auth lifecycle
 - [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
-- `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
+- [`docs/offers.md`](docs/offers.md) — offers: read an offer, change the Buy Now price
+- `docs/<domain>.md` — per-domain usage guides (orders, shipping, …), added as each
   domain lands
 
 ## Quick start
