@@ -33,6 +33,7 @@ module io.github.mgrtomaszzurawski.allegro {
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.builder;
 
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;

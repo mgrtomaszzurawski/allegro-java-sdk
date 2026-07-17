@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CurrentUser;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SalesQuality;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SmartClassification;
 
 /**
  * Account and user information — reached via {@code AllegroClient.user()}.
@@ -26,6 +28,37 @@ public interface UserAccount {
      * @return the authenticated user's profile
      */
     CurrentUser me();
+
+    /**
+     * The seller's sales-quality history (requires {@code profile:read}).
+     *
+     * @return the sales-quality report
+     */
+    SalesQuality salesQuality();
+
+    /**
+     * The seller's Smart! classification report for the account's registration
+     * marketplace.
+     *
+     * @return the Smart! classification report
+     */
+    SmartClassification smartClassification();
+
+    /**
+     * The seller's Smart! classification report for a specific marketplace.
+     *
+     * @param marketplaceId the marketplace to report on (e.g. {@code allegro-pl})
+     * @return the Smart! classification report
+     */
+    SmartClassification smartClassification(String marketplaceId);
+
+    /**
+     * The seller's received ratings (read, answer, request removal) and any
+     * user's public ratings summary.
+     *
+     * @return the ratings sub-facade
+     */
+    UserRatings ratings();
 
     /**
      * Additional e-mail addresses registered on the account.
