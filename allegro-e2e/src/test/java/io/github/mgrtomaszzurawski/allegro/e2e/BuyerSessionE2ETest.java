@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 @Tag("e2e")
 class BuyerSessionE2ETest {
 
+    private static final String LOGIN_PATH_SEGMENT = "/logowanie";
+
     @Test
     void authenticated_whenStorageStateExists_reusesSessionWithoutLogin() {
         // given — a bootstrapped buyer session (assert the precondition explicitly
@@ -45,7 +47,7 @@ class BuyerSessionE2ETest {
 
             // then — the reused session is already authenticated (not bounced to login)
             assertTrue(browser.hasValidSession());
-            assertFalse(browser.page().url().contains("/logowanie"));
+            assertFalse(browser.page().url().contains(LOGIN_PATH_SEGMENT));
         }
     }
 }

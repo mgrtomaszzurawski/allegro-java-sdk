@@ -102,11 +102,18 @@ public final class BuyerBrowser implements AutoCloseable {
         BrowserContext context = browser.newContext(contextOptions);
         context.addInitScript(WEBDRIVER_MASK);
         BuyerBrowser buyerBrowser = new BuyerBrowser(playwright, browser, context, storageStatePath);
-        if (!buyerBrowser.hasValidSession()) {
-            buyerBrowser.logIn(credentials);
-            buyerBrowser.saveState();
+        try {
+            if (!buyerBrowser.hasValidSession()) {
+                buyerBrowser.logIn(credentials);
+                buyerBrowser.saveState();
+            }
+            return buyerBrowser;
+        } catch (RuntimeException failure) {
+            // Close the just-launched browser + driver so a failed login (e.g. the
+            // DataDome hard block, which throws) never leaks an orphaned process.
+            buyerBrowser.close();
+            throw failure;
         }
-        return buyerBrowser;
     }
 
     /** {@code true} if the current context is already an authenticated buyer. */
@@ -174,7 +181,11 @@ public final class BuyerBrowser implements AutoCloseable {
 
     @Override
     public void close() {
-        browser.close();
-        playwright.close();
+        try {
+            browser.close();
+        } finally {
+            // Always release the driver process even if closing the browser threw.
+            playwright.close();
+        }
     }
 }
