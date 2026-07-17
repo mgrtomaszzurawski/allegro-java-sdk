@@ -109,7 +109,7 @@ your record maps must actually arrive non-null/parseable on a real response.
 
 ### Discipline
 
-- Credentials only from the environment (`/workspace/shared/allegro-sandbox.env`); token
+- Credentials only from the environment (`/workspace/shared/secrets/allegro-sandbox.env`); token
   refresh goes through the shared token store — never refresh ad hoc (rotation kills the
   other agents' sessions; see the pre-mortem, risk B1).
 - Demo scenarios log operation names and statuses, never bodies or tokens.

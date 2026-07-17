@@ -16,7 +16,7 @@ One shared token store: `/workspace/shared/.allegro-sandbox-tokens.json` (mode 6
 every git repo), written only under an exclusive `flock`. Demo runs READ the current access
 token (12 h validity); only the `auth-bootstrap` scenario — or a due-refresh holding the
 lock — performs the rotating refresh and rewrites the store. Unit tests never touch live
-auth (WireMock). Credentials themselves stay in `/workspace/shared/allegro-sandbox.env`
+auth (WireMock). Credentials themselves stay in `/workspace/shared/secrets/allegro-sandbox.env`
 (operator decision 2026-07-16).
 
 ## Consequences

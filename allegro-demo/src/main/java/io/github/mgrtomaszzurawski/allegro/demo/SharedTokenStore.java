@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  * store serializes writes with an exclusive OS-level file lock; readers grab
  * the same lock briefly. Format: one {@code account=token} line per account
  * (seller/buyer). Location: {@code ALLEGRO_TOKEN_STORE} env var, defaulting to
- * {@code /workspace/shared/.allegro-sandbox-tokens.properties}.
+ * {@code /workspace/shared/secrets/allegro-sandbox-tokens.properties}.
  *
  * <p>Agent infrastructure — not part of the published SDK; applications
  * persist {@code AllegroClient.refreshToken()} however they like.
@@ -34,7 +34,7 @@ final class SharedTokenStore {
 
     private static final String STORE_ENV_VAR = "ALLEGRO_TOKEN_STORE";
     private static final String DEFAULT_STORE_PATH =
-            "/workspace/shared/.allegro-sandbox-tokens.properties";
+            "/workspace/shared/secrets/allegro-sandbox-tokens.properties";
     private static final String READ_WRITE_MODE = "rw";
     private static final Pattern ENTRY_LINE = Pattern.compile("^([a-z]+)=(\\S+)$");
     private static final String ENTRY_FORMAT = "%s=%s%n";
