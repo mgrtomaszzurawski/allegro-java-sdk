@@ -1,0 +1,21 @@
+{
+  "id": "8f3b1c2e-0000-4a00-9b00-111122223333",
+  "externalId": "agent-c-demo-001",
+  "name": "Pickup Point Center",
+  "seller": {"id": "111332841"},
+  "type": "PICKUP_POINT",
+  "address": {
+    "street": "Grunwaldzka 100",
+    "city": "Gdansk",
+    "zipCode": "80-244",
+    "state": "pomorskie",
+    "countryCode": "PL"
+  },
+  "openHours": [
+    {"dayOfWeek": "MONDAY", "from": "08:00", "to": "16:00"}
+  ],
+  "confirmationType": "CONTACT_NOT_REQUIRED",
+  "status": "ACTIVE",
+  "createdAt": "2026-07-17T20:00:00.000+02:00",
+  "updatedAt": "2026-07-17T20:00:00.000+02:00"
+}

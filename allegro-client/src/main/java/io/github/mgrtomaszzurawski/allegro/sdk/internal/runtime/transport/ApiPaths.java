@@ -38,6 +38,10 @@ public final class ApiPaths {
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
 
+    // ---- catalog (bucket E) ----
+    /** Category tree; {@code parent.id} filters to one node's direct children. */
+    public static final String CATEGORIES = "/sale/categories";
+
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
@@ -45,6 +49,10 @@ public final class ApiPaths {
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+
+    // ---- shipping (bucket C) ----
+    /** Seller's points of service (personal-collection locations). */
+    public static final String POINTS_OF_SERVICE = "/points-of-service";
 
     // ---- contacts (bucket J) ----
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
