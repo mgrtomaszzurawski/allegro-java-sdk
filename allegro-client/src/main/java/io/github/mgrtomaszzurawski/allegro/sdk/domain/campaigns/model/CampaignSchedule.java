@@ -12,20 +12,20 @@ import org.jspecify.annotations.Nullable;
  * periods: when offers may be submitted, when the campaign is visible in the
  * seller's tools, and when the badge is shown to buyers.
  *
- * <p>The {@code start}/{@code end} bounds are present only when {@link #type}
+ * <p>The {@code startsAt}/{@code endsAt} bounds are present only when {@link #type}
  * requires them (see {@link SchedulePolicyType}); for {@link SchedulePolicyType#ALWAYS}
  * and {@link SchedulePolicyType#NEVER} both are {@code null}.
  *
- * @param type  how the window is bounded
- * @param start inclusive start instant, or {@code null} when the policy has no start
- * @param end   inclusive end instant, or {@code null} when the policy has no end
+ * @param type     how the window is bounded
+ * @param startsAt inclusive start instant, or {@code null} when the policy has no start
+ * @param endsAt   inclusive end instant, or {@code null} when the policy has no end
  *
  * @since 0.2.0
  */
 public record CampaignSchedule(
         SchedulePolicyType type,
-        @Nullable OffsetDateTime start,
-        @Nullable OffsetDateTime end) {
+        @Nullable OffsetDateTime startsAt,
+        @Nullable OffsetDateTime endsAt) {
 
     /**
      * Build from the wire policy-type value and the two ISO-8601 timestamps.
