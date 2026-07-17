@@ -56,6 +56,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   + compiled example + `offer` demo scenario (write→read on the sandbox).
 
 ### B — orders-payments
+
+- Orders facade (`AllegroClient.orders()`) starter slice: `get(orderId)` fetches a
+  single order (checkout form) as an immutable `Order` record — buyer-side
+  `OrderStatus`, seller-side `SellerStatus`, buyer, line items, and `Money` totals.
+  WireMock contract tests (happy path + 400/401-replay/404/429/5xx), `docs/orders.md`,
+  a compiled example, and the `orders-get` sandbox probe.
+
 ### C — shipping
 ### D — account-meta
 
@@ -65,6 +72,13 @@ sections. Empty subsections are dropped by the release engineer when folding
 
 ### E — catalog-products
 ### F — offers-extras
+
+- `client.classifieds()` accessor with `availablePackages(categoryId)` — read the
+  advertisement package configurations available in a category
+  (`GET /sale/classifieds-packages`). Starter slice of bucket F; immutable
+  `ClassifiedPackage` records, WireMock error-path coverage, and a live
+  read-shape demo scenario (`-Pdemo.scenario=classifieds`).
+
 ### G — pricing
 ### H — campaigns
 ### I — fulfillment
