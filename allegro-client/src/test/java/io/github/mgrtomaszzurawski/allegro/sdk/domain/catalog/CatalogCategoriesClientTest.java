@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -49,7 +50,7 @@ class CatalogCategoriesClientTest {
     private static final String TEST_CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_SECRET = "client-secret";
     private static final String TEST_TOKEN = "token-one";
-    private static final String TEST_TOKEN_2 = "token-two";
+    private static final String TEST_TOKEN_REAUTH = "token-two";
     private static final String TEST_TRACE_ID = "4631702648f0524e";
 
     private static final String CATEGORIES_PATH = "/sale/categories";
@@ -83,6 +84,9 @@ class CatalogCategoriesClientTest {
     private static final String CHILD_LIST = """
             {"categories":[{"id":"%s","name":"Wiertarki","leaf":true,"parent":{"id":"%s"}}]}
             """.formatted(CATEGORY_ID, CATEGORY_ID);
+    private static final String MINIMAL_CATEGORY = """
+            {"id":"%s","name":"Elektronika"}
+            """.formatted(CATEGORY_ID);
     private static final String BAD_REQUEST = """
             {"errors":[{"code":"CategoryIdNotValidException",
               "message":"Provided category id is not valid","userMessage":"Nieprawidłowa kategoria",
@@ -114,7 +118,7 @@ class CatalogCategoriesClientTest {
     }
 
     private static void stubToken(String accessToken) {
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(
+        stubFor(post(
                 urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(TOKEN_RESPONSE.formatted(accessToken, EXPIRY_SECONDS))));
@@ -200,8 +204,32 @@ class CatalogCategoriesClientTest {
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{}")));
 
         try (AllegroClient allegro = client(wmInfo)) {
-            // then — never null
-            assertTrue(allegro.catalog().categories().roots().isEmpty());
+            // when
+            List<Category> roots = allegro.catalog().categories().roots();
+
+            // then — never null, and the call still hit the wire
+            assertTrue(roots.isEmpty());
+            verify(1, getRequestedFor(urlEqualTo(CATEGORIES_PATH)));
+        }
+    }
+
+    @Test
+    void get_whenOptionalFieldsOmitted_defaultsLeafFalseAndNullsParentAndOptions(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a minimal category: no leaf, no parent, no options (spec marks none required)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(CATEGORY_BY_ID_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(MINIMAL_CATEGORY)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            Category category = allegro.catalog().categories().get(CATEGORY_ID);
+
+            // then — an absent boolean maps to false (not an unboxing NPE), refs stay null
+            assertFalse(category.leaf());
+            assertNull(category.parentId());
+            assertNull(category.options());
         }
     }
 
@@ -223,6 +251,7 @@ class CatalogCategoriesClientTest {
             AllegroBadRequestException failure =
                     assertThrows(AllegroBadRequestException.class, () -> categories.get(CATEGORY_ID));
             assertEquals(TestHttpConstants.HTTP_BAD_REQUEST, failure.statusCode());
+            assertEquals(TEST_TRACE_ID, failure.traceId());
             assertFalse(failure.errors().isEmpty());
             assertEquals("CategoryIdNotValidException", failure.errors().get(0).code());
             verify(1, getRequestedFor(urlEqualTo(CATEGORY_BY_ID_PATH)));
@@ -232,24 +261,24 @@ class CatalogCategoriesClientTest {
     @Test
     void get_when401Once_reauthenticatesAndReplaysWithFreshToken(WireMockRuntimeInfo wmInfo) {
         // given — token endpoint hands out token-one, then token-two on re-auth
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(
+        stubFor(post(
                 urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(TOKEN_RESPONSE.formatted(TEST_TOKEN, EXPIRY_SECONDS)))
                 .willSetStateTo(STATE_REAUTHED));
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(
+        stubFor(post(
                 urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(STATE_REAUTHED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(TOKEN_RESPONSE.formatted(TEST_TOKEN_2, EXPIRY_SECONDS))));
+                        .withBody(TOKEN_RESPONSE.formatted(TEST_TOKEN_REAUTH, EXPIRY_SECONDS))));
         stubFor(get(urlEqualTo(CATEGORY_BY_ID_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_UNAUTHORIZED)));
         stubFor(get(urlEqualTo(CATEGORY_BY_ID_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
-                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_2))
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_REAUTH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(LEAF_CATEGORY)));
 
         try (AllegroClient allegro = client(wmInfo)) {
@@ -261,7 +290,7 @@ class CatalogCategoriesClientTest {
             verify(2, getRequestedFor(urlEqualTo(CATEGORY_BY_ID_PATH)));
             verify(1, getRequestedFor(urlEqualTo(CATEGORY_BY_ID_PATH))
                     .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
-                            equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_2)));
+                            equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_REAUTH)));
         }
     }
 
@@ -322,6 +351,27 @@ class CatalogCategoriesClientTest {
                     assertThrows(AllegroServerException.class, () -> categories.get(CATEGORY_ID));
             assertEquals(TestHttpConstants.HTTP_SERVER_ERROR, failure.statusCode());
             verify(RETRY_MAX_ATTEMPTS, getRequestedFor(urlEqualTo(CATEGORY_BY_ID_PATH)));
+        }
+    }
+
+    // ---- fail-fast input validation ----
+
+    @Test
+    void childrenOf_whenIdNull_throwsNullPointerExceptionInsteadOfDegradingToRoots(
+            WireMockRuntimeInfo wmInfo) {
+        // then — a null id must fail loudly, never silently query all roots
+        try (AllegroClient allegro = client(wmInfo)) {
+            var categories = allegro.catalog().categories();
+            assertThrows(NullPointerException.class, () -> categories.childrenOf(null));
+        }
+    }
+
+    @Test
+    void get_whenIdNull_throwsNullPointerException(WireMockRuntimeInfo wmInfo) {
+        // then
+        try (AllegroClient allegro = client(wmInfo)) {
+            var categories = allegro.catalog().categories();
+            assertThrows(NullPointerException.class, () -> categories.get(null));
         }
     }
 }

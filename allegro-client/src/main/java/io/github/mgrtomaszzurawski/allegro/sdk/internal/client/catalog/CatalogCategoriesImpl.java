@@ -13,6 +13,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Endpoint wrapper behind the {@link CatalogCategories} facade. Both list
@@ -27,6 +28,8 @@ public final class CatalogCategoriesImpl implements CatalogCategories {
     private static final String OP_ROOT_CATEGORIES = "get root categories";
     private static final String OP_CHILD_CATEGORIES = "get child categories";
     private static final String PARAM_PARENT_ID = "parent.id";
+    private static final String ERR_CATEGORY_ID_NULL = "categoryId must not be null";
+    private static final String ERR_PARENT_ID_NULL = "parentCategoryId must not be null";
 
     private final HttpSupport http;
 
@@ -36,6 +39,7 @@ public final class CatalogCategoriesImpl implements CatalogCategories {
 
     @Override
     public Category get(String categoryId) {
+        Objects.requireNonNull(categoryId, ERR_CATEGORY_ID_NULL);
         String path = ApiPaths.subPath(ApiPaths.CATEGORIES, categoryId);
         return Category.from(http.request(OP_GET_CATEGORY).get(path).fetch(CategoryDtoRaw.class));
     }
@@ -47,6 +51,9 @@ public final class CatalogCategoriesImpl implements CatalogCategories {
 
     @Override
     public List<Category> childrenOf(String parentCategoryId) {
+        // Fail fast: without this, a null id would be dropped by Query's null-skip
+        // and the call would silently degrade into roots() instead of erroring.
+        Objects.requireNonNull(parentCategoryId, ERR_PARENT_ID_NULL);
         return categories(Query.create().add(PARAM_PARENT_ID, parentCategoryId),
                 OP_CHILD_CATEGORIES);
     }
