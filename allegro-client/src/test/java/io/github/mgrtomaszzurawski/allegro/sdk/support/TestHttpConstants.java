@@ -14,7 +14,10 @@ public final class TestHttpConstants {
     public static final String BEARER_PREFIX = "Bearer ";
     public static final String CONTENT_TYPE_HEADER = "Content-Type";
     public static final String ACCEPT_HEADER = "Accept";
+    public static final String ACCEPT_LANGUAGE_HEADER = "Accept-Language";
+    public static final String IF_MATCH_HEADER = "If-Match";
     public static final String VND_ALLEGRO_V1 = "application/vnd.allegro.public.v1+json";
+    public static final String VND_ALLEGRO_BETA_V1 = "application/vnd.allegro.beta.v1+json";
     public static final String APPLICATION_JSON = "application/json";
     public static final String FORM_URLENCODED = "application/x-www-form-urlencoded";
     public static final String TRACE_ID_HEADER = "trace-id";
