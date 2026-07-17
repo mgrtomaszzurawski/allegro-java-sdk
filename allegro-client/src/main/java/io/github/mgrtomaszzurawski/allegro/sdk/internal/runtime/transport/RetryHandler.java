@@ -66,13 +66,8 @@ public final class RetryHandler {
             try {
                 HttpResponse<String> response =
                         httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                long elapsedMillis = elapsedMillis(attemptStart);
-                interceptor.afterAttempt(new CallContext(operationName, request.method(), path,
-                        attempt, response.statusCode(), elapsedMillis));
-                if (SdkLoggers.RETRY.isDebugEnabled()) {
-                    SdkLoggers.RETRY.debug(LOG_ATTEMPT, operationName, request.method(), path,
-                            response.statusCode(), attempt, attemptsAllowed, elapsedMillis);
-                }
+                recordAttempt(interceptor, operationName, request, path, attempt,
+                        attemptsAllowed, response.statusCode(), elapsedMillis(attemptStart));
                 if (lastAttempt || !retryableMethod || !isRetryableStatus(response.statusCode())) {
                     return response;
                 }
@@ -81,8 +76,8 @@ public final class RetryHandler {
                 sleep(backoff);
             } catch (IOException e) {
                 lastNetworkFailure = e;
-                interceptor.afterAttempt(new CallContext(operationName, request.method(), path,
-                        attempt, 0, elapsedMillis(attemptStart)));
+                recordAttempt(interceptor, operationName, request, path, attempt,
+                        attemptsAllowed, 0, elapsedMillis(attemptStart));
                 if (lastAttempt || !retryableMethod || !policy.retryOn5xx()) {
                     throw new AllegroServerException(ERR_NETWORK, e);
                 }
@@ -100,6 +95,17 @@ public final class RetryHandler {
 
     private static long elapsedMillis(long startNanos) {
         return (System.nanoTime() - startNanos) / 1_000_000L;
+    }
+
+    private static void recordAttempt(AllegroExecutionInterceptor interceptor,
+            String operationName, HttpRequest request, String path, int attempt,
+            int attemptsAllowed, int statusCode, long elapsedMillis) {
+        interceptor.afterAttempt(new CallContext(operationName, request.method(), path,
+                attempt, statusCode, elapsedMillis));
+        if (SdkLoggers.RETRY.isDebugEnabled()) {
+            SdkLoggers.RETRY.debug(LOG_ATTEMPT, operationName, request.method(), path,
+                    statusCode, attempt, attemptsAllowed, elapsedMillis);
+        }
     }
 
     private boolean isRetryableStatus(int status) {

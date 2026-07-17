@@ -113,9 +113,10 @@ public final class HttpSupport {
             String operationName) {
         HttpRequest request = requestBuilder.get().build();
         String path = request.uri().getPath();
+        String method = request.method();
         var interceptor = runtime.executionInterceptor();
-        interceptor.beforeExecution(new CallContext(operationName, request.method(), path, 0, 0, 0L));
-        SdkLoggers.REQUEST.debug(LOG_SENDING, operationName, request.method(), path);
+        interceptor.beforeExecution(new CallContext(operationName, method, path, 0, 0, 0L));
+        SdkLoggers.REQUEST.debug(LOG_SENDING, operationName, method, path);
         long executionStart = System.nanoTime();
         HttpResponse<String> response = runtime.retryHandler().send(request, operationName, interceptor);
         if (response.statusCode() == HTTP_UNAUTHORIZED) {
@@ -135,7 +136,7 @@ public final class HttpSupport {
             SdkLoggers.REQUEST.debug(LOG_RESPONSE, operationName, response.statusCode(),
                     durationMillis, traceIdSuffix);
         }
-        CallContext finalContext = new CallContext(operationName, request.method(), path, 1,
+        CallContext finalContext = new CallContext(operationName, method, path, 1,
                 response.statusCode(), durationMillis);
         if (response.statusCode() < HTTP_OK_MIN || response.statusCode() > HTTP_OK_MAX) {
             AllegroException failure = errorParser.toException(response, operationName);

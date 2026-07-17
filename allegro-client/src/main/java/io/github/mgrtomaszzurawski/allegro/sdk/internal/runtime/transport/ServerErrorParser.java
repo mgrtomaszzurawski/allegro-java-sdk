@@ -132,8 +132,9 @@ public final class ServerErrorParser {
         try {
             return Long.parseLong(headerValue.trim());
         } catch (NumberFormatException e) {
-            // The rare HTTP-date flavour of that header is treated as absent;
-            // the backoff strategy still applies its own delay.
+            // Retry-After can also arrive as an HTTP date. That rare flavour is
+            // treated the same as a missing header and the backoff strategy
+            // falls back to its own delay.
             return 0L;
         }
     }
