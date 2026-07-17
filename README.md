@@ -39,6 +39,7 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
   - [`docs/catalog.md`](docs/catalog.md) — categories, products, compatibility (`client.catalog()`)
   - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
     rating, and bundles (bucket F)
+- [`docs/campaigns.md`](docs/campaigns.md) — badge campaigns, Allegro Prices, AlleDiscount
 
 ## Quick start
 

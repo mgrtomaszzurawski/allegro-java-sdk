@@ -46,6 +46,10 @@ public final class ApiPaths {
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
 
+    // ---- campaigns (bucket H) ----
+    /** Available badge campaigns ({@code /sale/badge-campaigns}). */
+    public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.
