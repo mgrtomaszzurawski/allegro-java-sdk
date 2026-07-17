@@ -70,10 +70,10 @@ public final class AllegroClient implements AutoCloseable {
                 .registerModule(new JavaTimeModule())
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        this.tokenManager = new OAuth2TokenManager(credentials, config.environment(),
+        this.tokenManager = new OAuth2TokenManager(credentials, config.oauthBaseUrl(),
                 httpClient, objectMapper, config.readTimeout());
         HttpRuntime runtime = new AllegroHttpRuntime(
-                config.environment().apiBaseUrl(),
+                config.apiBaseUrl(),
                 new RetryHandler(httpClient, config.retryPolicy()),
                 objectMapper,
                 config.readTimeout(),

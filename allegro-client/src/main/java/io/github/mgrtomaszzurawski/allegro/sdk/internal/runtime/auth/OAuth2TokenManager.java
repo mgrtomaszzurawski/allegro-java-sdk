@@ -6,7 +6,6 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AuthorizationCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceAuthorization;
@@ -105,8 +104,11 @@ public final class OAuth2TokenManager {
     private static final String REFRESH_PRESENT = "rotated";
     private static final String REFRESH_ABSENT = "absent";
 
+    private static final String TOKEN_ENDPOINT_SUFFIX = "/token";
+    private static final String DEVICE_ENDPOINT_SUFFIX = "/device";
+
     private final AllegroCredentials credentials;
-    private final AllegroEnvironment environment;
+    private final String oauthBaseUrl;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final Duration readTimeout;
@@ -117,10 +119,10 @@ public final class OAuth2TokenManager {
     private volatile @Nullable String refreshToken;
     private volatile boolean initialGrantConsumed;
 
-    public OAuth2TokenManager(AllegroCredentials credentials, AllegroEnvironment environment,
+    public OAuth2TokenManager(AllegroCredentials credentials, String oauthBaseUrl,
             HttpClient httpClient, ObjectMapper objectMapper, Duration readTimeout) {
         this.credentials = credentials;
-        this.environment = environment;
+        this.oauthBaseUrl = oauthBaseUrl;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.readTimeout = readTimeout;
@@ -212,7 +214,7 @@ public final class OAuth2TokenManager {
     // ---- device flow (RFC 8628) ----
 
     private void deviceFlow(DeviceCodeCredentials deviceCredentials) {
-        JsonNode deviceResponse = postForm(environment.deviceEndpoint(),
+        JsonNode deviceResponse = postForm(oauthBaseUrl + DEVICE_ENDPOINT_SUFFIX,
                 PARAM_CLIENT_ID + '=' + urlEncode(credentials.clientId()), ERR_DEVICE_ENDPOINT);
         long expiresInSeconds = deviceResponse.path(FIELD_EXPIRES_IN)
                 .asLong(DEFAULT_EXPIRES_IN_SECONDS);
@@ -231,7 +233,7 @@ public final class OAuth2TokenManager {
         while (Instant.now().isBefore(deadline)) {
             sleepSeconds(pollSeconds);
             HttpResponse<String> response = send(tokenEndpointRequest(
-                    environment.tokenEndpoint(), pollForm));
+                    oauthBaseUrl + TOKEN_ENDPOINT_SUFFIX, pollForm));
             if (response.statusCode() == HTTP_OK) {
                 storeTokens(parseJson(response.body()));
                 return;
@@ -254,7 +256,7 @@ public final class OAuth2TokenManager {
     // ---- token endpoint plumbing ----
 
     private JsonNode tokenRequest(String formBody) {
-        return postForm(environment.tokenEndpoint(), formBody, ERR_TOKEN_ENDPOINT);
+        return postForm(oauthBaseUrl + TOKEN_ENDPOINT_SUFFIX, formBody, ERR_TOKEN_ENDPOINT);
     }
 
     private JsonNode postForm(String endpoint, String formBody, String failureMessage) {

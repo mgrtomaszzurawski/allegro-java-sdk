@@ -18,6 +18,10 @@ import java.util.Objects;
  * @param readTimeout per-request response timeout
  * @param executionInterceptor hook around every SDK HTTP execution (metrics
  *     seam; defaults to a no-op)
+ * @param apiBaseUrl REST API base URL — defaults to the environment's; override
+ *     only for tests or proxies (no trailing slash)
+ * @param oauthBaseUrl OAuth2 endpoint base — defaults to the environment's;
+ *     override only for tests or proxies (no trailing slash)
  *
  * @since 0.1.0
  */
@@ -26,7 +30,9 @@ public record AllegroClientConfig(
         RetryPolicy retryPolicy,
         Duration connectTimeout,
         Duration readTimeout,
-        AllegroExecutionInterceptor executionInterceptor) {
+        AllegroExecutionInterceptor executionInterceptor,
+        String apiBaseUrl,
+        String oauthBaseUrl) {
 
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(30);
@@ -35,6 +41,8 @@ public record AllegroClientConfig(
     private static final String ERR_CONNECT_TIMEOUT_INVALID = "connectTimeout must be positive, got: ";
     private static final String ERR_READ_TIMEOUT_INVALID = "readTimeout must be positive, got: ";
     private static final String ERR_INTERCEPTOR_NULL = "executionInterceptor must not be null";
+    private static final String ERR_API_BASE_NULL = "apiBaseUrl must not be null";
+    private static final String ERR_OAUTH_BASE_NULL = "oauthBaseUrl must not be null";
 
     public AllegroClientConfig {
         Objects.requireNonNull(environment, ERR_ENVIRONMENT_NULL);
@@ -46,6 +54,8 @@ public record AllegroClientConfig(
             throw new IllegalArgumentException(ERR_READ_TIMEOUT_INVALID + readTimeout);
         }
         Objects.requireNonNull(executionInterceptor, ERR_INTERCEPTOR_NULL);
+        Objects.requireNonNull(apiBaseUrl, ERR_API_BASE_NULL);
+        Objects.requireNonNull(oauthBaseUrl, ERR_OAUTH_BASE_NULL);
     }
 
     /** Configuration with all defaults for the given environment. */
@@ -64,9 +74,13 @@ public record AllegroClientConfig(
         private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT;
         private Duration readTimeout = DEFAULT_READ_TIMEOUT;
         private AllegroExecutionInterceptor executionInterceptor = AllegroExecutionInterceptor.noop();
+        private String apiBaseUrl;
+        private String oauthBaseUrl;
 
         private Builder(AllegroEnvironment environment) {
             this.environment = Objects.requireNonNull(environment, ERR_ENVIRONMENT_NULL);
+            this.apiBaseUrl = environment.apiBaseUrl();
+            this.oauthBaseUrl = environment.oauthBaseUrl();
         }
 
         public Builder retryPolicy(RetryPolicy retryPolicy) {
@@ -89,9 +103,21 @@ public record AllegroClientConfig(
             return this;
         }
 
+        /** Test/proxy hook — points REST calls somewhere else (e.g. WireMock). */
+        public Builder apiBaseUrl(String apiBaseUrl) {
+            this.apiBaseUrl = apiBaseUrl;
+            return this;
+        }
+
+        /** Test/proxy hook — points OAuth2 calls somewhere else (e.g. WireMock). */
+        public Builder oauthBaseUrl(String oauthBaseUrl) {
+            this.oauthBaseUrl = oauthBaseUrl;
+            return this;
+        }
+
         public AllegroClientConfig build() {
             return new AllegroClientConfig(environment, retryPolicy, connectTimeout, readTimeout,
-                    executionInterceptor);
+                    executionInterceptor, apiBaseUrl, oauthBaseUrl);
         }
     }
 }
