@@ -78,7 +78,7 @@ public record CpsConversion(
             return new Offer(
                     raw.getId(),
                     raw.getName(),
-                    price == null ? null : Money.of(price.getAmount(), price.getCurrency()),
+                    price == null ? null : money(price.getAmount(), price.getCurrency()),
                     seller == null ? null : seller.getLogin());
         }
     }
@@ -98,8 +98,18 @@ public record CpsConversion(
             CpsConversionCommissionPublisherRaw publisher = raw.getPublisher();
             CpsConversionCommissionAllegroRaw allegro = raw.getAllegro();
             return new Commission(
-                    publisher == null ? null : Money.of(publisher.getAmount(), publisher.getCurrency()),
-                    allegro == null ? null : Money.of(allegro.getAmount(), allegro.getCurrency()));
+                    publisher == null ? null : money(publisher.getAmount(), publisher.getCurrency()),
+                    allegro == null ? null : money(allegro.getAmount(), allegro.getCurrency()));
         }
+    }
+
+    /**
+     * Build {@link Money} from a beta price pair, tolerating an incomplete
+     * object: the CPS price/commission leaf amounts are nullable on the wire, so
+     * a present-but-empty object maps to {@code null} instead of aborting the
+     * stream with an {@code IllegalArgumentException} from {@link Money}.
+     */
+    private static @Nullable Money money(@Nullable String amount, @Nullable String currency) {
+        return amount == null || currency == null ? null : Money.of(amount, currency);
     }
 }

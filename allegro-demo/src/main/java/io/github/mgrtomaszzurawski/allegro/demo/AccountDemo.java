@@ -50,14 +50,14 @@ public final class AccountDemo {
                 ignored -> System.out.println(STORED_TOKEN_EXPIRED),
                 storedRefreshToken);
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-            CurrentUser me = client.user().me();
-            System.out.println("me(): login=" + me.login() + ", id=" + me.id());
+            CurrentUser currentUser = client.user().me();
+            System.out.println("me(): login=" + currentUser.login() + ", id=" + currentUser.id());
             String rotated = client.refreshToken();
             if (rotated != null) {
                 tokenStore.store(account, rotated);
             }
 
-            reportProbes(client, me.id());
+            reportProbes(client, currentUser.id());
             additionalEmailsCycle(client);
         }
     }

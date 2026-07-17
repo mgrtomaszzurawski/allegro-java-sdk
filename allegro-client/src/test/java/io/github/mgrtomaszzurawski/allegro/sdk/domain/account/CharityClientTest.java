@@ -39,7 +39,6 @@ class CharityClientTest {
     private static final String TEST_TOKEN = "token-one";
     private static final long EXPIRY_SECONDS = 3600L;
 
-    private static final String VND_ALLEGRO_BETA_V1 = "application/vnd.allegro.beta.v1+json";
     private static final String CAMPAIGNS_PATH = "/charity/fundraising-campaigns";
     private static final String PHRASE = "children";
     private static final int LIMIT = 20;
@@ -82,7 +81,8 @@ class CharityClientTest {
             assertEquals(ORGANIZATION_NAME, campaigns.get(0).organizationName());
             // and — the beta Accept header + required query params went on the wire
             verify(getRequestedFor(urlPathEqualTo(CAMPAIGNS_PATH))
-                    .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(VND_ALLEGRO_BETA_V1))
+                    .withHeader(TestHttpConstants.ACCEPT_HEADER,
+                            equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                     .withQueryParam("phrase", equalTo(PHRASE))
                     .withQueryParam("limit", equalTo(String.valueOf(LIMIT))));
         }

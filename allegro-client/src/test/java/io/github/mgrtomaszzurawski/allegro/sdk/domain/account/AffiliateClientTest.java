@@ -14,6 +14,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -42,7 +43,6 @@ class AffiliateClientTest {
     private static final String TEST_TOKEN = "token-one";
     private static final long EXPIRY_SECONDS = 3600L;
 
-    private static final String VND_ALLEGRO_BETA_V1 = "application/vnd.allegro.beta.v1+json";
     private static final String CONVERSIONS_PATH = "/affiliate/conversions/cps";
     private static final String PUBLISHER_AMOUNT = "1.00";
     private static final String CURRENCY_PLN = "PLN";
@@ -58,6 +58,13 @@ class AffiliateClientTest {
               "commission":{"publisher":{"amount":"%s","currency":"%s"},
                 "allegro":{"amount":"0.50","currency":"%s"}}}]}
             """.formatted(PUBLISHER_AMOUNT, CURRENCY_PLN, CURRENCY_PLN);
+    // A conversion whose price/commission objects are present but omit their
+    // amount/currency — must map to null money, not abort the whole stream.
+    private static final String INCOMPLETE_PRICE_RESPONSE = """
+            {"conversions":[{"id":"conv-2","status":"CREATED",
+              "offer":{"id":"o2","unitPrice":{"currency":"PLN"}},
+              "commission":{"publisher":{}}}]}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
@@ -97,11 +104,33 @@ class AffiliateClientTest {
             assertEquals("seller1", conversion.offer().sellerLogin());
             // and — beta Accept header + status filter + first-page offset on the wire
             verify(getRequestedFor(urlPathEqualTo(CONVERSIONS_PATH))
-                    .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(VND_ALLEGRO_BETA_V1))
+                    .withHeader(TestHttpConstants.ACCEPT_HEADER,
+                            equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                     .withQueryParam("status", equalTo("CONFIRMED"))
                     .withQueryParam("offset", equalTo("0")));
             // and — exactly one page fetched (short page ended iteration)
             verify(1, getRequestedFor(urlPathEqualTo(CONVERSIONS_PATH)));
+        }
+    }
+
+    @Test
+    void streamCpsConversions_whenPriceAmountMissing_mapsMoneyToNullWithoutFailing(
+            WireMockRuntimeInfo wmInfo) {
+        // given — offer.unitPrice and commission.publisher lack amount/currency
+        stubFor(get(urlPathEqualTo(CONVERSIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(INCOMPLETE_PRICE_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<CpsConversion> conversions =
+                    allegro.affiliate().streamCpsConversions(ConversionFilter.all()).toList();
+
+            // then — the incomplete price maps to null, the conversion still yields
+            assertEquals(1, conversions.size());
+            assertNull(conversions.get(0).offer().unitPrice());
+            assertNull(conversions.get(0).commission().publisher());
         }
     }
 }
