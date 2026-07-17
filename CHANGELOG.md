@@ -58,6 +58,11 @@ sections. Empty subsections are dropped by the release engineer when folding
 ### B — orders-payments
 ### C — shipping
 ### D — account-meta
+
+- `client.marketplaces().list()` — the platform's marketplaces with their
+  languages, currencies and shipping countries (`GET /marketplaces`; public,
+  works with an app-only token). Bucket D starter slice.
+
 ### E — catalog-products
 ### F — offers-extras
 ### G — pricing
