@@ -16,10 +16,12 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Marketplaces;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog.CatalogImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -70,6 +72,7 @@ public final class AllegroClient implements AutoCloseable {
 
     private final OAuth2TokenManager tokenManager;
     private final UserAccount userAccount;
+    private final Orders orders;
     private final Marketplaces marketplaces;
     private final Catalog catalog;
     private final Classifieds classifieds;
@@ -101,6 +104,7 @@ public final class AllegroClient implements AutoCloseable {
                 tokenManager,
                 config.executionInterceptor());
         this.userAccount = new UserAccountImpl(runtime);
+        this.orders = new OrdersImpl(runtime);
         this.marketplaces = new MarketplacesImpl(runtime);
         this.catalog = new CatalogImpl(runtime);
         this.classifieds = new ClassifiedsImpl(runtime);
@@ -125,6 +129,12 @@ public final class AllegroClient implements AutoCloseable {
     public UserAccount user() {
         ensureOpen();
         return userAccount;
+    }
+
+    /** Orders, payments and billing. */
+    public Orders orders() {
+        ensureOpen();
+        return orders;
     }
 
     /** Details of the platform's marketplaces (public; app-token friendly). */

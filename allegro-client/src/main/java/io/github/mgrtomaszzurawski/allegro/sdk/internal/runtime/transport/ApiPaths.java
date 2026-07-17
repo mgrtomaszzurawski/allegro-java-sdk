@@ -19,6 +19,10 @@ public final class ApiPaths {
     /** Details for all marketplaces on the platform ({@code /marketplaces}). */
     public static final String MARKETPLACES = "/marketplaces";
 
+    // ---- orders (bucket B) ----
+    /** Seller's orders collection; append the order id for a single order. */
+    public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
+
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
     public static final String CATEGORIES = "/sale/categories";
