@@ -37,6 +37,10 @@ task-division plan in the shared context (`/workspace/shared/context/TASK-DIVISI
 - Spec files under `allegro-rest-models/openapi/` must NEVER appear in a diff. Check
   `git diff --name-only` before committing.
 - Javadoc every public API whose name doesn't carry the meaning.
+- **ADRs (`ADR/`) are immutable and BINDING** — consult before changing any design they
+  cover; supersede with a new ADR, never edit a decision. Every merged PR appends its
+  CHANGELOG entries under `[Unreleased]` in its bucket subsection. PRs follow
+  `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## Build and test commands
 

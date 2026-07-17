@@ -27,6 +27,24 @@ Three layers, enforced by the Java Platform Module System (JPMS):
 
 Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or transport types.
 
+## Domains
+
+Full navigable method layout: [`API-SURFACE.md`](API-SURFACE.md). Each section below is
+filled by its bucket owner in the bucket's PR (pre-seeded anchors — append inside your own
+section only).
+
+<!-- [bucket A] --> ### Offers — _lands with bucket A_
+<!-- [bucket B] --> ### Orders, payments, billing — _lands with bucket B_
+<!-- [bucket C] --> ### Shipping — _lands with bucket C_
+<!-- [bucket D] --> ### Account, bidding, marketplaces — _lands with bucket D_
+<!-- [bucket E] --> ### Catalog and products — _lands with bucket E_
+<!-- [bucket F] --> ### Offer tags, bundles, classifieds — _lands with bucket F_
+<!-- [bucket G] --> ### Pricing and promotions — _lands with bucket G_
+<!-- [bucket H] --> ### Campaigns — _lands with bucket H_
+<!-- [bucket I] --> ### Fulfillment — _lands with bucket I_
+<!-- [bucket J] --> ### Messaging, disputes, contacts — _lands with bucket J_
+<!-- [bucket K] --> ### Sale settings — _lands with bucket K_
+
 ## Requirements
 
 - Java 17+
