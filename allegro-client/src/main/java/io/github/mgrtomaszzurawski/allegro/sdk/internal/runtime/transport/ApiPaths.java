@@ -17,6 +17,10 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- orders (bucket B) ----
+    /** Seller's orders collection; append the order id for a single order. */
+    public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

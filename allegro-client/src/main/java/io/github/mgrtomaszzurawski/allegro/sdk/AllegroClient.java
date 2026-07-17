@@ -13,7 +13,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -64,6 +66,7 @@ public final class AllegroClient implements AutoCloseable {
 
     private final OAuth2TokenManager tokenManager;
     private final UserAccount userAccount;
+    private final Orders orders;
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
@@ -92,6 +95,7 @@ public final class AllegroClient implements AutoCloseable {
                 tokenManager,
                 config.executionInterceptor());
         this.userAccount = new UserAccountImpl(runtime);
+        this.orders = new OrdersImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
     }
@@ -113,6 +117,12 @@ public final class AllegroClient implements AutoCloseable {
     public UserAccount user() {
         ensureOpen();
         return userAccount;
+    }
+
+    /** Orders, payments and billing. */
+    public Orders orders() {
+        ensureOpen();
+        return orders;
     }
 
     // [append point: domain accessors] Each domain bucket appends its public
