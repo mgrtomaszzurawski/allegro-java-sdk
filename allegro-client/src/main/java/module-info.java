@@ -38,6 +38,10 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
+    // Offer lifecycle (bucket A).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
+
     // Product catalogue: categories, products, compatibility (bucket E).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
