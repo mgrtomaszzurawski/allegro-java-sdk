@@ -9,8 +9,22 @@ Every entry states: what happens, where it was observed (endpoint + date), and h
 handles it. Entries are added by the bucket owner who hit the behaviour; do not remove
 entries without re-verifying on the sandbox.
 
-_No verified entries yet — the first exploration passes land with the Phase 0.5 `me()`
-scenario and each bucket's starter slice._
+## Errors and diagnostics
+
+### Every error response carries a `trace-id` header (verified 2026-07-17, sandbox)
+
+Error responses include a `trace-id` HTTP header (e.g. `4631702648f0524e`) alongside the
+structured `errors[]` body. The SDK captures it into every `AllegroException`
+(`traceId()`) — quote it in Allegro support tickets.
+
+### `/me` with an app-only token returns 500, not 403 (verified 2026-07-17, sandbox)
+
+`GET /me` called with a client-credentials (application) token returns
+`500 INTERNAL_SERVER_ERROR` with `userMessage: "Internal server error. Try again in a few
+minutes."` — NOT a 401/403 explaining the missing user context. Consumers see
+`AllegroServerException` and a misleading "try again" message. The SDK cannot distinguish
+this from a real server error; the `UserAccount.me()` javadoc documents that a user-context
+token is required.
 
 ## From external sources (to verify on first contact)
 

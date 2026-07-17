@@ -269,7 +269,49 @@ Feature branch → PR to `develop` → `/review` gate (after open + again before
 squash-merge keep-branch. OWASP `dependencyCheckAggregate` (CVSS ≥ 7 fails) + PIT at release
 boundaries only.
 
-## 11. Environments
+## 11. Observability — three legs, in priority order
+
+**Leg 1 — internal execution trace (DEBUG).** If the SDK dies BEFORE sending, Allegro
+returns nothing — the only diagnostics is the SDK's own step trace. Every operation logs its
+pipeline steps at DEBUG with a per-call correlation id (short hex, generated per facade
+call), so the last line always pinpoints where execution stopped:
+
+```
+DEBUG [a3f19c] create offers: invoked (product=12345, parameters=8)
+DEBUG [a3f19c] create offers: request record built and validated
+DEBUG [a3f19c] create offers: mapped to raw DTO
+DEBUG [a3f19c] create offers: body serialized (1 412 B)
+DEBUG [a3f19c] auth: token cache hit (expires in 8 h)
+DEBUG [a3f19c] create offers: POST /sale/product-offers — sending (attempt 1/3)
+DEBUG [a3f19c] create offers: response 201 in 145 ms (trace-id 4631702648f0524e)
+DEBUG [a3f19c] create offers: response deserialized, mapped to domain record
+```
+
+Step points, in every layer: facade entry (operation + SAFE params: ids/counts, never
+values/PII/tokens) → builder validation → mapper → serialization → token manager (cache
+hit / refresh / device flow states) → retry handler (attempt n/m, backoff, Retry-After) →
+response status + duration + server trace-id → deserialization → domain mapping. Level
+discipline for a library: DEBUG = step markers; WARN = self-healed anomalies (retry fired,
+401 replay); INFO and ERROR are never used by the SDK — it throws, the application decides
+severity. Bodies and tokens are never logged at any level.
+
+**Leg 2 — the server's answer is never thrown away.** Every non-2xx response lands in the
+typed exception WITH its payload: `statusCode()`, full `responseBody()` (redacted
+`safeResponseBody()` for logs), parsed `errors[]` → `AllegroFieldError` list, `Retry-After`
+→ `retryAfterSeconds()`, and the server's **`trace-id` header → `traceId()`** (verified
+live: Allegro returns it on every error — quote it in support tickets). Transport failures
+(nothing sent/received) are distinguishable from server-reported errors: `statusCode() == 0`
++ cause, vs real status + body. The internal call id is also carried by the exception,
+linking it to the DEBUG trace.
+
+**Leg 3 — metrics seam (`AllegroCallListener` SPI).** Optional consumer hook in config
+(no-op default): `onCall(CallEvent)` after every exchange — operation, method+path, attempts,
+duration, status (0 for transport failure), and on failure the typed exception itself (which
+carries body/trace-id per leg 2, so the listener needs no body plumbing of its own).
+Micrometer/OTel pluggable without any SDK dependency. The SPI is the seam — legs 1 and 2 are
+the observability.
+
+## 12. Environments
 
 | | Production | Sandbox |
 |---|---|---|
@@ -279,7 +321,7 @@ boundaries only.
 Selected via `AllegroEnvironment`; both carry the same rate limits (~9000 req/min per client
 id + per-user leaky buckets → 429 with `Retry-After`).
 
-## 12. Status
+## 13. Status
 
 - **Built:** reactor + Layer-1 generation (PR #1, merged); config/credentials/policy,
   exception hierarchy, pagination, OAuth2 token manager, transport pipeline, `AllegroClient`
