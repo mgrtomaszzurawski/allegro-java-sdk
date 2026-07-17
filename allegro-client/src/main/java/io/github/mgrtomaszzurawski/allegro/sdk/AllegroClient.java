@@ -133,15 +133,21 @@ public final class AllegroClient implements AutoCloseable {
      *     or {@code unversioned} when running outside a packaged JAR
      */
     public static String sdkVersion() {
-        var moduleDescriptor = AllegroClient.class.getModule().getDescriptor();
+        Package sdkPackage = AllegroClient.class.getPackage();
+        return resolveVersion(
+                AllegroClient.class.getModule().getDescriptor(),
+                sdkPackage != null ? sdkPackage.getImplementationVersion() : null);
+    }
+
+    /** Pure resolution logic, testable with synthetic descriptors. */
+    static String resolveVersion(java.lang.module.@Nullable ModuleDescriptor moduleDescriptor,
+            @Nullable String implementationVersion) {
         if (moduleDescriptor != null) {
             var descriptorVersion = moduleDescriptor.version();
             if (descriptorVersion.isPresent()) {
                 return descriptorVersion.get().toString();
             }
         }
-        Package sdkPackage = AllegroClient.class.getPackage();
-        String implementationVersion = sdkPackage != null ? sdkPackage.getImplementationVersion() : null;
         return implementationVersion != null ? implementationVersion : VERSION_UNAVAILABLE;
     }
 

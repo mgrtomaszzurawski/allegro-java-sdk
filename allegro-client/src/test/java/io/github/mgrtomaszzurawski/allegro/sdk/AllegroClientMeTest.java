@@ -189,6 +189,21 @@ class AllegroClientMeTest {
     }
 
     @Test
+    void resolveVersion_prefersModuleDescriptorThenManifestThenFallback() {
+        // given
+        var versionedDescriptor = java.lang.module.ModuleDescriptor
+                .newModule("synthetic.module").version("9.9.9").build();
+        var unversionedDescriptor = java.lang.module.ModuleDescriptor
+                .newModule("synthetic.module").build();
+
+        // then — descriptor wins, manifest is the fallback, sentinel last
+        assertEquals("9.9.9", AllegroClient.resolveVersion(versionedDescriptor, "1.1.1"));
+        assertEquals("1.1.1", AllegroClient.resolveVersion(unversionedDescriptor, "1.1.1"));
+        assertEquals("1.1.1", AllegroClient.resolveVersion(null, "1.1.1"));
+        assertEquals("unversioned", AllegroClient.resolveVersion(null, null));
+    }
+
+    @Test
     void refreshToken_whenClientCredentialsGrant_returnsNull(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);

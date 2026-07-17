@@ -70,6 +70,9 @@ class OAuth2TokenManagerTest {
     private static final String INVALID_GRANT_RESPONSE = """
             {"error":"invalid_grant"}
             """;
+    private static final String ACCESS_DENIED_RESPONSE = """
+            {"error":"access_denied"}
+            """;
 
     private OAuth2TokenManager manager(AllegroCredentials credentials, WireMockRuntimeInfo wmInfo) {
         return new OAuth2TokenManager(credentials, wmInfo.getHttpBaseUrl() + "/auth/oauth",
@@ -233,6 +236,26 @@ class OAuth2TokenManagerTest {
         AllegroAuthException failure =
                 assertThrows(AllegroAuthException.class, tokenManager::requireToken);
         assertTrue(failure.getMessage().contains("re-authorize"));
+    }
+
+    @Test
+    void requireToken_whenDeviceAuthorizationDenied_throwsAuthException(WireMockRuntimeInfo wmInfo) {
+        // given — the user rejects the confirmation screen
+        stubFor(post(urlEqualTo(TestHttpConstants.DEVICE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(DEVICE_RESPONSE.formatted(TEST_DEVICE_CODE, TEST_USER_CODE,
+                                VERIFICATION_URI, VERIFICATION_URI, TEST_USER_CODE))));
+        stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
+                .withRequestBody(containing(GRANT_DEVICE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withBody(ACCESS_DENIED_RESPONSE)));
+        OAuth2TokenManager tokenManager = manager(
+                DeviceCodeCredentials.of(TEST_CLIENT_ID, TEST_CLIENT_SECRET, ignored -> { }), wmInfo);
+
+        // then
+        AllegroAuthException failure =
+                assertThrows(AllegroAuthException.class, tokenManager::requireToken);
+        assertTrue(failure.responseBody().contains("access_denied"));
     }
 
     @Test
