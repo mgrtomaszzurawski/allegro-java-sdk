@@ -31,10 +31,14 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — design, layers, auth lifecycle
 - [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
+- [`docs/offers.md`](docs/offers.md) — offers: read an offer, change the Buy Now price
+- [`docs/orders.md`](docs/orders.md) — orders, payments and billing
 - [`docs/contacts.md`](docs/contacts.md) — seller contact cards
-- `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
+- `docs/<domain>.md` — per-domain usage guides (shipping, …), added as each
   domain lands
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
+  - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
+    rating, and bundles (bucket F)
 
 ## Quick start
 
