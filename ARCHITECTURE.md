@@ -247,26 +247,35 @@ Exploration findings feed back three ways: server surprises → `KNOWN-SERVER-BE
 misfits → RCA + code fix. Scenarios prefix created entities with their bucket letter, clean
 up after themselves, log statuses only, and never run in CI or `check`.
 
-### 10.6 Playwright buyer-bot (user simulation for web-only flows)
+### 10.6 Buyer-side web automation — the `allegro-e2e` layer (Playwright-Java)
 
 The public API has no buyer-side checkout: buy-now purchases, opening disputes/returns as a
 buyer, and leaving ratings happen only in the web UI (verified against Allegro docs + team
-answers). A Node 20 + Playwright bot under `tools/buyer-bot/` (not a Gradle module, not
-published) simulates the buyer on the **sandbox web UI**: log in as the buyer account, buy a
-listed offer with the simulated sandbox payment, optionally open a dispute — seeding real
-orders/disputes that seller-side demo scenarios then exercise via the API. It can also click
-through device-flow consent screens, making token bootstrap fully non-interactive.
+answers). For flows that interleave a web-only buyer action with SDK calls (e.g. seller creates
+an offer → buyer buys + opens a dispute in the UI → the SDK reads/answers the dispute → assert),
+the web step is part of the test's control flow — the E2E test cannot exist without driving the
+browser. So the automation is **Playwright's Java binding driven in-process** from the
+`allegro-e2e` module (`BuyerBrowser`), interleaved with the SDK and JUnit assertions. Tests are
+`@Tag("e2e")`, excluded from `check`, run with `-Pe2e`; the module is not published. API-reachable
+buyer actions (auction bidding, Message Center both directions) don't need the browser — they use
+a buyer user-token via the SDK itself; the browser's first job is minting that token by clicking
+the device-flow consent screen.
 
-Status: PROVEN VIABLE (2026-07-17). Allegro fronts with DataDome-class anti-bot: headless is
-blocked (403 + `captcha-delivery.com`), but **full Chromium under Xvfb passes and logs in**.
-Working recipe (see `tools/buyer-bot/README.md`): full Chromium (not headless-shell) under
-Xvfb + stealth args + `navigator.webdriver` mask → the DataDome JS challenge self-clears after
-a ~9 s wait + one reload (URL gains `?dd_referrer=`) → dismiss the RODO consent modal
-(`button[data-role="accept-consent"]`) → fill `#login`/`#password`, click "Zaloguj się". The
-`probe.mjs` verdict was `loggedIn: true`. Fallback if DataDome hardens from the datacenter IP:
-one-time manual purchases in the sandbox UI (orders persist and remain queryable indefinitely).
-API-reachable buyer actions (auction bidding, Message Center both directions) don't need the
-bot at all — they use a buyer user-token via the SDK itself.
+Anti-bot: Allegro fronts with DataDome. Headless is blocked (403 + `captcha-delivery.com`);
+**full Chromium under Xvfb passes**. Recipe (in `BuyerBrowser`): full Chromium (not
+headless-shell) under Xvfb + stealth args + `navigator.webdriver` mask → the DataDome JS
+challenge self-clears after a ~9 s wait + one reload (URL gains `?dd_referrer=`) → dismiss the
+RODO consent modal (`button[data-role="accept-consent"]`) → fill `#login`/`#password`, click
+"Zaloguj się". Proven with a `loggedIn: true` login.
+
+**Storage-state reuse is mandatory.** From a datacenter IP, a fresh login on every run trips
+DataDome's HARD IP block ("Zostałeś zablokowany… w tej samej sieci operuje robot" — demonstrated
+2026-07-17 after ~8 rapid logins). So `BuyerBrowser` logs in at most once and reuses a saved
+`storageState` (cookies incl. the DataDome cookie + session) — bootstrap it once via
+`:allegro-e2e:run` (ideally from a clean IP), then every test reuses it. The storage-state file
+lives under `/workspace/shared/secrets/` (session cookies — outside any git repo). Fallback if
+DataDome still hardens: one-time manual purchases in the sandbox UI (orders persist and remain
+queryable indefinitely).
 
 ### 10.7 Process
 

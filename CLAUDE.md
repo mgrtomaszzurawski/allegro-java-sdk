@@ -13,6 +13,9 @@ OpenAPI-first, typed Java SDK for the Allegro REST API. Multi-module Gradle proj
 - `allegro-client` — the SDK library (hand-written Layers 2–3). Published artefact.
 - `allegro-demo` — live sandbox probe runner (manual execution; not published).
 - `allegro-examples` — compile-only check of consumer examples (not published).
+- `allegro-e2e` — live E2E layer: Java tests that drive the SDK AND (via Playwright-Java,
+  in-process) the buyer-side web UI for flows the REST API can't reach. `@Tag("e2e")`,
+  excluded from `check`, run with `-Pe2e`; not published.
 - `allegro-jpms-consumer` — JPMS consumer compile gate over the exported surface.
 
 Coordinates: `io.github.mgrtomaszzurawski:allegro-client` (version in `gradle.properties`).
@@ -179,10 +182,11 @@ Release boundary (`develop`→`main`) only: OWASP `dependencyCheckAggregate` (fa
 + **PIT mutation testing** (report-only, hand-written `allegro-client` code, target band
 ~70–85% — surviving mutants in token manager / retry / error parser are missing tests, fix
 before tagging). Live sandbox demo scenarios (`allegro-demo`) per bucket at PR DoD; the
-Playwright buyer-bot (`tools/buyer-bot/` — Node/Playwright, NOT a Gradle module, not published)
-seeds web-only flows (device-flow consent click for a buyer token; buy-now/disputes). PROVEN
-viable 2026-07-17 (full Chromium under Xvfb beats DataDome; headless is blocked) — recipe +
-run instructions in `tools/buyer-bot/README.md`, design in `ARCHITECTURE.md` §10.6.
+buyer-side web-only flows (device-flow consent click for a buyer token; buy-now/disputes)
+are driven in-process by **Playwright-Java** from the `allegro-e2e` module — a Java E2E test
+interleaves web actions with SDK calls and assertions. Full Chromium under Xvfb beats DataDome
+(headless is blocked); logins MUST reuse a saved `storageState` (login once — a fresh login per
+run from a datacenter IP trips DataDome's hard IP block). Design: `ARCHITECTURE.md` §10.6.
 
 ## Allegro API facts the code relies on
 
