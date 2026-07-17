@@ -192,14 +192,15 @@ Spotless (license headers) → Checkstyle → PMD (incl. the custom short-name r
 `domain.*.*Client`) attaches to `check` with the first domain PR. **JPMS gates:** hand-written
 module descriptors + the `allegro-jpms-consumer` compile gate.
 
-### 10.2 Tests
+### 10.2 Tests — convention is binding (`TESTING.md`)
 
-WireMock for ALL HTTP behaviour — happy paths, typed error mapping (400 `errors[]`, 401
-re-auth replay, 429 retry), with `WireMock.verify(...)` on writes and retries (an
-`assertDoesNotThrow` without verify is false-green). Per-builder round-trip tests
-(`requiredFieldsOnly`, `allCoreFieldsSet`, `toBuilder_preserves`). Fixture shapes come from
-the official Postman collection / live sandbox captures, not from imagination — the spec
-declares types, the wire decides reality. No live Allegro calls in unit tests.
+Full conventions live in `TESTING.md` (same rank as `CLAUDE.md`); they exist to force
+thinking, not greening. Highlights: WireMock for ALL HTTP behaviour with contract-pinning
+stubs and `verify(N, …)` on writes/retries; the mandatory error-path table
+(400 `errors[]` / 401-replay / 404 / 429 / 5xx) per facade; pagination laziness proofs;
+per-builder round-trips + per-required-field failure tests; RED-first discipline; fixture
+provenance (Postman / sandbox capture — `spec-derived` fixtures must be wire-verified before
+the bucket's final PR). No live Allegro calls in unit tests.
 
 ### 10.3 SonarQube (PR-ready, once per PR)
 
@@ -218,22 +219,33 @@ code — never per-PR (slow; equivalent mutants make 100% unreachable). Target b
 parser are treated as missing tests and fixed before a release tag. Report-only: the build
 never fails on the score, the release engineer reads the report.
 
-### 10.5 `allegro-demo` — live sandbox probe runner
+### 10.5 `allegro-demo` — the exploration and verification tool (not a test suite)
 
-The only place real HTTP happens. A manually-invoked runner
-(`./gradlew :allegro-demo:run -Pdemo.scenario=<name>`) executing named scenarios against the
-sandbox with credentials sourced from the environment (never tracked):
+The only place real HTTP happens. Green WireMock tests prove the SDK matches the author's
+understanding of the API; only the sandbox proves that understanding matches Allegro. The
+demo runner is the agent's instrument for both **exploring** real server behaviour
+(before/while implementing) and **verifying** the written code against the wire
+(`TESTING.md` §2 — binding).
 
-- `auth-bootstrap` — device-flow bootstrap for the seller and buyer accounts; persists rotated
-  refresh tokens to the shared token store so every later run (and every agent) starts
-  non-interactively.
+The core rule is the **write→read cycle through the SDK itself**: wrapping a GET from
+documentation proves nothing — the owning agent creates the state with the SDK (POST/PUT:
+publish the offer, send the message), reads it back with the SDK (GET/stream), and asserts
+the round-trip on the sandbox. Read-only areas verify response shape against a live payload.
+
+Runner: `./gradlew :allegro-demo:run -Pdemo.scenario=<name>`, credentials from the
+environment (never tracked). Scenario catalogue:
+
+- `auth-bootstrap` — device-flow bootstrap for the seller and buyer accounts; persists
+  rotated refresh tokens to the shared token store so later runs start non-interactively.
 - `me` — the Phase 0.5 vertical proof: full stack auth → transport → mapping on live sandbox.
-- One scenario per domain bucket lands with that bucket's PR (e.g. `offers-lifecycle`,
-  `orders-read`, `messaging-roundtrip`) — the bucket's DoD includes its demo scenario passing
-  against the sandbox.
+- One scenario per domain bucket, shipped in the bucket's PR (`offers-lifecycle`,
+  `orders-read`, `messaging-roundtrip`, …) — a bucket is not merge-ready until its scenario
+  passed against the sandbox on the code under review.
 
-Demo scenarios are wire-touching verification, not tests: they run on demand, log
-status-codes only, and never run in CI or `check`.
+Exploration findings feed back three ways: server surprises → `KNOWN-SERVER-BEHAVIORS.md`
+(dated, with the SDK's handling); fixture corrections → replace `spec-derived` marks; design
+misfits → RCA + code fix. Scenarios prefix created entities with their bucket letter, clean
+up after themselves, log statuses only, and never run in CI or `check`.
 
 ### 10.6 Playwright buyer-bot (user simulation for web-only flows)
 

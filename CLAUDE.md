@@ -100,13 +100,23 @@ drive-by edit in a domain PR.
 
 ## Test patterns
 
-- WireMock for ALL HTTP tests; VERIFY writes/retries (`WireMock.verify(N, ...)`) —
-  `assertDoesNotThrow` without verify is false-green. Fixtures in
-  `src/test/resources/__files/`.
+**`TESTING.md` is BINDING — read it before writing any test.** The short version:
+
+- WireMock for ALL HTTP tests; `@WireMockTest` class per domain client; all literals as
+  `TEST_*` constants; stubs pin the contract (auth header + method/path + request body);
+  VERIFY writes/retries (`WireMock.verify(N, ...)`) — `assertDoesNotThrow` without verify is
+  false-green. Mandatory error-path table (400/401-replay/404/429/5xx) per facade. Pagination
+  tests prove laziness. Fixtures carry provenance (Postman/sandbox capture; `spec-derived`
+  marks must be wire-verified before the bucket's final PR).
 - Naming `methodUnderTest_whenScenario_expectedResult`; given/when/then markers.
-- Per-builder round-trip tests (`requiredFieldsOnly`, `allCoreFieldsSet`, `toBuilder_preserves`).
-- Prove a new test fails without the fix. No `@Disabled` to ship. No live Allegro calls in tests;
-  live verification happens via `allegro-demo` against the sandbox.
+- Per-builder round-trip tests (`requiredFieldsOnly`, `allCoreFieldsSet`, `toBuilder_preserves`)
+  + one failure test per required field.
+- Prove a new test fails without the fix. No `@Disabled` to ship. No live Allegro calls in
+  unit tests.
+- **`allegro-demo` is an exploration/verification TOOL, not a test suite**: every
+  wire-touching facade area is verified on the sandbox with the write→read cycle THROUGH the
+  SDK (create with POST/PUT, read back with GET, assert the round-trip) before its PR is
+  merge-ready; server surprises go to `KNOWN-SERVER-BEHAVIORS.md`.
 
 ## Quality gates
 
