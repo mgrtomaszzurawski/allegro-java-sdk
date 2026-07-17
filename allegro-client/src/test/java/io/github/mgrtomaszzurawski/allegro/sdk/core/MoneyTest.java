@@ -35,6 +35,12 @@ class MoneyTest {
     }
 
     @Test
+    void ofBigDecimal_whenAmountNull_rejectsFailFastWithSameExceptionAsStringOverload() {
+        // then — both factories reject a missing amount the same way (IAE, not NPE)
+        assertThrows(IllegalArgumentException.class, () -> Money.of((BigDecimal) null, CURRENCY));
+    }
+
+    @Test
     void amountAsDecimal_whenParsed_equalsOriginal() {
         // then
         assertEquals(new BigDecimal(AMOUNT), Money.of(AMOUNT, CURRENCY).amountAsDecimal());

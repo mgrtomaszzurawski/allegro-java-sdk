@@ -23,6 +23,7 @@ import java.util.List;
 public final class Query {
 
     private static final String ENCODED_SPACE = "%20";
+    private static final String PLUS_SIGN = "+";
     private static final char QUERY_START = '?';
     private static final char PAIR_SEPARATOR = '&';
     private static final char VALUE_SEPARATOR = '=';
@@ -89,6 +90,6 @@ public final class Query {
     }
 
     private static String encode(String raw) {
-        return URLEncoder.encode(raw, StandardCharsets.UTF_8).replace("+", ENCODED_SPACE);
+        return URLEncoder.encode(raw, StandardCharsets.UTF_8).replace(PLUS_SIGN, ENCODED_SPACE);
     }
 }
