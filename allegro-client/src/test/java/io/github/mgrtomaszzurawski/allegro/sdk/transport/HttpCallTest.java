@@ -33,7 +33,6 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -200,19 +199,21 @@ class HttpCallTest {
     }
 
     @Test
-    void serialize_whenPayload_isUtf8(WireMockRuntimeInfo wmInfo) {
-        // given — a non-ASCII field must survive as UTF-8 bytes on the wire
-        String polish = "Cena za niska";
+    void jsonBody_whenPayloadHasDiacritics_survivesAsUtf8OnTheWire(WireMockRuntimeInfo wmInfo) {
+        // given — a field with real Polish diacritics (ł, ą, ę, ó) that only
+        // round-trip correctly if the request body is UTF-8 encoded end to end.
+        // WireMock decodes the received body as UTF-8, so a match on the exact
+        // string proves the bytes on the wire were UTF-8, not a mangled charset.
+        String diacritics = "Cena zbyt niska — wartość ≥ 10 zł";
         stubFor(post(urlEqualTo(PATH))
-                .withRequestBody(containing(polish))
+                .withRequestBody(containing(diacritics))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
 
         // when
-        support(wmInfo).request(OPERATION).post(PATH).jsonBody(Map.of("msg", polish)).send();
+        support(wmInfo).request(OPERATION).post(PATH).jsonBody(Map.of("msg", diacritics)).send();
 
-        // then
+        // then — the wire saw the diacritics intact (would fail on ISO-8859-1)
         verify(1, postRequestedFor(urlEqualTo(PATH))
-                .withRequestBody(containing(new String(polish.getBytes(StandardCharsets.UTF_8),
-                        StandardCharsets.UTF_8))));
+                .withRequestBody(containing(diacritics)));
     }
 }

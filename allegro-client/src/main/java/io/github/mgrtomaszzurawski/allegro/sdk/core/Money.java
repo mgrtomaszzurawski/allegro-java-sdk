@@ -5,7 +5,6 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.core;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 /**
  * A monetary amount in a single currency — the SDK-wide money value type.
@@ -50,7 +49,10 @@ public record Money(String amount, String currency) {
 
     /** Build from a {@link BigDecimal} amount, rendered as its plain string form. */
     public static Money of(BigDecimal amount, String currency) {
-        return new Money(Objects.requireNonNull(amount, ERR_AMOUNT).toPlainString(), currency);
+        if (amount == null) {
+            throw new IllegalArgumentException(ERR_AMOUNT);
+        }
+        return new Money(amount.toPlainString(), currency);
     }
 
     /** The amount as a {@link BigDecimal} for arithmetic or comparison. */
