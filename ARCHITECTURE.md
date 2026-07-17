@@ -257,11 +257,16 @@ listed offer with the simulated sandbox payment, optionally open a dispute — s
 orders/disputes that seller-side demo scenarios then exercise via the API. It can also click
 through device-flow consent screens, making token bootstrap fully non-interactive.
 
-Status: EXPERIMENT — Allegro fronts with DataDome-class anti-bot protection that may block
-headless browsers even on sandbox; a probe decides. Fallback: one-time manual purchases in
-the sandbox UI (orders persist and remain queryable indefinitely). API-reachable buyer
-actions (auction bidding, Message Center both directions) don't need the bot at all — they
-use a buyer user-token via the SDK itself.
+Status: PROVEN VIABLE (2026-07-17). Allegro fronts with DataDome-class anti-bot: headless is
+blocked (403 + `captcha-delivery.com`), but **full Chromium under Xvfb passes and logs in**.
+Working recipe (see `tools/buyer-bot/README.md`): full Chromium (not headless-shell) under
+Xvfb + stealth args + `navigator.webdriver` mask → the DataDome JS challenge self-clears after
+a ~9 s wait + one reload (URL gains `?dd_referrer=`) → dismiss the RODO consent modal
+(`button[data-role="accept-consent"]`) → fill `#login`/`#password`, click "Zaloguj się". The
+`probe.mjs` verdict was `loggedIn: true`. Fallback if DataDome hardens from the datacenter IP:
+one-time manual purchases in the sandbox UI (orders persist and remain queryable indefinitely).
+API-reachable buyer actions (auction bidding, Message Center both directions) don't need the
+bot at all — they use a buyer user-token via the SDK itself.
 
 ### 10.7 Process
 

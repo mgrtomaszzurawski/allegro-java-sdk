@@ -56,6 +56,10 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
 
+    // Pricing: automatic pricing rules, promotions, deposits (bucket G).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.builder;
     // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
@@ -64,6 +68,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder;
+
+    // Seller contact cards (bucket J — post-sale-comms).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.model;
 
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;

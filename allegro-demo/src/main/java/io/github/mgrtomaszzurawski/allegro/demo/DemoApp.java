@@ -35,8 +35,10 @@ public final class DemoApp {
     private static final String SCENARIO_MARKETPLACES = "marketplaces";
     private static final String SCENARIO_ACCOUNT = "account";
     private static final String SCENARIO_CLASSIFIEDS = "classifieds";
+    private static final String SCENARIO_PRICING = "pricing";
     private static final String SCENARIO_CAMPAIGNS = "campaigns";
     private static final String SCENARIO_POS_ROUNDTRIP = "pos-roundtrip";
+    private static final String SCENARIO_CONTACTS = "contacts";
     private static final String CLIENT_ID_ENV = "ALLEGRO_SANDBOX_CLIENT_ID";
     private static final String CLIENT_SECRET_ENV = "ALLEGRO_SANDBOX_CLIENT_SECRET";
     private static final String ACCOUNT_PROPERTY = "demo.account";
@@ -62,6 +64,7 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_AUTH_BOOTSTRAP, DemoApp::authBootstrap);
         SCENARIOS.put(SCENARIO_ME, DemoApp::currentUser);
         SCENARIOS.put(SCENARIO_OFFER, OffersDemo::run);
+        SCENARIOS.put(SCENARIO_PRICING, PricingDemo::run);
         // [append point: demo scenarios] One line per bucket, append-only:
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
         SCENARIOS.put(SCENARIO_ORDERS_GET, OrdersDemo::run);
@@ -72,6 +75,7 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);
         SCENARIOS.put(SCENARIO_POS_ROUNDTRIP, PointsOfServiceDemo::run);
         SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);
+        SCENARIOS.put(SCENARIO_CONTACTS, ContactsDemo::run);
     }
 
     private DemoApp() {
