@@ -23,6 +23,7 @@ public final class BadgesClient implements Badges {
 
     private static final String OP_AVAILABLE_CAMPAIGNS = "list badge campaigns";
     private static final String PARAM_MARKETPLACE_ID = "marketplace.id";
+    private static final String ERR_BLANK_MARKETPLACE = "marketplaceId must not be null or blank";
 
     private final HttpSupport http;
 
@@ -37,6 +38,9 @@ public final class BadgesClient implements Badges {
 
     @Override
     public List<BadgeCampaign> availableCampaigns(String marketplaceId) {
+        if (marketplaceId == null || marketplaceId.isBlank()) {
+            throw new IllegalArgumentException(ERR_BLANK_MARKETPLACE);
+        }
         return fetchCampaigns(marketplaceId);
     }
 

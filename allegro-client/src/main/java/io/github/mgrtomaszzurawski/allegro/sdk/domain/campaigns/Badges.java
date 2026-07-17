@@ -29,8 +29,10 @@ public interface Badges {
     /**
      * Badge campaigns offered to the authenticated seller on a single marketplace.
      *
-     * @param marketplaceId marketplace id (e.g. {@code "allegro-pl"})
+     * @param marketplaceId marketplace id (e.g. {@code "allegro-pl"}); must not be null or blank
      * @return the available campaigns on that marketplace; never {@code null}, possibly empty
+     * @throws IllegalArgumentException if {@code marketplaceId} is null or blank — use
+     *     {@link #availableCampaigns()} for the all-marketplaces listing
      */
     List<BadgeCampaign> availableCampaigns(String marketplaceId);
 }

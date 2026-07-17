@@ -49,6 +49,9 @@ public record BadgeCampaign(
     /** Map the generated Layer-1 DTO to the public immutable record. */
     public static BadgeCampaign from(BadgeCampaignRaw raw) {
         var eligibility = raw.getEligibility();
+        var application = raw.getApplication();
+        var visibility = raw.getVisibility();
+        var publication = raw.getPublication();
         List<CampaignRefusalReason> reasons = eligibility.getRefusalReasons().stream()
                 .map(CampaignRefusalReason::from)
                 .toList();
@@ -60,17 +63,13 @@ public record BadgeCampaign(
                 CampaignType.from(raw.getType()),
                 eligibility.getEligible(),
                 reasons,
-                schedule(raw.getApplication().getType().getValue(),
-                        raw.getApplication().getFrom(), raw.getApplication().getTo()),
-                schedule(raw.getVisibility().getType().getValue(),
-                        raw.getVisibility().getFrom(), raw.getVisibility().getTo()),
-                schedule(raw.getPublication().getType().getValue(),
-                        raw.getPublication().getFrom(), raw.getPublication().getTo()),
+                CampaignSchedule.from(application.getType().getValue(),
+                        application.getFrom(), application.getTo()),
+                CampaignSchedule.from(visibility.getType().getValue(),
+                        visibility.getFrom(), visibility.getTo()),
+                CampaignSchedule.from(publication.getType().getValue(),
+                        publication.getFrom(), publication.getTo()),
                 raw.getRegulationsLink(),
                 stockReservation != null && stockReservation);
-    }
-
-    private static CampaignSchedule schedule(String policyType, String startIso, String endIso) {
-        return CampaignSchedule.from(policyType, startIso, endIso);
     }
 }
