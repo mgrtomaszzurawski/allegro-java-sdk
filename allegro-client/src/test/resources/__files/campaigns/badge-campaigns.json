@@ -1,0 +1,29 @@
+{
+  "badgeCampaigns": [
+    {
+      "id": "BARGAIN",
+      "name": "Strefa Okazji",
+      "marketplace": { "id": "allegro-pl" },
+      "type": "DISCOUNT",
+      "eligibility": {
+        "eligible": false,
+        "refusalReasons": [
+          {
+            "code": "BB5",
+            "messages": [
+              {
+                "text": "Currency is not supported.",
+                "link": "https://na.allegro.pl/regulamin"
+              }
+            ]
+          }
+        ]
+      },
+      "application": { "type": "WITHIN", "from": "2026-07-01T10:00:00Z", "to": "2026-08-01T10:00:00Z" },
+      "visibility": { "type": "ALWAYS" },
+      "publication": { "type": "NEVER" },
+      "regulationsLink": "https://na.allegro.pl/regulamin-kampania-BARGAIN",
+      "stockReservationIsRequired": false
+    }
+  ]
+}

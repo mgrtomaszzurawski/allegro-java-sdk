@@ -46,6 +46,10 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
 
+    // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
+
     // Seller contact cards (bucket J — post-sale-comms).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.builder;

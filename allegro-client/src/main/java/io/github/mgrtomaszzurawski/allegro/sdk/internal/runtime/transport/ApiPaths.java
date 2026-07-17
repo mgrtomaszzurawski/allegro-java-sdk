@@ -42,6 +42,10 @@ public final class ApiPaths {
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
 
+    // ---- campaigns (bucket H) ----
+    /** Available badge campaigns ({@code /sale/badge-campaigns}). */
+    public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+
     // ---- contacts (bucket J) ----
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
     public static final String OFFER_CONTACTS = "/sale/offer-contacts";

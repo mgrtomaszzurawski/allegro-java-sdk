@@ -81,6 +81,12 @@ sections. Empty subsections are dropped by the release engineer when folding
 
 ### G — pricing
 ### H — campaigns
+
+- `client.campaigns().badges().availableCampaigns()` — list badge campaigns available to the
+  authenticated seller (GET `/sale/badge-campaigns`), with an optional per-marketplace overload.
+  Immutable `BadgeCampaign` model with eligibility, refusal reasons and the application/visibility/
+  publication schedules. Starter slice of bucket H.
+
 ### I — fulfillment
 ### J — post-sale-comms
 
