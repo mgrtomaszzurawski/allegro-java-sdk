@@ -16,7 +16,7 @@ One shared token store: `/workspace/shared/.allegro-sandbox-tokens.json` (mode 6
 every git repo), written only under an exclusive `flock`. Demo runs READ the current access
 token (12 h validity); only the `auth-bootstrap` scenario — or a due-refresh holding the
 lock — performs the rotating refresh and rewrites the store. Unit tests never touch live
-auth (WireMock). Credentials themselves stay in `/workspace/shared/secrets/allegro-sandbox.env`
+auth (WireMock). Credentials themselves stay in `/workspace/shared/allegro-sandbox.env`
 (operator decision 2026-07-16).
 
 ## Consequences
@@ -25,3 +25,10 @@ auth (WireMock). Credentials themselves stay in `/workspace/shared/secrets/alleg
 - A crashed writer self-heals on the next bootstrap run.
 - Production consumers are unaffected — this is agent-infrastructure, not SDK behaviour;
   the SDK's own persistence hook is `AllegroClient.refreshToken()`.
+
+## Amendment (2026-07-17)
+
+Operator decision: all agent-side secrets moved under a single 700-mode directory so the RAG
+scribe excludes exactly one path. The store now lives at
+`/workspace/shared/secrets/allegro-sandbox-tokens.properties` and the credentials env file at
+`/workspace/shared/secrets/allegro-sandbox.env`. The decision and its rationale are unchanged.
