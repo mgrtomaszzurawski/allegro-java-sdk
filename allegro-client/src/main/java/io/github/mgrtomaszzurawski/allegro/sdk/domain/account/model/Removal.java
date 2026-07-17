@@ -54,10 +54,7 @@ public record Removal(@Nullable String possibleTo, @Nullable RemovalRequest requ
             if (raw == null) {
                 return null;
             }
-            return switch (raw) {
-                case SELLER -> SELLER;
-                case ADMIN -> ADMIN;
-            };
+            return raw == RemovalRequestRaw.SourceEnum.ADMIN ? ADMIN : SELLER;
         }
     }
 }

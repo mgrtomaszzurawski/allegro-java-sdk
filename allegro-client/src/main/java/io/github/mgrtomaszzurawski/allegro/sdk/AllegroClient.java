@@ -12,10 +12,14 @@ import org.openapitools.jackson.nullable.JsonNullableModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Affiliate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Bidding;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Charity;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Marketplaces;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.AffiliateImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.BiddingImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.CharityImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
@@ -70,6 +74,8 @@ public final class AllegroClient implements AutoCloseable {
     private final UserAccount userAccount;
     private final Marketplaces marketplaces;
     private final Bidding bidding;
+    private final Charity charity;
+    private final Affiliate affiliate;
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
@@ -100,6 +106,8 @@ public final class AllegroClient implements AutoCloseable {
         this.userAccount = new UserAccountImpl(runtime);
         this.marketplaces = new MarketplacesImpl(runtime);
         this.bidding = new BiddingImpl(runtime);
+        this.charity = new CharityImpl(runtime);
+        this.affiliate = new AffiliateImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
     }
@@ -133,6 +141,18 @@ public final class AllegroClient implements AutoCloseable {
     public Bidding bidding() {
         ensureOpen();
         return bidding;
+    }
+
+    /** Charity fundraising-campaign search (beta). */
+    public Charity charity() {
+        ensureOpen();
+        return charity;
+    }
+
+    /** Affiliate CPS conversions (beta; needs the affiliate:read scope). */
+    public Affiliate affiliate() {
+        ensureOpen();
+        return affiliate;
     }
 
     // [append point: domain accessors] Each domain bucket appends its public

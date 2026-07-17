@@ -1,0 +1,105 @@
+/*
+ * Copyright (c) 2026 Tomasz Zurawski
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+package io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
+
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionCommissionAllegroRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionCommissionPublisherRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionCommissionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionMarketplaceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferSellerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferUnitPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.time.OffsetDateTime;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * A single affiliate CPS (Cost Per Sale) conversion, as returned by
+ * {@code Affiliate.streamCpsConversions(...)}. Beta resource.
+ *
+ * @param id conversion identifier
+ * @param status conversion lifecycle status, or {@code null} if not reported
+ * @param lastModifiedAt when the conversion was last modified, or {@code null}
+ * @param orderCreatedAt when the related order was created, or {@code null}
+ * @param quantity net ordered quantity (ordered minus returned), or {@code null}
+ * @param marketplaceId marketplace the conversion belongs to, or {@code null}
+ * @param offer the converted offer, or {@code null}
+ * @param commission the commission breakdown, or {@code null}
+ *
+ * @since 0.2.0
+ */
+public record CpsConversion(
+        String id,
+        @Nullable ConversionStatus status,
+        @Nullable OffsetDateTime lastModifiedAt,
+        @Nullable OffsetDateTime orderCreatedAt,
+        @Nullable Integer quantity,
+        @Nullable String marketplaceId,
+        @Nullable Offer offer,
+        @Nullable Commission commission) {
+
+    /** Map the generated Layer-1 DTO to the public immutable record. */
+    public static CpsConversion from(CpsConversionRaw raw) {
+        CpsConversionMarketplaceRaw marketplace = raw.getMarketplace();
+        return new CpsConversion(
+                raw.getId(),
+                ConversionStatus.from(raw.getStatus()),
+                raw.getLastModifiedAt(),
+                raw.getOrderCreatedAt(),
+                raw.getQuantity(),
+                marketplace == null ? null : marketplace.getId(),
+                Offer.from(raw.getOffer()),
+                Commission.from(raw.getCommission()));
+    }
+
+    /**
+     * The converted offer.
+     *
+     * @param id offer id
+     * @param name offer title, or {@code null}
+     * @param unitPrice unit price, or {@code null}
+     * @param sellerLogin the seller's login, or {@code null}
+     */
+    public record Offer(
+            String id,
+            @Nullable String name,
+            @Nullable Money unitPrice,
+            @Nullable String sellerLogin) {
+
+        static @Nullable Offer from(@Nullable CpsConversionOfferRaw raw) {
+            if (raw == null) {
+                return null;
+            }
+            CpsConversionOfferUnitPriceRaw price = raw.getUnitPrice();
+            CpsConversionOfferSellerRaw seller = raw.getSeller();
+            return new Offer(
+                    raw.getId(),
+                    raw.getName(),
+                    price == null ? null : Money.of(price.getAmount(), price.getCurrency()),
+                    seller == null ? null : seller.getLogin());
+        }
+    }
+
+    /**
+     * The commission split for a conversion.
+     *
+     * @param publisher the publisher's commission, or {@code null}
+     * @param allegro Allegro's commission, or {@code null}
+     */
+    public record Commission(@Nullable Money publisher, @Nullable Money allegro) {
+
+        static @Nullable Commission from(@Nullable CpsConversionCommissionRaw raw) {
+            if (raw == null) {
+                return null;
+            }
+            CpsConversionCommissionPublisherRaw publisher = raw.getPublisher();
+            CpsConversionCommissionAllegroRaw allegro = raw.getAllegro();
+            return new Commission(
+                    publisher == null ? null : Money.of(publisher.getAmount(), publisher.getCurrency()),
+                    allegro == null ? null : Money.of(allegro.getAmount(), allegro.getCurrency()));
+        }
+    }
+}

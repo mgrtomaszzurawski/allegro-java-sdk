@@ -31,14 +31,12 @@ public final class UserAccountImpl implements UserAccount {
     private static final String OP_SMART = "get smart classification";
     private static final String QUERY_MARKETPLACE_ID = "marketplaceId";
 
+    private final HttpRuntime runtime;
     private final HttpSupport http;
-    private final UserRatings ratings;
-    private final AdditionalEmails additionalEmails;
 
     public UserAccountImpl(HttpRuntime runtime) {
+        this.runtime = runtime;
         this.http = new HttpSupport(runtime);
-        this.ratings = new UserRatingsImpl(runtime);
-        this.additionalEmails = new AdditionalEmailsImpl(runtime);
     }
 
     @Override
@@ -73,11 +71,13 @@ public final class UserAccountImpl implements UserAccount {
 
     @Override
     public UserRatings ratings() {
-        return ratings;
+        // Fresh, stateless sub-facade per call (avoids exposing a stored field;
+        // the wrapper is a cheap HttpSupport holder).
+        return new UserRatingsImpl(runtime);
     }
 
     @Override
     public AdditionalEmails additionalEmails() {
-        return additionalEmails;
+        return new AdditionalEmailsImpl(runtime);
     }
 }

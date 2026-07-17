@@ -30,10 +30,10 @@ public record MyBid(
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
     public static MyBid from(MyBidResponseRaw raw) {
-        MaxPriceRaw max = raw.getMaxAmount();
+        MaxPriceRaw maxPrice = raw.getMaxAmount();
         CurrentPriceRaw current = raw.getAuction().getCurrentPrice();
         return new MyBid(
-                Money.of(max.getAmount(), max.getCurrency()),
+                Money.of(maxPrice.getAmount(), maxPrice.getCurrency()),
                 raw.getMinimalPriceMet(),
                 raw.getHighBidder(),
                 Money.of(current.getAmount(), current.getCurrency()));
