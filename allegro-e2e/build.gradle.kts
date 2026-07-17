@@ -44,6 +44,13 @@ tasks.named<Test>("test") {
             excludeTags("e2e")
         }
     }
+    // Playwright E2E MUST run as a serial series with a rate limit: they share
+    // one buyer session/IP, and concurrent or rapid browser traffic trips
+    // DataDome's hard IP block. One JVM fork, no parallel test execution, and
+    // one class per fork so sessions never overlap.
+    maxParallelForks = 1
+    forkEvery = 1
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
 }
 
 tasks.withType<JavaCompile>().configureEach {

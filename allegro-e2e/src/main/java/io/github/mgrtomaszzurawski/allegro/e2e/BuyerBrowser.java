@@ -13,9 +13,12 @@ import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.WaitForSelectorState;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.List;
+import java.util.Set;
 
 /**
  * An authenticated buyer session on the Allegro <strong>sandbox</strong> web UI,
@@ -172,6 +175,15 @@ public final class BuyerBrowser implements AutoCloseable {
     /** Persist cookies + session so later runs skip the login (and the challenge). */
     public void saveState() {
         context.storageState(new BrowserContext.StorageStateOptions().setPath(storageStatePath));
+        // The state holds live session cookies — restrict it to the owner, like
+        // every other file under the shared secrets dir.
+        try {
+            Files.setPosixFilePermissions(storageStatePath,
+                    Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+        } catch (IOException e) {
+            throw new PlaywrightException("Failed to restrict storageState permissions: "
+                    + e.getMessage());
+        }
     }
 
     /** The live page, for a test that needs to drive the UI directly. */
