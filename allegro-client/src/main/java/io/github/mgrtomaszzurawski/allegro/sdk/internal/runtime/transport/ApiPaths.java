@@ -16,6 +16,8 @@ public final class ApiPaths {
     // ---- account (bucket D) ----
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
+    /** Details for all marketplaces on the platform ({@code /marketplaces}). */
+    public static final String MARKETPLACES = "/marketplaces";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
