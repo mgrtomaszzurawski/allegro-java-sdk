@@ -12,8 +12,10 @@ import org.openapitools.jackson.nullable.JsonNullableModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Marketplaces;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.Contacts;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.contacts.ContactsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
@@ -67,6 +69,7 @@ public final class AllegroClient implements AutoCloseable {
     private final OAuth2TokenManager tokenManager;
     private final UserAccount userAccount;
     private final Contacts contacts;
+    private final Marketplaces marketplaces;
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
@@ -96,6 +99,7 @@ public final class AllegroClient implements AutoCloseable {
                 config.executionInterceptor());
         this.userAccount = new UserAccountImpl(runtime);
         this.contacts = new ContactsImpl(runtime);
+        this.marketplaces = new MarketplacesImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
     }
@@ -123,6 +127,12 @@ public final class AllegroClient implements AutoCloseable {
     public Contacts contacts() {
         ensureOpen();
         return contacts;
+    }
+
+    /** Details of the platform's marketplaces (public; app-token friendly). */
+    public Marketplaces marketplaces() {
+        ensureOpen();
+        return marketplaces;
     }
 
     // [append point: domain accessors] Each domain bucket appends its public
