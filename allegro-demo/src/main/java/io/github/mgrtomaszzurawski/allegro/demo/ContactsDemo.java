@@ -54,14 +54,14 @@ public final class ContactsDemo {
             if (rotatedRefreshToken != null) {
                 tokenStore.store(account, rotatedRefreshToken);
             }
-            boolean roundTrip = DEMO_CONTACT_NAME.equals(readBack.name())
+            boolean roundTripMatches = DEMO_CONTACT_NAME.equals(readBack.name())
                     && readBack.emails().contains(DEMO_EMAIL)
                     && readBack.phones().contains(DEMO_PHONE);
             System.out.println("contacts write->read: id=" + readBack.id()
                     + ", name=" + readBack.name()
                     + ", emails=" + readBack.emails().size()
                     + ", phones=" + readBack.phones().size()
-                    + ", roundTrip=" + roundTrip);
+                    + ", roundTrip=" + roundTripMatches);
         }
     }
 

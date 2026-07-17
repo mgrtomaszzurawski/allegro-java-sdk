@@ -63,6 +63,11 @@ class ContactsClientTest {
 
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final String SCENARIO_RECOVER = "recover-5xx";
+    private static final String STATE_RECOVERED = "recovered";
+    private static final String JSON_PATH_NAME = "$.name";
+    private static final String JSON_PATH_EMAIL_ADDRESS = "$.emails[0].address";
+    private static final String JSON_PATH_PHONE_NUMBER = "$.phones[0].number";
     private static final int RETRY_TWICE = 2;
     private static final String RETRY_AFTER_SECONDS = "1";
     private static final long RETRY_AFTER_EXPECTED = 1L;
@@ -171,9 +176,9 @@ class ContactsClientTest {
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
-                .withRequestBody(matchingJsonPath("$.name", equalTo(TEST_NAME)))
-                .withRequestBody(matchingJsonPath("$.emails[0].address", equalTo(TEST_EMAIL)))
-                .withRequestBody(matchingJsonPath("$.phones[0].number", equalTo(TEST_PHONE)))
+                .withRequestBody(matchingJsonPath(JSON_PATH_NAME, equalTo(TEST_NAME)))
+                .withRequestBody(matchingJsonPath(JSON_PATH_EMAIL_ADDRESS, equalTo(TEST_EMAIL)))
+                .withRequestBody(matchingJsonPath(JSON_PATH_PHONE_NUMBER, equalTo(TEST_PHONE)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(CONTACT_RESPONSE)));
 
@@ -194,7 +199,7 @@ class ContactsClientTest {
         stubFor(put(urlEqualTo(CONTACT_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
-                .withRequestBody(matchingJsonPath("$.name", equalTo(TEST_NAME)))
+                .withRequestBody(matchingJsonPath(JSON_PATH_NAME, equalTo(TEST_NAME)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(CONTACT_RESPONSE)));
 
@@ -314,12 +319,12 @@ class ContactsClientTest {
     void list_when5xxThenOk_retriesAndSucceeds(WireMockRuntimeInfo wmInfo) {
         // given — a GET is idempotent, so a transient 500 is retried
         stubToken(TEST_TOKEN);
-        stubFor(get(urlEqualTo(CONTACTS_PATH)).inScenario(SCENARIO_REPLAY)
+        stubFor(get(urlEqualTo(CONTACTS_PATH)).inScenario(SCENARIO_RECOVER)
                 .whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR))
-                .willSetStateTo(STATE_REAUTHED));
-        stubFor(get(urlEqualTo(CONTACTS_PATH)).inScenario(SCENARIO_REPLAY)
-                .whenScenarioStateIs(STATE_REAUTHED)
+                .willSetStateTo(STATE_RECOVERED));
+        stubFor(get(urlEqualTo(CONTACTS_PATH)).inScenario(SCENARIO_RECOVER)
+                .whenScenarioStateIs(STATE_RECOVERED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(CONTACT_LIST_RESPONSE)));
         RetryPolicy twoAttempts = RetryPolicy.builder().maxAttempts(RETRY_TWICE).build();
