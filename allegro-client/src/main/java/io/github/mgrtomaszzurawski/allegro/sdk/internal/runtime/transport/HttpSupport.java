@@ -103,6 +103,21 @@ public final class HttpSupport {
      */
     HttpResponse<String> exchange(Supplier<HttpRequest.Builder> requestBuilder,
             String operationName) {
+        return exchangeFor(requestBuilder, operationName, HttpResponse.BodyHandlers.ofString(),
+                stringBody -> stringBody);
+    }
+
+    /**
+     * Generic form of {@link #exchange}: same retry, single-attempt 401 re-auth,
+     * interceptor lifecycle and typed error mapping, but with a caller-chosen
+     * body handler. {@code errorBodyAsString} renders the body for error mapping
+     * so a binary download (bytes on success) still surfaces the vendor JSON
+     * error payload on failure. The request builder is a supplier because the
+     * replay attempt must re-read the (refreshed) access token.
+     */
+    <B> HttpResponse<B> exchangeFor(Supplier<HttpRequest.Builder> requestBuilder,
+            String operationName, HttpResponse.BodyHandler<B> bodyHandler,
+            java.util.function.Function<B, String> errorBodyAsString) {
         HttpRequest request = requestBuilder.get().build();
         String path = request.uri().getPath();
         String method = request.method();
@@ -111,7 +126,8 @@ public final class HttpSupport {
                 new CallContext(operationName, method, path, EXECUTION_LEVEL_ATTEMPT, 0, 0L)));
         SdkLoggers.REQUEST.debug(LOG_SENDING, operationName, method, path);
         long executionStart = System.nanoTime();
-        HttpResponse<String> response = runtime.retryHandler().send(request, operationName, interceptor);
+        HttpResponse<B> response = runtime.retryHandler().send(request, operationName, interceptor,
+                bodyHandler);
         if (response.statusCode() == HTTP_UNAUTHORIZED) {
             // Single-attempt recovery: the token may simply have been revoked
             // server-side, so re-acquire once and replay; a second rejection is
@@ -119,7 +135,7 @@ public final class HttpSupport {
             SdkLoggers.AUTH.warn(WARN_REPLAY_401, operationName);
             runtime.reauthenticate();
             response = runtime.retryHandler().send(requestBuilder.get().build(), operationName,
-                    interceptor);
+                    interceptor, bodyHandler);
         }
         long durationMillis = (System.nanoTime() - executionStart) / 1_000_000L;
         if (SdkLoggers.REQUEST.isDebugEnabled()) {
@@ -132,7 +148,8 @@ public final class HttpSupport {
         CallContext finalContext = new CallContext(operationName, method, path,
                 EXECUTION_LEVEL_ATTEMPT, response.statusCode(), durationMillis);
         if (response.statusCode() < HTTP_OK_MIN || response.statusCode() > HTTP_OK_MAX) {
-            AllegroException failure = errorParser.toException(response, operationName);
+            AllegroException failure = errorParser.toException(response.statusCode(),
+                    errorBodyAsString.apply(response.body()), response, operationName);
             notifySafely(() -> interceptor.onExecutionFailure(finalContext, failure));
             throw failure;
         }

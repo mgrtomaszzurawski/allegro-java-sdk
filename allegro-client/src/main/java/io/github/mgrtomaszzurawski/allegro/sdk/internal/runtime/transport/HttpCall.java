@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Fluent, single-use description of one authenticated Allegro request.
@@ -31,6 +32,7 @@ public final class HttpCall {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String ACCEPT_LANGUAGE_HEADER = "Accept-Language";
     private static final String IF_MATCH_HEADER = "If-Match";
+    private static final String ETAG_HEADER = "ETag";
     private static final String BEARER_PREFIX = "Bearer ";
 
     private static final String METHOD_GET = "GET";
@@ -101,6 +103,12 @@ public final class HttpCall {
         return this;
     }
 
+    /** Request an arbitrary media type (e.g. {@code application/pdf} downloads). */
+    public HttpCall accept(String mediaType) {
+        this.acceptMediaType = mediaType;
+        return this;
+    }
+
     /** Localize the response ({@code Accept-Language}); {@code null} omits it. */
     public HttpCall acceptLanguage(String language) {
         this.acceptLanguage = language;
@@ -136,6 +144,30 @@ public final class HttpCall {
     /** Execute a write whose response body is empty or ignored (204/200-void). */
     public void send() {
         support.exchange(this::buildRequest, operationName);
+    }
+
+    /**
+     * Execute and return the raw response bytes (binary downloads: invoice PDFs,
+     * message/dispute attachments). On a non-2xx status the vendor JSON error is
+     * still decoded and mapped to a typed exception.
+     */
+    public byte[] fetchBytes() {
+        HttpResponse<byte[]> response = support.exchangeFor(this::buildRequest, operationName,
+                HttpResponse.BodyHandlers.ofByteArray(),
+                bytes -> new String(bytes, StandardCharsets.UTF_8));
+        return response.body();
+    }
+
+    /**
+     * Execute and return the deserialized body together with the response
+     * {@code ETag}, so a later {@link #ifMatch(String)} write can be guarded
+     * against a concurrent modification.
+     */
+    public <T> Etagged<T> fetchWithETag(Class<T> responseType) {
+        HttpResponse<String> response = support.exchangeFor(this::buildRequest, operationName,
+                HttpResponse.BodyHandlers.ofString(), stringBody -> stringBody);
+        T value = support.deserialize(response, responseType);
+        return new Etagged<>(value, response.headers().firstValue(ETAG_HEADER).orElse(null));
     }
 
     private HttpRequest.Builder buildRequest() {

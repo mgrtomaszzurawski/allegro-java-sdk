@@ -42,6 +42,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   backoff, an optional `Duration` timeout, and `AllegroAsyncTimeoutException`;
   status shape and terminal predicate supplied by the caller. Shared by
   buckets A (batch), C (WZA), H (badges/subsidies), I (ASN).
+- Binary download (`HttpCall.fetchBytes`) and conditional-read
+  (`HttpCall.fetchWithETag` → `Etagged<T>`): the transport response path is now
+  generic over the body type, so a byte download still shares retry, 401 replay
+  and typed error mapping (the error body is decoded from bytes). Unblocks
+  bucket I (PDF, `If-Match`) and bucket J (attachment downloads).
 
 ### A — offers-core
 ### B — orders-payments
