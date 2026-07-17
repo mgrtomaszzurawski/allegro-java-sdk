@@ -11,6 +11,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -117,7 +118,7 @@ public final class HttpSupport {
      */
     <B> HttpResponse<B> exchangeFor(Supplier<HttpRequest.Builder> requestBuilder,
             String operationName, HttpResponse.BodyHandler<B> bodyHandler,
-            java.util.function.Function<B, String> errorBodyAsString) {
+            Function<B, String> errorBodyAsString) {
         HttpRequest request = requestBuilder.get().build();
         String path = request.uri().getPath();
         String method = request.method();

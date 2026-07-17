@@ -22,7 +22,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -233,9 +235,11 @@ class HttpCallTest {
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
                         .withBody(NOT_FOUND_BODY)));
 
-        // then
-        assertThrows(AllegroNotFoundException.class,
+        // then — the decoded error body reaches the typed exception, proving the
+        // bytes→String error path ran (not just status-code inference)
+        AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
                 () -> support(wmInfo).request(OPERATION).get(PATH).accept(PDF_MEDIA_TYPE).fetchBytes());
+        assertTrue(failure.responseBody().contains("no such attachment"));
     }
 
     @Test
@@ -251,6 +255,20 @@ class HttpCallTest {
         // then — both the deserialized body and the ETag are captured
         assertEquals(OK_VALUE, result.value().get("value"));
         assertEquals(ETAG_VALUE, result.etag());
+    }
+
+    @Test
+    void fetchWithETag_whenNoEtagHeader_returnsNullEtag(WireMockRuntimeInfo wmInfo) {
+        // given — the server sent no ETag (the resource is not conditionally guardable)
+        stubFor(get(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        Etagged<Map> result = support(wmInfo).request(OPERATION).get(PATH).fetchWithETag(Map.class);
+
+        // then — value is still deserialized, etag is null
+        assertEquals(OK_VALUE, result.value().get("value"));
+        assertNull(result.etag());
     }
 
     @Test
