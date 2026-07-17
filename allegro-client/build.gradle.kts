@@ -142,15 +142,11 @@ spotbugs {
     onlyAnalyze.set(listOf("io.github.mgrtomaszzurawski.allegro.sdk.-"))
 }
 
-// ---------- JaCoCo coverage ----------
+// ---------- JaCoCo coverage gate (ACTIVE — wired into `check`) ----------
 //
-// The coverage GATE (bundle INSTRUCTION >= 0.75 / METHOD >= 0.80 floor +
-// per-class METHOD = 1.00 on every sdk.domain.*.builder.*Builder and
-// sdk.domain.*.*Client) is enabled with the first domain PR — an empty
-// bootstrap skeleton has no methods to cover, so wiring the ratchet now would
-// fail the reactor on 0%. The report task stays wired so Sonar has input.
-// The verification rules are staged in the block below (currently not part of
-// `check`) and get attached to `check` when domains land — see BACKLOG.md.
+// Bundle floor INSTRUCTION >= 0.75 / METHOD >= 0.80; per-class METHOD = 1.00
+// ratchet on every sdk.domain.*.builder.*Builder and sdk.domain.*.*Client.
+// Activated with the core-runtime PR (85%/84% at activation).
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
@@ -190,6 +186,10 @@ tasks.jacocoTestCoverageVerification {
             }
         }
     }
+}
+
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }
 
 // ---------- Javadoc ----------
