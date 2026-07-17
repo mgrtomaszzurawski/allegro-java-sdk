@@ -30,9 +30,17 @@ module io.github.mgrtomaszzurawski.allegro {
     // `exports ...sdk.domain.<feature>...` lines below this marker, one block
     // per bucket, in BACKLOG order.
 
+    // Orders, payments and billing (bucket B).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
+
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
+
+    // Classifieds (advertisement) packages and statistics (bucket F).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
 
     // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;

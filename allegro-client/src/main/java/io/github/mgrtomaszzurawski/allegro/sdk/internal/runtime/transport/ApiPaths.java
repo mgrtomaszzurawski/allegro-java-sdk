@@ -19,6 +19,14 @@ public final class ApiPaths {
     /** Details for all marketplaces on the platform ({@code /marketplaces}). */
     public static final String MARKETPLACES = "/marketplaces";
 
+    // ---- orders (bucket B) ----
+    /** Seller's orders collection; append the order id for a single order. */
+    public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
+
+    // ---- offers-extras + classifieds (bucket F) ----
+    /** Classifieds (advertisement) package configurations, filtered by category. */
+    public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
+
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";

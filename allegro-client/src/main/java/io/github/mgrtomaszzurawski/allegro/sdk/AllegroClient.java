@@ -15,9 +15,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredent
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Marketplaces;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Campaigns;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns.CampaignsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -68,7 +72,9 @@ public final class AllegroClient implements AutoCloseable {
 
     private final OAuth2TokenManager tokenManager;
     private final UserAccount userAccount;
+    private final Orders orders;
     private final Marketplaces marketplaces;
+    private final Classifieds classifieds;
     private final Campaigns campaigns;
     private volatile boolean closed;
 
@@ -98,7 +104,9 @@ public final class AllegroClient implements AutoCloseable {
                 tokenManager,
                 config.executionInterceptor());
         this.userAccount = new UserAccountImpl(runtime);
+        this.orders = new OrdersImpl(runtime);
         this.marketplaces = new MarketplacesImpl(runtime);
+        this.classifieds = new ClassifiedsImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
         this.campaigns = new CampaignsImpl(runtime);
@@ -123,10 +131,22 @@ public final class AllegroClient implements AutoCloseable {
         return userAccount;
     }
 
+    /** Orders, payments and billing. */
+    public Orders orders() {
+        ensureOpen();
+        return orders;
+    }
+
     /** Details of the platform's marketplaces (public; app-token friendly). */
     public Marketplaces marketplaces() {
         ensureOpen();
         return marketplaces;
+    }
+
+    /** Classifieds (advertisement) packages and statistics. */
+    public Classifieds classifieds() {
+        ensureOpen();
+        return classifieds;
     }
 
     // [append point: domain accessors] Each domain bucket appends its public
