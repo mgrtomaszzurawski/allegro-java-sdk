@@ -117,10 +117,13 @@ public final class DemoApp {
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             CurrentUser user = client.user().me();
             // Rotation: the refresh we just did invalidated the stored token.
-            tokenStore.store(account, client.refreshToken());
+            String rotatedRefreshToken = client.refreshToken();
+            if (rotatedRefreshToken != null) {
+                tokenStore.store(account, rotatedRefreshToken);
+            }
+            // Status-level output only - no e-mail (PII).
             System.out.println("me(): login=" + user.login()
                     + ", id=" + user.id()
-                    + ", email=" + user.email()
                     + ", features=" + user.features().size());
             System.out.println("SDK version: " + AllegroClient.sdkVersion());
         }

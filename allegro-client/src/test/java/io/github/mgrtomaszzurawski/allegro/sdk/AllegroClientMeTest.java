@@ -58,6 +58,8 @@ class AllegroClientMeTest {
              "email":"seller@example.com","features":["feature-a"],
              "company":{"name":"test"},"baseMarketplace":{"id":"allegro-pl"}}
             """;
+    // spec-derived: not yet wire-verified (errors[] contract shape; a live 404
+    // capture during any bucket's exploration pass will confirm or correct it)
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFoundException","message":"User not found",
               "userMessage":"Nie znaleziono","path":null}]}

@@ -50,6 +50,13 @@ public final class OAuth2TokenManager {
     private static final long DEFAULT_DEVICE_POLL_SECONDS = 5L;
     /** RFC 8628 back-off bump applied on {@code slow_down}. */
     private static final long SLOW_DOWN_INCREMENT_SECONDS = 5L;
+    /** Upper clamp on the server-sent poll interval. */
+    private static final long MAX_DEVICE_POLL_SECONDS = 60L;
+    /** Upper clamp on the server-sent device-code lifetime. */
+    private static final long MAX_DEVICE_EXPIRES_SECONDS = 3_600L;
+    private static final int HTTP_SERVER_ERROR_MIN = 500;
+    private static final String WARN_DEVICE_TRANSIENT =
+            "transient failure while polling the device flow - retrying until the deadline: {}";
 
     private static final int HTTP_OK = 200;
     private static final int HTTP_BAD_REQUEST = 400;
@@ -143,8 +150,10 @@ public final class OAuth2TokenManager {
             if (cached != null && Instant.now().isBefore(expiresAt.minus(EXPIRY_MARGIN))) {
                 return cached;
             }
-            acquireOrRefresh();
-            return accessToken;
+            // Return by VALUE: a concurrent invalidate() (401 replay on another
+            // thread) may null the shared field between storeTokens and this
+            // return - re-reading the field could hand out a literal null.
+            return acquireOrRefresh();
         }
     }
 
@@ -166,14 +175,13 @@ public final class OAuth2TokenManager {
         return refreshToken;
     }
 
-    private void acquireOrRefresh() {
+    private String acquireOrRefresh() {
         String currentRefresh = refreshToken;
         if (currentRefresh != null) {
             try {
                 SdkLoggers.AUTH.debug(LOG_REFRESHING);
-                storeTokens(tokenRequest(GRANT_REFRESH_TOKEN
+                return storeTokens(tokenRequest(GRANT_REFRESH_TOKEN
                         + '&' + PARAM_REFRESH_TOKEN + '=' + urlEncode(currentRefresh)));
-                return;
             } catch (AllegroAuthException e) {
                 // Stored/rotated refresh token revoked or expired — fall through
                 // to a fresh initial grant where the credential type allows one.
@@ -181,44 +189,50 @@ public final class OAuth2TokenManager {
                 refreshToken = null;
             }
         }
-        initialAcquire();
+        return initialAcquire();
     }
 
-    private void initialAcquire() {
+    private String initialAcquire() {
         // Sealed hierarchy walked with instanceof patterns — switch patterns
         // are preview-only on the Java 17 baseline.
         if (credentials instanceof AuthorizationCodeCredentials authorizationCode) {
             SdkLoggers.AUTH.debug(LOG_INITIAL_GRANT, GRANT_LABEL_CODE);
-            initialAuthorizationCode(authorizationCode);
-        } else if (credentials instanceof DeviceCodeCredentials deviceCode) {
-            deviceFlow(deviceCode);
-        } else {
-            SdkLoggers.AUTH.debug(LOG_INITIAL_GRANT, GRANT_LABEL_CLIENT);
-            storeTokens(tokenRequest(GRANT_CLIENT_CREDENTIALS));
+            return initialAuthorizationCode(authorizationCode);
         }
+        if (credentials instanceof DeviceCodeCredentials deviceCode) {
+            return deviceFlow(deviceCode);
+        }
+        SdkLoggers.AUTH.debug(LOG_INITIAL_GRANT, GRANT_LABEL_CLIENT);
+        return storeTokens(tokenRequest(GRANT_CLIENT_CREDENTIALS));
     }
 
-    private void initialAuthorizationCode(AuthorizationCodeCredentials authorizationCode) {
+    private String initialAuthorizationCode(AuthorizationCodeCredentials authorizationCode) {
         String oneTimeCode = authorizationCode.authorizationCode();
         if (oneTimeCode == null || initialGrantConsumed) {
             // Constructed from a refresh token that no longer works, or the
             // one-time code was already exchanged — only the user can fix this.
             throw new AllegroAuthException(ERR_CODE_CONSUMED, null);
         }
-        initialGrantConsumed = true;
-        storeTokens(tokenRequest(GRANT_AUTHORIZATION_CODE
+        String acquired = storeTokens(tokenRequest(GRANT_AUTHORIZATION_CODE
                 + '&' + PARAM_CODE + '=' + urlEncode(oneTimeCode)
                 + '&' + PARAM_REDIRECT_URI + '=' + urlEncode(authorizationCode.redirectUri())));
+        // Marked consumed only after a SUCCESSFUL exchange - a transient
+        // network failure must not permanently poison the credential.
+        initialGrantConsumed = true;
+        return acquired;
     }
 
     // ---- device flow (RFC 8628) ----
 
-    private void deviceFlow(DeviceCodeCredentials deviceCredentials) {
+    private String deviceFlow(DeviceCodeCredentials deviceCredentials) {
         JsonNode deviceResponse = postForm(oauthBaseUrl + DEVICE_ENDPOINT_SUFFIX,
                 PARAM_CLIENT_ID + '=' + urlEncode(credentials.clientId()), ERR_DEVICE_ENDPOINT);
-        long expiresInSeconds = deviceResponse.path(FIELD_EXPIRES_IN)
-                .asLong(DEFAULT_EXPIRES_IN_SECONDS);
-        long pollSeconds = deviceResponse.path(FIELD_INTERVAL).asLong(DEFAULT_DEVICE_POLL_SECONDS);
+        // Server-sent values are clamped: a bogus interval must neither hang
+        // the flow nor hammer the endpoint, and the deadline stays bounded.
+        long expiresInSeconds = Math.min(Math.max(deviceResponse.path(FIELD_EXPIRES_IN)
+                .asLong(DEFAULT_EXPIRES_IN_SECONDS), 1L), MAX_DEVICE_EXPIRES_SECONDS);
+        long pollSeconds = Math.min(Math.max(deviceResponse.path(FIELD_INTERVAL)
+                .asLong(DEFAULT_DEVICE_POLL_SECONDS), 1L), MAX_DEVICE_POLL_SECONDS);
         String deviceCode = deviceResponse.path(FIELD_DEVICE_CODE).asText();
 
         deviceCredentials.userPrompt().accept(new DeviceAuthorization(
@@ -232,11 +246,22 @@ public final class OAuth2TokenManager {
         String pollForm = GRANT_DEVICE_CODE + '&' + PARAM_DEVICE_CODE + '=' + urlEncode(deviceCode);
         while (Instant.now().isBefore(deadline)) {
             sleepSeconds(pollSeconds);
-            HttpResponse<String> response = send(tokenEndpointRequest(
-                    oauthBaseUrl + TOKEN_ENDPOINT_SUFFIX, pollForm));
+            HttpResponse<String> response;
+            try {
+                response = send(tokenEndpointRequest(
+                        oauthBaseUrl + TOKEN_ENDPOINT_SUFFIX, pollForm));
+            } catch (AllegroServerException e) {
+                // A transient network/5xx blip must not abort the interactive
+                // flow the user is mid-way through - the deadline bounds us.
+                SdkLoggers.AUTH.warn(WARN_DEVICE_TRANSIENT, e.getMessage());
+                continue;
+            }
             if (response.statusCode() == HTTP_OK) {
-                storeTokens(parseJson(response.body()));
-                return;
+                return storeTokens(parseJson(response.body()));
+            }
+            if (response.statusCode() >= HTTP_SERVER_ERROR_MIN) {
+                SdkLoggers.AUTH.warn(WARN_DEVICE_TRANSIENT, response.statusCode());
+                continue;
             }
             String oauthError = parseJson(response.body()).path(FIELD_ERROR).asText();
             boolean pending = response.statusCode() == HTTP_BAD_REQUEST
@@ -249,7 +274,7 @@ public final class OAuth2TokenManager {
             if (pending) {
                 SdkLoggers.AUTH.debug(LOG_DEVICE_PENDING);
             } else {
-                pollSeconds += SLOW_DOWN_INCREMENT_SECONDS;
+                pollSeconds = Math.min(pollSeconds + SLOW_DOWN_INCREMENT_SECONDS, MAX_DEVICE_POLL_SECONDS);
             }
         }
         throw new AllegroAuthException(ERR_DEVICE_TIMEOUT, null);
@@ -289,7 +314,7 @@ public final class OAuth2TokenManager {
         }
     }
 
-    private void storeTokens(JsonNode tokenResponse) {
+    private String storeTokens(JsonNode tokenResponse) {
         JsonNode tokenNode = tokenResponse.path(FIELD_ACCESS_TOKEN);
         if (tokenNode.isMissingNode() || tokenNode.asText().isEmpty()) {
             throw new AllegroAuthException(ERR_NO_ACCESS_TOKEN, null);
@@ -302,9 +327,11 @@ public final class OAuth2TokenManager {
         }
         long expiresInSeconds = tokenResponse.path(FIELD_EXPIRES_IN).asLong(DEFAULT_EXPIRES_IN_SECONDS);
         expiresAt = Instant.now().plusSeconds(expiresInSeconds);
-        accessToken = tokenNode.asText();
+        String issuedToken = tokenNode.asText();
+        accessToken = issuedToken;
         SdkLoggers.AUTH.debug(LOG_TOKEN_STORED, expiresInSeconds,
                 refreshToken != null ? REFRESH_PRESENT : REFRESH_ABSENT);
+        return issuedToken;
     }
 
     private JsonNode parseJson(String body) {

@@ -35,6 +35,9 @@ public final class HttpSupport {
     private static final String LOG_MAPPED = "response deserialized to {}";
     private static final String LOG_TRACE_ID_PREFIX = " (trace-id ";
     private static final String WARN_REPLAY_401 = "{}: 401 received - re-authenticating and replaying once";
+    private static final String WARN_INTERCEPTOR = "execution interceptor threw - ignored: {}";
+    /** Execution-level interceptor callbacks carry attempt 0 (per-attempt numbering lives in afterAttempt). */
+    private static final int EXECUTION_LEVEL_ATTEMPT = 0;
 
     private static final String ACCEPT_HEADER = "Accept";
     private static final String CONTENT_TYPE_HEADER = "Content-Type";
@@ -115,7 +118,8 @@ public final class HttpSupport {
         String path = request.uri().getPath();
         String method = request.method();
         var interceptor = runtime.executionInterceptor();
-        interceptor.beforeExecution(new CallContext(operationName, method, path, 0, 0, 0L));
+        notifySafely(() -> interceptor.beforeExecution(
+                new CallContext(operationName, method, path, EXECUTION_LEVEL_ATTEMPT, 0, 0L)));
         SdkLoggers.REQUEST.debug(LOG_SENDING, operationName, method, path);
         long executionStart = System.nanoTime();
         HttpResponse<String> response = runtime.retryHandler().send(request, operationName, interceptor);
@@ -136,15 +140,25 @@ public final class HttpSupport {
             SdkLoggers.REQUEST.debug(LOG_RESPONSE, operationName, response.statusCode(),
                     durationMillis, traceIdSuffix);
         }
-        CallContext finalContext = new CallContext(operationName, method, path, 1,
-                response.statusCode(), durationMillis);
+        CallContext finalContext = new CallContext(operationName, method, path,
+                EXECUTION_LEVEL_ATTEMPT, response.statusCode(), durationMillis);
         if (response.statusCode() < HTTP_OK_MIN || response.statusCode() > HTTP_OK_MAX) {
             AllegroException failure = errorParser.toException(response, operationName);
-            interceptor.onExecutionFailure(finalContext, failure);
+            notifySafely(() -> interceptor.onExecutionFailure(finalContext, failure));
             throw failure;
         }
-        interceptor.afterExecution(finalContext);
+        notifySafely(() -> interceptor.afterExecution(finalContext));
         return response;
+    }
+
+    private static void notifySafely(Runnable interceptorCallback) {
+        try {
+            interceptorCallback.run();
+        } catch (RuntimeException e) {
+            // The SPI contract says callbacks must not throw; a misbehaving
+            // consumer hook must never replace the typed SDK outcome.
+            SdkLoggers.REQUEST.warn(WARN_INTERCEPTOR, e.toString());
+        }
     }
 
     private String serialize(Object body) {

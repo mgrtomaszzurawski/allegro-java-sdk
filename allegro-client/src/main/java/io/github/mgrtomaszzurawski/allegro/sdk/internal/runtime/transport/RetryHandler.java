@@ -31,6 +31,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class RetryHandler {
 
     private static final long BASE_BACKOFF_MILLIS = 500L;
+    /** Exponent clamp: 500ms * 2^6 = 32s max exponential base (also guards << overflow). */
+    private static final int MAX_BACKOFF_EXPONENT = 6;
+    private static final long MAX_BACKOFF_MILLIS = 60_000L;
+    private static final String WARN_INTERCEPTOR = "execution interceptor threw - ignored: {}";
     private static final long MILLIS_PER_SECOND = 1_000L;
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_SERVER_ERROR_MIN = 500;
@@ -100,7 +104,13 @@ public final class RetryHandler {
 
     private static void recordAttempt(AllegroExecutionInterceptor interceptor,
             int attemptsAllowed, CallContext context) {
-        interceptor.afterAttempt(context);
+        try {
+            interceptor.afterAttempt(context);
+        } catch (RuntimeException e) {
+            // The SPI contract says callbacks must not throw; a misbehaving
+            // consumer hook must not abort the retry loop it observes.
+            SdkLoggers.RETRY.warn(WARN_INTERCEPTOR, e.toString());
+        }
         if (SdkLoggers.RETRY.isDebugEnabled()) {
             SdkLoggers.RETRY.debug(LOG_ATTEMPT, context.operation(), context.method(),
                     context.path(), context.statusCode(), context.attempt(), attemptsAllowed,
@@ -125,17 +135,19 @@ public final class RetryHandler {
     }
 
     /**
-     * Equal-jitter backoff: base doubles per attempt (EXPONENTIAL) or stays
-     * flat (FIXED); a server-sent {@code Retry-After} raises the base when
-     * larger. Actual sleep is uniform in {@code [base/2, base]}.
+     * Equal-jitter backoff: the base doubles per attempt (EXPONENTIAL, clamped
+     * exponent and 60s cap) or stays flat (FIXED); the actual sleep is uniform
+     * in {@code [base/2, base]}. A server-sent {@code Retry-After} is a FLOOR
+     * — jitter never dips below the server-mandated wait.
      */
     private long backoffMillis(int attempt, long retryAfterMillis) {
         long base = policy.backoffStrategy() == RetryPolicy.BackoffStrategy.EXPONENTIAL
-                ? BASE_BACKOFF_MILLIS * (1L << (attempt - 1))
+                ? BASE_BACKOFF_MILLIS * (1L << Math.min(attempt - 1, MAX_BACKOFF_EXPONENT))
                 : BASE_BACKOFF_MILLIS;
-        base = Math.max(base, retryAfterMillis);
+        base = Math.min(base, MAX_BACKOFF_MILLIS);
         long half = base / 2;
-        return half + ThreadLocalRandom.current().nextLong(base - half + 1);
+        long jittered = half + ThreadLocalRandom.current().nextLong(base - half + 1);
+        return Math.max(jittered, retryAfterMillis);
     }
 
     private static void sleep(long millis) {

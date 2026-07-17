@@ -39,6 +39,10 @@ public class AllegroException extends RuntimeException {
     private static final Pattern BEARER_TOKEN = Pattern.compile(
             "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
     private static final String BEARER_TOKEN_REPLACEMENT = "eyJ***";
+    /** Opaque token values in JSON fields (refresh tokens are not JWT-shaped). */
+    private static final Pattern TOKEN_JSON_FIELD = Pattern.compile(
+            "(\"(?:access|refresh)_token\"\s*:\s*\")[^\"]+(\")");
+    private static final String TOKEN_JSON_REPLACEMENT = "$1***$2";
 
     private final int statusCode;
     private final @Nullable String responseBody;
@@ -88,11 +92,16 @@ public class AllegroException extends RuntimeException {
         return responseBody;
     }
 
-    /** Response body with JWT-shaped tokens redacted — safe for logs. */
+    /**
+     * Response body with token material redacted — JWT-shaped strings AND the
+     * values of {@code access_token}/{@code refresh_token} JSON fields (Allegro
+     * refresh tokens are opaque, not JWT-shaped). Safe for logs.
+     */
     public @Nullable String safeResponseBody() {
         if (responseBody == null) {
             return null;
         }
-        return BEARER_TOKEN.matcher(responseBody).replaceAll(BEARER_TOKEN_REPLACEMENT);
+        String redacted = BEARER_TOKEN.matcher(responseBody).replaceAll(BEARER_TOKEN_REPLACEMENT);
+        return TOKEN_JSON_FIELD.matcher(redacted).replaceAll(TOKEN_JSON_REPLACEMENT);
     }
 }

@@ -59,8 +59,9 @@ public final class ServerErrorParser {
     }
 
     /**
-     * Translate a non-2xx response into the matching typed exception. Never
-     * returns normally — always throws.
+     * Build the matching typed exception for a non-2xx response; the caller
+     * throws it (returning instead of throwing keeps the caller's control
+     * flow explicit for the interceptor hand-off).
      *
      * @param response the failed HTTP response
      * @param operationName human-readable operation label for the message

@@ -13,7 +13,9 @@ import java.util.Objects;
  * @param operation intent-level operation label (e.g. {@code "get current user"})
  * @param method HTTP method
  * @param path request path relative to the API base URL
- * @param attempt attempt number, starting at 1; {@code 0} in {@code beforeExecution}
+ * @param attempt wire-attempt number starting at 1 in {@code afterAttempt};
+ *     {@code 0} in execution-level callbacks ({@code beforeExecution},
+ *     {@code afterExecution}, {@code onExecutionFailure})
  * @param statusCode HTTP status of the last response; {@code 0} when none was received
  * @param durationMillis elapsed time of the attempt/execution; {@code 0} in {@code beforeExecution}
  *

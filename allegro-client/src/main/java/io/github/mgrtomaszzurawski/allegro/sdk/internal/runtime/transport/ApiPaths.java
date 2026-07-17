@@ -25,10 +25,13 @@ public final class ApiPaths {
     }
 
     private static final char PATH_SEPARATOR = '/';
+    private static final String ENCODED_SPACE = "%20";
 
     /**
      * Join a base path with dynamic segments, guaranteeing exactly one
-     * {@code /} separator between parts.
+     * {@code /} separator between parts. Segments are percent-encoded, so an
+     * identifier containing {@code /}, {@code ?}, {@code #} or {@code ..}
+     * cannot re-route the request or smuggle query parameters.
      */
     public static String subPath(String basePath, String... segments) {
         StringBuilder joined = new StringBuilder(basePath);
@@ -36,7 +39,8 @@ public final class ApiPaths {
             if (joined.charAt(joined.length() - 1) != PATH_SEPARATOR) {
                 joined.append(PATH_SEPARATOR);
             }
-            joined.append(segment);
+            joined.append(java.net.URLEncoder.encode(segment, java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("+", ENCODED_SPACE));
         }
         return joined.toString();
     }

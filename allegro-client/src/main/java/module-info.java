@@ -4,13 +4,11 @@
  */
 
 /**
- * Typed Java SDK for the Allegro REST API.
- *
- * <p>Bootstrap scaffold: only the entry-point package is exported so far.
- * Domain packages ({@code sdk.config}, {@code sdk.config.credentials},
- * {@code sdk.config.policy}, {@code sdk.core}, {@code sdk.exception},
- * {@code sdk.domain.*}) are added with their owning PRs once the task-division
- * plan is accepted — each domain PR adds its {@code exports} lines here.
+ * Typed Java SDK for the Allegro REST API. Exports the {@code sdk.*} public
+ * surface (entry point, configuration, credentials, policy, exceptions, and
+ * the domain facades); everything under {@code sdk.internal.*} and the
+ * generated {@code *Raw} DTO module stay invisible to consumers. Domain
+ * buckets append their {@code exports} lines at the marked append point.
  */
 module io.github.mgrtomaszzurawski.allegro {
 
@@ -37,13 +35,19 @@ module io.github.mgrtomaszzurawski.allegro {
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 
-    // Transport + JSON mapping.
+    // Transport + JSON mapping. jackson.nullable is used directly (the SDK
+    // registers JsonNullableModule), so the dependence is declared here, not
+    // inherited from the generated module's transitivity.
     requires java.net.http;
     requires com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jsr310;
+    requires org.openapitools.jackson.nullable;
     requires org.slf4j;
 
-    // JSpecify null-safety annotations (compile-time only).
+    // JSpecify null-safety annotations — static (compile-time only, absent at
+    // run time; consumers wanting to READ the annotations add jspecify
+    // themselves - transitive would force it onto every consumer's module
+    // path at compile time).
     requires static org.jspecify;
 
     // apiguardian @API EXPERIMENTAL marker on AllegroClient (preview release).

@@ -32,12 +32,16 @@ import org.jspecify.annotations.Nullable;
  * intent-named operations; no endpoint or transport detail leaks through.
  *
  * <pre>{@code
- * try (AllegroClient client = AllegroClient.create(
- *         new ClientCredentials(clientId, clientSecret),
- *         AllegroEnvironment.SANDBOX)) {
- *     CurrentUser me = client.user().me();
+ * var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
+ *         auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
+ * try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
+ *     CurrentUser currentUser = client.user().me();
  * }
  * }</pre>
+ *
+ * <p>User-scoped resources (including {@code user().me()}) need a user-context
+ * grant (authorization-code or device); an app-only client-credentials token is
+ * limited to public data.
  *
  * <p>Marked {@link org.apiguardian.api.API.Status#EXPERIMENTAL EXPERIMENTAL}:
  * the surface may break between {@code 0.x} releases until the {@code 1.0.0}
@@ -63,9 +67,12 @@ public final class AllegroClient implements AutoCloseable {
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
+        // Redirect.NEVER: every endpoint is a pinned Allegro host that never
+        // legitimately redirects, and the JDK client would forward the
+        // Authorization header to cross-host https targets under NORMAL.
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(config.connectTimeout())
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
         // JsonNullableModule is REQUIRED: generated *Raw DTOs wrap optional
         // fields in JsonNullable (live-probe finding 2026-07-17 — /me with a

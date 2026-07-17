@@ -53,6 +53,12 @@ class OAuth2TokenManagerTest {
     private static final String GRANT_CLIENT_CREDENTIALS = "grant_type=client_credentials";
     private static final String GRANT_REFRESH = "grant_type=refresh_token";
     private static final String GRANT_DEVICE = "device_code";
+    private static final String GRANT_AUTH_CODE = "grant_type=authorization_code";
+    private static final String SCENARIO_DEVICE_POLL = "device-poll";
+    private static final String STATE_APPROVED = "approved";
+    private static final String TEST_AUTH_CODE = "one-time-code";
+    private static final String TEST_REDIRECT_URI = "http://localhost/callback";
+    private static final int TOKEN_ENDPOINT_DELAY_MILLIS = 200;
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","refresh_token":"%s","expires_in":%d}
@@ -199,13 +205,13 @@ class OAuth2TokenManagerTest {
                                 VERIFICATION_URI, VERIFICATION_URI, TEST_USER_CODE))));
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .withRequestBody(containing(GRANT_DEVICE))
-                .inScenario("device-poll").whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+                .inScenario(SCENARIO_DEVICE_POLL).whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
                         .withBody(PENDING_RESPONSE))
-                .willSetStateTo("approved"));
+                .willSetStateTo(STATE_APPROVED));
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .withRequestBody(containing(GRANT_DEVICE))
-                .inScenario("device-poll").whenScenarioStateIs("approved")
+                .inScenario(SCENARIO_DEVICE_POLL).whenScenarioStateIs(STATE_APPROVED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(TOKEN_RESPONSE.formatted(
                                 TEST_ACCESS_TOKEN, TEST_REFRESH_TOKEN_ROTATED, LONG_EXPIRY_SECONDS))));
@@ -279,7 +285,7 @@ class OAuth2TokenManagerTest {
         // given
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withFixedDelay(200)
+                        .withFixedDelay(TOKEN_ENDPOINT_DELAY_MILLIS)
                         .withBody(TOKEN_RESPONSE_NO_REFRESH.formatted(TEST_ACCESS_TOKEN, LONG_EXPIRY_SECONDS))));
         OAuth2TokenManager tokenManager = manager(appCredentials(), wmInfo);
 
@@ -300,13 +306,13 @@ class OAuth2TokenManagerTest {
             WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
-                .withRequestBody(containing("grant_type=authorization_code"))
-                .withRequestBody(containing("code=one-time-code"))
+                .withRequestBody(containing(GRANT_AUTH_CODE))
+                .withRequestBody(containing("code=" + TEST_AUTH_CODE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(TOKEN_RESPONSE.formatted(
                                 TEST_ACCESS_TOKEN, TEST_REFRESH_TOKEN, LONG_EXPIRY_SECONDS))));
         OAuth2TokenManager tokenManager = manager(AuthorizationCodeCredentials.ofCode(
-                TEST_CLIENT_ID, TEST_CLIENT_SECRET, "one-time-code", "http://localhost/callback"),
+                TEST_CLIENT_ID, TEST_CLIENT_SECRET, TEST_AUTH_CODE, TEST_REDIRECT_URI),
                 wmInfo);
 
         // when

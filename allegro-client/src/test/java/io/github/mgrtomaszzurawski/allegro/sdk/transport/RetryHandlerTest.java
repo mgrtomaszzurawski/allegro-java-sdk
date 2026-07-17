@@ -42,6 +42,7 @@ class RetryHandlerTest {
     private static final String OK_BODY = "{\"ok\":true}";
     private static final String BUSY_BODY = "{\"errors\":[]}";
     private static final int MAX_ATTEMPTS = 3;
+    private static final String RETRY_AFTER_ONE_SECOND = "1";
 
     private static RetryHandler handler() {
         return new RetryHandler(HttpClient.newHttpClient(),
@@ -63,7 +64,7 @@ class RetryHandlerTest {
         stubFor(get(urlEqualTo(TEST_PATH)).inScenario(SCENARIO_RECOVERY)
                 .whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
-                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, "1")
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, RETRY_AFTER_ONE_SECOND)
                         .withBody(BUSY_BODY))
                 .willSetStateTo(STATE_RECOVERED));
         stubFor(get(urlEqualTo(TEST_PATH)).inScenario(SCENARIO_RECOVERY)

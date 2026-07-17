@@ -7,10 +7,13 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,22 +48,43 @@ final class SharedTokenStore {
 
     /** Stored refresh token for the account, or {@code null}. */
     String load(String accountKey) throws IOException {
-        try (RandomAccessFile file = new RandomAccessFile(storePath.toFile(), READ_WRITE_MODE);
+        try (RandomAccessFile file = openSecured();
                 FileLock ignored = file.getChannel().lock()) {
-            return parse(Files.readString(storePath)).get(accountKey);
+            // All I/O goes through the LOCKED channel: opening a second channel
+            // (Files.readString) and closing it would release every lock this
+            // JVM holds on the file (POSIX advisory-lock semantics).
+            return parse(readAll(file)).get(accountKey);
         }
     }
 
     /** Atomically upsert the account's refresh token under the exclusive lock. */
     void store(String accountKey, String refreshToken) throws IOException {
-        try (RandomAccessFile file = new RandomAccessFile(storePath.toFile(), READ_WRITE_MODE);
+        try (RandomAccessFile file = openSecured();
                 FileLock ignored = file.getChannel().lock()) {
-            Map<String, String> entries = parse(Files.readString(storePath));
+            Map<String, String> entries = parse(readAll(file));
             entries.put(accountKey, refreshToken);
             StringBuilder content = new StringBuilder();
             entries.forEach((account, token) -> content.append(ENTRY_FORMAT.formatted(account, token)));
-            Files.writeString(storePath, content.toString());
+            byte[] bytes = content.toString().getBytes(StandardCharsets.UTF_8);
+            file.setLength(0);
+            file.seek(0);
+            file.write(bytes);
         }
+    }
+
+    /** Open (creating if absent) with owner-only permissions — tokens at rest. */
+    private RandomAccessFile openSecured() throws IOException {
+        RandomAccessFile file = new RandomAccessFile(storePath.toFile(), READ_WRITE_MODE);
+        Files.setPosixFilePermissions(storePath,
+                Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE));
+        return file;
+    }
+
+    private static String readAll(RandomAccessFile file) throws IOException {
+        file.seek(0);
+        byte[] bytes = new byte[(int) file.length()];
+        file.readFully(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private static Map<String, String> parse(String content) {

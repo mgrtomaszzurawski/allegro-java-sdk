@@ -47,8 +47,8 @@ var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
         auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
 
 try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-    var me = client.user().me();
-    System.out.println("Logged in as " + me.login());
+    var currentUser = client.user().me();
+    System.out.println("Logged in as " + currentUser.login());
 
     // Persist this and pass it to DeviceCodeCredentials.ofRefreshToken(...)
     // next time - no prompt ever again.

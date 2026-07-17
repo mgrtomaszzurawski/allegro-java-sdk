@@ -51,6 +51,15 @@ class HttpSupportAndErrorsTest {
     private static final String OK_BODY = "{\"value\":\"ok\"}";
     private static final String JWT_SHAPED =
             "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.c2lnbmF0dXJl";
+    private static final String OPAQUE_TOKEN = "opaque-rotating-refresh-token-value";
+    private static final String RETRY_AFTER_VALUE = "7";
+    private static final long RETRY_AFTER_SECONDS = 7L;
+    private static final String OPERATION_GET = "read resource";
+    private static final int RETRY_MAX_ATTEMPTS = 2;
+    private static final String RETRY_AFTER_SHORT_VALUE = "1";
+    private static final long RETRY_AFTER_SHORT_SECONDS = 1L;
+    // spec-derived: not yet wire-verified (shape per the errors[] contract;
+    // to be confirmed by a captured 400 during a bucket exploration pass)
     private static final String VALIDATION_BODY = """
             {"errors":[
               {"code":"VALIDATION_ERROR","message":"price too low",
@@ -62,9 +71,14 @@ class HttpSupportAndErrorsTest {
 
     /** Minimal runtime host for direct HttpSupport tests. */
     private static HttpRuntime runtime(WireMockRuntimeInfo wmInfo) {
+        return runtime(wmInfo, RetryPolicy.builder().enabled(false).build(),
+                AllegroExecutionInterceptor.noop());
+    }
+
+    private static HttpRuntime runtime(WireMockRuntimeInfo wmInfo, RetryPolicy retryPolicy,
+            AllegroExecutionInterceptor interceptor) {
         var mapper = new ObjectMapper();
-        var retryHandler = new RetryHandler(HttpClient.newHttpClient(),
-                RetryPolicy.builder().enabled(false).build());
+        var retryHandler = new RetryHandler(HttpClient.newHttpClient(), retryPolicy);
         return new HttpRuntime() {
             @Override public String baseUrl() {
                 return wmInfo.getHttpBaseUrl();
@@ -75,7 +89,7 @@ class HttpSupportAndErrorsTest {
             }
 
             @Override public AllegroExecutionInterceptor executionInterceptor() {
-                return AllegroExecutionInterceptor.noop();
+                return interceptor;
             }
 
             @Override public ObjectMapper objectMapper() {
@@ -121,7 +135,7 @@ class HttpSupportAndErrorsTest {
     void deleteAuthenticated_whenNoContent_verifiesWireCall(WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(delete(urlEqualTo(TEST_PATH))
-                .willReturn(aResponse().withStatus(204)));
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
         HttpSupport support = new HttpSupport(runtime(wmInfo));
 
         // when
@@ -158,13 +172,89 @@ class HttpSupportAndErrorsTest {
         // given — retry disabled in this fixture, so the 429 maps immediately
         stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo(TEST_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
-                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, "7")));
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, RETRY_AFTER_VALUE)));
         HttpSupport support = new HttpSupport(runtime(wmInfo));
 
         // then
         AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
-                () -> support.getAuthenticated(TEST_PATH, Map.class, OPERATION_PUT));
-        assertEquals(7L, failure.retryAfterSeconds());
+                () -> support.getAuthenticated(TEST_PATH, Map.class, OPERATION_GET));
+        assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
+    }
+
+    @Test
+    void getAuthenticated_when429PersistsWithRetriesEnabled_retriesThenThrowsRateLimit(
+            WireMockRuntimeInfo wmInfo) {
+        // given — persistent 429 with a short Retry-After and ENABLED retries
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo(TEST_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, RETRY_AFTER_SHORT_VALUE)));
+        HttpSupport support = new HttpSupport(runtime(wmInfo,
+                RetryPolicy.builder().maxAttempts(RETRY_MAX_ATTEMPTS).build(),
+                AllegroExecutionInterceptor.noop()));
+
+        // then — the wire saw every allowed attempt, then the typed rate limit
+        AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
+                () -> support.getAuthenticated(TEST_PATH, Map.class, OPERATION_GET));
+        assertEquals(RETRY_AFTER_SHORT_SECONDS, failure.retryAfterSeconds());
+        verify(RETRY_MAX_ATTEMPTS,
+                com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor(urlEqualTo(TEST_PATH)));
+    }
+
+    @Test
+    void getAuthenticated_when500WithRetryDisabled_throwsServerExceptionWithBody(
+            WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo(TEST_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)
+                        .withBody(VALIDATION_BODY)));
+        HttpSupport support = new HttpSupport(runtime(wmInfo));
+
+        // then — 5xx maps to the server-trouble type, body preserved
+        var failure = assertThrows(
+                io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException.class,
+                () -> support.getAuthenticated(TEST_PATH, Map.class, OPERATION_GET));
+        assertEquals(TestHttpConstants.HTTP_SERVER_ERROR, failure.statusCode());
+        assertTrue(failure.responseBody().contains("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void getAuthenticated_when403_throwsAuthException(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo(TEST_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_FORBIDDEN)));
+        HttpSupport support = new HttpSupport(runtime(wmInfo));
+
+        // then — 403 folds into the auth-remediation type
+        assertThrows(io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAuthException.class,
+                () -> support.getAuthenticated(TEST_PATH, Map.class, OPERATION_GET));
+    }
+
+    @Test
+    void putJsonAuthenticated_whenSucceeds_firesBeforeAndAfterExecutionOnce(
+            WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(put(urlEqualTo(TEST_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+        List<String> lifecycle = new java.util.ArrayList<>();
+        var recording = new AllegroExecutionInterceptor() {
+            @Override public void beforeExecution(
+                    io.github.mgrtomaszzurawski.allegro.sdk.config.CallContext context) {
+                lifecycle.add("before:" + context.attempt());
+            }
+
+            @Override public void afterExecution(
+                    io.github.mgrtomaszzurawski.allegro.sdk.config.CallContext context) {
+                lifecycle.add("after:" + context.statusCode());
+            }
+        };
+        HttpSupport support = new HttpSupport(runtime(wmInfo,
+                RetryPolicy.builder().enabled(false).build(), recording));
+
+        // when
+        support.putJsonAuthenticated(TEST_PATH, Map.of("name", "payload"), Map.class, OPERATION_PUT);
+
+        // then — execution-level callbacks fire exactly once, attempt 0
+        assertEquals(List.of("before:0", "after:" + TestHttpConstants.HTTP_OK), lifecycle);
     }
 
     @Test
@@ -179,15 +269,22 @@ class HttpSupportAndErrorsTest {
     }
 
     @Test
-    void safeResponseBody_whenBodyCarriesJwt_redactsToken() {
-        // given
-        AllegroException failure = new AllegroException("boom", 500,
-                "{\"access_token\":\"" + JWT_SHAPED + "\"}");
+    void safeResponseBody_whenBodyCarriesTokens_redactsJwtAndTokenFields() {
+        // given — a JWT inside a token field AND an opaque (non-JWT) refresh
+        // token: both must vanish from the safe view
+        AllegroException failure = new AllegroException("boom", TestHttpConstants.HTTP_SERVER_ERROR,
+                "{\"access_token\":\"" + JWT_SHAPED + "\","
+                        + "\"refresh_token\":\"" + OPAQUE_TOKEN + "\","
+                        + "\"note\":\"" + JWT_SHAPED + "\"}");
 
-        // then — raw body keeps it, safe body redacts it
+        // then — raw body keeps everything, safe body redacts every token form
         assertTrue(failure.responseBody().contains(JWT_SHAPED));
-        assertFalse(failure.safeResponseBody().contains(JWT_SHAPED));
-        assertTrue(failure.safeResponseBody().contains("eyJ***"));
+        String safeBody = failure.safeResponseBody();
+        assertFalse(safeBody.contains(JWT_SHAPED));
+        assertFalse(safeBody.contains(OPAQUE_TOKEN));
+        assertTrue(safeBody.contains("\"access_token\":\"***\""));
+        assertTrue(safeBody.contains("\"refresh_token\":\"***\""));
+        assertTrue(safeBody.contains("eyJ***"));
     }
 
     @Test
