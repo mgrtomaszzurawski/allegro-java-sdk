@@ -14,7 +14,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
  * typically build metrics (Micrometer/OTel) on this seam.
  *
  * <p>Contract: callbacks run synchronously on the calling thread — keep them
- * fast and never throw (a throwing interceptor fails the SDK call). Failure
+ * fast and never throw. The SDK defends itself regardless: a runtime
+ * exception from a callback is logged and ignored, never replacing the SDK
+ * call's own outcome. Failure
  * callbacks receive the typed {@link AllegroException}, which already carries
  * the server's status, error payload, and {@code trace-id}; the interceptor
  * never sees request/response bodies.
