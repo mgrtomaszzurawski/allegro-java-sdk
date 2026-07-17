@@ -27,6 +27,42 @@ Three layers, enforced by the Java Platform Module System (JPMS):
 
 Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or transport types.
 
+## Documentation
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — design, layers, auth lifecycle
+- [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
+- `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
+  domain lands
+
+## Quick start
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+
+// Console/headless app: the user confirms once at a verification URL,
+// the SDK handles polling, token caching, proactive refresh, and rotation.
+var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
+        auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
+
+try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
+    var currentUser = client.user().me();
+    System.out.println("Logged in as " + currentUser.login());
+
+    // Persist this and pass it to DeviceCodeCredentials.ofRefreshToken(...)
+    // next time - no prompt ever again.
+    String refreshToken = client.refreshToken();
+}
+```
+
+Errors are typed by remediation (`AllegroBadRequestException` with field-level
+`errors()`, `AllegroRateLimitException.retryAfterSeconds()`, …) and every
+server error carries `traceId()` for Allegro support tickets. Retry with
+equal-jitter backoff and lazy `Stream` pagination are on by default. SLF4J
+debug channels (`…allegro.request` / `.auth` / `.retry`) trace every step the
+SDK takes — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §11.
+
 ## Requirements
 
 - Java 17+

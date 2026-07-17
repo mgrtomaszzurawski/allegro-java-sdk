@@ -37,6 +37,35 @@ task-division plan in the shared context (`/workspace/shared/context/TASK-DIVISI
 - Spec files under `allegro-rest-models/openapi/` must NEVER appear in a diff. Check
   `git diff --name-only` before committing.
 - Javadoc every public API whose name doesn't carry the meaning.
+- **ADRs (`ADR/`) are immutable and BINDING** — consult before changing any design they
+  cover; supersede with a new ADR, never edit a decision. Every merged PR appends its
+  CHANGELOG entries ONLY inside its own pre-created bucket subsection under `[Unreleased]`
+  (never touch another bucket's subsection or the section order). PRs follow
+  `.github/PULL_REQUEST_TEMPLATE.md`.
+
+## Project documents map — what to read and when
+
+In this repo (canonical, versioned with the code):
+
+| File | What it is | Read it when |
+|---|---|---|
+| `CLAUDE.md` | THIS file — binding conventions, collision rules, gates | always, before touching the tree |
+| `ARCHITECTURE.md` | design: layers, OAuth lifecycle, transport, observability (AWS-model §11), quality stack | before any design/impl work |
+| `API-SURFACE.md` | proposed consumer method layout for all 267 ops — your bucket's naming contract | before designing your facade |
+| `TESTING.md` | BINDING test conventions + the live-layer write→read exploration rules | before writing any test |
+| `KNOWN-SERVER-BEHAVIORS.md` | live-verified server quirks (dated) | before wrapping an endpoint; ADD entries from your exploration |
+| `ADR/` | immutable decisions ADR-001.. — supersede, never edit | before changing anything they cover; new decision = new ADR in the same PR |
+| `CHANGELOG.md` | Keep-a-Changelog; write ONLY in your bucket's subsection | every PR |
+| `README.md` | consumer-facing (what/why/how to use) — NOT an agent doc | when your bucket adds its `docs/<feature>.md` + link |
+| `docs/<feature>.md` | per-bucket consumer usage guide (bucket-owned) | ships with your bucket PR |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR checklist (bucket, append points, TESTING.md, demo) | every PR |
+
+On the shared volume (`/workspace/shared/`, agent coordination — never committed to this repo):
+`CLAUDE.md` (common rules, credentials location) · `context/BACKLOG.md` (assignment board +
+phase status — re-read before EVERY PR) · `context/TASK-DIVISION-PLAN.md` (accepted plan,
+DoD) · `context/ALLEGRO-API-RESEARCH.md` (platform facts) ·
+`context/RISKS-MULTIAGENT-PREMORTEM.md` (failure modes) · `context/RAG-PLAN.md` (doc corpus
++ RAG phases) · `context/REPORT-*.md` (session reports).
 
 ## Build and test commands
 
@@ -86,13 +115,19 @@ Each domain bucket is owned by exactly one agent (assignment in shared `BACKLOG.
 Exclusively owned by the bucket owner (no one else touches them):
 - `sdk/domain/<feature>/**`, `sdk/internal/client/<feature>/**`
 - that feature's tests + WireMock fixtures (`src/test/resources/__files/<feature>/`)
-- that feature's README section
+- that feature's consumer usage doc `docs/<feature>.md` (linked from README's Documentation
+  list) + its CHANGELOG subsection under `[Unreleased]`
 
-Shared APPEND POINTS — append-only edits, one small block per bucket, rebase on `develop`
-before opening the PR:
+Shared APPEND POINTS — append-only edits, one small block per bucket. Before opening the
+PR (and again if `develop` moved before your merge): `git merge origin/develop` into YOUR
+feature branch, resolve the conflicts there, push. Squash-merge to `develop` flattens the
+history, so merge-based updates are safe — never rebase-force-push a shared branch:
 1. `allegro-client/src/main/java/module-info.java` — your `exports sdk.domain.<feature>...` lines
 2. `AllegroClient` — your accessor (`public <Feature> <feature>()`) + field + wiring
 3. `ApiPaths` — your feature's path-constant section
+4. `Offers` root interface (owned by bucket A) — bucket F appends its sub-accessor lines
+   (`tags()`, `translations()`, `bundles()`, `flexibleBundles()`, `rating()`) under the same
+   append-only regime; see `API-SURFACE.md`.
 
 FROZEN for domain agents: `sdk/internal/runtime/**`, `sdk/{config,core,exception}` root types,
 build files, quality configs. A needed core change = BACKLOG item for the core owner, never a
@@ -100,13 +135,23 @@ drive-by edit in a domain PR.
 
 ## Test patterns
 
-- WireMock for ALL HTTP tests; VERIFY writes/retries (`WireMock.verify(N, ...)`) —
-  `assertDoesNotThrow` without verify is false-green. Fixtures in
-  `src/test/resources/__files/`.
+**`TESTING.md` is BINDING — read it before writing any test.** The short version:
+
+- WireMock for ALL HTTP tests; `@WireMockTest` class per domain client; all literals as
+  `TEST_*` constants; stubs pin the contract (auth header + method/path + request body);
+  VERIFY writes/retries (`WireMock.verify(N, ...)`) — `assertDoesNotThrow` without verify is
+  false-green. Mandatory error-path table (400/401-replay/404/429/5xx) per facade. Pagination
+  tests prove laziness. Fixtures carry provenance (Postman/sandbox capture; `spec-derived`
+  marks must be wire-verified before the bucket's final PR).
 - Naming `methodUnderTest_whenScenario_expectedResult`; given/when/then markers.
-- Per-builder round-trip tests (`requiredFieldsOnly`, `allCoreFieldsSet`, `toBuilder_preserves`).
-- Prove a new test fails without the fix. No `@Disabled` to ship. No live Allegro calls in tests;
-  live verification happens via `allegro-demo` against the sandbox.
+- Per-builder round-trip tests (`requiredFieldsOnly`, `allCoreFieldsSet`, `toBuilder_preserves`)
+  + one failure test per required field.
+- Prove a new test fails without the fix. No `@Disabled` to ship. No live Allegro calls in
+  unit tests.
+- **`allegro-demo` is an exploration/verification TOOL, not a test suite**: every
+  wire-touching facade area is verified on the sandbox with the write→read cycle THROUGH the
+  SDK (create with POST/PUT, read back with GET, assert the round-trip) before its PR is
+  merge-ready; server surprises go to `KNOWN-SERVER-BEHAVIORS.md`.
 
 ## Quality gates
 
@@ -116,7 +161,12 @@ per-class METHOD = 1.00 on `domain.*.builder.*Builder` + `domain.*.*Client`) is 
 `allegro-client/build.gradle.kts` and attaches to `check` with the first domain PR.
 Sonar at PR-ready: `./gradlew sonar --no-configuration-cache -Dsonar.host.url=$SONAR_HOST_URL
 -Dsonar.login=$SONAR_LOGIN -Dsonar.password=$SONAR_PASSWORD` (after `build`).
-OWASP `dependencyCheckAggregate`: release-only.
+Release boundary (`develop`→`main`) only: OWASP `dependencyCheckAggregate` (fails on CVSS ≥ 7)
++ **PIT mutation testing** (report-only, hand-written `allegro-client` code, target band
+~70–85% — surviving mutants in token manager / retry / error parser are missing tests, fix
+before tagging). Live sandbox demo scenarios (`allegro-demo`) per bucket at PR DoD; the
+Playwright buyer-bot (`tools/buyer-bot/`, experiment) seeds web-only flows — see
+`ARCHITECTURE.md` §10.
 
 ## Allegro API facts the code relies on
 

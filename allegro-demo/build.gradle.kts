@@ -16,6 +16,18 @@ java {
 
 dependencies {
     implementation(project(":allegro-client"))
+    // Console logging backend so the SDK's named debug channels are visible
+    // during live probes (enable with -Dorg.slf4j.simpleLogger.log.io.github
+    // .mgrtomaszzurawski.allegro=debug).
+    runtimeOnly(libs.slf4j.simple)
+}
+
+// Pass -Pdemo.scenario=<name> (and optional -Pdemo.account=seller|buyer)
+// through to the runner.
+tasks.named<JavaExec>("run") {
+    providers.gradleProperty("demo.scenario").orNull?.let { args = listOf(it) }
+    providers.gradleProperty("demo.account").orNull?.let { systemProperty("demo.account", it) }
+    standardInput = System.`in`
 }
 
 application {

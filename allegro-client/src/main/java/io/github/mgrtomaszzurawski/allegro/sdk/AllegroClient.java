@@ -4,18 +4,44 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.openapitools.jackson.nullable.JsonNullableModule;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
+import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
+import java.net.http.HttpClient;
+import java.util.Objects;
 import org.apiguardian.api.API;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Single entry point of the Allegro Java SDK.
  *
- * <p><strong>Bootstrap scaffold.</strong> This is a placeholder entry point: it
- * establishes the module surface so downstream modules and
- * consumers compile against a stable type. The builder, OAuth2 credential
- * configuration, transport runtime, and domain accessors (offers, orders,
- * fulfillment, billing, …) are added per the accepted task-division plan — see
- * the shared {@code BACKLOG.md}. The public method shape here is intentionally
- * minimal and will grow; it is not yet a usable client.
+ * <p>Pass credentials once — token acquisition, caching, proactive refresh,
+ * refresh-token rotation, and 401 re-auth are handled internally. Domain
+ * accessors ({@link #user()}, more per the task-division plan) expose
+ * intent-named operations; no endpoint or transport detail leaks through.
+ *
+ * <pre>{@code
+ * var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
+ *         auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
+ * try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
+ *     CurrentUser currentUser = client.user().me();
+ * }
+ * }</pre>
+ *
+ * <p>User-scoped resources (including {@code user().me()}) need a user-context
+ * grant (authorization-code or device); an app-only client-credentials token is
+ * limited to public data.
  *
  * <p>Marked {@link org.apiguardian.api.API.Status#EXPERIMENTAL EXPERIMENTAL}:
  * the surface may break between {@code 0.x} releases until the {@code 1.0.0}
@@ -27,43 +53,126 @@ import org.apiguardian.api.API;
 public final class AllegroClient implements AutoCloseable {
 
     /**
-     * Returned by {@link #sdkVersion()} when no JAR manifest is present, i.e.
-     * when the SDK classes run from a classes directory (IDE, unit tests)
-     * instead of the published artefact.
+     * Returned by {@link #sdkVersion()} when neither a module descriptor
+     * version nor a JAR manifest is present (IDE/classes-dir runs).
      */
     private static final String VERSION_UNAVAILABLE = "unversioned";
+    private static final String ERR_CREDENTIALS_NULL = "credentials must not be null";
+    private static final String ERR_CONFIG_NULL = "config must not be null";
+    private static final String ERR_ENVIRONMENT_NULL = "environment must not be null";
+    private static final String ERR_CLOSED = "AllegroClient is closed";
 
-    private AllegroClient() {
-        // Instances are created via a builder introduced with the transport/auth
-        // core PR; the scaffold exposes no construction path yet.
+    private final OAuth2TokenManager tokenManager;
+    private final UserAccount userAccount;
+    private volatile boolean closed;
+
+    private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
+        // Redirect.NEVER: every endpoint is a pinned Allegro host that never
+        // legitimately redirects, and the JDK client would forward the
+        // Authorization header to cross-host https targets under NORMAL.
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(config.connectTimeout())
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
+        // JsonNullableModule is REQUIRED: generated *Raw DTOs wrap optional
+        // fields in JsonNullable (live-probe finding 2026-07-17 — /me with a
+        // company deserializes only with this module registered).
+        ObjectMapper objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .registerModule(new JsonNullableModule())
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        this.tokenManager = new OAuth2TokenManager(credentials, config.oauthBaseUrl(),
+                httpClient, objectMapper, config.readTimeout());
+        HttpRuntime runtime = new AllegroHttpRuntime(
+                config.apiBaseUrl(),
+                new RetryHandler(httpClient, config.retryPolicy()),
+                objectMapper,
+                config.readTimeout(),
+                tokenManager,
+                config.executionInterceptor());
+        this.userAccount = new UserAccountImpl(runtime);
+        // [append point: domain wiring] Each domain bucket appends its
+        // accessor field construction here, one line per bucket, BACKLOG order.
+    }
+
+    /** Client with explicit configuration. */
+    public static AllegroClient create(AllegroCredentials credentials, AllegroClientConfig config) {
+        Objects.requireNonNull(credentials, ERR_CREDENTIALS_NULL);
+        Objects.requireNonNull(config, ERR_CONFIG_NULL);
+        return new AllegroClient(credentials, config);
+    }
+
+    /** Client with default configuration for the given environment. */
+    public static AllegroClient create(AllegroCredentials credentials, AllegroEnvironment environment) {
+        Objects.requireNonNull(environment, ERR_ENVIRONMENT_NULL);
+        return create(credentials, AllegroClientConfig.defaults(environment));
+    }
+
+    /** Account and user information. */
+    public UserAccount user() {
+        ensureOpen();
+        return userAccount;
+    }
+
+    // [append point: domain accessors] Each domain bucket appends its public
+    // accessor method here, one block per bucket, in BACKLOG order.
+
+    /**
+     * Refresh token currently held by the SDK (Allegro rotates it on every
+     * refresh), or {@code null} for app-only credentials. Persist it between
+     * sessions and pass it back via
+     * {@code AuthorizationCodeCredentials.ofRefreshToken(...)} or
+     * {@code DeviceCodeCredentials.ofRefreshToken(...)} to skip the browser or
+     * device prompt next time.
+     */
+    public @Nullable String refreshToken() {
+        ensureOpen();
+        return tokenManager.currentRefreshToken();
     }
 
     /**
-     * The SDK artefact version. Read from the module descriptor first (stamped
-     * by the build via {@code javaModuleVersion} — the only source visible to
-     * module-path consumers), falling back to the JAR manifest
-     * ({@code Implementation-Version}) for classpath use. Both are populated
-     * from the single version source in {@code gradle.properties}.
+     * The SDK artefact version, read from the module descriptor (stamped by
+     * the build) or the JAR manifest, both derived from the single version
+     * source in {@code gradle.properties}.
      *
      * @return the semantic version of this SDK build (e.g. {@code 0.1.0-preview}),
      *     or {@code unversioned} when running outside a packaged JAR
      */
     public static String sdkVersion() {
-        var moduleDescriptor = AllegroClient.class.getModule().getDescriptor();
-        if (moduleDescriptor != null && moduleDescriptor.version().isPresent()) {
-            return moduleDescriptor.version().get().toString();
-        }
         Package sdkPackage = AllegroClient.class.getPackage();
-        String implementationVersion = sdkPackage != null ? sdkPackage.getImplementationVersion() : null;
+        return resolveVersion(
+                AllegroClient.class.getModule().getDescriptor(),
+                sdkPackage != null ? sdkPackage.getImplementationVersion() : null);
+    }
+
+    /** Pure resolution logic, testable with synthetic descriptors. */
+    static String resolveVersion(java.lang.module.@Nullable ModuleDescriptor moduleDescriptor,
+            @Nullable String implementationVersion) {
+        if (moduleDescriptor != null) {
+            var descriptorVersion = moduleDescriptor.version();
+            if (descriptorVersion.isPresent()) {
+                return descriptorVersion.get().toString();
+            }
+        }
         return implementationVersion != null ? implementationVersion : VERSION_UNAVAILABLE;
     }
 
     /**
-     * No-op in the scaffold. Once the transport runtime lands, this releases the
-     * underlying HTTP resources and invalidates cached OAuth2 tokens.
+     * Invalidates cached tokens and marks the client closed; subsequent
+     * accessor calls throw {@link IllegalStateException}. The underlying JDK
+     * {@code HttpClient} has no close() on Java 17 — its resources are
+     * reclaimed by GC once unreferenced.
      */
     @Override
     public void close() {
-        // Nothing to release yet — no transport runtime is held in the scaffold.
+        closed = true;
+        tokenManager.invalidate();
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException(ERR_CLOSED);
+        }
     }
 }
