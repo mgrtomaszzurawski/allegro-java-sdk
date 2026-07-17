@@ -17,6 +17,11 @@ public final class ApiPaths {
     /** Basic information about the authenticated user ({@code /me}). */
     public static final String CURRENT_USER = "/me";
 
+    // ---- sale-settings (bucket K) ----
+    /** Seller after-sale warranty definitions. */
+    public static final String AFTER_SALES_WARRANTIES =
+            "/after-sales-service-conditions/warranties";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.

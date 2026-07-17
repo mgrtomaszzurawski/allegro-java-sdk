@@ -30,6 +30,13 @@ module io.github.mgrtomaszzurawski.allegro {
     // `exports ...sdk.domain.<feature>...` lines below this marker, one block
     // per bucket, in BACKLOG order.
 
+    // Sale settings — seller-side configuration (bucket K). Starter slice:
+    // after-sale service conditions (warranties).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder;
+
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;

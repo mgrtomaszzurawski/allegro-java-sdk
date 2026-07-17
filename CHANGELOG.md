@@ -59,3 +59,10 @@ sections. Empty subsections are dropped by the release engineer when folding
 ### I — fulfillment
 ### J — post-sale-comms
 ### K — sale-settings
+
+- `settings().afterSale()` starter slice: seller **warranty** definitions —
+  `streamWarranties()` (lazy offset/limit `Stream`), `warranty(id)`,
+  `createWarranty(...)`, `updateWarranty(...)`. Immutable `Warranty` /
+  `WarrantySummary` records, `WarrantyType` / `WarrantyPeriod` value types, and a
+  fail-fast `WarrantyRequest` builder. Documented in `docs/settings.md`; verified
+  on the sandbox with the `settings-warranty` write→read demo.

@@ -33,6 +33,8 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
 - `docs/<domain>.md` — per-domain usage guides (offers, orders, shipping, …), added as each
   domain lands
+- [`docs/settings.md`](docs/settings.md) — seller sale settings (`client.settings()`): after-sale
+  warranties (more of bucket K to follow)
 
 ## Quick start
 
