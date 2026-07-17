@@ -19,6 +19,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns.CampaignsImpl;
@@ -26,6 +27,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog.CatalogIm
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -82,6 +84,7 @@ public final class AllegroClient implements AutoCloseable {
     private final Catalog catalog;
     private final Classifieds classifieds;
     private final Campaigns campaigns;
+    private final Shipping shipping;
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
@@ -118,6 +121,7 @@ public final class AllegroClient implements AutoCloseable {
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
         this.campaigns = new CampaignsImpl(runtime);
+        this.shipping = new ShippingImpl(runtime);
     }
 
     /** Client with explicit configuration. */
@@ -176,6 +180,12 @@ public final class AllegroClient implements AutoCloseable {
     public Campaigns campaigns() {
         ensureOpen();
         return campaigns;
+    }
+
+    /** Shipping: shipment management, delivery configuration, points of service. */
+    public Shipping shipping() {
+        ensureOpen();
+        return shipping;
     }
 
     /**

@@ -64,6 +64,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   a compiled example, and the `orders-get` sandbox probe.
 
 ### C — shipping
+
+- `shipping()` facade with the points-of-service sub-facade (starter slice):
+  `points().create(PointOfServiceRequest)`, `points().get(id)` and
+  `points().delete(id)`, immutable `PointOfService` records with fluent builders
+  (fail-fast required fields, replicated length limits) and read-only enum
+  fallbacks.
+
 ### D — account-meta
 
 - `client.marketplaces().list()` — the platform's marketplaces with their
