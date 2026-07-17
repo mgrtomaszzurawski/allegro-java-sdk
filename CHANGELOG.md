@@ -37,6 +37,11 @@ sections. Empty subsections are dropped by the release engineer when folding
 - Shared value type `sdk.core.Money` (exact-string amount + ISO-4217 currency).
 - `allegro-demo` scenario-registration seam (`DemoScenario` + append point) so
   every bucket adds probes without colliding on a shared dispatch.
+- `CommandPoller` — the sync-default engine for Allegro's asynchronous command
+  endpoints (ADR-005): submit-then-poll to a terminal state with bounded
+  backoff, an optional `Duration` timeout, and `AllegroAsyncTimeoutException`;
+  status shape and terminal predicate supplied by the caller. Shared by
+  buckets A (batch), C (WZA), H (badges/subsidies), I (ASN).
 
 ### A — offers-core
 ### B — orders-payments
