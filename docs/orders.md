@@ -4,10 +4,10 @@ Orders, payments and billing for the authenticated seller, reached through
 `AllegroClient.orders()`. An Allegro *order* is a **checkout form**: who bought, what they
 bought, the amount due, and the buyer- and seller-side statuses.
 
-> **Scope of this guide.** This is the starter slice of the orders domain (bucket B) and
-> documents `orders().get(id)`. Order listing and filtering, seller-status updates, parcel
-> tracking, invoices, customer returns, commission refunds, payments and billing follow in the
-> bucket body; this page grows with them.
+> **Scope of this guide.** Covers the order-management surface of bucket B: reading and listing
+> orders, advancing the seller status, serial numbers, parcel tracking, the order event log, and
+> the carrier / pickup-point dictionaries. Invoices, customer returns, commission refunds,
+> payments and billing follow in later slices; this page grows with them.
 
 ## Authentication
 
@@ -59,3 +59,84 @@ If no order with that id exists for the seller, `get` throws `AllegroNotFoundExc
 prepares and ships the order). Monetary amounts use the SDK-wide
 [`Money`](../allegro-client/src/main/java/io/github/mgrtomaszzurawski/allegro/sdk/core/Money.java)
 type — an exact decimal string plus currency, never a lossy `double`.
+
+## List and stream orders
+
+`streamOrders` returns a **lazy** `Stream<Order>`: pages are fetched from Allegro only as the
+consumer advances, and only one page is held in memory. Build an `OrderFilter` to narrow the
+result (all fields optional; `OrderFilter.all()` streams everything).
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.OrderFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
+import java.time.OffsetDateTime;
+
+OrderFilter toShip = OrderFilter.builder()
+        .fulfillmentStatuses(SellerStatus.READY_FOR_SHIPMENT)
+        .updatedFrom(OffsetDateTime.now().minusDays(7))
+        .build();
+
+client.orders().streamOrders(toShip)
+        .limit(50)                       // only the first 50 are fetched
+        .forEach(order -> ship(order));
+```
+
+Never call a `listAll()` — the stream is the whole API; bound it with `limit(...)` or a
+short-circuiting terminal operation.
+
+## Advance the seller status
+
+`markStatus` moves an order through the seller-side lifecycle. To guard against a concurrent
+change, pass the `revision` you last read from the order (optimistic concurrency); omit it for
+last-write-wins.
+
+```java
+Order order = client.orders().get(orderId);
+client.orders().markStatus(orderId, SellerStatus.SENT, order.revision());
+```
+
+A stale revision fails with `AllegroBadRequestException` — re-read the order and retry.
+
+## Serial numbers and billing documents
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.SerialNumbersRequest;
+
+client.orders().setSerialNumbers(orderId, SerialNumbersRequest.builder()
+        .lineItem(lineItemId, "SN-0001", "SN-0002")
+        .build());
+
+client.orders().attachBillingDocumentLink(orderId, "https://example.com/invoice-1.pdf");
+```
+
+## Parcel tracking
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ShipmentRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Carrier;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Waybill;
+
+Carrier carrier = client.orders().carriers().get(0);           // dictionary of carriers
+Waybill added = client.orders().addTrackingNumber(orderId, ShipmentRequest.builder()
+        .carrierId(carrier.id())
+        .waybill("00123456789")
+        .build());
+
+client.orders().trackingNumbers(orderId);                       // waybills on an order
+client.orders().carrierTracking(carrier.id(), added.waybill()); // carrier delivery history
+```
+
+## Order events and pickup points
+
+The order **event log** is a cursor stream — resume from the last event you saw, and use
+`eventStats()` to discover the newest event id first.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.OrderEventFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.PointsFilter;
+
+client.orders().eventStats();                                   // latest event marker
+client.orders().streamEvents(OrderEventFilter.all()).limit(100).forEach(this::handle);
+
+client.orders().allegroPickupPoints(PointsFilter.ofCarriers("UPS"));
+```

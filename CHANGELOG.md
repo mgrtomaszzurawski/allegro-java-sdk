@@ -62,6 +62,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `OrderStatus`, seller-side `SellerStatus`, buyer, line items, and `Money` totals.
   WireMock contract tests (happy path + 400/401-replay/404/429/5xx), `docs/orders.md`,
   a compiled example, and the `orders-get` sandbox probe.
+- Order-management surface: `streamOrders(OrderFilter)` (lazy offset `Stream<Order>`),
+  `streamEvents(OrderEventFilter)` (lazy cursor stream) + `eventStats()`,
+  `markStatus`/`setSerialNumbers` with optional `revision` optimistic concurrency,
+  `attachBillingDocumentLink`, `trackingNumbers`/`addTrackingNumber`, and the
+  `carriers()`/`carrierTracking()`/`allegroPickupPoints()` dictionaries. New models
+  (`OrderEvent`, `OrderEventStats`, `Waybill`, `Carrier`, `CarrierTracking`,
+  `PickupPoint`) and fluent filter/request builders. `orders-list` sandbox probe.
 
 ### C — shipping
 

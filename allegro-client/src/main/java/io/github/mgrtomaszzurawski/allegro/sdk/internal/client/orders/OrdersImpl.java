@@ -8,17 +8,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AllegroPickupDropOffPoin
 import io.github.mgrtomaszzurawski.allegro.client.model.AllegroPickupDropOffPointsResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CarrierParcelTrackingResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormAddWaybillCreatedRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormAddWaybillRequestLineItemsInnerRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormAddWaybillRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormFulfillmentRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormLineItemSetSerialNumbersEntriesRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormLineItemSetSerialNumbersEntryRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormLineItemSetSerialNumbersRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormLineItemsSetSerialNumbersRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormOrderWaybillResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormsRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.NewOrderBillingDocumentLinkRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrderEventRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrderEventStatsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrderEventsListRaw;
@@ -47,7 +39,6 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
@@ -193,11 +184,10 @@ public final class OrdersImpl implements Orders {
     }
 
     private void putFulfillment(String orderId, SellerStatus status, @Nullable String revision) {
-        CheckoutFormFulfillmentRaw body = new CheckoutFormFulfillmentRaw().status(status.toRaw());
         http.request(OP_MARK_STATUS)
                 .put(ApiPaths.subPath(ApiPaths.ORDER_CHECKOUT_FORMS, orderId, ApiPaths.FULFILLMENT_SEGMENT))
                 .query(Query.create().add(QUERY_REVISION, revision))
-                .jsonBody(body)
+                .jsonBody(OrdersRequestFactory.fulfillment(status))
                 .send();
     }
 
@@ -216,30 +206,16 @@ public final class OrdersImpl implements Orders {
                 .post(ApiPaths.subPath(ApiPaths.ORDER_CHECKOUT_FORMS, orderId,
                         ApiPaths.SERIAL_NUMBERS_SEGMENT))
                 .query(Query.create().add(QUERY_REVISION, revision))
-                .jsonBody(toRaw(request))
+                .jsonBody(OrdersRequestFactory.serialNumbers(request))
                 .send();
-    }
-
-    private static CheckoutFormLineItemsSetSerialNumbersRequestRaw toRaw(SerialNumbersRequest request) {
-        List<CheckoutFormLineItemSetSerialNumbersRequestRaw> lineItems = request.lineItems().stream()
-                .map(entry -> new CheckoutFormLineItemSetSerialNumbersRequestRaw()
-                        .id(UUID.fromString(entry.lineItemId()))
-                        .serialNumbers(new CheckoutFormLineItemSetSerialNumbersEntriesRequestRaw()
-                                .entries(entry.serialNumbers().stream()
-                                        .map(serial -> new CheckoutFormLineItemSetSerialNumbersEntryRequestRaw()
-                                                .value(serial))
-                                        .toList())))
-                .toList();
-        return new CheckoutFormLineItemsSetSerialNumbersRequestRaw().lineItems(lineItems);
     }
 
     @Override
     public void attachBillingDocumentLink(String orderId, String url) {
-        NewOrderBillingDocumentLinkRaw body = new NewOrderBillingDocumentLinkRaw().url(url);
         http.request(OP_ATTACH_BILLING_LINK)
                 .post(ApiPaths.subPath(ApiPaths.ORDER_ROOT, orderId,
                         ApiPaths.BILLING_DOCUMENTS_SEGMENT, ApiPaths.LINKS_SEGMENT))
-                .jsonBody(body)
+                .jsonBody(OrdersRequestFactory.billingDocumentLink(url))
                 .send();
     }
 
@@ -254,19 +230,10 @@ public final class OrdersImpl implements Orders {
 
     @Override
     public Waybill addTrackingNumber(String orderId, ShipmentRequest request) {
-        List<String> lineItemIds = request.lineItemIds();
-        CheckoutFormAddWaybillRequestRaw body = new CheckoutFormAddWaybillRequestRaw()
-                .carrierId(request.carrierId())
-                .waybill(request.waybill())
-                .carrierName(request.carrierName())
-                // Omit line items entirely when none given: an empty array would
-                // mean "cover no items", a null means "cover the whole order".
-                .lineItems(lineItemIds.isEmpty() ? null : lineItemIds.stream()
-                        .map(id -> new CheckoutFormAddWaybillRequestLineItemsInnerRaw().id(id))
-                        .toList());
         return Waybill.from(http.postJsonAuthenticated(
                 ApiPaths.subPath(ApiPaths.ORDER_CHECKOUT_FORMS, orderId, ApiPaths.SHIPMENTS_SEGMENT),
-                body, CheckoutFormAddWaybillCreatedRaw.class, OP_ADD_TRACKING_NUMBER));
+                OrdersRequestFactory.shipment(request),
+                CheckoutFormAddWaybillCreatedRaw.class, OP_ADD_TRACKING_NUMBER));
     }
 
     @Override
