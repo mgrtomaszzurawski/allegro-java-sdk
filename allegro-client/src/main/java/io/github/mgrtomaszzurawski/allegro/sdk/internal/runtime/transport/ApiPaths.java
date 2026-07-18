@@ -158,10 +158,46 @@ public final class ApiPaths {
     public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
     /** Daily advertisement statistics aggregated for the seller. */
     public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
+    /** Seller's private offer tags ({@code /sale/offer-tags}); append {@code /{tagId}}. */
+    public static final String OFFER_TAGS = "/sale/offer-tags";
+    private static final String TAGS_SEGMENT = "tags";
+
+    /** One offer tag ({@code /sale/offer-tags/{tagId}}). */
+    public static String offerTag(String tagId) {
+        return subPath(OFFER_TAGS, tagId);
+    }
+
+    /** Tags assigned to an offer ({@code /sale/offers/{offerId}/tags}). */
+    public static String offerAssignedTags(String offerId) {
+        return subPath(SALE_OFFERS, offerId, TAGS_SEGMENT);
+    }
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
+    /** Fee-and-commission preview for a draft offer ({@code /pricing/offer-fee-preview}). */
+    public static final String OFFER_FEE_PREVIEW = "/pricing/offer-fee-preview";
+    /** The user's current offer fee quotes ({@code /pricing/offer-quotes}). */
+    public static final String OFFER_QUOTES = "/pricing/offer-quotes";
+    /** Turnover-discount configuration ({@code /sale/turnover-discount}); append {@code /{marketplaceId}} via {@link #subPath}. */
+    public static final String TURNOVER_DISCOUNT = "/sale/turnover-discount";
+    /** Available deposit types ({@code /deposit/types}). */
+    public static final String DEPOSIT_TYPES = "/deposit/types";
+
+    private static final String PRICE_AUTOMATION_OFFERS = "/sale/price-automation/offers";
+    private static final String RULES_SEGMENT = "rules";
+    private static final String DEACTIVATE_SEGMENT = "deactivate";
+
+    /** Automatic pricing rules assigned to one offer ({@code /sale/price-automation/offers/{offerId}/rules}). */
+    public static String priceAutomationOfferRules(String offerId) {
+        return subPath(PRICE_AUTOMATION_OFFERS, offerId, RULES_SEGMENT);
+    }
+
+    /** Deactivate a marketplace's turnover discount ({@code /sale/turnover-discount/{marketplaceId}/deactivate}). */
+    public static String turnoverDiscountDeactivate(String marketplaceId) {
+        return subPath(TURNOVER_DISCOUNT, marketplaceId, DEACTIVATE_SEGMENT);
+    }
+
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
@@ -175,6 +211,17 @@ public final class ApiPaths {
     public static final String BADGE_OFFERS_SEGMENT = "offers";
     /** Path segment for a campaign within the badge update path. */
     public static final String BADGE_CAMPAIGNS_SEGMENT = "campaigns";
+    /** Allegro Prices account participation ({@code /sale/allegro-prices/accounts/participations}). */
+    public static final String ALLEGRO_PRICES_PARTICIPATIONS =
+            "/sale/allegro-prices/accounts/participations";
+    /** Allegro Prices offer-status query ({@code /sale/allegro-prices/offers-queries}). */
+    public static final String ALLEGRO_PRICES_OFFERS_QUERIES = "/sale/allegro-prices/offers-queries";
+    /** Allegro Prices submit-offer commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLEGRO_PRICES_SUBMIT_COMMANDS =
+            "/sale/allegro-prices/offers/submit-offer-commands";
+    /** Allegro Prices exclusion commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLEGRO_PRICES_EXCLUSION_COMMANDS =
+            "/sale/allegro-prices/offers/exclusion-commands";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
