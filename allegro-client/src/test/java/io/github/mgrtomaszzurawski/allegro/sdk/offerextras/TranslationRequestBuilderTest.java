@@ -31,6 +31,7 @@ class TranslationRequestBuilderTest {
     private static final String EMPTY_MESSAGE =
             "a translation update must set at least one of title, description, or safety information";
     private static final String BLANK_TITLE_MESSAGE = "title must not be blank when set";
+    private static final String DESCRIPTION_EMPTY_MESSAGE = "description must have at least one section when set";
     private static final String SAFETY_EMPTY_MESSAGE = "safetyInformation must not be empty when set";
 
     private static StandardizedDescription description() {
@@ -124,5 +125,21 @@ class TranslationRequestBuilderTest {
         // then
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertEquals(SAFETY_EMPTY_MESSAGE, failure.getMessage());
+    }
+
+    @Test
+    void build_whenDescriptionHasNoSections_throwsIllegalState() {
+        var builder = TranslationRequest.builder().description(StandardizedDescription.of());
+
+        // then
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertEquals(DESCRIPTION_EMPTY_MESSAGE, failure.getMessage());
+    }
+
+    @Test
+    void of_whenProductIdNotUuid_throwsIllegalArgument() {
+        // then — the write factory validates the product id fail-fast, not at send time
+        assertThrows(IllegalArgumentException.class,
+                () -> ProductSafetyInformationTranslation.of("not-a-uuid", SAFETY_TEXT));
     }
 }

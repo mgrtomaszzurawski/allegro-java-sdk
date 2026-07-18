@@ -205,6 +205,9 @@ class OfferTranslationsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(patch(urlPathEqualTo(TRANSLATION_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(equalToJson(DESCRIPTION_UPDATE_BODY))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
 
@@ -229,6 +232,9 @@ class OfferTranslationsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(patch(urlPathEqualTo(TRANSLATION_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(equalToJson(SAFETY_UPDATE_BODY))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
 
@@ -244,6 +250,24 @@ class OfferTranslationsClientTest {
             // then — the product id and translation are on the wire; no null siblings
             verify(1, patchRequestedFor(urlPathEqualTo(TRANSLATION_PATH))
                     .withRequestBody(equalToJson(SAFETY_UPDATE_BODY)));
+        }
+    }
+
+    @Test
+    void update_whenDescriptionItemIsUnknown_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        // given — no PATCH stub: an UNKNOWN item (as produced by reading a future item
+        // kind) cannot be written and must fail before the wire
+        try (AllegroClient allegro = client(wmInfo)) {
+            var translations = allegro.offers().translations();
+            TranslationRequest request = TranslationRequest.builder()
+                    .description(StandardizedDescription.of(new DescriptionSection(List.of(
+                            new DescriptionSectionItem(DescriptionItemType.UNKNOWN, null, null)))))
+                    .build();
+
+            // then
+            assertThrows(IllegalArgumentException.class,
+                    () -> translations.update(TEST_OFFER_ID, TEST_LANGUAGE, request));
+            verify(0, anyRequestedFor(anyUrl()));
         }
     }
 
@@ -275,6 +299,7 @@ class OfferTranslationsClientTest {
             DescriptionSectionItem unknownItem = description.sections().get(1).items().get(0);
             assertEquals(DescriptionItemType.UNKNOWN, unknownItem.type());
             assertNull(unknownItem.content());
+            assertNull(unknownItem.url());
 
             // then — the per-product safety information maps
             assertEquals(1, translation.safetyInformation().size());

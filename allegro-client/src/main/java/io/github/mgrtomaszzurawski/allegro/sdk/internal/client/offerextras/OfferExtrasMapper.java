@@ -28,6 +28,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.Descript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.ProductSafetyInformationTranslation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.StandardizedDescription;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -39,6 +40,8 @@ final class OfferExtrasMapper {
 
     private static final String ERR_UNKNOWN_ITEM =
             "cannot write a description item of UNKNOWN type — build it with text(...) or image(...)";
+    private static final String ERR_SAFETY_PRODUCT_ID_NULL =
+            "a safety-information translation must have a productId — build it with of(productId, translation)";
 
     private OfferExtrasMapper() {
     }
@@ -114,8 +117,9 @@ final class OfferExtrasMapper {
     private static ManualSafetyInformationTranslationRaw safetyRaw(List<ProductSafetyInformationTranslation> products) {
         ManualSafetyInformationTranslationRaw raw = new ManualSafetyInformationTranslationRaw();
         for (ProductSafetyInformationTranslation product : products) {
+            String productId = Objects.requireNonNull(product.productId(), ERR_SAFETY_PRODUCT_ID_NULL);
             raw.addProductsItem(new ManualProductSafetyInformationDescriptionTranslationRaw()
-                    .id(UUID.fromString(product.productId()))
+                    .id(UUID.fromString(productId))
                     .translation(product.translation()));
         }
         return raw;

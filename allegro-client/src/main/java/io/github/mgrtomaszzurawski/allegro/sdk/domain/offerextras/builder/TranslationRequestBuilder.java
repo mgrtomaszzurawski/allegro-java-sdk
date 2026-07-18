@@ -22,6 +22,7 @@ public final class TranslationRequestBuilder {
     private static final String ERR_EMPTY =
             "a translation update must set at least one of title, description, or safety information";
     private static final String ERR_TITLE_BLANK = "title must not be blank when set";
+    private static final String ERR_DESCRIPTION_EMPTY = "description must have at least one section when set";
     private static final String ERR_SAFETY_EMPTY = "safetyInformation must not be empty when set";
 
     private @Nullable String title;
@@ -74,6 +75,9 @@ public final class TranslationRequestBuilder {
     public TranslationRequest build() {
         if (title != null && title.isBlank()) {
             throw new IllegalStateException(ERR_TITLE_BLANK);
+        }
+        if (description != null && description.sections().isEmpty()) {
+            throw new IllegalStateException(ERR_DESCRIPTION_EMPTY);
         }
         if (safetyInformation != null && safetyInformation.isEmpty()) {
             throw new IllegalStateException(ERR_SAFETY_EMPTY);

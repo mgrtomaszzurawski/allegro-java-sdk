@@ -23,10 +23,10 @@ import org.jspecify.annotations.Nullable;
  *     translation for this language
  * @param titleType how the title translation was produced, or {@code null} when
  *     there is no title translation
- * @param description the translated standardized description, or {@code null} when
- *     the offer has no description translation for this language
+ * @param description the translated standardized description content, or {@code
+ *     null} when the offer has no description translation content for this language
  * @param descriptionType how the description translation was produced, or {@code
- *     null} when there is no description translation
+ *     null} when the offer has no description translation entry for this language
  * @param safetyInformation the per-product safety-information translations; never
  *     {@code null}, possibly empty
  *
