@@ -7,7 +7,10 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackageType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
 import java.io.IOException;
 import java.util.List;
 
@@ -24,15 +27,20 @@ import java.util.List;
  *
  * <pre>
  *   ./gradlew :allegro-demo:run -Pdemo.scenario=classifieds \
- *       -Pdemo.account=seller -Pdemo.categoryId=&lt;id&gt;
+ *       -Pdemo.account=seller -Pdemo.categoryId=&lt;id&gt; [-Pdemo.offerId=&lt;offerId&gt;]
  * </pre>
  *
- * where {@code <id>} is a category that supports advertisements. Output is
+ * where {@code <id>} is a category that supports advertisements. When an
+ * advertisement {@code -Pdemo.offerId} is also supplied, the scenario runs the
+ * full write→read cycle (TESTING.md §2): it assigns the category's first base
+ * package to the offer with {@code assignPackages} and reads it back with
+ * {@code packagesOfOffer}, asserting the base package id round-trips. Output is
  * status-level only — never bodies or tokens.
  */
 public final class ClassifiedsDemo {
 
     private static final String CATEGORY_ID_PROPERTY = "demo.categoryId";
+    private static final String OFFER_ID_PROPERTY = "demo.offerId";
     private static final String ERR_NO_CATEGORY =
             "Provide -Pdemo.categoryId=<classifieds-enabled category id>";
     private static final String ERR_NO_STORED_TOKEN =
@@ -74,6 +82,51 @@ public final class ClassifiedsDemo {
                         + "] extensions=" + classifiedPackage.extensions().size()
                         + " promotions=" + classifiedPackage.promotions().size());
             }
+            verifySinglePackageRead(client, packages);
+            verifyAssignmentCycle(client, packages);
         }
+    }
+
+    /** Read one package back by id (getPackage), confirming the single-read shape. */
+    private static void verifySinglePackageRead(AllegroClient client, List<ClassifiedPackage> packages) {
+        if (packages.isEmpty()) {
+            return;
+        }
+        String packageId = packages.get(0).id();
+        ClassifiedPackage single = client.classifieds().getPackage(packageId);
+        System.out.println("classifieds.getPackage(" + packageId + "): " + single.name()
+                + " [" + single.type() + "]");
+    }
+
+    /**
+     * Write→read cycle: assign the category's first base package to the offer and
+     * read the assignment back, asserting the base package id round-trips. Skipped
+     * unless an advertisement {@code -Pdemo.offerId} is supplied.
+     */
+    private static void verifyAssignmentCycle(AllegroClient client, List<ClassifiedPackage> packages) {
+        String offerId = System.getProperty(OFFER_ID_PROPERTY);
+        if (offerId == null || offerId.isBlank()) {
+            System.out.println("(no -Pdemo.offerId - skipping the assign write→read cycle)");
+            return;
+        }
+        String basePackageId = firstBasePackageId(packages);
+        if (basePackageId == null) {
+            System.out.println("(no BASE package in the category - cannot assign)");
+            return;
+        }
+        client.classifieds().assignPackages(offerId,
+                ClassifiedAssignment.builder().basePackage(basePackageId).build());
+        OfferClassifieds assigned = client.classifieds().packagesOfOffer(offerId);
+        System.out.println("classifieds.assignPackages/packagesOfOffer(" + offerId + "): base="
+                + assigned.basePackageId() + " roundTrips=" + basePackageId.equals(assigned.basePackageId())
+                + " extras=" + assigned.extraPackages().size());
+    }
+
+    private static String firstBasePackageId(List<ClassifiedPackage> packages) {
+        return packages.stream()
+                .filter(classifiedPackage -> classifiedPackage.type() == ClassifiedPackageType.BASE)
+                .map(ClassifiedPackage::id)
+                .findFirst()
+                .orElse(null);
     }
 }

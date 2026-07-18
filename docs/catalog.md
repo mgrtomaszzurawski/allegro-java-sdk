@@ -5,9 +5,9 @@ parameters, the product database, and vehicle/part compatibility lists. It is wh
 classified and described against. All of it is public data, so an app-only **client-credentials**
 token is enough — no user login required.
 
-> **Status:** starter slice. Only `catalog().categories()` (the category tree) ships in this
-> first PR; `products()` and `compatibility()` follow in the same bucket. See
-> [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
+> **Status:** the `catalog().categories()` sub-facade ships — tree navigation, per-category
+> parameters, and name-based suggestions; `products()` and `compatibility()` follow in the same
+> bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
 
 ## Categories
 
@@ -52,6 +52,51 @@ id surfaces as `AllegroBadRequestException` (with the typed `errors()` list), a 
 `AllegroNotFoundException`, throttling as `AllegroRateLimitException` (honouring `Retry-After`),
 and 5xx/transport failures as `AllegroServerException`. GET calls are retried on 429/5xx per the
 configured `RetryPolicy`.
+
+## Category parameters
+
+Every category defines the parameters its offers and products may (or must) set — each with a
+value type, its constraints, and, for dictionary parameters, the allowed values.
+
+```java
+for (CategoryParameter parameter : categories.parameters("165929")) {
+    System.out.println(parameter.name() + " (" + parameter.type() + ")"
+            + (parameter.required() ? " [required]" : ""));
+    if (parameter.type() == CategoryParameterType.DICTIONARY) {
+        for (DictionaryValue value : parameter.dictionary()) {
+            System.out.println("  " + value.id() + " = " + value.value());
+        }
+    }
+}
+```
+
+`CategoryParameter.type()` selects which part of the record carries the constraint:
+
+| Type | Where the constraint lives |
+|---|---|
+| `DICTIONARY` | `dictionary()` — the selectable `DictionaryValue`s; `restrictions().multipleChoices()` |
+| `FLOAT` | `restrictions()` — `minValue` / `maxValue` / `range` / `precision` |
+| `INTEGER` | `restrictions()` — `minValue` / `maxValue` / `range` |
+| `STRING` | `restrictions()` — `minLength` / `maxLength` / `allowedNumberOfValues` |
+| `OTHER` | a type this SDK version does not model — `restrictions()` is `null`, `dictionary()` empty |
+
+Use `parameter.id()` (and, for dictionaries, a `value.id()`) to set the value when you build an
+offer or product.
+
+## Category suggestions
+
+Given a product or offer title, Allegro suggests the categories it best fits — the same hint the
+sell form makes. Matches come best-first; walk `parent()` for the breadcrumb up to the root.
+
+```java
+for (CategorySuggestion match : categories.suggest("wiertarka udarowa Bosch")) {
+    StringBuilder breadcrumb = new StringBuilder(match.name());
+    for (CategorySuggestion node = match.parent(); node != null; node = node.parent()) {
+        breadcrumb.insert(0, node.name() + " > ");
+    }
+    System.out.println(match.id() + "  " + breadcrumb);
+}
+```
 
 ## Verifying against the sandbox
 

@@ -47,6 +47,10 @@ public final class ApiPaths {
     private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
+    private static final String SMART_SEGMENT = "smart";
+
+    /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
+    public static final String SALE_OFFERS = "/sale/offers";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
     public static String productOffer(String offerId) {
@@ -58,6 +62,11 @@ public final class ApiPaths {
         return subPath(OFFERS, offerId, CHANGE_PRICE_COMMANDS, commandId);
     }
 
+    /** Smart! classification report of one offer ({@code /sale/offers/{offerId}/smart}). */
+    public static String offerSmart(String offerId) {
+        return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
+    }
+
     // ---- orders (bucket B) ----
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
@@ -65,10 +74,25 @@ public final class ApiPaths {
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
     public static final String CATEGORIES = "/sale/categories";
+    /** Parameters sub-resource of a category (under {@link #CATEGORIES}/{id}). */
+    public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
+    /** Category suggestions matched by name ({@code /sale/matching-categories}). */
+    public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
+    private static final String OFFER_CLASSIFIEDS_PACKAGES = "/sale/offer-classifieds-packages";
+
+    /** One classifieds package configuration ({@code /sale/classifieds-packages/{packageId}}). */
+    public static String classifiedsPackage(String packageId) {
+        return subPath(CLASSIFIEDS_PACKAGES, packageId);
+    }
+
+    /** Packages assigned to an offer ({@code /sale/offer-classifieds-packages/{offerId}}). */
+    public static String offerClassifiedsPackages(String offerId) {
+        return subPath(OFFER_CLASSIFIEDS_PACKAGES, offerId);
+    }
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
@@ -101,10 +125,22 @@ public final class ApiPaths {
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+    /** Badges collection ({@code /sale/badges}); apply and list; build sub-paths via {@link #subPath}. */
+    public static final String BADGES = "/sale/badges";
+    /** Badge applications ({@code /sale/badge-applications}); append {@code /{applicationId}} via subPath. */
+    public static final String BADGE_APPLICATIONS = "/sale/badge-applications";
+    /** Badge operations ({@code /sale/badge-operations}); append {@code /{operationId}} via subPath. */
+    public static final String BADGE_OPERATIONS = "/sale/badge-operations";
+    /** Path segment for an offer within the badge update path. */
+    public static final String BADGE_OFFERS_SEGMENT = "offers";
+    /** Path segment for a campaign within the badge update path. */
+    public static final String BADGE_CAMPAIGNS_SEGMENT = "campaigns";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
     public static final String POINTS_OF_SERVICE = "/points-of-service";
+    /** Delivery methods Allegro offers the seller. */
+    public static final String DELIVERY_METHODS = "/sale/delivery-methods";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
@@ -113,6 +149,11 @@ public final class ApiPaths {
     // ---- contacts (bucket J) ----
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
     public static final String OFFER_CONTACTS = "/sale/offer-contacts";
+
+    // ---- sale-settings (bucket K) ----
+    /** Seller after-sale warranty definitions. */
+    public static final String AFTER_SALES_WARRANTIES =
+            "/after-sales-service-conditions/warranties";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
