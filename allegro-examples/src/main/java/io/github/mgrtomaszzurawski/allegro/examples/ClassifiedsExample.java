@@ -7,7 +7,9 @@ package io.github.mgrtomaszzurawski.allegro.examples;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
 import java.util.List;
 
 /**
@@ -29,6 +31,21 @@ public final class ClassifiedsExample {
                 System.out.println(classifiedPackage.name() + " (" + classifiedPackage.type() + ")");
             }
             return packages.size();
+        }
+    }
+
+    static String assignFirstPackage(String clientId, String clientSecret,
+            String categoryId, String offerId) {
+        var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
+                auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
+        try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
+            ClassifiedPackage basePackage = client.classifieds().availablePackages(categoryId).get(0);
+            ClassifiedAssignment assignment = ClassifiedAssignment.builder()
+                    .basePackage(basePackage.id())
+                    .build();
+            client.classifieds().assignPackages(offerId, assignment);
+            OfferClassifieds assigned = client.classifieds().packagesOfOffer(offerId);
+            return assigned.basePackageId();
         }
     }
 }

@@ -1,0 +1,26 @@
+{
+  "deliveryMethods": [
+    {
+      "id": "8f9a6c2e-1111-4a00-9b00-aaaabbbbcccc",
+      "name": "Kurier",
+      "marketplaces": ["allegro-pl"],
+      "paymentPolicy": "IN_ADVANCE",
+      "allegroEndorsed": true,
+      "dispatchCountry": "PL",
+      "destinationCountry": "PL"
+    },
+    {
+      "id": "7e8b5d1f-2222-4c00-8d00-ddddeeeeffff",
+      "name": "Za pobraniem",
+      "marketplaces": [],
+      "paymentPolicy": "CASH_ON_DELIVERY",
+      "allegroEndorsed": false,
+      "dispatchCountry": "PL",
+      "destinationCountry": "PL"
+    },
+    {
+      "id": "6d7c4e0a-3333-4d00-9e00-111100002222",
+      "name": "Odbior osobisty"
+    }
+  ]
+}

@@ -25,6 +25,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.AffiliateImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.BiddingImpl;
@@ -39,6 +40,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.Fulfi
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing.PricingImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.SaleSettingsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
@@ -103,6 +105,7 @@ public final class AllegroClient implements AutoCloseable {
     private final Shipping shipping;
     private final Fulfillment fulfillment;
     private final Contacts contacts;
+    private final SaleSettings saleSettings;
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
@@ -146,6 +149,7 @@ public final class AllegroClient implements AutoCloseable {
         this.campaigns = new CampaignsImpl(runtime);
         this.shipping = new ShippingImpl(runtime);
         this.contacts = new ContactsImpl(runtime);
+        this.saleSettings = new SaleSettingsImpl(runtime);
     }
 
     /** Client with explicit configuration. */
@@ -247,6 +251,12 @@ public final class AllegroClient implements AutoCloseable {
     public Contacts contacts() {
         ensureOpen();
         return contacts;
+    }
+
+    /** Seller sale settings (after-sale conditions, and more per bucket K). */
+    public SaleSettings settings() {
+        ensureOpen();
+        return saleSettings;
     }
 
     /**

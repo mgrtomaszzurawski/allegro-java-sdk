@@ -43,6 +43,52 @@ The spec declares no `required` fields on `CategoryDto`, but on the wire `id`, `
 is present on children / absent on roots. The SDK's `Category` record therefore treats
 `id`/`name`/`leaf` as always-present and `parentId`/`options` as nullable.
 
+### Category parameters are polymorphic by `type`; suggestions nest parents (verified 2026-07-18, sandbox)
+
+`GET /sale/categories/{id}/parameters` returns `parameters[]` whose element shape depends on
+`type` (`dictionary`/`float`/`integer`/`string`): dictionary parameters carry a `dictionary[]` of
+`{id,value,dependsOnValueIds}` plus `restrictions.multipleChoices`; numeric parameters carry
+`restrictions.{min,max,range[,precision]}`; string parameters carry
+`restrictions.{minLength,maxLength,allowedNumberOfValues}`. Live probe: category `1520`
+("Budownictwo i Akcesoria") returned 7 parameters, the first ("Stan") a required dictionary with
+5 values. The SDK flattens all four onto one `CategoryParameter` record (`CategoryParameterType`
++ nullable `ParameterRestrictions` + a `DictionaryValue` list). NOTE: the Layer-1 parameter DTO
+declares no Jackson `defaultImpl`, so an unrecognised future `type` currently fails
+deserialization (surfaced as `AllegroServerException`) rather than degrading to
+`CategoryParameterType.OTHER`; delivering that degradation is a core follow-up (generator
+`defaultImpl` / mapper `FAIL_ON_INVALID_SUBTYPE`).
+
+`GET /sale/matching-categories?name=` returns `matchingCategories[]`, each a category node whose
+`parent` nests recursively up to the root (`parent` absent on a root match). Live probe:
+`name=iphone` returned 10 matches, the top being `353` "Etui i pokrowce" with a parent chain.
+Both endpoints succeed with an app-only client-credentials token (no user context, no scope).
+
+## Shipping & delivery (bucket C)
+
+### `GET /sale/delivery-methods` works with an app-only token (verified 2026-07-18, sandbox)
+
+`shipping().deliveryMethods()` succeeds with a client-credentials (application)
+token — the endpoint declares no OAuth scope. The live sandbox returned **571**
+delivery methods; the first mapped cleanly (`paymentPolicy=IN_ADVANCE`,
+`destinationCountry=PL`, `marketplaces=[1]`), confirming the `DeliveryMethod`
+record's field shape against the wire. `dispatchCountry` arrived `null` on that
+method, confirming it is genuinely nullable.
+
+### `deliveryMethods().paymentPolicy` is a closed typed enum (verified 2026-07-18, sandbox)
+
+Each method's `paymentPolicy` is one of a fixed set (`IN_ADVANCE`,
+`CASH_ON_DELIVERY`). In the generated Layer-1 model this field is a typed
+enumeration whose Jackson creator **rejects** any other value, so — unlike the
+free-form string enums on a point of service, which fall back to an `UNKNOWN`
+sentinel — a `paymentPolicy` value Allegro might add in future would fail
+deserialization of the whole response (surfaced as `AllegroServerException`)
+rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
+match, and the raw→domain map is a by-name lookup guarded by a name-parity test
+(`ShippingEnumsTest`) that iterates both enums. If Allegro extends the set, a
+Layer-1 regeneration adds the constant and that test then fails in the build —
+forcing the domain enum to gain the value in the same change, rather than leaking
+a runtime error.
+
 ## Account & meta (bucket D)
 
 ### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)
@@ -67,17 +113,53 @@ incomplete price to a `null` `Money` rather than failing the stream.
 `GET /bidding/offers/{offerId}/bid` answers 404 whether the offer is not an auction (or does
 not exist) or the auction exists but the user has placed no bid — the two cases are not
 distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. Confirmed live
-with a buyer user token against a non-existent offer id.
+with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
+the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
 
-### The device-flow consent page is DataDome-fronted (verified 2026-07-18, sandbox)
+## Sale settings (bucket K)
 
-Minting a buyer token via the device flow drives the browser to
-`…/uzytkownik/bezpieczenstwo/skojarz-aplikacje?code=…`, which is behind the same DataDome
-anti-bot as the login page. A JS interstitial clears with one settle-and-reload; a datacenter
-IP that navigates it repeatedly is escalated to a full captcha that does **not** clear there.
-Mitigation (in `BuyerAuthentication` / `allegro-e2e`): mint **once** from a cooled session,
-then reuse the persisted refresh token — the reuse path makes no navigation and never meets
-DataDome. A sandbox buyer account authenticates as a user id distinct from the seller's.
+### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/warranties` and `PUT …/warranties/{id}` reject a request
+that omits either buyer-class period with `HTTP 422 UNPROCESSABLE_ENTITY` and a single field
+error whose `path` names the missing one — `path=corporate` when only `individual` is set,
+`path=individual` when only `corporate` is set (both directions verified live on the seller
+sandbox account TestBoxSDK, id 111332841). The spec marks **neither** `required`. A request
+that carries both periods succeeds and reads back cleanly (create→get round-trip green). The
+SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
+a client-side `IllegalStateException` naming the field — no wasted round-trip.
+
+## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
+
+### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
+
+Allegro fronts its **web UI** (login + the OAuth device-flow consent page) with DataDome.
+From this container's datacenter IP two distinct challenge tiers were observed:
+
+- **JS interstitial** (self-clearing) — "Potwierdź, że jesteś człowiekiem" served on a 403/429;
+  it sets a cookie and clears after a short wait + one reload. The `allegro-e2e` login recipe
+  handles exactly this tier (and only this tier).
+- **Interactive slider/audio CAPTCHA** (does NOT self-clear) — the same heading, but the
+  `geo.captcha-delivery.com` iframe presents a "Przesuń w prawo, aby zabezpieczyć dostęp"
+  slider puzzle (plus audio + reload controls). Observed on the **device-flow consent URL**
+  (`verification_uri_complete`) when reached with a stale/aged DataDome cookie.
+
+The SDK's REST calls are unaffected — this is purely the browser-facing web UI (login,
+device-consent, and the web-only buyer actions). Implications, baked into the code and tests:
+
+- `allegro-e2e` does **not** attempt to solve the interactive puzzle — automating an anti-bot
+  CAPTCHA is detection evasion. `BuyerBrowser` detects any DataDome challenge
+  (`isDataDomeChallenge`) and fails loudly on the puzzle tier instead of hanging or
+  false-passing.
+- The **buyer device-flow token** is therefore minted by a one-time human consent click in a
+  normal browser (residential IP → no CAPTCHA): run `:allegro-demo:run
+  -Pdemo.scenario=auth-bootstrap -Pdemo.account=buyer`, open the printed URL, click *Authorize*.
+  Every later run reuses the stored refresh token non-interactively (rotation-safe store).
+- Fresh **web-session** automation (buy-now/dispute) from this IP is blocked at the puzzle tier
+  the same way; seed the `storageState`/session from a clean IP or by hand when needed.
+- DataDome hard-blocks the IP after a burst of rapid logins ("Zostałeś zablokowany… w tej
+  samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
+  discipline (`TESTING.md` §3).
 
 ## From external sources (to verify on first contact)
 
