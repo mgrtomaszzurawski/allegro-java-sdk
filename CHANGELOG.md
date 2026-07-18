@@ -115,6 +115,22 @@ sections. Empty subsections are dropped by the release engineer when folding
   and the fail-fast `PricingRuleRequest` fluent builder. WireMock-covered
   (request shape, oneOf mapping, full error-path table) with the `pricing` demo
   performing a live sandbox write→read→teardown.
+- Automatic pricing completed: `automation().rules()` (list incl. built-in
+  defaults), `automation().update(ruleId, PricingRuleEdit)` (edit name +
+  configuration; the immutable type is not part of an edit), and
+  `automation().rulesOfOffer(offerId)` returning the per-marketplace
+  `OfferPricingRules` assignments with their price bands.
+- `pricing().feePreview(OfferFeePreviewRequest)` — preview an offer's sale
+  commission and recurring quotes for a category + Buy Now price, mapped to
+  `FeePreview` (`FeeCommission` / `FeeQuote`).
+- `pricing().quotes(List<String> offerIds)` — the seller's current fee quotes
+  (repeated `offer.id`, `billing:read`), mapped to `OfferQuote`.
+- `pricing().turnoverDiscounts()` — `list()` / `list(marketplaceId)` /
+  `set(marketplaceId, TurnoverDiscountRequest)` / `deactivate(marketplaceId)`,
+  with the immutable `TurnoverDiscount` (dated `TurnoverDiscountDefinition`s and
+  `TurnoverThreshold` ladders) and its fail-fast request builder.
+- `pricing().depositTypes()` — the deposit types available for offers, mapped to
+  `DepositType`.
 
 ### H — campaigns
 

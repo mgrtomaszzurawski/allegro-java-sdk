@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param name the human-readable quote name
  * @param type the quote type identifier
- * @param fee the fee amount, or {@code null} when the preview carries none
+ * @param feeAmount the fee amount, or {@code null} when the preview carries none
  * @param cycleDuration the billing cycle as an ISO-8601 duration string (e.g.
  *     {@code "P1M"}), or {@code null} when the quote is not recurring
  *
@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 public record FeeQuote(
         @Nullable String name,
         @Nullable String type,
-        @Nullable Money fee,
+        @Nullable Money feeAmount,
         @Nullable String cycleDuration) {
 
     /**

@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param type the quote type identifier
  * @param name the human-readable quote name
  * @param enabled whether the quote is currently active
- * @param fee the fee amount, or {@code null} when the quote carries none
+ * @param feeAmount the fee amount, or {@code null} when the quote carries none
  * @param nextDate when the quote next applies, or {@code null} when not scheduled
  *
  * @since 0.3.0
@@ -28,7 +28,7 @@ public record OfferQuote(
         @Nullable String type,
         @Nullable String name,
         boolean enabled,
-        @Nullable Money fee,
+        @Nullable Money feeAmount,
         @Nullable Instant nextDate) {
 
     /**

@@ -149,7 +149,7 @@ class PricingClientTest {
             assertEquals(QUOTE_TYPE, quote.type());
             assertEquals(QUOTE_NAME, quote.name());
             assertTrue(quote.enabled());
-            assertEquals(Money.of(QUOTE_FEE_AMOUNT, TEST_CURRENCY), quote.fee());
+            assertEquals(Money.of(QUOTE_FEE_AMOUNT, TEST_CURRENCY), quote.feeAmount());
             assertEquals(QUOTE_NEXT_DATE, quote.nextDate());
             verify(1, getRequestedFor(urlEqualTo(QUOTES_URL)));
         }
@@ -260,7 +260,7 @@ class PricingClientTest {
             // then — commissions and recurring quotes both map, including the cycle
             assertEquals(1, preview.commissions().size());
             assertEquals(Money.of(COMMISSION_FEE_AMOUNT, TEST_CURRENCY),
-                    preview.commissions().get(0).fee());
+                    preview.commissions().get(0).feeAmount());
             assertEquals(1, preview.quotes().size());
             assertEquals(QUOTE_CYCLE, preview.quotes().get(0).cycleDuration());
             verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));

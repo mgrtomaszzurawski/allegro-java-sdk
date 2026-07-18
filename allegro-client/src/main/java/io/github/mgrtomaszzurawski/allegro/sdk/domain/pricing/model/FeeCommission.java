@@ -14,11 +14,11 @@ import org.jspecify.annotations.Nullable;
  *
  * @param name the human-readable commission name
  * @param type the commission type identifier
- * @param fee the fee amount, or {@code null} when the preview carries none
+ * @param feeAmount the fee amount, or {@code null} when the preview carries none
  *
  * @since 0.3.0
  */
-public record FeeCommission(@Nullable String name, @Nullable String type, @Nullable Money fee) {
+public record FeeCommission(@Nullable String name, @Nullable String type, @Nullable Money feeAmount) {
 
     /**
      * Map the generated commission DTO to the public record.
