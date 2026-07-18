@@ -65,7 +65,11 @@
       "city": "Krakow",
       "zipCode": "30-001",
       "countryCode": "PL",
-      "company": { "name": "Acme Sp. z o.o.", "vatPayerStatus": "ACTIVE", "taxId": "1234567890" }
+      "company": {
+        "name": "Acme Sp. z o.o.",
+        "vatPayerStatus": "ACTIVE",
+        "ids": [{ "type": "PL_NIP", "value": "1234567890" }]
+      }
     }
   },
   "summary": {

@@ -175,10 +175,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`DeliveryMethod`, recipient `DeliveryAddress` or `DeliveryPickupPoint`, `cost`, estimated
   `DeliveryTime`, Smart! flag) and `invoice()` as an `InvoiceRequirement` (required flag, due date,
   and an `InvoiceAddress` addressed to an `InvoiceCompany` — with a forward-compatible
-  `VatPayerStatus` — or a private `InvoicePerson`). `DeliveryAddress` and `InvoicePerson` redact
-  personal data in `toString()`. The delivery cancellation/package-count, guaranteed/dispatch time
-  sub-windows, and invoice feature flags are intentionally not modelled. This completes the `Order`
-  depth fill.
+  `VatPayerStatus` and typed `taxIds` (`CompanyTaxId`/`CompanyTaxIdType`, e.g. `PL_NIP`) — or a
+  private `InvoicePerson`). `DeliveryAddress`, `InvoicePerson` and `InvoiceAddress` redact personal
+  data in `toString()`. The company's deprecated single `taxId` string (superseded by `taxIds`), the
+  delivery cancellation/package-count, guaranteed/dispatch time sub-windows, and invoice feature
+  flags are intentionally not modelled. This completes the `Order` depth fill.
 
 ### C — shipping
 

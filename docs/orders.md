@@ -85,7 +85,7 @@ if (order.payment() != null && order.payment().type() == PaymentType.CASH_ON_DEL
 `address()` or a `pickupPoint()` (exactly one is set), the `cost`, the estimated `time` window, and a
 `smart()` flag for Allegro Smart! deliveries. `order.invoice()` says whether the buyer `required()` an
 invoice and, if so, the `dueDate()` and the `InvoiceAddress` — addressed to a `company()` (with
-`vatPayerStatus` and `taxId`) or a private `naturalPerson()`.
+`vatPayerStatus` and typed `taxIds`, e.g. `PL_NIP`) or a private `naturalPerson()`.
 
 ```java
 OrderDelivery delivery = order.delivery();

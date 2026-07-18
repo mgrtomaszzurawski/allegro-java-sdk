@@ -8,10 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormFulfillmentStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormInvoiceAddressCompanyIdRaw.TypeEnum;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormInvoiceAddressCompanyRaw.VatPayerStatusEnum;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormPaymentProviderRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormPaymentTypeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CompanyTaxIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentProvider;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentType;
@@ -116,5 +118,25 @@ class OrderMappingTest {
         // then
         assertEquals(VatPayerStatus.UNKNOWN,
                 VatPayerStatus.from(VatPayerStatusEnum.UNKNOWN_DEFAULT_OPEN_API));
+    }
+
+    @Test
+    void from_whenEveryCompanyTaxIdTypeRawValue_mapsToMatchingType() {
+        // then
+        assertEquals(CompanyTaxIdType.PL_NIP, CompanyTaxIdType.from(TypeEnum.PL_NIP));
+        assertEquals(CompanyTaxIdType.VAT_EU, CompanyTaxIdType.from(TypeEnum.VAT_EU));
+        assertEquals(CompanyTaxIdType.CZ_DIC, CompanyTaxIdType.from(TypeEnum.CZ_DIC));
+        assertEquals(CompanyTaxIdType.CZ_ICO, CompanyTaxIdType.from(TypeEnum.CZ_ICO));
+        assertEquals(CompanyTaxIdType.SK_ICO, CompanyTaxIdType.from(TypeEnum.SK_ICO));
+        assertEquals(CompanyTaxIdType.SK_IC_DPH, CompanyTaxIdType.from(TypeEnum.SK_IC_DPH));
+        assertEquals(CompanyTaxIdType.HU_ADOSZAM, CompanyTaxIdType.from(TypeEnum.HU_ADOSZAM));
+        assertEquals(CompanyTaxIdType.OTHER, CompanyTaxIdType.from(TypeEnum.OTHER));
+    }
+
+    @Test
+    void from_whenCompanyTaxIdTypeRawUnmodelled_mapsToUnknown() {
+        // then
+        assertEquals(CompanyTaxIdType.UNKNOWN,
+                CompanyTaxIdType.from(TypeEnum.UNKNOWN_DEFAULT_OPEN_API));
     }
 }

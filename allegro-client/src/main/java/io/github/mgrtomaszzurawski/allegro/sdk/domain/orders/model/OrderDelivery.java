@@ -5,7 +5,6 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormDeliveryReferenceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import org.jspecify.annotations.Nullable;
 
@@ -23,7 +22,8 @@ import org.jspecify.annotations.Nullable;
  * @param pickupPoint the destination pickup point, or {@code null} for an address delivery
  * @param cost the delivery cost, or {@code null} when not set
  * @param time the estimated delivery-time window, or {@code null} when not set
- * @param smart {@code true} when this is an Allegro Smart! delivery
+ * @param smart {@code true} when this is an Allegro Smart! delivery; an absent
+ *     wire value maps to {@code false}
  *
  * @since 0.7.0
  */
@@ -45,16 +45,8 @@ public record OrderDelivery(
                 method == null ? null : DeliveryMethod.from(method),
                 address == null ? null : DeliveryAddress.from(address),
                 pickupPoint == null ? null : DeliveryPickupPoint.from(pickupPoint),
-                money(raw.getCost()),
+                Prices.money(raw.getCost()),
                 time == null ? null : DeliveryTime.from(time),
                 Boolean.TRUE.equals(raw.getSmart()));
-    }
-
-    /** Money from a price leaf, or {@code null} when the leaf or its parts are absent. */
-    private static @Nullable Money money(@Nullable PriceRaw price) {
-        if (price == null || price.getAmount() == null || price.getCurrency() == null) {
-            return null;
-        }
-        return Money.of(price.getAmount(), price.getCurrency());
     }
 }

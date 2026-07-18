@@ -40,4 +40,16 @@ public record InvoiceAddress(
                 company == null ? null : InvoiceCompany.from(company),
                 naturalPerson == null ? null : InvoicePerson.from(naturalPerson));
     }
+
+    /**
+     * Redacts the street and postal code so an accidental log or trace of an
+     * {@code InvoiceAddress} never leaks it — for a private-person invoice these
+     * are that individual's home address. Mirrors {@link DeliveryAddress}; use the
+     * typed accessors to read the fields deliberately.
+     */
+    @Override
+    public String toString() {
+        return "InvoiceAddress[city=" + city + ", countryCode=" + countryCode
+                + ", personal data redacted]";
+    }
 }

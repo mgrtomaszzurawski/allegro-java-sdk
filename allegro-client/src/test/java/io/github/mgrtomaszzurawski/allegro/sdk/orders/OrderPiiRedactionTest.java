@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.DeliveryAddress;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.InvoiceAddress;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.InvoicePerson;
 import org.junit.jupiter.api.Test;
 
@@ -59,5 +60,22 @@ class OrderPiiRedactionTest {
         assertFalse(rendered.contains(LAST_NAME));
         assertEquals(FIRST_NAME, person.firstName());
         assertEquals(LAST_NAME, person.lastName());
+    }
+
+    @Test
+    void toString_whenInvoiceAddress_redactsStreetAndZipButAccessorsExposeThem() {
+        // given — a private-person invoice address, where street/zip are a home address
+        InvoiceAddress address =
+                new InvoiceAddress(STREET, CITY, ZIP_CODE, COUNTRY_CODE, null, null);
+
+        // when
+        String rendered = address.toString();
+
+        // then — street and postal code are absent from toString...
+        assertFalse(rendered.contains(STREET));
+        assertFalse(rendered.contains(ZIP_CODE));
+        // ...but still readable through the accessors
+        assertEquals(STREET, address.street());
+        assertEquals(ZIP_CODE, address.zipCode());
     }
 }

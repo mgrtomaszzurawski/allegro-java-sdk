@@ -39,6 +39,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.SerialNumbe
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ShipmentRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Carrier;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CarrierTracking;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CompanyTaxIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Order;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventStats;
@@ -339,7 +340,11 @@ class OrdersClientTest {
             assertEquals(EXPECTED_INVOICE_COMPANY, order.invoice().address().company().name());
             assertEquals(VatPayerStatus.ACTIVE,
                     order.invoice().address().company().vatPayerStatus());
-            assertEquals(EXPECTED_INVOICE_TAX_ID, order.invoice().address().company().taxId());
+            assertEquals(1, order.invoice().address().company().taxIds().size());
+            assertEquals(CompanyTaxIdType.PL_NIP,
+                    order.invoice().address().company().taxIds().get(0).type());
+            assertEquals(EXPECTED_INVOICE_TAX_ID,
+                    order.invoice().address().company().taxIds().get(0).value());
             assertNull(order.invoice().address().naturalPerson());
             verify(1, getRequestedFor(urlEqualTo(ORDER_PATH)));
         }
