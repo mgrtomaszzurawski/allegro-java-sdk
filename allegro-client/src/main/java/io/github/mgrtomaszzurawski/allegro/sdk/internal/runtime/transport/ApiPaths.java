@@ -55,6 +55,8 @@ public final class ApiPaths {
 
     /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
     public static final String SALE_OFFERS = "/sale/offers";
+    /** Seller's offers with missing category parameters ({@code /sale/offers/unfilled-parameters}). */
+    public static final String SALE_OFFERS_UNFILLED_PARAMETERS = "/sale/offers/unfilled-parameters";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
     public static String productOffer(String offerId) {

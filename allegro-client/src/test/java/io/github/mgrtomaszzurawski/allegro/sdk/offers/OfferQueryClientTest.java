@@ -31,6 +31,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
@@ -85,6 +86,13 @@ class OfferQueryClientTest {
     private static final String CONDITION_MET_CODE = "DELIVERY";
     private static final String CONDITION_MET_NAME = "Wysyłka";
     private static final String CONDITION_MET_DESCRIPTION = "szybko";
+    private static final String UNFILLED_PATH = "/sale/offers/unfilled-parameters";
+    private static final String PARAM_ID_ONE = "p-100";
+    private static final String PARAM_ID_TWO = "p-200";
+    private static final String UNFILLED_ENTRY = "{\"offers\":[{\"id\":\"" + OFFER_ID
+            + "\",\"category\":{\"id\":\"" + CATEGORY_ID + "\"},\"parameters\":[{\"id\":\""
+            + PARAM_ID_ONE + "\"},{\"id\":\"" + PARAM_ID_TWO + "\"}]}],\"count\":1}";
+
     private static final String SMART_BODY = "{\"classification\":{\"fulfilled\":true,"
             + "\"lastChanged\":\"2026-01-01T00:00:00Z\"},\"scheduledForReclassification\":false,"
             + "\"conditions\":[{\"code\":\"" + CONDITION_MET_CODE + "\",\"name\":\"" + CONDITION_MET_NAME
@@ -235,6 +243,50 @@ class OfferQueryClientTest {
         AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
                 () -> offers(wmInfo).streamOffers(OfferFilter.all()).findFirst());
         assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
+    }
+
+    private static String unfilledPage(int size) {
+        StringBuilder body = new StringBuilder("{\"offers\":[");
+        for (int index = 0; index < size; index++) {
+            if (index > 0) {
+                body.append(',');
+            }
+            body.append("{\"id\":\"").append(index).append("\"}");
+        }
+        return body.append("],\"count\":").append(size).append('}').toString();
+    }
+
+    @Test
+    void streamUnfilledParameters_whenEntry_mapsOfferCategoryAndMissingParams(WireMockRuntimeInfo wmInfo) {
+        // given — one offer missing two parameters
+        stubFor(get(urlPathEqualTo(UNFILLED_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(UNFILLED_ENTRY)));
+
+        // when
+        UnfilledParameters entry = offers(wmInfo).streamUnfilledParameters().findFirst().orElseThrow();
+
+        // then
+        assertEquals(OFFER_ID, entry.offerId());
+        assertEquals(CATEGORY_ID, entry.categoryId());
+        assertEquals(List.of(PARAM_ID_ONE, PARAM_ID_TWO), entry.parameterIds());
+    }
+
+    @Test
+    void streamUnfilledParameters_whenConsumerStopsAtFirstPage_doesNotFetchSecondPage(
+            WireMockRuntimeInfo wmInfo) {
+        // given — two available pages
+        stubFor(get(urlPathEqualTo(UNFILLED_PATH)).withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(unfilledPage(FULL_PAGE))));
+        stubFor(get(urlPathEqualTo(UNFILLED_PATH)).withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(unfilledPage(SECOND_PAGE))));
+
+        // when — take only the first page
+        long taken = offers(wmInfo).streamUnfilledParameters().limit(FULL_PAGE).count();
+
+        // then — laziness: the second page is never requested
+        assertEquals(FULL_PAGE, taken);
+        verify(1, getRequestedFor(urlPathEqualTo(UNFILLED_PATH)).withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST)));
+        verify(0, getRequestedFor(urlPathEqualTo(UNFILLED_PATH)).withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND)));
     }
 
     @Test
