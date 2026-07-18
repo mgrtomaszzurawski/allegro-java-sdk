@@ -64,6 +64,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   instead of `public.v1`. Beta write surfaces reject the v1 content type, and
   `acceptBeta()` only flips the `Accept` header. Unblocks bucket J's dispute
   writes (post-purchase issues) and bucket B's `returns().rejectRefund`.
+- Forward compatibility for enums: generated `*Raw` enums now use
+  `enumUnknownDefaultCase`, so `fromValue()` returns an `UNKNOWN_DEFAULT_OPEN_API`
+  sentinel for a value Allegro adds later instead of throwing and failing the
+  whole response. Domain enums map that sentinel (and any unmodelled value) to
+  their own `UNKNOWN` via a switch default; enums that had no `UNKNOWN` gained a
+  read-only sentinel constant. Affected domain buckets should add coverage —
+  see BACKLOG C3 follow-ups.
 
 ### A — offers-core
 

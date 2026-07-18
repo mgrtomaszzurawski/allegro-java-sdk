@@ -35,7 +35,10 @@ public enum OrderEventType {
     BUYER_MODIFIED,
 
     /** The platform auto-cancelled the order (e.g. payment never arrived). */
-    AUTO_CANCELLED;
+    AUTO_CANCELLED,
+
+    /** An event type this SDK release does not model yet (read-only sentinel; never sent as a filter). */
+    UNKNOWN;
 
     /** Map the generated Layer-1 enum to the public event type. */
     public static OrderEventType from(OrderEventTypeRaw raw) {
@@ -47,6 +50,7 @@ public enum OrderEventType {
             case FULFILLMENT_STATUS_CHANGED -> FULFILLMENT_STATUS_CHANGED;
             case BUYER_MODIFIED -> BUYER_MODIFIED;
             case AUTO_CANCELLED -> AUTO_CANCELLED;
+            default -> UNKNOWN;
         };
     }
 }

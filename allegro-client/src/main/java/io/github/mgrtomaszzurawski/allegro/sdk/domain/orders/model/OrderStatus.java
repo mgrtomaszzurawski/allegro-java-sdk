@@ -25,7 +25,10 @@ public enum OrderStatus {
     READY_FOR_PROCESSING,
 
     /** The order was cancelled. */
-    CANCELLED;
+    CANCELLED,
+
+    /** A status this SDK release does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
 
     /** Map the generated Layer-1 enum to the public status. */
     public static OrderStatus from(CheckoutFormStatusRaw raw) {
@@ -34,6 +37,7 @@ public enum OrderStatus {
             case FILLED_IN -> FILLED_IN;
             case READY_FOR_PROCESSING -> READY_FOR_PROCESSING;
             case CANCELLED -> CANCELLED;
+            default -> UNKNOWN;
         };
     }
 }

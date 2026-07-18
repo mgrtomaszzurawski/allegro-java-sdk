@@ -38,6 +38,7 @@ public enum ChatAuthorRole {
             case ADMIN -> ADMIN;
             case SYSTEM -> SYSTEM;
             case FULFILLMENT -> FULFILLMENT;
+            default -> UNKNOWN;
         };
     }
 }
