@@ -22,9 +22,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.Contacts;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.Messaging;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.AffiliateImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.BiddingImpl;
@@ -36,9 +38,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog.CatalogIm
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.contacts.ContactsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.FulfillmentImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.messaging.MessagingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing.PricingImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.SaleSettingsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
@@ -103,6 +107,8 @@ public final class AllegroClient implements AutoCloseable {
     private final Shipping shipping;
     private final Fulfillment fulfillment;
     private final Contacts contacts;
+    private final Messaging messaging;
+    private final SaleSettings saleSettings;
     private volatile boolean closed;
 
     private AllegroClient(AllegroCredentials credentials, AllegroClientConfig config) {
@@ -146,6 +152,8 @@ public final class AllegroClient implements AutoCloseable {
         this.campaigns = new CampaignsImpl(runtime);
         this.shipping = new ShippingImpl(runtime);
         this.contacts = new ContactsImpl(runtime);
+        this.messaging = new MessagingImpl(runtime);
+        this.saleSettings = new SaleSettingsImpl(runtime);
     }
 
     /** Client with explicit configuration. */
@@ -247,6 +255,18 @@ public final class AllegroClient implements AutoCloseable {
     public Contacts contacts() {
         ensureOpen();
         return contacts;
+    }
+
+    /** The message center: buyer↔seller threads, messages, attachments (bucket J). */
+    public Messaging messaging() {
+        ensureOpen();
+        return messaging;
+    }
+
+    /** Seller sale settings (after-sale conditions, and more per bucket K). */
+    public SaleSettings settings() {
+        ensureOpen();
+        return saleSettings;
     }
 
     /**

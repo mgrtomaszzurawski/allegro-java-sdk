@@ -47,6 +47,10 @@ public final class ApiPaths {
     private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
+    private static final String SMART_SEGMENT = "smart";
+
+    /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
+    public static final String SALE_OFFERS = "/sale/offers";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
     public static String productOffer(String offerId) {
@@ -56,6 +60,11 @@ public final class ApiPaths {
     /** Single-offer Buy Now price change command ({@code /offers/{offerId}/change-price-commands/{commandId}}). */
     public static String changePriceCommand(String offerId, String commandId) {
         return subPath(OFFERS, offerId, CHANGE_PRICE_COMMANDS, commandId);
+    }
+
+    /** Smart! classification report of one offer ({@code /sale/offers/{offerId}/smart}). */
+    public static String offerSmart(String offerId) {
+        return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
     }
 
     // ---- orders (bucket B) ----
@@ -87,6 +96,10 @@ public final class ApiPaths {
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
     public static final String CATEGORIES = "/sale/categories";
+    /** Parameters sub-resource of a category (under {@link #CATEGORIES}/{id}). */
+    public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
+    /** Category suggestions matched by name ({@code /sale/matching-categories}). */
+    public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
@@ -103,24 +116,73 @@ public final class ApiPaths {
         return subPath(OFFER_CLASSIFIEDS_PACKAGES, offerId);
     }
 
+    /** Daily advertisement statistics for selected offers ({@code offer.id} query). */
+    public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
+    /** Daily advertisement statistics aggregated for the seller. */
+    public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
+
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+    /** Badges collection ({@code /sale/badges}); apply and list; build sub-paths via {@link #subPath}. */
+    public static final String BADGES = "/sale/badges";
+    /** Badge applications ({@code /sale/badge-applications}); append {@code /{applicationId}} via subPath. */
+    public static final String BADGE_APPLICATIONS = "/sale/badge-applications";
+    /** Badge operations ({@code /sale/badge-operations}); append {@code /{operationId}} via subPath. */
+    public static final String BADGE_OPERATIONS = "/sale/badge-operations";
+    /** Path segment for an offer within the badge update path. */
+    public static final String BADGE_OFFERS_SEGMENT = "offers";
+    /** Path segment for a campaign within the badge update path. */
+    public static final String BADGE_CAMPAIGNS_SEGMENT = "campaigns";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
     public static final String POINTS_OF_SERVICE = "/points-of-service";
+    /** Delivery methods Allegro offers the seller. */
+    public static final String DELIVERY_METHODS = "/sale/delivery-methods";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
+    /** Available stock report for One Fulfillment goods. */
+    public static final String FULFILLMENT_STOCK = "/fulfillment/stock";
+    /** Products the seller may ship into One Fulfillment. */
+    public static final String FULFILLMENT_AVAILABLE_PRODUCTS = "/fulfillment/available-products";
+    /** Refund-dispositions report for returned/bounced One Fulfillment goods. */
+    public static final String FULFILLMENT_REFUND_DISPOSITIONS = "/fulfillment/returns/refund-dispositions";
+    /** Seller's tax identification number for One Fulfillment. */
+    public static final String FULFILLMENT_TAX_ID = "/fulfillment/tax-id";
+    private static final String FULFILLMENT_ORDERS = "/fulfillment/orders";
+    private static final String PARCELS_SEGMENT = "parcels";
+
+    /** Parcels shipped for one fulfillment order ({@code /fulfillment/orders/{orderId}/parcels}). */
+    public static String fulfillmentOrderParcels(String orderId) {
+        return subPath(FULFILLMENT_ORDERS, orderId, PARCELS_SEGMENT);
+    }
 
     // ---- contacts (bucket J) ----
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
     public static final String OFFER_CONTACTS = "/sale/offer-contacts";
+
+    // ---- messaging (bucket J) ----
+    /** Message-center threads ({@code /messaging/threads}); append {@code /{threadId}} via subPath. */
+    public static final String MESSAGING_THREADS = "/messaging/threads";
+    /** Single messages ({@code /messaging/messages}); append {@code /{messageId}} via subPath. */
+    public static final String MESSAGING_MESSAGES = "/messaging/messages";
+    /** Message attachments ({@code /messaging/message-attachments}); append {@code /{attachmentId}} via subPath. */
+    public static final String MESSAGING_MESSAGE_ATTACHMENTS = "/messaging/message-attachments";
+    /** Sub-resource: the messages collection within a thread. */
+    public static final String MESSAGES_SEGMENT = "messages";
+    /** Sub-resource: the read-flag toggle of a thread. */
+    public static final String READ_SEGMENT = "read";
+
+    // ---- sale-settings (bucket K) ----
+    /** Seller after-sale warranty definitions. */
+    public static final String AFTER_SALES_WARRANTIES =
+            "/after-sales-service-conditions/warranties";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

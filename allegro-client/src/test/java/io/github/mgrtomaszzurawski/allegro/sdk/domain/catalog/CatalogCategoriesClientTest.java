@@ -24,17 +24,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import io.github.mgrtomaszzurawski.allegro.client.model.CategoryParameterRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameterType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategorySuggestion;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -97,6 +102,39 @@ class CatalogCategoriesClientTest {
               "userMessage":"Nie znaleziono kategorii","path":null}]}
             """;
     private static final String BUSY = "{\"errors\":[]}";
+
+    private static final String CATEGORY_PARAMETERS_PATH = CATEGORY_BY_ID_PATH + "/parameters";
+    private static final String MATCHING_PATH = "/sale/matching-categories";
+    private static final String NAME_PARAM = "name";
+    private static final String SUGGEST_NAME = "iphone";
+    private static final String NO_MATCHES = "{\"matchingCategories\":[]}";
+    private static final String NULL_MATCHES = "{\"matchingCategories\":null}";
+    private static final String UNKNOWN_TYPE_PARAM =
+            "{\"parameters\":[{\"id\":\"1\",\"name\":\"Geo\",\"type\":\"geo\"}]}";
+    // Shapes spec-derived; wire-verified on the sandbox via the catalog-categories
+    // demo (see KNOWN-SERVER-BEHAVIORS.md). One parameter of each of the four types.
+    private static final String CATEGORY_PARAMETERS = """
+            {"parameters":[
+              {"id":"11323","name":"Marka","type":"dictionary","required":true,"requiredForProduct":true,
+               "options":{"describesProduct":true,"customValuesEnabled":false,
+                          "ambiguousValueId":"11323_0","dependsOnParameterId":null},
+               "restrictions":{"multipleChoices":true},
+               "dictionary":[{"id":"11323_1","value":"Bosch","dependsOnValueIds":[]},
+                             {"id":"11323_2","value":"Makita","dependsOnValueIds":["11323_1"]}]},
+              {"id":"medium","name":"Moc","type":"float","required":false,"requiredForProduct":false,
+               "unit":"W","restrictions":{"min":0.0,"max":2000.5,"range":false,"precision":2}},
+              {"id":"count","name":"Liczba sztuk","type":"integer","required":false,
+               "requiredForProduct":false,"restrictions":{"min":1,"max":100,"range":true}},
+              {"id":"note","name":"Opis","type":"string","required":false,"requiredForProduct":false,
+               "restrictions":{"minLength":0,"maxLength":40,"allowedNumberOfValues":1}}]}
+            """;
+    private static final String MATCHING_CATEGORIES = """
+            {"matchingCategories":[
+              {"id":"257","name":"Smartfony i telefony komórkowe",
+               "parent":{"id":"48978","name":"Telefony i Akcesoria",
+                         "parent":{"id":"165","name":"Elektronika"}}},
+              {"id":"321","name":"Akcesoria GSM"}]}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -372,6 +410,216 @@ class CatalogCategoriesClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
             var categories = allegro.catalog().categories();
             assertThrows(NullPointerException.class, () -> categories.get(null));
+        }
+    }
+
+    // ---- category parameters ----
+
+    @Test
+    void parameters_whenCategoryHasParameters_mapsEveryTypeAndItsRestrictions(
+            WireMockRuntimeInfo wmInfo) {
+        // given — one parameter of each type: dictionary, float, integer, string
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(CATEGORY_PARAMETERS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(CATEGORY_PARAMETERS)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CategoryParameter> parameters =
+                    allegro.catalog().categories().parameters(CATEGORY_ID);
+
+            // then — the polymorphic Raw hierarchy flattened onto the typed record
+            assertEquals(4, parameters.size());
+
+            CategoryParameter dictionary = parameters.get(0);
+            assertEquals(CategoryParameterType.DICTIONARY, dictionary.type());
+            assertTrue(dictionary.required());
+            assertTrue(dictionary.requiredForProduct());
+            assertNotNull(dictionary.options());
+            assertTrue(dictionary.options().describesProduct());
+            assertEquals("11323_0", dictionary.options().ambiguousValueId());
+            assertNull(dictionary.options().dependsOnParameterId());
+            assertNotNull(dictionary.restrictions());
+            assertTrue(dictionary.restrictions().multipleChoices());
+            assertEquals(2, dictionary.dictionary().size());
+            assertEquals("11323_1", dictionary.dictionary().get(0).id());
+            assertEquals("Bosch", dictionary.dictionary().get(0).value());
+            assertEquals(List.of("11323_1"), dictionary.dictionary().get(1).dependsOnValueIds());
+
+            CategoryParameter floatParam = parameters.get(1);
+            assertEquals(CategoryParameterType.FLOAT, floatParam.type());
+            assertEquals("W", floatParam.unit());
+            assertNotNull(floatParam.restrictions());
+            BigDecimal floatMin = floatParam.restrictions().minValue();
+            assertNotNull(floatMin);
+            assertEquals(0, floatMin.compareTo(new BigDecimal("0.0")));
+            BigDecimal floatMax = floatParam.restrictions().maxValue();
+            assertNotNull(floatMax);
+            assertEquals(0, floatMax.compareTo(new BigDecimal("2000.5")));
+            assertEquals(Integer.valueOf(2), floatParam.restrictions().precision());
+            assertTrue(floatParam.dictionary().isEmpty());
+
+            CategoryParameter integerParam = parameters.get(2);
+            assertEquals(CategoryParameterType.INTEGER, integerParam.type());
+            assertNotNull(integerParam.restrictions());
+            BigDecimal integerMin = integerParam.restrictions().minValue();
+            assertNotNull(integerMin);
+            assertEquals(0, integerMin.compareTo(BigDecimal.ONE));
+            BigDecimal integerMax = integerParam.restrictions().maxValue();
+            assertNotNull(integerMax);
+            assertEquals(0, integerMax.compareTo(new BigDecimal("100")));
+            assertTrue(integerParam.restrictions().range());
+            assertNull(integerParam.restrictions().precision());
+
+            CategoryParameter stringParam = parameters.get(3);
+            assertEquals(CategoryParameterType.STRING, stringParam.type());
+            assertNotNull(stringParam.restrictions());
+            assertEquals(Integer.valueOf(40), stringParam.restrictions().maxLength());
+
+            verify(1, getRequestedFor(urlEqualTo(CATEGORY_PARAMETERS_PATH)));
+        }
+    }
+
+    @Test
+    void parameters_whenResponseHasNoParameters_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given — a parameter envelope with the array omitted
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(CATEGORY_PARAMETERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CategoryParameter> parameters =
+                    allegro.catalog().categories().parameters(CATEGORY_ID);
+
+            // then — never null, and the call still hit the wire
+            assertTrue(parameters.isEmpty());
+            verify(1, getRequestedFor(urlEqualTo(CATEGORY_PARAMETERS_PATH)));
+        }
+    }
+
+    @Test
+    void parameters_whenIdNull_throwsNullPointerException(WireMockRuntimeInfo wmInfo) {
+        // then
+        try (AllegroClient allegro = client(wmInfo)) {
+            var categories = allegro.catalog().categories();
+            assertThrows(NullPointerException.class, () -> categories.parameters(null));
+        }
+    }
+
+    @Test
+    void from_whenParameterTypeIsUnmodeled_mapsToOtherWithoutRestrictionsOrDictionary() {
+        // given — a base parameter DTO whose concrete type this SDK version does not
+        // model. This exercises the mapper's OTHER default DIRECTLY; note the live wire
+        // cannot yet produce it (Jackson rejects an unknown discriminator before the
+        // mapper runs — see parameters_whenTypeUnknown_... and CategoryParameterType.OTHER).
+        CategoryParameterRaw raw = new CategoryParameterRaw();
+        raw.setId("999");
+        raw.setName("Nowość");
+        raw.setType("geo");
+        raw.setRequired(true);
+
+        // when
+        CategoryParameter parameter = CategoryParameter.from(raw);
+
+        // then
+        assertEquals(CategoryParameterType.OTHER, parameter.type());
+        assertTrue(parameter.required());
+        assertNull(parameter.restrictions());
+        assertTrue(parameter.dictionary().isEmpty());
+    }
+
+    @Test
+    void parameters_whenTypeUnknown_failsDeserializationRatherThanDegrading(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a parameter whose discriminator is outside the four modelled types.
+        // The generated Raw base declares no @JsonSubTypes defaultImpl, so Jackson rejects
+        // it during deserialization. This pins the CURRENT wire behaviour: an unknown type
+        // surfaces as a deserialization failure, NOT CategoryParameterType.OTHER. (Letting
+        // unknown types degrade needs a core change — generator defaultImpl / mapper config.)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(CATEGORY_PARAMETERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_TYPE_PARAM)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var categories = allegro.catalog().categories();
+            // then
+            assertThrows(AllegroServerException.class, () -> categories.parameters(CATEGORY_ID));
+        }
+    }
+
+    // ---- category suggestions (matching-categories) ----
+
+    @Test
+    void suggest_whenNameMatches_sendsNameQueryAndMapsParentChain(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(MATCHING_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(MATCHING_CATEGORIES)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CategorySuggestion> suggestions =
+                    allegro.catalog().categories().suggest(SUGGEST_NAME);
+
+            // then — best match first, with its breadcrumb reachable via parent()
+            assertEquals(2, suggestions.size());
+            CategorySuggestion best = suggestions.get(0);
+            assertEquals("257", best.id());
+            assertEquals("Smartfony i telefony komórkowe", best.name());
+            CategorySuggestion parent = best.parent();
+            assertNotNull(parent);
+            assertEquals("48978", parent.id());
+            CategorySuggestion grandParent = parent.parent();
+            assertNotNull(grandParent);
+            assertEquals("Elektronika", grandParent.name());
+            assertNull(grandParent.parent());
+            // a root match carries no parent
+            assertNull(suggestions.get(1).parent());
+            // the required name filter reached the wire
+            verify(1, getRequestedFor(urlPathEqualTo(MATCHING_PATH))
+                    .withQueryParam(NAME_PARAM, equalTo(SUGGEST_NAME)));
+        }
+    }
+
+    @Test
+    void suggest_whenNoMatches_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(MATCHING_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NO_MATCHES)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // then
+            assertTrue(allegro.catalog().categories().suggest(SUGGEST_NAME).isEmpty());
+            verify(1, getRequestedFor(urlPathEqualTo(MATCHING_PATH)));
+        }
+    }
+
+    @Test
+    void suggest_whenMatchingCategoriesNull_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given — an explicit null array (the impl's null-guard branch, distinct from [])
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(MATCHING_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NULL_MATCHES)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // then — never null
+            assertTrue(allegro.catalog().categories().suggest(SUGGEST_NAME).isEmpty());
+        }
+    }
+
+    @Test
+    void suggest_whenNameNull_throwsNullPointerException(WireMockRuntimeInfo wmInfo) {
+        // then — a null name must fail loudly, never match every category
+        try (AllegroClient allegro = client(wmInfo)) {
+            var categories = allegro.catalog().categories();
+            assertThrows(NullPointerException.class, () -> categories.suggest(null));
         }
     }
 }
