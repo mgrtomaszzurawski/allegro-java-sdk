@@ -115,7 +115,37 @@ your record maps must actually arrive non-null/parseable on a real response.
 - Demo scenarios log operation names and statuses, never bodies or tokens.
 - Sandbox rate limits are production-grade; a scenario is a handful of calls, not a load test.
 
-## 3. Gates are the floor, not the goal
+## 3. Buyer-side E2E layer — Java driving the web UI via Playwright (`allegro-e2e`)
+
+Some SDK flows can only be verified end-to-end by performing a **web-only buyer action** — buy-now,
+opening a dispute/return, leaving a rating, or clicking the device-flow consent that mints the buyer
+token. Those actions have no REST API, so for a real E2E the web step is part of the test's control
+flow (seller creates an offer via the SDK → buyer buys and opens a dispute in the UI → the SDK reads
+and answers the dispute → assert). The test therefore **cannot exist without a browser**: it drives
+Playwright's **Java binding in-process** and interleaves it with SDK calls and JUnit assertions. Home:
+the `allegro-e2e` module (`BuyerBrowser`).
+
+- **Not part of `check`.** Every E2E test is `@Tag("e2e")`; the default `test` task excludes that tag,
+  so a normal build launches no browser. Opt in with `-Pe2e`. The module is not published.
+- **Headed under Xvfb.** Allegro fronts with DataDome; headless is blocked, full Chromium under Xvfb
+  passes (`DISPLAY=:99 ./gradlew :allegro-e2e:test -Pe2e`). Recipe lives in `BuyerBrowser` /
+  `ARCHITECTURE.md` §10.6.
+- **Serial + rate-limited — mandatory, not optional.** The tests share one buyer session and IP; a
+  series of rapid logins trips DataDome's HARD IP block (demonstrated 2026-07-17). So the task runs
+  `maxParallelForks = 1`, `forkEvery = 1`, JUnit parallelism off — one browser at a time, human-paced.
+- **Log in at most once — reuse `storageState`.** `BuyerBrowser` reuses a saved `storageState` (cookies
+  incl. the DataDome cookie + session) and only logs in when there is none. Bootstrap it once with
+  `:allegro-e2e:run` (ideally from a clean IP). The state file lives under
+  `/workspace/shared/secrets/` at `0600` (live session cookies — outside any git repo, never committed).
+- **Fallback.** If DataDome still hardens from the datacenter IP, seed once by hand in the sandbox UI
+  (orders persist and stay queryable); the API-reachable buyer actions (bidding, Message Center) never
+  need the browser — they use a buyer user-token through the SDK.
+
+The three verification layers: **§1 WireMock** pins the contract and runs in `check`; **§2 the
+`allegro-demo` tool** does live write→read *through the SDK*; **§3 this E2E layer** adds the web-only
+buyer half that §2 cannot reach, and is the precondition/interleave for those flows.
+
+## 4. Gates are the floor, not the goal
 
 JaCoCo (bundle ≥ 0.75/0.80 instruction/method; per-class METHOD = 1.00 on builders and domain
 clients), Sonar (0 bugs / 0 vulns / no new smells on touched files), and release-time PIT

@@ -169,6 +169,11 @@ drive-by edit in a domain PR.
   wire-touching facade area is verified on the sandbox with the write→read cycle THROUGH the
   SDK (create with POST/PUT, read back with GET, assert the round-trip) before its PR is
   merge-ready; server surprises go to `KNOWN-SERVER-BEHAVIORS.md`.
+- **`allegro-e2e` is the buyer-side E2E layer** (Playwright-Java in-process): for flows whose
+  E2E needs a web-only buyer action (buy-now, disputes, device-flow consent), a Java test drives
+  the browser AND the SDK. `@Tag("e2e")`, excluded from `check`, run with `-Pe2e`; **serial +
+  rate-limited** and reuses a `0600` `storageState` (login once) — rapid logins trip DataDome's
+  IP block. See `TESTING.md` §3.
 
 ## Quality gates
 
