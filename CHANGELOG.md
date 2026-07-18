@@ -47,6 +47,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   generic over the body type, so a byte download still shares retry, 401 replay
   and typed error mapping (the error body is decoded from bytes). Unblocks
   bucket I (PDF, `If-Match`) and bucket J (attachment downloads).
+- `HttpCall.jsonBodyNonNull(body)` — serialize a request body omitting null
+  fields, for partial (PATCH) updates where an unset field must be absent from
+  the payload rather than sent as `null` (which would reset it server-side).
+  Reusable by every bucket's partial-update endpoints.
 
 ### A — offers-core
 
@@ -199,6 +203,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   per-offer assignment (`ofOffer`, `assignToOffer`). Immutable `Tag` records +
   fail-fast `TagRequest` builder; `offer-tags` write→read demo. New `offerextras`
   package wired onto the bucket-A `Offers` root.
+- `offers().translations()` — an offer's translations into other languages:
+  `ofOffer` (read), `update` (set the title translation), `delete`. Immutable
+  `OfferTranslation` records (`title` + `titleType`) + `TranslationRequest`
+  builder. Title translation only for now; description/safety-information
+  translations (rich structured content) are a documented follow-up.
+- `offers().rating(offerId)` — an offer's aggregated buyer rating (`OfferRating`:
+  average, total, score distribution, size feedback). Read-only.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
@@ -246,6 +257,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AllegroPricesOfferStatus`, `SubsidyCommandReport`/`SubsidyOfferResult`/`SubsidyOfferStatus` models
   and the `ParticipationUpdate`/`AllegroPricesOfferQuery`/`SubmitOffersRequest`/`ExcludeOffersRequest`
   builders (with `OfferScope`/`OfferSubstatus` filters).
+- Add the AlleDiscount sub-facade `client.campaigns().alleDiscount()` — completes bucket H:
+  `campaigns()` (GET `/sale/alle-discount/campaigns`, a `List`), lazy `streamEligibleOffers`/
+  `streamSubmittedOffers` (GET `…/{campaignId}/eligible-offers` and `…/submitted-offers`), and the
+  `submitOffer`/`withdrawOffer(...[, Duration])` commands (POST, polled to a terminal result). Adds
+  `AlleDiscountCampaign`, `AlleDiscountEligibleOffer`, `AlleDiscountSubmittedOffer`,
+  `AlleDiscountSubmitResult`/`AlleDiscountWithdrawResult` and their status/type enums (plus the shared
+  `ConditionViolation`), and the `SubmitOfferRequest`/`EligibleOffersFilter`/`SubmittedOffersFilter`
+  builders.
 
 ### I — fulfillment
 

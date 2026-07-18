@@ -196,6 +196,24 @@ public final class ApiPaths {
         return subPath(SALE_OFFERS, offerId, TAGS_SEGMENT);
     }
 
+    private static final String TRANSLATIONS_SEGMENT = "translations";
+    private static final String RATING_SEGMENT = "rating";
+
+    /** An offer's translations ({@code /sale/offers/{offerId}/translations}). */
+    public static String offerTranslations(String offerId) {
+        return subPath(SALE_OFFERS, offerId, TRANSLATIONS_SEGMENT);
+    }
+
+    /** One offer translation ({@code /sale/offers/{offerId}/translations/{language}}). */
+    public static String offerTranslation(String offerId, String language) {
+        return subPath(SALE_OFFERS, offerId, TRANSLATIONS_SEGMENT, language);
+    }
+
+    /** An offer's buyer rating ({@code /sale/offers/{offerId}/rating}). */
+    public static String offerRating(String offerId) {
+        return subPath(SALE_OFFERS, offerId, RATING_SEGMENT);
+    }
+
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
@@ -246,6 +264,19 @@ public final class ApiPaths {
     /** Allegro Prices exclusion commands; append {@code /{commandId}} via subPath. */
     public static final String ALLEGRO_PRICES_EXCLUSION_COMMANDS =
             "/sale/allegro-prices/offers/exclusion-commands";
+    /** AlleDiscount campaigns list ({@code /sale/alle-discount/campaigns}). */
+    public static final String ALLE_DISCOUNT_CAMPAIGNS = "/sale/alle-discount/campaigns";
+    /** AlleDiscount root ({@code /sale/alle-discount}); build per-campaign sub-paths via subPath. */
+    public static final String ALLE_DISCOUNT = "/sale/alle-discount";
+    /** AlleDiscount submit-offer commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLE_DISCOUNT_SUBMIT_COMMANDS = "/sale/alle-discount/submit-offer-commands";
+    /** AlleDiscount withdraw-offer commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLE_DISCOUNT_WITHDRAW_COMMANDS =
+            "/sale/alle-discount/withdraw-offer-commands";
+    /** Path segment for a campaign's eligible offers ({@code …/{campaignId}/eligible-offers}). */
+    public static final String ALLE_DISCOUNT_ELIGIBLE_OFFERS_SEGMENT = "eligible-offers";
+    /** Path segment for a campaign's submitted offers ({@code …/{campaignId}/submitted-offers}). */
+    public static final String ALLE_DISCOUNT_SUBMITTED_OFFERS_SEGMENT = "submitted-offers";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
