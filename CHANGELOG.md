@@ -147,6 +147,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /affiliate/conversions/cps`, beta, lazy stream).
 - New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
   `RatingFilter`, `CharitySearch`, `ConversionFilter`.
+- `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
+  bucket D's live verification, run with a stored buyer token
+  (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
+  (`myBid` on a non-existent auction → `AllegroNotFoundException`); `myBid`/
+  `placeBid`→`myBid` write→read on a real auction stay gated behind
+  `-Pdemo.offerId`/`-Pdemo.bidAmount`. Verified live 2026-07-18: a buyer token
+  (account distinct from the seller) reaches the bidding API and maps its 404s.
 
 ### E — catalog-products
 

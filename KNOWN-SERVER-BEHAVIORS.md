@@ -108,6 +108,14 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+### `bidding().myBid(offerId)` returns 404 for both "no auction" and "no bid" (verified 2026-07-18, sandbox)
+
+`GET /bidding/offers/{offerId}/bid` answers 404 whether the offer is not an auction (or does
+not exist) or the auction exists but the user has placed no bid — the two cases are not
+distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. Confirmed live
+with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
+the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
+
 ## Sale settings (bucket K)
 
 ### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
