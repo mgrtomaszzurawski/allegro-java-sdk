@@ -101,8 +101,6 @@ public final class ApiPaths {
     public static final String OFFER_FEE_PREVIEW = "/pricing/offer-fee-preview";
     /** The user's current offer fee quotes ({@code /pricing/offer-quotes}). */
     public static final String OFFER_QUOTES = "/pricing/offer-quotes";
-    /** Seller promotions collection ({@code /sale/loyalty/promotions}); append {@code /{promotionId}} via {@link #subPath}. */
-    public static final String LOYALTY_PROMOTIONS = "/sale/loyalty/promotions";
     /** Turnover-discount configuration ({@code /sale/turnover-discount}); append {@code /{marketplaceId}} via {@link #subPath}. */
     public static final String TURNOVER_DISCOUNT = "/sale/turnover-discount";
     /** Available deposit types ({@code /deposit/types}). */

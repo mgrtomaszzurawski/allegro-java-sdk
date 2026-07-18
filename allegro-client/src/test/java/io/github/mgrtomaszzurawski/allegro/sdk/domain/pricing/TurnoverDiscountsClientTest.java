@@ -31,6 +31,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.TurnoverDisc
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.TurnoverDiscountRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.TurnoverThreshold;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -62,6 +65,11 @@ class TurnoverDiscountsClientTest {
 
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final long TEST_RETRY_AFTER = 1L;
+    private static final String ERROR_CODE_VALIDATION = "ValidationError";
+    private static final String NOT_FOUND_RESPONSE = """
+            {"errors":[{"code":"NotFound","message":"Not found","userMessage":"Not found","path":null}]}
+            """;
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -233,7 +241,61 @@ class TurnoverDiscountsClientTest {
                     AllegroBadRequestException.class,
                     () -> turnover.set(TEST_MARKETPLACE_ID, request));
             assertEquals(1, failure.errors().size());
+            assertEquals(ERROR_CODE_VALIDATION, failure.errors().get(0).code());
             assertEquals("thresholds", failure.errors().get(0).path());
+        }
+    }
+
+    @Test
+    void deactivate_when404_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given — deactivating a marketplace with no discount
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlEqualTo(DEACTIVATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withBody(NOT_FOUND_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            TurnoverDiscounts turnover = allegro.pricing().turnoverDiscounts();
+
+            // then
+            AllegroNotFoundException failure = assertThrows(
+                    AllegroNotFoundException.class, () -> turnover.deactivate(TEST_MARKETPLACE_ID));
+            assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
+        }
+    }
+
+    @Test
+    void list_when429_retriesThenThrowsRateLimit(WireMockRuntimeInfo wmInfo) {
+        // given — every attempt is throttled; the policy allows one retry
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(TURNOVER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, String.valueOf(TEST_RETRY_AFTER))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            TurnoverDiscounts turnover = allegro.pricing().turnoverDiscounts();
+
+            // then — retried once (verify 2), then surfaced with Retry-After
+            AllegroRateLimitException failure = assertThrows(
+                    AllegroRateLimitException.class, turnover::list);
+            assertEquals(TEST_RETRY_AFTER, failure.retryAfterSeconds());
+            verify(2, getRequestedFor(urlEqualTo(TURNOVER_PATH)));
+        }
+    }
+
+    @Test
+    void list_when5xx_throwsServerException(WireMockRuntimeInfo wmInfo) {
+        // given — a GET is retried once, then the server error surfaces
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(TURNOVER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            TurnoverDiscounts turnover = allegro.pricing().turnoverDiscounts();
+
+            // then
+            assertThrows(AllegroServerException.class, turnover::list);
+            verify(2, getRequestedFor(urlEqualTo(TURNOVER_PATH)));
         }
     }
 

@@ -31,6 +31,7 @@ public interface Pricing {
      * a percentage discount.
      *
      * @return the turnover-discount sub-facade
+     * @since 0.3.0
      */
     TurnoverDiscounts turnoverDiscounts();
 
@@ -41,6 +42,7 @@ public interface Pricing {
      * @param request the draft-offer details, built with
      *     {@link OfferFeePreviewRequest#builder()}
      * @return the previewed commissions and quotes
+     * @since 0.3.0
      */
     FeePreview feePreview(OfferFeePreviewRequest request);
 
@@ -51,6 +53,8 @@ public interface Pricing {
      * @param offerIds the offers to quote (at least one); sent as repeated
      *     {@code offer.id} filters
      * @return one {@link OfferQuote} per matching offer/quote pairing
+     * @throws IllegalArgumentException if {@code offerIds} is null or empty
+     * @since 0.3.0
      */
     List<OfferQuote> quotes(List<String> offerIds);
 
@@ -59,6 +63,7 @@ public interface Pricing {
      * packaging or bottle deposits).
      *
      * @return the available deposit types
+     * @since 0.3.0
      */
     List<DepositType> depositTypes();
 }

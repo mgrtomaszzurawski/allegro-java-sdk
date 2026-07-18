@@ -31,6 +31,7 @@ public interface PricingAutomation {
      * returned as a {@link List} rather than a stream.
      *
      * @return every rule the seller can assign
+     * @since 0.3.0
      */
     List<PricingRule> rules();
 
@@ -59,6 +60,7 @@ public interface PricingAutomation {
      * @param edit the new name and optional configuration, built with
      *     {@link PricingRuleEdit#builder()}
      * @return the updated rule
+     * @since 0.3.0
      */
     PricingRule update(String ruleId, PricingRuleEdit edit);
 
@@ -77,6 +79,7 @@ public interface PricingAutomation {
      *
      * @param offerId the offer identifier
      * @return the offer's rule assignments
+     * @since 0.3.0
      */
     OfferPricingRules rulesOfOffer(String offerId);
 }

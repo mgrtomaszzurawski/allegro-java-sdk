@@ -39,6 +39,7 @@ public final class PricingImpl implements Pricing {
     private static final String OP_QUOTES = "get offer fee quotes";
     private static final String OP_DEPOSIT_TYPES = "list deposit types";
     private static final String QUERY_OFFER_ID = "offer.id";
+    private static final String ERR_NO_OFFER_IDS = "at least one offer id is required";
 
     private final HttpSupport http;
     private final PricingAutomation automation;
@@ -71,6 +72,9 @@ public final class PricingImpl implements Pricing {
 
     @Override
     public List<OfferQuote> quotes(List<String> offerIds) {
+        if (offerIds == null || offerIds.isEmpty()) {
+            throw new IllegalArgumentException(ERR_NO_OFFER_IDS);
+        }
         OfferQuotesDtoRaw response = http.request(OP_QUOTES)
                 .get(ApiPaths.OFFER_QUOTES)
                 .query(Query.create().addAll(QUERY_OFFER_ID, offerIds))

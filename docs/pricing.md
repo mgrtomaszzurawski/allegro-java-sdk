@@ -121,8 +121,10 @@ FeePreview preview = client.pricing().feePreview(
                 .price(Money.of("99.99", "PLN"))
                 .build());
 
-preview.commissions().forEach(c -> System.out.println(c.name() + ": " + c.feeAmount()));
-preview.quotes().forEach(q -> System.out.println(q.name() + " every " + q.cycleDuration()));
+preview.commissions().forEach(commission ->
+        System.out.println(commission.name() + ": " + commission.feeAmount()));
+preview.quotes().forEach(quote ->
+        System.out.println(quote.name() + " every " + quote.cycleDuration()));
 ```
 
 Pass `.offerId(...)` to preview the fees for an existing offer. The preview needs

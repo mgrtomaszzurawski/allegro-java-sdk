@@ -23,6 +23,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleT
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.StreamSupport;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -87,14 +88,13 @@ final class PricingMapper {
 
     /** Map a rules-list response (as raw JSON) to public records. */
     static List<PricingRule> toRules(JsonNode wrapper) {
-        List<PricingRule> rules = new ArrayList<>();
         JsonNode rulesArray = wrapper.get(FIELD_RULES);
-        if (rulesArray != null) {
-            for (JsonNode ruleNode : rulesArray) {
-                rules.add(toRule(ruleNode));
-            }
+        if (rulesArray == null) {
+            return List.of();
         }
-        return List.copyOf(rules);
+        return StreamSupport.stream(rulesArray.spliterator(), false)
+                .map(PricingMapper::toRule)
+                .toList();
     }
 
     /** Map a rule response (as raw JSON) to the public record. */

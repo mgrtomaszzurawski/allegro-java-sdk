@@ -13,6 +13,8 @@ import org.jspecify.annotations.Nullable;
  * A deposit type the seller can attach to an offer (e.g. a returnable-packaging
  * or bottle deposit), as listed by {@code pricing().depositTypes()}.
  *
+ * <p>Every field is spec-nullable, so any may be {@code null} on a sparse listing.
+ *
  * @param id the deposit-type identifier
  * @param name the human-readable description
  * @param marketplaceId the marketplace the deposit type applies to
@@ -21,9 +23,9 @@ import org.jspecify.annotations.Nullable;
  * @since 0.3.0
  */
 public record DepositType(
-        UUID id,
-        String name,
-        String marketplaceId,
+        @Nullable UUID id,
+        @Nullable String name,
+        @Nullable String marketplaceId,
         @Nullable Money price) {
 
     /**

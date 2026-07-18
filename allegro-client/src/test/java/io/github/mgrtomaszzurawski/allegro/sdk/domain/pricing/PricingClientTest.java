@@ -15,6 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -30,6 +31,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreview;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferFeePreviewRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferQuote;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.Instant;
 import java.util.List;
@@ -76,6 +81,9 @@ class PricingClientTest {
 
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final long TEST_RETRY_AFTER = 1L;
+    private static final String TEST_ERROR_CODE = "ValidationError";
+    private static final String TEST_ERROR_PATH = "offer.category.id";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -104,6 +112,14 @@ class PricingClientTest {
                 "fee":{"amount":"2.50","currency":"PLN"}}],
              "quotes":[{"name":"Promo","type":"PROMO",
                 "fee":{"amount":"1.00","currency":"PLN"},"cycleDuration":"P1M"}]}
+            """;
+    // spec-derived: not yet wire-verified (errors[] contract shape)
+    private static final String VALIDATION_ERROR_RESPONSE = """
+            {"errors":[{"code":"ValidationError","message":"Invalid category",
+              "userMessage":"Invalid category","path":"offer.category.id","details":null,"metadata":null}]}
+            """;
+    private static final String NOT_FOUND_RESPONSE = """
+            {"errors":[{"code":"NotFound","message":"Not found","userMessage":"Not found","path":null}]}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -288,6 +304,99 @@ class PricingClientTest {
             // then
             assertEquals(1, preview.commissions().size());
             verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
+        }
+    }
+
+    @Test
+    void feePreview_when400_throwsBadRequestWithParsedFieldErrors(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(FEE_PREVIEW_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withBody(VALIDATION_ERROR_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var request = OfferFeePreviewRequest.builder()
+                    .categoryId(TEST_CATEGORY_ID).price(Money.of(PRICE_AMOUNT, TEST_CURRENCY)).build();
+            var pricing = allegro.pricing();
+
+            // then — field errors survive; a POST is not retried
+            AllegroBadRequestException failure = assertThrows(
+                    AllegroBadRequestException.class, () -> pricing.feePreview(request));
+            assertEquals(TEST_ERROR_CODE, failure.errors().get(0).code());
+            assertEquals(TEST_ERROR_PATH, failure.errors().get(0).path());
+            verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
+        }
+    }
+
+    @Test
+    void feePreview_when5xx_throwsServerAndDoesNotRetryPost(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(FEE_PREVIEW_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var request = OfferFeePreviewRequest.builder()
+                    .categoryId(TEST_CATEGORY_ID).price(Money.of(PRICE_AMOUNT, TEST_CURRENCY)).build();
+            var pricing = allegro.pricing();
+
+            // then — POST is not retried by default
+            assertThrows(AllegroServerException.class, () -> pricing.feePreview(request));
+            verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
+        }
+    }
+
+    @Test
+    void quotes_when404_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(QUOTES_URL))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withBody(NOT_FOUND_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var pricing = allegro.pricing();
+            var offerIds = List.of(OFFER_ID_ONE, OFFER_ID_TWO);
+
+            // then
+            AllegroNotFoundException failure = assertThrows(
+                    AllegroNotFoundException.class, () -> pricing.quotes(offerIds));
+            assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
+        }
+    }
+
+    @Test
+    void quotes_when429_retriesThenThrowsRateLimit(WireMockRuntimeInfo wmInfo) {
+        // given — every attempt is throttled; the policy allows one retry
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(QUOTES_URL))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, String.valueOf(TEST_RETRY_AFTER))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var pricing = allegro.pricing();
+            var offerIds = List.of(OFFER_ID_ONE, OFFER_ID_TWO);
+
+            // then — retried once (verify 2), then surfaced with Retry-After
+            AllegroRateLimitException failure = assertThrows(
+                    AllegroRateLimitException.class, () -> pricing.quotes(offerIds));
+            assertEquals(TEST_RETRY_AFTER, failure.retryAfterSeconds());
+            verify(2, getRequestedFor(urlEqualTo(QUOTES_URL)));
+        }
+    }
+
+    @Test
+    void quotes_whenOfferIdsEmpty_throwsWithoutCallingServer(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var pricing = allegro.pricing();
+
+            // then — fail-fast on the required, repeated offer.id filter; no request is sent
+            assertThrows(IllegalArgumentException.class, () -> pricing.quotes(List.of()));
+            verify(0, getRequestedFor(urlEqualTo(QUOTES_URL)));
         }
     }
 }

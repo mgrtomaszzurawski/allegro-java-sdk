@@ -4,6 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.TurnoverDiscountThresholdDtoDiscountRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.TurnoverDiscountThresholdDtoMinimumTurnoverRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TurnoverDiscountThresholdDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.util.Objects;
@@ -31,14 +33,20 @@ public record TurnoverThreshold(Money minimumTurnover, String discountPercentage
     }
 
     /**
-     * Map the generated threshold DTO to the public record.
+     * Map the generated threshold DTO to the public record. The nested turnover
+     * and discount are {@code nullable} in the spec, so each is null-checked with
+     * a clear message before use rather than dereferenced blindly.
      *
      * @param raw the generated threshold DTO
      * @return the mapped record
      */
     public static TurnoverThreshold from(TurnoverDiscountThresholdDtoRaw raw) {
+        TurnoverDiscountThresholdDtoMinimumTurnoverRaw minimumTurnover =
+                Objects.requireNonNull(raw.getMinimumTurnover(), ERR_MINIMUM_TURNOVER);
+        TurnoverDiscountThresholdDtoDiscountRaw discount =
+                Objects.requireNonNull(raw.getDiscount(), ERR_DISCOUNT_PERCENTAGE);
         return new TurnoverThreshold(
-                Money.of(raw.getMinimumTurnover().getAmount(), raw.getMinimumTurnover().getCurrency()),
-                raw.getDiscount().getPercentage());
+                Money.of(minimumTurnover.getAmount(), minimumTurnover.getCurrency()),
+                discount.getPercentage());
     }
 }
