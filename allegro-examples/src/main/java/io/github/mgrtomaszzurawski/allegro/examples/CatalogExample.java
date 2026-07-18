@@ -9,6 +9,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogCategories;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameterType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategorySuggestion;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.DictionaryValue;
 import java.util.List;
 
 /**
@@ -35,6 +39,17 @@ public final class CatalogExample {
                     && category.options().productCreationEnabled();
             System.out.println(category.name() + " canCreateProduct=" + canCreateProduct
                     + " children=" + children.size());
+
+            for (CategoryParameter parameter : categories.parameters(first.id())) {
+                if (parameter.type() == CategoryParameterType.DICTIONARY
+                        && !parameter.dictionary().isEmpty()) {
+                    DictionaryValue value = parameter.dictionary().get(0);
+                    System.out.println(parameter.name() + " -> " + value.id() + "=" + value.value());
+                }
+            }
+            for (CategorySuggestion match : categories.suggest(category.name())) {
+                System.out.println("match " + match.id() + " isRoot=" + (match.parent() == null));
+            }
 
             return roots.stream().filter(Category::leaf).count();
         }

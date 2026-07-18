@@ -65,6 +65,10 @@ public final class ApiPaths {
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
     public static final String CATEGORIES = "/sale/categories";
+    /** Parameters sub-resource of a category (under {@link #CATEGORIES}/{id}). */
+    public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
+    /** Category suggestions matched by name ({@code /sale/matching-categories}). */
+    public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
