@@ -335,15 +335,18 @@ Fulfillment fulfillment = client.fulfillment();
 
 AdvanceShipNotices asn = fulfillment.advanceShipNotices();
 asn.streamNotices(AsnFilter)                      // GET    /fulfillment/advance-ship-notices  Stream<Asn>
-asn.get(asnId)                                    // GET    /fulfillment/advance-ship-notices/{id}
+asn.get(asnId)                                    // GET    /fulfillment/advance-ship-notices/{id}  (ETag -> version())
 asn.create(AsnRequest)                            // POST   /fulfillment/advance-ship-notices
-asn.update(asnId, AsnRequest)                     // PUT    /fulfillment/advance-ship-notices/{id}
-asn.updateSubmitted(asnId, SubmittedAsnUpdate)    // PUT    /fulfillment/advance-ship-notices/{id}/submitted
-asn.submit(asnId)                                 // PUT    /fulfillment/submit-commands/{command-id} (sync)
+asn.update(asnId, AsnRequest, version)            // PUT    /fulfillment/advance-ship-notices/{id}            (If-Match)
+asn.updateSubmitted(asnId, Update, version)       // PUT    /fulfillment/advance-ship-notices/{id}/submitted  (If-Match)
+asn.submit(asnId) -> SubmitStatus                 // PUT+GET /fulfillment/submit-commands/{command-id} (sync poll)
 asn.cancel(asnId)                                 // PUT    /fulfillment/advance-ship-notices/{id}/cancel
 asn.delete(asnId)                                 // DELETE /fulfillment/advance-ship-notices/{id}
-asn.labels(asnId)                                 // GET    /fulfillment/advance-ship-notices/{id}/labels
+asn.labels(asnId) -> byte[]                       // GET    /fulfillment/advance-ship-notices/{id}/labels  (PDF)
 asn.receivingState(asnId)                         // GET    /fulfillment/advance-ship-notices/{id}/receiving-state
+// update/updateSubmitted take the version() from a prior get()/create()/write as the If-Match token
+// (the spec requires If-Match on both). ASN `shipping` (polymorphic COURIER_BY_SELLER / OWN_TRANSPORT /
+// THIRD_PARTY_DELIVERY) is a deferred follow-up — not on the read model or the write builders yet.
 
 fulfillment.stock()                               // GET /fulfillment/stock
 fulfillment.parcelsOf(orderId)                    // GET /fulfillment/orders/{orderId}/parcels

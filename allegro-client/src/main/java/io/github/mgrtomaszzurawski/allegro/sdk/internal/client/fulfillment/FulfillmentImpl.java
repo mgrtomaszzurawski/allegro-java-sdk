@@ -16,6 +16,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.StockProductItemRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockProductListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TaxIdRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TaxIdResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.AdvanceShipNotices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.RefundDispositionFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.StockFilter;
@@ -79,9 +80,16 @@ public final class FulfillmentImpl implements Fulfillment {
     private static final String ERR_TAX_ID_NULL = "taxId must not be null";
 
     private final HttpSupport http;
+    private final AdvanceShipNotices advanceShipNotices;
 
     public FulfillmentImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
+        this.advanceShipNotices = new AdvanceShipNoticesImpl(runtime);
+    }
+
+    @Override
+    public AdvanceShipNotices advanceShipNotices() {
+        return advanceShipNotices;
     }
 
     @Override

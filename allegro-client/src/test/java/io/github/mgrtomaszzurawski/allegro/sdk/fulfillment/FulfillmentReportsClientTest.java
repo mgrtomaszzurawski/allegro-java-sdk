@@ -290,6 +290,23 @@ class FulfillmentReportsClientTest {
         }
     }
 
+    @Test
+    void stock_whenReserveStatusUnknownToServer_degradesToUnknownEnum(WireMockRuntimeInfo wmInfo) {
+        // given — a reserve status this build does not know (Allegro documents the
+        // set as open). The Layer-1 generator's UNKNOWN_DEFAULT_OPEN_API fallback lets
+        // the response deserialize instead of throwing, so the domain enum can degrade.
+        String body = STOCK_RICH_RESPONSE.replace("\"status\":\"NORMAL\"", "\"status\":\"FUTURE_RESERVE_STATE\"");
+        stubStockPage(OFFSET_FIRST, body);
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — the read completes end-to-end (no AllegroServerException)
+            StockItem item = allegro.fulfillment().stock().toList().get(0);
+
+            // then — the unrecognized token maps to UNKNOWN, not a thrown error
+            assertEquals(ReserveStatus.UNKNOWN, item.reserve().status());
+        }
+    }
+
     // ---- available products ----
 
     @Test
