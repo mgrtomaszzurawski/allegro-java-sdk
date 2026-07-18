@@ -189,13 +189,14 @@ class OrdersClientTest {
             """;
     // spec-derived: forward-compat probe. A wire status/fulfillment.status the SDK
     // does not model must degrade to the UNKNOWN sentinel, not fail the response.
-    private static final String UNKNOWN_ENUM_ORDER_BODY = """
-            {"id":"a8f6c3e2-1111-2222-3333-444455556666","status":"SOME_FUTURE_STATUS",
-             "buyer":{"id":"44556677","email":"buyer@example.com","login":"test-buyer"},
-             "lineItems":[],
-             "fulfillment":{"status":"SOME_FUTURE_STATUS"},
-             "summary":{"totalToPay":{"amount":"0.00","currency":"PLN"}}}
-            """;
+    // Built by concatenation (not a text block) so the FUTURE_STATUS constant is
+    // the single source of the unmodelled wire value.
+    private static final String UNKNOWN_ENUM_ORDER_BODY =
+            "{\"id\":\"a8f6c3e2-1111-2222-3333-444455556666\",\"status\":\"" + FUTURE_STATUS + "\","
+            + "\"buyer\":{\"id\":\"44556677\",\"email\":\"buyer@example.com\",\"login\":\"test-buyer\"},"
+            + "\"lineItems\":[],"
+            + "\"fulfillment\":{\"status\":\"" + FUTURE_STATUS + "\"},"
+            + "\"summary\":{\"totalToPay\":{\"amount\":\"0.00\",\"currency\":\"PLN\"}}}";
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
