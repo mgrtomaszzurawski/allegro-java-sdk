@@ -57,6 +57,8 @@ class FlexibleBundlesClientTest {
     private static final String TEST_FLEX_ID = "11111111-1111-1111-1111-111111111111";
     private static final String FLEX_BUNDLE_PATH = FLEX_PATH + "/" + TEST_FLEX_ID;
     private static final String PAGE_ID_PARAM = "page.id";
+    private static final String LIMIT_PARAM = "limit";
+    private static final String PAGE_SIZE = "100";
     private static final String NEXT_CURSOR = "cursor-2";
     private static final String SUMMARY_ID = "flex-1";
     private static final String SECOND_SUMMARY_ID = "flex-2";
@@ -93,7 +95,9 @@ class FlexibleBundlesClientTest {
     private static final String LISTING_PAGE_2 = """
             {"bundles":[%s],"nextPage":null}
             """.formatted(SUMMARY.replace(SUMMARY_ID, SECOND_SUMMARY_ID));
-    // A full bundle with one slot and a per-slot discount.
+    // spec-derived: not yet wire-verified. A full bundle with one slot and a
+    // per-slot discount (the get/slot-discount mapping is verified live before
+    // the flexible-bundle write follow-up, once a seller token is restored).
     private static final String FULL_BUNDLE = """
             {"id":"%s","createdBy":"USER","createdAt":"2026-07-01T10:15:30Z",
              "slots":[{"id":"22222222-2222-2222-2222-222222222222","order":1,"entryPoint":true,
@@ -103,10 +107,12 @@ class FlexibleBundlesClientTest {
                "slot":{"slots":[{"order":1,
                  "discounts":[{"marketplaceId":"%s","percentage":%d}]}]}}}
             """.formatted(TEST_FLEX_ID, OFFER_A, MARKETPLACE_PL, SLOT_PERCENTAGE);
+    // spec-derived: not yet wire-verified (errors[] contract shape).
     private static final String BAD_REQUEST_RESPONSE = """
             {"errors":[{"code":"ConstraintViolationException","message":"invalid",
               "userMessage":"Nieprawidłowe","path":"slots"}]}
             """;
+    // spec-derived: not yet wire-verified (errors[] contract shape).
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFoundException","message":"bundle not found","path":null}]}
             """;
@@ -136,9 +142,13 @@ class FlexibleBundlesClientTest {
     }
 
     private static void stubTwoCursorPages() {
-        stubFor(get(urlPathEqualTo(FLEX_PATH)).withQueryParam(PAGE_ID_PARAM, absent())
+        stubFor(get(urlPathEqualTo(FLEX_PATH))
+                .withQueryParam(PAGE_ID_PARAM, absent())
+                .withQueryParam(LIMIT_PARAM, equalTo(PAGE_SIZE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(LISTING_PAGE_1)));
-        stubFor(get(urlPathEqualTo(FLEX_PATH)).withQueryParam(PAGE_ID_PARAM, equalTo(NEXT_CURSOR))
+        stubFor(get(urlPathEqualTo(FLEX_PATH))
+                .withQueryParam(PAGE_ID_PARAM, equalTo(NEXT_CURSOR))
+                .withQueryParam(LIMIT_PARAM, equalTo(PAGE_SIZE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(LISTING_PAGE_2)));
     }
 

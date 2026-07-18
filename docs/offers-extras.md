@@ -210,7 +210,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.Flexible
 FlexibleBundles flexible = client.offers().flexibleBundles();
 
 for (FlexibleBundleSummary summary : flexible.streamBundles().toList()) {
-    System.out.println(summary.id() + " discount=" + summary.discount().type());
+    System.out.println(summary.id() + " slots=" + summary.slotRepresentatives().size());
 }
 
 FlexibleBundle bundle = flexible.get(bundleId);

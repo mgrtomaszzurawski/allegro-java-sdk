@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * A flexible bundle's discount for one slot.
  *
- * @param order the 1-based position of the slot the discount applies to
+ * @param order the position (0-based) of the slot the discount applies to
  * @param marketplaceDiscounts the per-marketplace discount percentages; never
  *     {@code null}, possibly empty
  *

@@ -13,7 +13,7 @@ import java.util.Objects;
  * the slot's offers.
  *
  * @param id the slot identifier
- * @param order the 1-based position of the slot in the bundle
+ * @param order the position of the slot in the bundle (0-based)
  * @param entryPoint whether this slot is the bundle's entry point
  * @param requiredQuantity how many units the slot requires
  * @param offers the offers a buyer may choose for this slot; never {@code null},
