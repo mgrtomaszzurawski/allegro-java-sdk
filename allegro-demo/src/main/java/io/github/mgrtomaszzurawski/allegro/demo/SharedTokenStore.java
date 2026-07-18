@@ -124,8 +124,12 @@ final class SharedTokenStore {
             Files.writeString(temp, content.toString(), StandardCharsets.UTF_8);
             moveIntoPlace(temp);
         } finally {
+            // No-op after a successful ATOMIC_MOVE (temp no longer exists);
+            // fires only when the write or move failed, leaving the temp behind.
             Files.deleteIfExists(temp);
         }
+        // The atomic path inherits the temp's 0600; this guards the non-atomic
+        // fallback in moveIntoPlace, where a copy need not preserve permissions.
         restrictPermissions(storePath);
     }
 
