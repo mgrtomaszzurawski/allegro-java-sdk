@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import java.util.stream.Stream;
 
 /**
@@ -59,6 +60,21 @@ public interface Offers {
      * @return the Smart! classification report
      */
     SmartClassification smartClassification(String offerId);
+
+    /**
+     * Stream the seller's offers that are still missing category parameters,
+     * fetched page by page and lazily.
+     *
+     * @return a lazy stream of offers with their unfilled parameter ids
+     */
+    Stream<UnfilledParameters> streamUnfilledParameters();
+
+    /**
+     * Bulk offer operations (publish/unpublish in one Allegro batch command).
+     *
+     * @return the batch sub-facade
+     */
+    OfferBatch batch();
 
     // [append point: offers sub-facades] Bucket A appends its own sub-facade
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
