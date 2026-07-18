@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -53,6 +54,16 @@ public interface Offers {
      * @return the created offer
      */
     Offer create(CreateOfferRequest request);
+
+    /**
+     * Apply a partial edit to an existing offer — only the fields set on the
+     * request are changed; unset fields keep their current value.
+     *
+     * @param offerId the offer to edit
+     * @param request the fields to change
+     * @return the updated offer
+     */
+    Offer edit(String offerId, EditOfferRequest request);
 
     /**
      * Delete a draft (unpublished) offer.

@@ -41,6 +41,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -293,38 +294,39 @@ class HttpCallTest {
     }
 
     @Test
-    void jsonBodyNonNull_whenFieldNull_omitsItFromBody(WireMockRuntimeInfo wmInfo) {
-        // given — a partial payload with one unset (null) field
+    void jsonBodyPartial_whenFieldNullOrEmpty_omitsThemFromBody(WireMockRuntimeInfo wmInfo) {
+        // given — a partial payload with a null field and an empty collection
         stubFor(post(urlEqualTo(PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
 
         // when
         support(wmInfo).request(OPERATION).post(PATH)
-                .jsonBodyNonNull(new Payload(PRESENT_VALUE, null)).send();
+                .jsonBodyPartial(new Payload(PRESENT_VALUE, null, List.of())).send();
 
-        // then — the null field is absent (a strict match rejects any extra field)
+        // then — only the set field survives (a strict match rejects any extra field,
+        // so a serialized null OR an empty [] would fail this)
         verify(1, postRequestedFor(urlEqualTo(PATH))
                 .withRequestBody(equalToJson("{\"present\":\"" + PRESENT_VALUE + "\"}", true, false)));
     }
 
     @Test
-    void jsonBody_whenFieldNull_includesNullInBody(WireMockRuntimeInfo wmInfo) {
+    void jsonBody_whenFieldNullOrEmpty_keepsThemInBody(WireMockRuntimeInfo wmInfo) {
         // given — the same payload sent with the plain serializer
         stubFor(post(urlEqualTo(PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
 
         // when
         support(wmInfo).request(OPERATION).post(PATH)
-                .jsonBody(new Payload(PRESENT_VALUE, null)).send();
+                .jsonBody(new Payload(PRESENT_VALUE, null, List.of())).send();
 
-        // then — the default serializer keeps the null field as JSON null (the contrast
-        // that makes jsonBodyNonNull necessary for a PATCH)
+        // then — the default serializer keeps the null field and empty collection (the
+        // contrast that makes jsonBodyPartial necessary for a PATCH)
         verify(1, postRequestedFor(urlEqualTo(PATH))
                 .withRequestBody(equalToJson(
-                        "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null}", true, false)));
+                        "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null,\"items\":[]}", true, false)));
     }
 
-    /** A partial payload where {@code absent} may be null (a PATCH-style body). */
-    private record Payload(String present, String absent) {
+    /** A partial payload with a nullable field and a collection (a PATCH-style body). */
+    private record Payload(String present, String absent, List<String> items) {
     }
 }
