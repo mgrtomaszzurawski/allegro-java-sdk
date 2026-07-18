@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerRaw;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -33,9 +34,10 @@ public record ImpliedWarranty(
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
     public static ImpliedWarranty from(ImpliedWarrantyResponseRaw raw) {
+        SellerRaw seller = raw.getSeller();
         return new ImpliedWarranty(
                 raw.getId().toString(),
-                raw.getSeller() == null ? null : raw.getSeller().getId(),
+                seller == null ? null : seller.getId(),
                 raw.getName(),
                 ImpliedWarrantyPeriod.from(raw.getIndividual()),
                 ImpliedWarrantyPeriod.from(raw.getCorporate()),

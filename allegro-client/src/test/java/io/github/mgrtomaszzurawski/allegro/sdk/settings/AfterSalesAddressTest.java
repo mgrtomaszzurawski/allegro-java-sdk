@@ -54,7 +54,12 @@ class AfterSalesAddressTest {
 
         AfterSalesAddress address = AfterSalesAddress.from(raw);
 
+        // Assert every field — a transposition of the middle positional args
+        // (street/postCode/city) in from() must not slip through.
         assertEquals(NAME, address.name());
+        assertEquals(STREET, address.street());
+        assertEquals(POST_CODE, address.postCode());
+        assertEquals(CITY, address.city());
         assertEquals(COUNTRY, address.countryCode());
     }
 }

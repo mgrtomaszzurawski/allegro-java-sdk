@@ -63,9 +63,9 @@ final class SettingsImpliedWarrantyDemo {
                 AfterSaleConditions afterSale = client.settings().afterSale();
                 ImpliedWarranty written = createOrUpdateDemo(afterSale);
                 ImpliedWarranty readBack = afterSale.impliedWarranty(written.id());
-                boolean roundTrip = DEMO_NAME.equals(readBack.name());
+                boolean roundTripOk = DEMO_NAME.equals(readBack.name());
                 System.out.println("read-back: id=" + readBack.id()
-                        + ", round-trip-ok=" + roundTrip);
+                        + ", round-trip-ok=" + roundTripOk);
             } catch (AllegroBadRequestException rejection) {
                 printFieldErrors(rejection);
                 throw rejection;

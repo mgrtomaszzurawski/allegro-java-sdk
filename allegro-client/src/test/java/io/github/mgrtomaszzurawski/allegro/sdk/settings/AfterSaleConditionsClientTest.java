@@ -20,6 +20,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -127,6 +128,11 @@ class AfterSaleConditionsClientTest {
                "postCode":"60-166","city":"%s","countryCode":"PL"},
              "description":"%s"}
             """.formatted(IMPLIED_WARRANTY_ID, SELLER_ID, NAME, IMPLIED_PERIOD, ADDRESS_CITY, DESCRIPTION);
+    // Only the always-present fields — pins the nullable-mapping branches
+    // (absent seller / corporate / address) in ImpliedWarranty.from.
+    private static final String IMPLIED_WARRANTY_MINIMAL_RESPONSE = """
+            {"id":"%s","name":"%s","individual":{"period":"%s"}}
+            """.formatted(IMPLIED_WARRANTY_ID, NAME, IMPLIED_PERIOD);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -496,6 +502,7 @@ class AfterSaleConditionsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(IMPLIED_WARRANTY_PATH))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -515,6 +522,28 @@ class AfterSaleConditionsClientTest {
             assertEquals(ADDRESS_CITY, implied.address().city());
             assertEquals(DESCRIPTION, implied.description());
             verify(1, getRequestedFor(urlEqualTo(IMPLIED_WARRANTY_PATH)));
+        }
+    }
+
+    @Test
+    void impliedWarranty_whenMinimalResponse_mapsAbsentFieldsAsNull(WireMockRuntimeInfo wmInfo) {
+        // given — a response with only the always-present fields
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(IMPLIED_WARRANTY_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(IMPLIED_WARRANTY_MINIMAL_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            ImpliedWarranty implied = allegro.settings().afterSale().impliedWarranty(IMPLIED_WARRANTY_ID);
+
+            // then — the optional fields map to null, individual still maps
+            assertEquals(IMPLIED_WARRANTY_ID, implied.id());
+            assertEquals(IMPLIED_PERIOD, implied.individual().period());
+            assertNull(implied.sellerId());
+            assertNull(implied.corporate());
+            assertNull(implied.address());
+            assertNull(implied.description());
         }
     }
 
@@ -646,7 +675,10 @@ class AfterSaleConditionsClientTest {
             // then — typed field errors survive; POST is not retried
             AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                     () -> afterSale.createImpliedWarranty(request));
+            assertEquals(1, failure.errors().size());
+            assertEquals(BAD_REQUEST_CODE, failure.errors().get(0).code());
             assertEquals(BAD_REQUEST_PATH, failure.errors().get(0).path());
+            assertEquals(TRACE_ID, failure.traceId());
             verify(1, postRequestedFor(urlEqualTo(IMPLIED_WARRANTIES_PATH)));
         }
     }

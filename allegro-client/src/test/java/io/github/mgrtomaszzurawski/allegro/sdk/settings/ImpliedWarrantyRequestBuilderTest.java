@@ -25,6 +25,7 @@ class ImpliedWarrantyRequestBuilderTest {
     private static final String DESCRIPTION = "Statutory warranty of conformity";
     private static final String INDIVIDUAL_PERIOD = "P2Y";
     private static final String CORPORATE_PERIOD = "P1Y";
+    private static final int NAME_AT_LIMIT = 200;
     private static final int OVER_NAME_LIMIT = 201;
     private static final int OVER_DESCRIPTION_LIMIT = 10_241;
     private static final String FIELD_NAME = "name";
@@ -115,6 +116,17 @@ class ImpliedWarrantyRequestBuilderTest {
         var builder = ImpliedWarrantyRequest.builder().name(NAME);
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertTrue(failure.getMessage().contains(FIELD_INDIVIDUAL));
+    }
+
+    @Test
+    void build_whenNameAtLimit_succeeds() {
+        // Boundary: a name of exactly the cap length must be accepted.
+        String maxName = "a".repeat(NAME_AT_LIMIT);
+        ImpliedWarrantyRequest request = ImpliedWarrantyRequest.builder()
+                .name(maxName)
+                .individual(ImpliedWarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .build();
+        assertEquals(maxName, request.name());
     }
 
     @Test
