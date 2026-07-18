@@ -18,5 +18,8 @@ public enum OfferTranslationType {
     MANUAL,
 
     /** The offer's original (base) language text. */
-    BASE
+    BASE,
+
+    /** A value Allegro introduced that this SDK version does not model yet. */
+    UNKNOWN
 }

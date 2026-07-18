@@ -47,6 +47,15 @@ public record OfferTranslation(
     }
 
     private static @Nullable OfferTranslationType typeFrom(@Nullable OfferTranslationTypeRaw raw) {
-        return raw == null ? null : OfferTranslationType.valueOf(raw.name());
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return OfferTranslationType.valueOf(raw.name());
+        } catch (IllegalArgumentException unknownType) {
+            // A title-type Allegro added after this SDK version — degrade rather
+            // than fail the whole translations read.
+            return OfferTranslationType.UNKNOWN;
+        }
     }
 }

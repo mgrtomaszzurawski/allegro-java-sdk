@@ -95,6 +95,7 @@ class OfferRatingClientTest {
             assertEquals(2, rating.scoreDistribution().size());
             assertEquals("5", rating.scoreDistribution().get(0).name());
             assertEquals(TOP_SCORE_COUNT, rating.scoreDistribution().get(0).count());
+            assertEquals("TRUE_TO_SIZE", rating.sizeFeedback().get(0).name());
             assertEquals(SIZE_COUNT, rating.sizeFeedback().get(0).count());
             verify(1, getRequestedFor(urlPathEqualTo(RATING_PATH)));
         }

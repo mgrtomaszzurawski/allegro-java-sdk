@@ -144,6 +144,9 @@ class OfferTranslationsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(patch(urlPathEqualTo(TRANSLATION_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(equalToJson(UPDATE_REQUEST_BODY))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
 
@@ -164,6 +167,8 @@ class OfferTranslationsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(delete(urlPathEqualTo(TRANSLATION_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
 
         try (AllegroClient allegro = client(wmInfo)) {
@@ -177,7 +182,7 @@ class OfferTranslationsClientTest {
     }
 
     @Test
-    void translationWrites_whenArgumentsNull_throwBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+    void translationOps_whenArgumentsNull_throwBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
         try (AllegroClient allegro = client(wmInfo)) {
             var translations = allegro.offers().translations();
             TranslationRequest request = TranslationRequest.builder().title(TEST_TITLE).build();
@@ -210,6 +215,8 @@ class OfferTranslationsClientTest {
                     () -> translations.ofOffer(TEST_OFFER_ID));
             assertEquals(1, failure.errors().size());
             assertEquals(EXPECTED_ERROR_CODE, failure.errors().get(0).code());
+            // a 400 is terminal — not retried
+            verify(1, getRequestedFor(urlPathEqualTo(TRANSLATIONS_PATH)));
         }
     }
 
@@ -264,6 +271,8 @@ class OfferTranslationsClientTest {
             AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
                     () -> translations.ofOffer(TEST_OFFER_ID));
             assertEquals(TEST_TRACE_ID, failure.traceId());
+            // a 404 is terminal — not retried
+            verify(1, getRequestedFor(urlPathEqualTo(TRANSLATIONS_PATH)));
         }
     }
 

@@ -41,7 +41,7 @@ public record OfferRating(
     public static OfferRating from(OfferRatingRaw raw) {
         return new OfferRating(
                 raw.getAverageScore(),
-                raw.getTotalResponses() == null ? NO_COUNT : raw.getTotalResponses(),
+                count(raw.getTotalResponses()),
                 scoreBuckets(raw.getScoreDistribution()),
                 sizeBuckets(raw.getSizeFeedback()));
     }
@@ -50,14 +50,20 @@ public record OfferRating(
             @Nullable List<OfferRatingScoreDistributionInnerRaw> raw) {
         return raw == null
                 ? List.of()
-                : raw.stream().map(bucket -> new RatingBucket(bucket.getName(), count(bucket.getCount()))).toList();
+                : raw.stream()
+                        .filter(bucket -> bucket.getName() != null)
+                        .map(bucket -> new RatingBucket(bucket.getName(), count(bucket.getCount())))
+                        .toList();
     }
 
     private static List<RatingBucket> sizeBuckets(
             @Nullable List<OfferRatingSizeFeedbackInnerRaw> raw) {
         return raw == null
                 ? List.of()
-                : raw.stream().map(bucket -> new RatingBucket(bucket.getName(), count(bucket.getCount()))).toList();
+                : raw.stream()
+                        .filter(bucket -> bucket.getName() != null)
+                        .map(bucket -> new RatingBucket(bucket.getName(), count(bucket.getCount())))
+                        .toList();
     }
 
     private static int count(@Nullable Integer rawCount) {
