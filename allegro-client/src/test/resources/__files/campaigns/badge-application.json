@@ -1,0 +1,11 @@
+{
+  "id": "app-1",
+  "createdAt": "2026-07-15T09:00:00Z",
+  "updatedAt": "2026-07-15T09:05:00Z",
+  "campaign": { "id": "BARGAIN" },
+  "offer": { "id": "12345678" },
+  "prices": { "bargain": { "amount": "29.99", "currency": "PLN" } },
+  "campaignStock": { "quantity": 10 },
+  "process": { "status": "REQUESTED", "rejectionReasons": [] },
+  "purchaseConstraints": { "limit": { "perUser": { "maxItems": 3 } } }
+}

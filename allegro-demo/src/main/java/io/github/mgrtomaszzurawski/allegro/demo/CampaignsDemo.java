@@ -7,6 +7,11 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Badges;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeApplicationFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.Badge;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.BadgeApplication;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.BadgeCampaign;
 import java.io.IOException;
 import java.util.List;
@@ -26,6 +31,8 @@ final class CampaignsDemo {
     private static final String NO_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String STALE_TOKEN = "(stored token expired - rerun auth-bootstrap)";
+    private static final String MARKETPLACE_PL = "allegro-pl";
+    private static final long READ_SHAPE_SAMPLE = 5L;
 
     private CampaignsDemo() {
     }
@@ -52,6 +59,33 @@ final class CampaignsDemo {
                 System.out.println("  - " + campaign.id() + " [" + campaign.type() + "] eligible="
                         + campaign.eligible());
             }
+            readShapeApplicationsAndBadges(client.campaigns().badges());
+        }
+    }
+
+    /**
+     * Read-shape check of the seller's badge applications and active badges through
+     * the SDK — a sample is streamed so every mapped field is proven to arrive
+     * parseable on a live response (TESTING.md §2). Bounded to a handful of items.
+     */
+    private static void readShapeApplicationsAndBadges(Badges badges) {
+        List<BadgeApplication> applications = badges.streamApplications(BadgeApplicationFilter.all())
+                .limit(READ_SHAPE_SAMPLE)
+                .toList();
+        System.out.println("badges().streamApplications(): " + applications.size() + " sampled");
+        for (BadgeApplication application : applications) {
+            System.out.println("  - " + application.id() + " " + application.campaignId() + " → "
+                    + application.status());
+        }
+        List<Badge> activeBadges = badges.streamBadges(BadgeFilter.builder()
+                        .marketplaceId(MARKETPLACE_PL).build())
+                .limit(READ_SHAPE_SAMPLE)
+                .toList();
+        System.out.println("badges().streamBadges(" + MARKETPLACE_PL + "): "
+                + activeBadges.size() + " sampled");
+        for (Badge badge : activeBadges) {
+            System.out.println("  - " + badge.offerId() + " " + badge.campaignId() + " → "
+                    + badge.status());
         }
     }
 }

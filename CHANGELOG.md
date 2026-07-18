@@ -153,6 +153,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   authenticated seller (GET `/sale/badge-campaigns`), with an optional per-marketplace overload.
   Immutable `BadgeCampaign` model with eligibility, refusal reasons and the application/visibility/
   publication schedules. Starter slice of bucket H.
+- Complete the badges sub-facade: `apply(BadgeApplicationRequest)` (POST `/sale/badges`, returned
+  without blocking — badge verification is e-mail-notified and asynchronous), `streamApplications`
+  (GET `/sale/badge-applications`) and `application(id)`, `streamBadges` (GET `/sale/badges`), and
+  `update(offerId, campaignId, BadgePatch[, Duration])` (PATCH, polled to a terminal badge operation
+  via the shared command poller). Adds `BadgeApplication`, `Badge`, `BadgePrices`, `BadgeOperation`
+  models and their status/type enums, the `BadgeApplicationRequest`/`BadgeApplicationFilter`/
+  `BadgeFilter` builders and the `BadgePatch` change type.
 
 ### I — fulfillment
 
