@@ -97,7 +97,7 @@ tags.ofOffer(offerId)                             // GET    /sale/offers/{offerI
 // Translations
 OfferTranslations translations = offers.translations();
 translations.ofOffer(offerId)                     // GET    /sale/offers/{offerId}/translations
-translations.update(offerId, language, TranslationRequest) // PATCH /sale/offers/{offerId}/translations/{language} (title only)
+translations.update(offerId, language, TranslationRequest) // PATCH /sale/offers/{offerId}/translations/{language} (title + description + safetyInformation; partial)
 translations.delete(offerId, language)            // DELETE /sale/offers/{offerId}/translations/{language}
 
 // Rating
@@ -404,7 +404,7 @@ afterSale.deleteReturnPolicy(id)                  // DELETE /after-sales-service
 afterSale.streamWarranties() / .warranty(id)      // GET  …/warranties[/{warrantyId}] (lazy Stream, matches stream* convention)
 afterSale.createWarranty(WarrantyRequest)         // POST …/warranties
 afterSale.updateWarranty(id, WarrantyRequest)     // PUT  …/warranties/{warrantyId}
-afterSale.impliedWarranties() / .impliedWarranty(id) // GET …/implied-warranties[/{id}]
+afterSale.streamImpliedWarranties() / .impliedWarranty(id) // GET …/implied-warranties[/{id}] (lazy Stream, matches stream* convention)
 afterSale.createImpliedWarranty(Request)          // POST …/implied-warranties
 afterSale.updateImpliedWarranty(id, Request)      // PUT  …/implied-warranties/{impliedWarrantyId}
 afterSale.declareAttachment(AttachmentMetadata)   // POST …/attachments

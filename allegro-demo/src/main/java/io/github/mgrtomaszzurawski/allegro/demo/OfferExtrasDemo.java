@@ -67,6 +67,12 @@ public final class OfferExtrasDemo {
             List<OfferTranslation> translations = client.offers().translations().ofOffer(offerId);
             System.out.println("offers.translations().ofOffer(" + offerId + "): "
                     + translations.size() + " language(s)");
+            for (OfferTranslation translation : translations) {
+                int sections = translation.description() == null ? 0 : translation.description().sections().size();
+                System.out.println("  " + translation.language() + ": title=" + translation.title()
+                        + " description=" + sections + " section(s)"
+                        + " safety=" + translation.safetyInformation().size() + " product(s)");
+            }
 
             long bundleCount = client.offers().bundles().streamBundles().count();
             System.out.println("offers.bundles().streamBundles(): " + bundleCount + " bundle(s)");

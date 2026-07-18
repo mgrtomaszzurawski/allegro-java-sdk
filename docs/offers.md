@@ -114,6 +114,57 @@ builder. The offer is created as a **draft** — publish it with
 `client.offers().batch().publish(List.of(created.id()))`. Delete an unpublished draft with
 `client.offers().deleteDraft(offerId)`.
 
+### Delivery terms and after-sales conditions
+
+An offer can reference the seller's configured **shipping-rate table** and **after-sales
+conditions** (implied warranty, return policy, warranty) by id — the same ids Allegro assigns
+to those templates:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .delivery(OfferDelivery.builder()
+                .shippingRatesId("a1b2c3d4-…")   // sale delivery-settings shipping-rate id
+                .handlingTime("PT24H")            // ISO-8601 duration
+                .build())
+        .afterSalesServices(AfterSalesServices.builder()
+                .impliedWarrantyId("11111111-…")
+                .returnPolicyId("22222222-…")
+                .warrantyId("33333333-…")
+                .build())
+        .build();
+```
+
+Both blocks are optional, and both are read back on `client.offers().get(offerId)` as
+`offer.delivery()` and `offer.afterSalesServices()`.
+
+### Selling format, auction prices and stock unit
+
+The default is a Buy Now offer counted in single units, and `buyNowPrice` is required. For an
+auction, set `sellingFormat(AUCTION)` and a `startingPrice` instead — Buy Now becomes optional
+(omit it for a pure auction, or set it for a buy-it-now-or-bid offer). Set `stockUnit` for offers
+sold in pairs or sets:
+
+```java
+CreateOfferRequest auction = CreateOfferRequest.builder()
+        .name("Vintage lamp")
+        .categoryId("257")
+        .availableStock(1)
+        .sellingFormat(OfferFormat.AUCTION)
+        .startingPrice(Money.of("1.00", "PLN"))   // required for an auction
+        .minimalPrice(Money.of("150.00", "PLN"))  // optional reserve price
+        .stockUnit(StockUnit.UNIT)
+        .build();                                  // no buyNowPrice → a pure auction
+```
+
+The builder validates this fail-fast: an auction with no `startingPrice`, or any other format
+with no `buyNowPrice`, throws. On the read side, `offer.startingPrice()`, `offer.minimalPrice()`
+and `offer.stockUnit()` are populated for auctions; `offer.buyNowPrice()` is `null` for a pure
+auction.
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its

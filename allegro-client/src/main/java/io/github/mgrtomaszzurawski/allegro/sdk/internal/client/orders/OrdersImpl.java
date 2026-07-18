@@ -128,10 +128,10 @@ public final class OrdersImpl implements Orders {
         int offset = pageIndex * ORDERS_PAGE_SIZE;
         Query query = Query.create();
         for (OrderStatus status : filter.statuses()) {
-            query.add(QUERY_STATUS, status.name());
+            query.add(QUERY_STATUS, wireValueOf(status));
         }
         for (SellerStatus status : filter.fulfillmentStatuses()) {
-            query.add(QUERY_FULFILLMENT_STATUS, status.name());
+            query.add(QUERY_FULFILLMENT_STATUS, wireValueOf(status));
         }
         query.add(QUERY_FULFILLMENT_PROVIDER_ID, filter.fulfillmentProviderId())
                 .add(QUERY_LINE_ITEMS_SENT, filter.lineItemsSent())
@@ -179,7 +179,7 @@ public final class OrdersImpl implements Orders {
             OrderEventFilter filter, @Nullable String cursor) {
         Query query = Query.create().add(QUERY_FROM, cursor);
         for (OrderEventType type : filter.types()) {
-            query.add(QUERY_TYPE, type.name());
+            query.add(QUERY_TYPE, wireValueOf(type));
         }
         query.add(QUERY_LIMIT, EVENTS_PAGE_SIZE);
         OrderEventsListRaw response = http.request(OP_STREAM_EVENTS)
@@ -299,5 +299,26 @@ public final class OrdersImpl implements Orders {
                 .fetch(AllegroPickupDropOffPointsResponseRaw.class);
         List<AllegroPickupDropOffPointRaw> points = response.getPoints();
         return points == null ? List.of() : points.stream().map(PickupPoint::from).toList();
+    }
+
+    // The UNKNOWN sentinel is a read-only forward-compat value (a wire value this
+    // release does not model); it is not a real filter token, so it must never be
+    // serialized into a query parameter. Dropping it to null omits the param
+    // (Query.add skips nulls) rather than sending status=UNKNOWN, which the server
+    // would reject with 400. Mirrors OffersImpl.wireValueOf.
+
+    /** The wire token for an order-status filter, or {@code null} to omit it (never {@code UNKNOWN}). */
+    private static @Nullable String wireValueOf(OrderStatus status) {
+        return status == OrderStatus.UNKNOWN ? null : status.name();
+    }
+
+    /** The wire token for a fulfillment-status filter, or {@code null} to omit it (never {@code UNKNOWN}). */
+    private static @Nullable String wireValueOf(SellerStatus status) {
+        return status == SellerStatus.UNKNOWN ? null : status.name();
+    }
+
+    /** The wire token for an event-type filter, or {@code null} to omit it (never {@code UNKNOWN}). */
+    private static @Nullable String wireValueOf(OrderEventType type) {
+        return type == OrderEventType.UNKNOWN ? null : type.name();
     }
 }

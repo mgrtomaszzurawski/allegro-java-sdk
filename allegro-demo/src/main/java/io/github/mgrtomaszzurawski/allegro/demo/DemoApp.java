@@ -90,6 +90,7 @@ public final class DemoApp {
         SCENARIOS.put(DisputesDemo.SCENARIO, DisputesDemo::run);
         SCENARIOS.put(SCENARIO_SETTINGS_WARRANTY, SettingsWarrantyDemo::run);
         SCENARIOS.put(BiddingDemo.SCENARIO, BiddingDemo::run);
+        SCENARIOS.put(SettingsImpliedWarrantyDemo.SCENARIO, SettingsImpliedWarrantyDemo::run);
     }
 
     private DemoApp() {

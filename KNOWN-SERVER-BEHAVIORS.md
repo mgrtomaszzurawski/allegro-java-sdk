@@ -172,6 +172,18 @@ that carries both periods succeeds and reads back cleanly (create→get round-tr
 SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
 a client-side `IllegalStateException` naming the field — no wasted round-trip.
 
+### Implied-warranty periods are whole years, at least two (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/implied-warranties` (and the `PUT`) accept a period only as
+a **whole-year** ISO-8601 duration of **at least two years** (`P2Y`). Verified live on seller
+TestBoxSDK: `P2Y` on both `individual` and `corporate` succeeds and reads back cleanly
+(create→get round-trip green); `P1Y` is rejected with `422 UNPROCESSABLE_ENTITY path=corporate.period`
+(minimum is two years, the statutory rękojmia term); the month-denominated forms `P12M` and `P24M`
+are rejected on both `individual.period` and `corporate.period`. This differs from the seller
+`warranties` endpoint, whose periods are month-denominated (`P12M`) and may be lifetime. The SDK
+leaves the exact value to the server (it can change per legal category) and documents the rule on
+`ImpliedWarrantyPeriod`; only the structural `name`/`individual` requirements are builder-enforced.
+
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
 ### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
@@ -219,18 +231,18 @@ spec; the exclusivity and the terminal empty-page behaviour are **to be confirme
 once a seeded order produces events (the RAG digest generically labels this endpoint
 "offset/limit", which is inaccurate for `/order/events`).
 
-### Customer-returns are BETA; the reject-refund POST needs a beta request Content-Type (core follow-up)
+### Customer-returns are BETA on both sides; the reject-refund POST body uses the beta Content-Type (RESOLVED)
 
 The customer-returns endpoints (`GET /order/customer-returns`, `GET …/{id}`,
 `POST …/{id}/rejection`) speak the **beta** vendor media type. The SDK sends
-`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` — correct for the two
-GETs. But `POST …/rejection` declares its **request body** only as the beta media type, while
-`HttpCall.jsonBody(...)` hard-pins `Content-Type: application/vnd.allegro.public.v1+json` (frozen
-runtime), so `returns().rejectRefund(...)` currently sends a mismatched Content-Type that the beta
-endpoint may reject (415/406). **Core follow-up (agent-1):** add a media-type overload to the JSON
-body helper (e.g. `jsonBody(body, mediaType)`) so beta writes can set the beta Content-Type; it is
-the first beta POST-with-body in the SDK. `rejectRefund` ships wired but must not be relied on live
-until that lands (WireMock covers the request body shape; the mismatch is header-only).
+`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` on all three, and
+`POST …/rejection` declares its **request body** only as the beta media type. Earlier this was a
+header mismatch (the frozen `HttpCall.jsonBody(...)` hard-pinned `Content-Type:
+application/vnd.allegro.public.v1+json`). **Resolved 2026-07-18:** the core added
+`HttpCall.betaJsonBody(...)` (PR #63, `2958e1f`), and `returns().rejectRefund(...)` now sends the
+request body with `Content-Type: application/vnd.allegro.beta.v1+json` (asserted on the wire in
+`CustomerReturnsClientTest`). No remaining Content-Type mismatch; live write→read still pending a
+seeded buyer return.
 
 ## Payments & billing (bucket B)
 
@@ -268,17 +280,19 @@ seller-side and treats the immediate download 404 as expected.
 
 ## Offers extras (bucket F)
 
-### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+### Translation PATCH must omit unset parts, not send them as `null` — FIXED (partial body; spec-derived)
 
-`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
-serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
-Jackson's default `ALWAYS` inclusion. So a title-only update sends
-`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
-whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
-translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
-latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
-handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
-`update` is safe for offers whose description/safety translations are not manually set.
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`) is a
+partial update: the caller may set any subset of title / description / safety-information, and the
+unset parts must be **left untouched**. The earlier implementation serialized through the shared
+SDK ObjectMapper's default `ALWAYS` inclusion, so a title-only update sent
+`{"description":null,"title":{…},"safetyInformation":null}` — risking that the server reads a
+`null` sibling as **"clear the translation"** (latent data loss) rather than "no change". Fixed by
+serializing the body with `HttpCall.jsonBodyPartial` (NON_EMPTY — omits nulls and empties, the
+same approach bucket A adopted for `POST /sale/product-offers`, §below) and building the raw with
+only the parts the request set. A title-only update now sends `{"title":{…}}`; the ambiguity is
+gone regardless of server semantics. **Still to confirm on the sandbox** (needs a live offer): that
+the server does treat an omitted part as "no change" (expected) and accepts a subset PATCH.
 
 ## Offers — create (bucket A)
 

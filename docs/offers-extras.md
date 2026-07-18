@@ -125,14 +125,18 @@ apart. Both reads use the `sale:offers:read` scope and therefore a **user
 ## Offer translations
 
 Read and set an offer's translations into other languages via
-`client.offers().translations()`. The SDK currently covers the **title**
-translation (description and safety-information translations are not yet
-modelled):
+`client.offers().translations()`. Covers the **title**, the standardized
+**description**, and the per-product **safety-information** translations:
 
 ```java
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TranslationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.DescriptionSectionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferTranslation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.ProductSafetyInformationTranslation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.StandardizedDescription;
+import java.util.List;
 
 OfferTranslations translations = client.offers().translations();
 
@@ -141,13 +145,28 @@ for (OfferTranslation translation : translations.ofOffer(offerId)) {
             + " (" + translation.titleType() + ")");
 }
 
-translations.update(offerId, "en-US", TranslationRequest.builder().title("Wireless keyboard").build());
+// A partial update: set only the parts you want to translate. The others are
+// left untouched — the SDK omits them from the request body rather than sending
+// them as null (which the server could read as "clear this translation").
+translations.update(offerId, "en-US", TranslationRequest.builder()
+        .title("Wireless keyboard")
+        .description(StandardizedDescription.of(DescriptionSection.of(
+                DescriptionSectionItem.text("A comfortable, quiet wireless keyboard."),
+                DescriptionSectionItem.image("https://images.allegrostatic.pl/kbd.jpg"))))
+        .safetyInformation(List.of(
+                ProductSafetyInformationTranslation.of(productId, "Keep away from water.")))
+        .build());
+
 translations.delete(offerId, "en-US");
 ```
 
-Each `OfferTranslation` carries the `language`, the translated `title`, and the
-`titleType` (`AUTO`/`MANUAL`/`BASE`). All operations use `sale:offers:*` and need
-a **user (seller) access token**.
+Each `OfferTranslation` carries the `language`; the translated `title` and its
+`titleType`; the translated `description` (a `StandardizedDescription` of
+`DescriptionSection`s, each a list of text/image `DescriptionSectionItem`s) and
+its `descriptionType`; and the per-product `safetyInformation`. Every type is
+`AUTO`/`MANUAL`/`BASE`, or `UNKNOWN` for a kind Allegro added after this SDK
+version. All operations use `sale:offers:*` and need a **user (seller) access
+token**.
 
 ## Offer rating
 

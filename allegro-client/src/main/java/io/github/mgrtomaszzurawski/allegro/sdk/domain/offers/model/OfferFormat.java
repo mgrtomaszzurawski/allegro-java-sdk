@@ -23,6 +23,8 @@ public enum OfferFormat {
     /** A format this SDK release does not model yet. */
     UNKNOWN;
 
+    private static final String NOT_WRITABLE = "OfferFormat.UNKNOWN is a read-only sentinel and cannot be sent";
+
     /** Map the generated selling-mode format, tolerating unknown future values. */
     public static OfferFormat from(@Nullable SellingModeFormatRaw raw) {
         if (raw == null) {
@@ -33,6 +35,21 @@ public enum OfferFormat {
             case AUCTION -> AUCTION;
             case ADVERTISEMENT -> ADVERTISEMENT;
             default -> UNKNOWN;
+        };
+    }
+
+    /**
+     * The generated selling-mode format for this value.
+     *
+     * @return the wire value
+     * @throws IllegalStateException if called on {@link #UNKNOWN} (not writable)
+     */
+    public SellingModeFormatRaw toRaw() {
+        return switch (this) {
+            case BUY_NOW -> SellingModeFormatRaw.BUY_NOW;
+            case AUCTION -> SellingModeFormatRaw.AUCTION;
+            case ADVERTISEMENT -> SellingModeFormatRaw.ADVERTISEMENT;
+            case UNKNOWN -> throw new IllegalStateException(NOT_WRITABLE);
         };
     }
 }
