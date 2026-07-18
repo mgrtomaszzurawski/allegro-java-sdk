@@ -4,18 +4,25 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -41,6 +48,8 @@ import org.jspecify.annotations.Nullable;
 public final class OffersImpl implements Offers {
 
     private static final String OP_GET = "get offer";
+    private static final String OP_CREATE = "create offer";
+    private static final String OP_DELETE_DRAFT = "delete draft offer";
     private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
     private static final String OP_STREAM = "stream offers";
     private static final String OP_SMART = "get offer Smart classification";
@@ -73,6 +82,32 @@ public final class OffersImpl implements Offers {
     public Offer get(String offerId) {
         return Offer.from(http.getAuthenticated(
                 ApiPaths.productOffer(offerId), SaleProductOfferResponseV1Raw.class, OP_GET));
+    }
+
+    @Override
+    public Offer create(CreateOfferRequest request) {
+        SellingModeRaw sellingMode = new SellingModeRaw()
+                .format(SellingModeFormatRaw.BUY_NOW)
+                .price(new BuyNowPriceRaw()
+                        .amount(request.buyNowPrice().amount())
+                        .currency(request.buyNowPrice().currency()));
+        SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
+                .name(request.name())
+                .category(new OfferCategoryRequestRaw().id(request.categoryId()))
+                .sellingMode(sellingMode)
+                .stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
+        if (!request.imageUrls().isEmpty()) {
+            body.images(request.imageUrls());
+        }
+        return Offer.from(http.request(OP_CREATE)
+                .post(ApiPaths.SALE_PRODUCT_OFFERS)
+                .jsonBody(body)
+                .fetch(SaleProductOfferResponseV1Raw.class));
+    }
+
+    @Override
+    public void deleteDraft(String offerId) {
+        http.request(OP_DELETE_DRAFT).delete(ApiPaths.offerDraft(offerId)).send();
     }
 
     @Override
