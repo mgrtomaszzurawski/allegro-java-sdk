@@ -4,12 +4,21 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.client.model.AccountParticipationMarketplaceRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ActualPriceReductionDtoFinalPriceForTheBuyerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ActualPriceReductionDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AllegroPricesAccountParticipationRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DeclaredPriceReductionDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MoneyDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoActualPriceReductionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoDeclaredPriceReductionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoDiscountRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoRecommendedPriceReductionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusQueryRequestDtoMarketplaceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusQueryRequestDtoOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusQueryRequestDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.RecommendedPriceReductionDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubsidyExcludeOffersCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubsidyOfferToExcludeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubsidyOfferToSubmitMarketplaceRaw;
@@ -24,49 +33,27 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.OfferSub
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.ParticipationUpdate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.SubmitOffersRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesOfferStatus;
-import java.time.OffsetDateTime;
 import java.util.Locale;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Package-private mapper between the Allegro Prices domain types and the wire form.
  *
- * <p><strong>Writes</strong> use the generated request DTOs. The <strong>offer
- * status read</strong> is mapped from a {@link JsonNode}: the response's per-stage
- * price-reduction fields are a generated {@code oneOf[Object, …Dto]}, and under the
- * SDK's forward-compatible mapper the {@code Object} branch matches every payload,
- * so the generated deserializer fails with "2 classes match". Reading from the raw
- * JSON side-steps that generator flaw (BACKLOG Phase 1.1; same approach as
- * {@code PricingMapper}).
+ * <p>Both writes and reads map through the generated DTOs. The offer-status
+ * response's per-stage price-reduction fields are a generated
+ * {@code oneOf[Object, …Dto]}; the SDK's strict {@code oneOf} mapper (core C5)
+ * resolves each wrapper to its concrete {@code …PriceReductionDtoRaw} — or leaves an
+ * empty {@code Object} when the stage does not apply — so they read through typed
+ * getters like every other field (the BACKLOG Phase 1.1 raw-JSON workaround is
+ * retired now that the strict resolver no longer over-matches the {@code Object}
+ * branch).
  */
 final class AllegroPricesMapper {
 
     private static final char MARKETPLACE_ID_SEPARATOR = '-';
     private static final char MARKETPLACE_ENUM_SEPARATOR = '_';
 
-    private static final String FIELD_OFFERS = "offers";
-    private static final String FIELD_ID = "id";
-    private static final String FIELD_NAME = "name";
-    private static final String FIELD_MARKETPLACE = "marketplace";
-    private static final String FIELD_BASE_PRICE = "basePrice";
-    private static final String FIELD_AMOUNT = "amount";
-    private static final String FIELD_CURRENCY = "currency";
-    private static final String FIELD_DISCOUNT = "discount";
-    private static final String FIELD_OPPORTUNITY = "opportunity";
-    private static final String FIELD_RECOMMENDED = "recommendedPriceReduction";
-    private static final String FIELD_DECLARED = "declaredPriceReduction";
-    private static final String FIELD_ACTUAL = "actualPriceReduction";
-    private static final String FIELD_SELLER_MAX_PCT = "sellerMaxDeclaredPercentage";
-    private static final String FIELD_FINAL_PRICE = "finalPriceForTheBuyer";
-    private static final String FIELD_DISCOUNTED_AT = "discountedAt";
-    private static final String FIELD_EXCLUDED_AT = "excludedAt";
-
     private AllegroPricesMapper() {
-    }
-
-    /** The {@code offers} array from an offer-status query response, or {@code null}. */
-    static @Nullable JsonNode offersArray(JsonNode response) {
-        return response.get(FIELD_OFFERS);
     }
 
     static AllegroPricesAccountParticipationRequestRaw toRaw(ParticipationUpdate update) {
@@ -111,19 +98,20 @@ final class AllegroPricesMapper {
         return raw;
     }
 
-    static AllegroPricesOfferStatus offerStatusFrom(JsonNode item) {
+    static AllegroPricesOfferStatus offerStatusFrom(OfferStatusItemDtoRaw item) {
+        ActualPriceReductionDtoRaw actual = actualReduction(item.getActualPriceReduction());
         return new AllegroPricesOfferStatus(
-                item.get(FIELD_ID).asText(),
-                item.get(FIELD_NAME).asText(),
-                item.get(FIELD_MARKETPLACE).get(FIELD_ID).asText(),
-                money(item.get(FIELD_BASE_PRICE)),
-                discountOpportunity(item.get(FIELD_DISCOUNT)),
-                percentage(item.get(FIELD_RECOMMENDED)),
-                percentage(item.get(FIELD_DECLARED)),
-                percentage(item.get(FIELD_ACTUAL)),
-                money(finalPriceNode(item.get(FIELD_ACTUAL))),
-                dateTime(item.get(FIELD_DISCOUNTED_AT)),
-                dateTime(item.get(FIELD_EXCLUDED_AT)));
+                item.getId(),
+                item.getName(),
+                item.getMarketplace().getId(),
+                money(item.getBasePrice()),
+                discountOpportunity(item.getDiscount()),
+                recommendedPercentage(item.getRecommendedPriceReduction()),
+                declaredPercentage(item.getDeclaredPriceReduction()),
+                actual == null ? null : actual.getSellerMaxDeclaredPercentage(),
+                actual == null ? null : money(actual.getFinalPriceForTheBuyer()),
+                item.getDiscountedAt(),
+                item.getExcludedAt());
     }
 
     private static SubsidyOfferToSubmitRaw submitItem(SubmitOffersRequest.Offer offer) {
@@ -144,30 +132,46 @@ final class AllegroPricesMapper {
         return OfferStatusQueryRequestDtoMarketplaceRaw.IdEnum.valueOf(enumName);
     }
 
-    private static boolean discountOpportunity(@Nullable JsonNode discount) {
-        return discount != null && discount.hasNonNull(FIELD_OPPORTUNITY)
-                && discount.get(FIELD_OPPORTUNITY).asBoolean();
+    private static boolean discountOpportunity(@Nullable OfferStatusItemDtoDiscountRaw discount) {
+        return discount != null && Boolean.TRUE.equals(discount.getOpportunity());
     }
 
-    private static @Nullable String percentage(@Nullable JsonNode reduction) {
-        if (reduction == null || !reduction.hasNonNull(FIELD_SELLER_MAX_PCT)) {
-            return null;
+    private static @Nullable String recommendedPercentage(
+            @Nullable OfferStatusItemDtoRecommendedPriceReductionRaw reduction) {
+        if (reduction != null
+                && reduction.getActualInstance() instanceof RecommendedPriceReductionDtoRaw recommended) {
+            return recommended.getSellerMaxDeclaredPercentage();
         }
-        return reduction.get(FIELD_SELLER_MAX_PCT).asText();
+        return null;
     }
 
-    private static @Nullable JsonNode finalPriceNode(@Nullable JsonNode actualReduction) {
-        return actualReduction == null ? null : actualReduction.get(FIELD_FINAL_PRICE);
-    }
-
-    private static @Nullable Money money(@Nullable JsonNode price) {
-        if (price == null || !price.hasNonNull(FIELD_AMOUNT) || !price.hasNonNull(FIELD_CURRENCY)) {
-            return null;
+    private static @Nullable String declaredPercentage(
+            @Nullable OfferStatusItemDtoDeclaredPriceReductionRaw reduction) {
+        if (reduction != null
+                && reduction.getActualInstance() instanceof DeclaredPriceReductionDtoRaw declared) {
+            return declared.getSellerMaxDeclaredPercentage();
         }
-        return Money.of(price.get(FIELD_AMOUNT).asText(), price.get(FIELD_CURRENCY).asText());
+        return null;
     }
 
-    private static @Nullable OffsetDateTime dateTime(@Nullable JsonNode node) {
-        return node == null || node.isNull() ? null : OffsetDateTime.parse(node.asText());
+    private static @Nullable ActualPriceReductionDtoRaw actualReduction(
+            @Nullable OfferStatusItemDtoActualPriceReductionRaw reduction) {
+        if (reduction != null
+                && reduction.getActualInstance() instanceof ActualPriceReductionDtoRaw actual) {
+            return actual;
+        }
+        return null;
+    }
+
+    private static @Nullable Money money(@Nullable MoneyDtoRaw price) {
+        return price == null ? null : money(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money money(@Nullable ActualPriceReductionDtoFinalPriceForTheBuyerRaw price) {
+        return price == null ? null : money(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money money(@Nullable String amount, @Nullable String currency) {
+        return amount == null || currency == null ? null : Money.of(amount, currency);
     }
 }
