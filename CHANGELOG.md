@@ -157,6 +157,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `page.id` cursor automatically. The fail-fast `ProductSearchRequest` builder
   requires a phrase (category is an optional phrase-scoped filter). Live
   `catalog-products` demo scenario.
+- `catalog().products().get(productId)` — read a product
+  (`GET /sale/products/{id}`) as an immutable `Product`: id, name, category,
+  publication status, protected-brand flag, image URLs, and the
+  `ProductParameterValue` list (localized `values` + stable `valuesIds`)
+  describing it. A focused projection — the structured `description` and
+  compatibility blocks follow in a later slice. The `catalog-products` demo reads
+  a searched product back (search → get round-trip).
 
 ### F — offers-extras
 
