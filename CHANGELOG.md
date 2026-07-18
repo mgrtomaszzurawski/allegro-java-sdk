@@ -131,6 +131,20 @@ sections. Empty subsections are dropped by the release engineer when folding
   request type left `language` null and pre-initialized empty collections, which the default
   serializer sent as `"language": null` and Allegro rejected with a 400 (live-caught on the
   sandbox). Only the fields actually set are sent.
+- Coverage (fulfilment): `CreateOfferRequest` and the `Offer` read now carry the offer's
+  delivery terms and after-sales conditions. New `OfferDelivery` (shipping-rate table id,
+  handling time, shipment date, delivery info) and `AfterSalesServices` (implied-warranty,
+  return-policy, warranty ids) value types — each an immutable record with a fluent builder,
+  usable both to configure an offer and to read one back. First step of the bucket-A coverage
+  debt: the request builder grows toward every field of `SaleProductOfferRequestV1`.
+- Coverage (selling terms): `CreateOfferRequest` gains `sellingFormat` (`OfferFormat` —
+  `BUY_NOW`/`AUCTION`/`ADVERTISEMENT`), `startingPrice` and `minimalPrice` (auction), and
+  `stockUnit` (new `StockUnit` enum: `UNIT`/`PAIR`/`SET`, forward-compat `UNKNOWN`); the `Offer`
+  read maps them back. `OfferFormat.toRaw()` added for the write path (throws on the read-only
+  `UNKNOWN` sentinel, like `StockUnit.toRaw()`). Pricing is now format-conditional and validated
+  fail-fast: an `AUCTION` requires `startingPrice` (Buy Now optional — a pure auction), any other
+  format requires `buyNowPrice`. `AfterSalesServices` ids are validated as UUIDs when set on the
+  builder (fail-fast `IllegalArgumentException`) rather than deep in the request.
 
 ### B — orders-payments
 
