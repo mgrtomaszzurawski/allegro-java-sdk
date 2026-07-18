@@ -5,7 +5,10 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BadgeApplicationRejectionReasonRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ErrorRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ErrorsHolderRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -35,5 +38,24 @@ final class CampaignMappers {
         return reasons == null
                 ? List.of()
                 : reasons.stream().map(CampaignRefusalReason::from).toList();
+    }
+
+    /**
+     * Flatten the doubly-nested command error structure ({@code errors[].errors[]})
+     * to a flat list of messages, tolerating absent levels.
+     */
+    static List<String> commandErrorMessages(@Nullable List<ErrorsHolderRaw> holders) {
+        if (holders == null) {
+            return List.of();
+        }
+        List<String> messages = new ArrayList<>();
+        for (ErrorsHolderRaw holder : holders) {
+            if (holder.getErrors() != null) {
+                for (ErrorRaw error : holder.getErrors()) {
+                    messages.add(error.getMessage());
+                }
+            }
+        }
+        return List.copyOf(messages);
     }
 }

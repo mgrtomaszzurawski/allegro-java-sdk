@@ -215,6 +215,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AllegroPricesOfferStatus`, `SubsidyCommandReport`/`SubsidyOfferResult`/`SubsidyOfferStatus` models
   and the `ParticipationUpdate`/`AllegroPricesOfferQuery`/`SubmitOffersRequest`/`ExcludeOffersRequest`
   builders (with `OfferScope`/`OfferSubstatus` filters).
+- Add the AlleDiscount sub-facade `client.campaigns().alleDiscount()` — completes bucket H:
+  `campaigns()` (GET `/sale/alle-discount/campaigns`, a `List`), lazy `streamEligibleOffers`/
+  `streamSubmittedOffers` (GET `…/{campaignId}/eligible-offers` and `…/submitted-offers`), and the
+  `submitOffer`/`withdrawOffer(...[, Duration])` commands (POST, polled to a terminal result). Adds
+  `AlleDiscountCampaign`, `AlleDiscountEligibleOffer`, `AlleDiscountSubmittedOffer`,
+  `AlleDiscountSubmitResult`/`AlleDiscountWithdrawResult` and their status/type enums (plus the shared
+  `ConditionViolation`), and the `SubmitOfferRequest`/`EligibleOffersFilter`/`SubmittedOffersFilter`
+  builders.
 
 ### I — fulfillment
 
