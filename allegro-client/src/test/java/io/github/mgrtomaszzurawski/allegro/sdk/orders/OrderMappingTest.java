@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormFulfillmentStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormInvoiceAddressCompanyRaw.VatPayerStatusEnum;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormPaymentProviderRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormPaymentTypeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormStatusRaw;
@@ -15,6 +16,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentProvider;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.VatPayerStatus;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -98,5 +100,21 @@ class OrderMappingTest {
         // then
         assertEquals(PaymentProvider.UNKNOWN,
                 PaymentProvider.from(CheckoutFormPaymentProviderRaw.UNKNOWN_DEFAULT_OPEN_API));
+    }
+
+    @Test
+    void from_whenEveryVatPayerStatusRawValue_mapsToMatchingStatus() {
+        // then
+        assertEquals(VatPayerStatus.ACTIVE, VatPayerStatus.from(VatPayerStatusEnum.ACTIVE));
+        assertEquals(VatPayerStatus.NON_ACTIVE, VatPayerStatus.from(VatPayerStatusEnum.NON_ACTIVE));
+        assertEquals(VatPayerStatus.NOT_APPLICABLE,
+                VatPayerStatus.from(VatPayerStatusEnum.NOT_APPLICABLE));
+    }
+
+    @Test
+    void from_whenVatPayerStatusRawUnmodelled_mapsToUnknown() {
+        // then
+        assertEquals(VatPayerStatus.UNKNOWN,
+                VatPayerStatus.from(VatPayerStatusEnum.UNKNOWN_DEFAULT_OPEN_API));
     }
 }
