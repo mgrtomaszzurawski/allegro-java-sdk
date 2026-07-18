@@ -20,6 +20,16 @@ dependencies {
     // during live probes (enable with -Dorg.slf4j.simpleLogger.log.io.github
     // .mgrtomaszzurawski.allegro=debug).
     runtimeOnly(libs.slf4j.simple)
+
+    // The shared token store is agent infrastructure that has caused real data
+    // loss; it carries a regression test (no live traffic — pure filesystem).
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
 }
 
 // Pass -Pdemo.scenario=<name> as the runner argument, and forward EVERY other
