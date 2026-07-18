@@ -25,6 +25,14 @@ public interface Pricing {
     PricingAutomation automation();
 
     /**
+     * Marketplace turnover discounts — reward a buyer's cumulated turnover with
+     * a percentage discount.
+     *
+     * @return the turnover-discount sub-facade
+     */
+    TurnoverDiscounts turnoverDiscounts();
+
+    /**
      * The seller's current fee quotes for the given offers — the recurring fees
      * (such as promoted-listing quotes) each offer is currently subject to.
      *
