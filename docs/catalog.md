@@ -125,6 +125,22 @@ for (ProductParameterValue parameter : product.parameters()) {
 }
 ```
 
+Before building a product for a category, learn the schema that category expects with
+`parametersIn` — the product-side counterpart of `categories().parameters(...)`:
+
+```java
+for (ProductParameter parameter : products.parametersIn("257")) {
+    System.out.println(parameter.id() + "  " + parameter.name()
+            + "  (" + parameter.type() + (parameter.required() ? ", required)" : ")"));
+}
+```
+
+Each `ProductParameter` carries the value `type` (`DICTIONARY` / `FLOAT` / `INTEGER` /
+`STRING`, or `OTHER` for a type this release does not yet model), whether it is `required`,
+its `unit`, and — by type — either the numeric/text `restrictions` or the selectable
+`dictionary` values. It shares those value types with `CategoryParameter` but omits the two
+components that apply only to an offer's parameters (`requiredForProduct`, display options).
+
 ## Verifying against the sandbox
 
 The read-only demo scenario navigates the live category tree and confirms the mapped fields

@@ -238,9 +238,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `CategoryParameterType` (dictionary/float/integer/string), a flattened
   `ParameterRestrictions` (numeric bounds/precision, text lengths,
   `multipleChoices`), the dictionary `DictionaryValue`s and
-  `CategoryParameterOptions`. An unmodelled parameter type maps to the mapper's
-  `CategoryParameterType.OTHER` default (today an unknown `type` still fails
-  deserialization on the wire — end-to-end degradation is a tracked core follow-up).
+  `CategoryParameterOptions`. An unmodelled parameter type degrades to the
+  mapper's `CategoryParameterType.OTHER` default rather than failing the read —
+  the core `UnknownSubtypeToBaseHandler` resolves an unknown `type` discriminator
+  to the polymorphic base (the Layer-1 Raw declares no `defaultImpl`).
 - `categories().suggest(productName)` — categories whose names best match a
   product or offer name (`GET /sale/matching-categories`) as `CategorySuggestion`
   records, each reachable up its parent breadcrumb.
@@ -257,6 +258,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   describing it. A focused projection — the structured `description` and
   compatibility blocks follow in a later slice. The `catalog-products` demo reads
   a searched product back (search → get round-trip).
+- `catalog().products().parametersIn(categoryId)` — the parameters a *product* in
+  a category expects (`GET /sale/categories/{id}/product-parameters`), as
+  immutable `ProductParameter` records. The product-side counterpart of
+  `categories().parameters(...)`: it reuses the shared `CategoryParameterType`,
+  `ParameterRestrictions` and `DictionaryValue` value types but drops the two
+  offer-only components a product parameter never carries (`requiredForProduct`,
+  display `CategoryParameterOptions`). An unmodelled parameter type degrades to
+  `CategoryParameterType.OTHER` (core `UnknownSubtypeToBaseHandler`). The
+  `catalog-products` demo lists a searched product's category schema.
 
 ### F — offers-extras
 
@@ -411,3 +421,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `corporate`) are required, an undocumented server rule (spec marks neither) verified
   live and recorded in `KNOWN-SERVER-BEHAVIORS.md`. Documented in `docs/settings.md`; the
   `settings-warranty` write→read demo is green on the sandbox (create→get round-trip).
+- `settings().afterSale()` implied warranties (rękojmia): `streamImpliedWarranties()`
+  (lazy, single page), `impliedWarranty(id)`, `createImpliedWarranty(...)`,
+  `updateImpliedWarranty(...)`. Immutable `ImpliedWarranty` / `ImpliedWarrantySummary`
+  records, `ImpliedWarrantyPeriod` (whole years, min `P2Y`) and a shared self-validating
+  `AfterSalesAddress` value type, and a fail-fast `ImpliedWarrantyRequest` builder
+  (`name` + `individual` required). Documented in `docs/settings.md`; `settings-implied-warranty`
+  write→read demo scenario.
