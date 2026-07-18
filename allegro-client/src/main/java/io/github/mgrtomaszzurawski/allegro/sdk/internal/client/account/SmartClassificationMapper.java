@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SmartClassification;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -82,8 +83,16 @@ final class SmartClassificationMapper {
     }
 
     private static @Nullable OffsetDateTime offsetDateTimeOrNull(@Nullable JsonNode node) {
-        String text = textOrNull(node);
-        return text == null ? null : OffsetDateTime.parse(text);
+        if (node == null || !node.isTextual()) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(node.asText());
+        } catch (DateTimeParseException malformed) {
+            // An optional timestamp arriving in an unexpected shape must not abort
+            // the whole report — the same forward-compat stance as value/threshold.
+            return null;
+        }
     }
 
     private static @Nullable String textOrNull(@Nullable JsonNode node) {

@@ -79,6 +79,11 @@ class UserAccountClientTest {
     private static final String SMART_MINIMAL_RESPONSE = """
             {"classification":{"fulfilled":false}}
             """;
+    // An optional `lastChanged` in an unexpected shape must not abort the report.
+    private static final String SMART_BAD_TIMESTAMP_RESPONSE = """
+            {"classification":{"fulfilled":true,"lastChanged":"not-a-timestamp"},
+             "conditions":[]}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
@@ -179,6 +184,24 @@ class UserAccountClientTest {
             assertTrue(report.conditions().isEmpty());
             assertTrue(report.excludedDeliveryMethodIds().isEmpty());
             assertNull(report.lastChanged());
+        }
+    }
+
+    @Test
+    void smartClassification_whenLastChangedMalformed_mapsToNullWithoutFailing(WireMockRuntimeInfo wmInfo) {
+        // given — an optional timestamp that is not a valid date
+        stubFor(get(urlEqualTo(SMART_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(SMART_BAD_TIMESTAMP_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — the report still deserializes (would abort without the guard)
+            SmartClassification report = allegro.user().smartClassification();
+
+            // then — the unparseable timestamp degrades to null, the rest maps
+            assertNull(report.lastChanged());
+            assertTrue(report.fulfilled());
         }
     }
 
