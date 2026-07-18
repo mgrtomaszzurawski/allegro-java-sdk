@@ -42,6 +42,7 @@ public enum IssueStatus {
             case CLAIM_SUBMITTED -> CLAIM_SUBMITTED;
             case CLAIM_ACCEPTED -> CLAIM_ACCEPTED;
             case CLAIM_REJECTED -> CLAIM_REJECTED;
+            default -> UNKNOWN;
         };
     }
 }

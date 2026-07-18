@@ -20,7 +20,9 @@ public enum ConversionStatus {
     /** The conversion was rejected (e.g. the order was returned). */
     REJECTED,
     /** The conversion was confirmed and is payable. */
-    CONFIRMED;
+    CONFIRMED,
+    /** A status this SDK release does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
 
     /** Map the generated Layer-1 enum to this public enum. */
     public static @Nullable ConversionStatus from(CpsConversionRaw.@Nullable StatusEnum raw) {
@@ -31,6 +33,7 @@ public enum ConversionStatus {
             case CREATED -> CREATED;
             case REJECTED -> REJECTED;
             case CONFIRMED -> CONFIRMED;
+            default -> UNKNOWN;
         };
     }
 }

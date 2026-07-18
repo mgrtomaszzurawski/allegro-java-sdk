@@ -20,7 +20,10 @@ public enum CampaignType {
     STANDARD,
 
     /** A sourcing campaign the platform runs to grow supply of a product. */
-    SOURCING;
+    SOURCING,
+
+    /** A campaign type this SDK release does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
 
     /** Map the generated Layer-1 enum to the public domain enum. */
     static CampaignType from(BadgeCampaignRaw.TypeEnum raw) {
@@ -28,6 +31,7 @@ public enum CampaignType {
             case DISCOUNT -> DISCOUNT;
             case STANDARD -> STANDARD;
             case SOURCING -> SOURCING;
+            default -> UNKNOWN;
         };
     }
 }

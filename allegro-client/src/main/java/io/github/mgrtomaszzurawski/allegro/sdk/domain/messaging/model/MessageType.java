@@ -32,6 +32,7 @@ public enum MessageType {
             case ASK_QUESTION -> ASK_QUESTION;
             case MAIL -> MAIL;
             case MESSAGE_CENTER -> MESSAGE_CENTER;
+            default -> UNKNOWN;
         };
     }
 }
