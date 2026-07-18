@@ -458,3 +458,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AfterSalesAddress` value type, and a fail-fast `ImpliedWarrantyRequest` builder
   (`name` + `individual` required). Documented in `docs/settings.md`; `settings-implied-warranty`
   write→read demo scenario.
+- `settings().afterSale()` return policies: `streamReturnPolicies()` (lazy, single page,
+  full `ReturnPolicy` records), `returnPolicy(id)`, `createReturnPolicy(...)`,
+  `updateReturnPolicy(...)`, `deleteReturnPolicy(...)`. Immutable `ReturnPolicy` with typed
+  `ReturnPolicyAvailability` (`ReturnRange` + `ReturnRestrictionCause`), `ReturnCostCoveredBy`,
+  `ReturnPolicyContact` and `ReturnPolicyOptions`; separate fail-fast `ReturnPolicyRequest`
+  (create — requires `name`/`fulfillment`/`availability`) and `ReturnPolicyUpdateRequest`
+  (update — no `fulfillment`, which is fixed at creation) builders. Both require `options`
+  when the availability range is not `DISABLED` (live-verified — the server rejects an enabled
+  policy without options). Documented in `docs/settings.md`; `settings-return-policy`
+  write→read→update→delete demo scenario.

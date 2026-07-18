@@ -173,6 +173,19 @@ are rejected on both `individual.period` and `corporate.period`. This differs fr
 leaves the exact value to the server (it can change per legal category) and documents the rule on
 `ImpliedWarrantyPeriod`; only the structural `name`/`individual` requirements are builder-enforced.
 
+### A return policy with returns enabled requires `options` (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/return-policies` (and the `PUT`) reject a body whose
+`availability.range` is not `DISABLED` but which omits the `options` object, with
+`422 UNPROCESSABLE_ENTITY code=AVAILABILITY_ENABLED_RETURN_OPTIONS_INVALID` (`path=null`, a
+body-level error). The spec marks `ReturnPolicyOptions` `nullable: true` with "Can be null if
+availability range is 'DISABLED'", and all five booleans are `required` within it. Verified live
+on seller TestBoxSDK: a `FULL`/`RESTRICTED` policy with `options` (all five flags) creates, reads
+back, updates and deletes cleanly (full round-trip green); the same request without `options` is
+rejected. The SDK's `ReturnPolicyRequest`/`ReturnPolicyUpdateRequest` builders therefore require
+`options` fail-fast whenever the range is not `DISABLED`, turning the opaque 422 into a
+client-side `IllegalStateException`.
+
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
 ### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
