@@ -201,6 +201,23 @@ class OfferWriteClientTest {
     }
 
     @Test
+    void edit_whenPriceAndImages_serializesThoseFields(WireMockRuntimeInfo wmInfo) {
+        // given — an edit that changes only the price and images
+        stubFor(patch(urlEqualTo(EDIT_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBodyFile(OFFER_FIXTURE)));
+        EditOfferRequest request = EditOfferRequest.builder()
+                .buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN)).imageUrls(List.of(IMAGE_URL)).build();
+
+        // when
+        offers(wmInfo).edit(EDIT_OFFER_ID, request);
+
+        // then — the PATCH carries the selling-mode price and the image, and nothing else
+        verify(1, patchRequestedFor(urlEqualTo(EDIT_PATH))
+                .withRequestBody(matchingJsonPath(PRICE_JSON_PATH, equalTo(AMOUNT)))
+                .withRequestBody(matchingJsonPath(IMAGES_JSON_PATH, equalTo(IMAGE_URL))));
+    }
+
+    @Test
     void edit_whenOfferMissing_throwsNotFound(WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(patch(urlEqualTo(EDIT_PATH))

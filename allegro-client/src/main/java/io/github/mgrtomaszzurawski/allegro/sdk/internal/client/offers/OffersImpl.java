@@ -99,13 +99,16 @@ public final class OffersImpl implements Offers {
                 ApiPaths.productOffer(offerId), SaleProductOfferResponseV1Raw.class, OP_GET));
     }
 
+    /** The generated Buy Now price DTO for a {@link Money} amount. */
+    private static BuyNowPriceRaw priceOf(Money money) {
+        return new BuyNowPriceRaw().amount(money.amount()).currency(money.currency());
+    }
+
     @Override
     public Offer create(CreateOfferRequest request) {
         SellingModeRaw sellingMode = new SellingModeRaw()
                 .format(SellingModeFormatRaw.BUY_NOW)
-                .price(new BuyNowPriceRaw()
-                        .amount(request.buyNowPrice().amount())
-                        .currency(request.buyNowPrice().currency()));
+                .price(priceOf(request.buyNowPrice()));
         SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
                 .name(request.name())
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
@@ -131,9 +134,7 @@ public final class OffersImpl implements Offers {
             body.name(request.name());
         }
         if (request.buyNowPrice() != null) {
-            body.sellingMode(new SellingModeRaw().price(new BuyNowPriceRaw()
-                    .amount(request.buyNowPrice().amount())
-                    .currency(request.buyNowPrice().currency())));
+            body.sellingMode(new SellingModeRaw().price(priceOf(request.buyNowPrice())));
         }
         if (request.availableStock() != null) {
             body.stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
