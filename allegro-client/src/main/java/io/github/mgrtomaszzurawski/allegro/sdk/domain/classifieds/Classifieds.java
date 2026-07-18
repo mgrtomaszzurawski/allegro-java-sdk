@@ -4,7 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
 import java.util.List;
 
 /**
@@ -16,11 +18,9 @@ import java.util.List;
  * attach to a classified offer, the packages assigned to an offer, and the
  * advertisement statistics.
  *
- * <p>Starter slice of bucket F (offers-extras): only
- * {@link #availablePackages(String)} ships first, as the end-to-end proof of the
- * classifieds surface; the remaining classifieds operations and the
- * {@code offers()}-attached extras (tags, translations, rating, bundles) land
- * per the task-division plan.
+ * <p>Bucket F (offers-extras): the classifieds package and assignment surface
+ * ships here; the advertisement statistics and the {@code offers()}-attached
+ * extras (tags, translations, rating, bundles) land per the task-division plan.
  *
  * @since 0.2.0
  */
@@ -36,4 +36,28 @@ public interface Classifieds {
      *     possibly empty
      */
     List<ClassifiedPackage> availablePackages(String categoryId);
+
+    /**
+     * The configuration of a single classifieds package.
+     *
+     * @param packageId identifier of the package to read
+     * @return the package configuration
+     */
+    ClassifiedPackage getPackage(String packageId);
+
+    /**
+     * The classifieds packages currently assigned to an offer.
+     *
+     * @param offerId identifier of the offer to read the assignment for
+     * @return the base and extra packages assigned to the offer
+     */
+    OfferClassifieds packagesOfOffer(String offerId);
+
+    /**
+     * Assign classifieds packages to an offer, replacing any current assignment.
+     *
+     * @param offerId identifier of the offer to assign packages to
+     * @param assignment the base and extra packages to assign
+     */
+    void assignPackages(String offerId, ClassifiedAssignment assignment);
 }

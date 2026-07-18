@@ -13,12 +13,16 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -28,6 +32,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.PointOfServiceRequestBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Address;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Coordinates;
@@ -99,6 +104,19 @@ class ShippingPointsOfServiceClientTest {
 
     private static final String CREATED_FIXTURE = "shipping/pos-created.json";
     private static final String GET_FIXTURE = "shipping/pos-get.json";
+    private static final String LIST_FIXTURE = "shipping/pos-list.json";
+    private static final String UPDATED_FIXTURE = "shipping/pos-updated.json";
+
+    // Query parameters on GET /points-of-service (seller.id required, countryCode optional).
+    private static final String PARAM_SELLER_ID = "seller.id";
+    private static final String PARAM_COUNTRY_CODE = "countryCode";
+
+    // Second point in pos-list.json — proves the list maps every item, not just the first.
+    private static final int LIST_SIZE = 2;
+    private static final String SECOND_POS_NAME = "Warehouse Desk";
+    // New name PUT in the update round-trip, echoed back by pos-updated.json.
+    private static final String UPDATED_NAME = "Pickup Point Center East";
+    private static final String EMPTY_SEARCH_RESULT = "{\"posList\":[]}";
 
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
@@ -145,7 +163,7 @@ class ShippingPointsOfServiceClientTest {
                         .withBody(TOKEN_RESPONSE.formatted(accessToken, EXPIRY_SECONDS))));
     }
 
-    private static PointOfServiceRequest sampleRequest() {
+    private static PointOfServiceRequestBuilder sampleRequestBuilder() {
         return PointOfServiceRequest.builder()
                 .name(POS_NAME)
                 .type(PosType.PICKUP_POINT)
@@ -164,8 +182,11 @@ class ShippingPointsOfServiceClientTest {
                 .externalId(POS_EXTERNAL_ID)
                 .phoneNumber(PHONE_NUMBER)
                 .email(EMAIL)
-                .serviceTime(SERVICE_TIME)
-                .build();
+                .serviceTime(SERVICE_TIME);
+    }
+
+    private static PointOfServiceRequest sampleRequest() {
+        return sampleRequestBuilder().build();
     }
 
     @Test
@@ -202,6 +223,100 @@ class ShippingPointsOfServiceClientTest {
             assertEquals(POS_EXTERNAL_ID, created.externalId());
             assertEquals(CITY, created.address().city());
             verify(1, postRequestedFor(urlEqualTo(POS_PATH)));
+        }
+    }
+
+    @Test
+    void list_whenSellerId_returnsAllPointsAndSendsSellerFilter(WireMockRuntimeInfo wmInfo) {
+        // given — seller.id is a required query parameter on the list endpoint
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(POS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withQueryParam(PARAM_SELLER_ID, equalTo(SELLER_ID))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(LIST_FIXTURE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<PointOfService> points = allegro.shipping().points().list(SELLER_ID);
+
+            // then — every item in the wrapper maps, not just the first
+            assertEquals(LIST_SIZE, points.size());
+            assertEquals(POS_ID, points.get(0).id());
+            assertEquals(SECOND_POS_NAME, points.get(1).name());
+            assertEquals(PosStatus.TEMPORARILY_CLOSED, points.get(1).status());
+            verify(1, getRequestedFor(urlPathEqualTo(POS_PATH))
+                    .withQueryParam(PARAM_SELLER_ID, equalTo(SELLER_ID)));
+        }
+    }
+
+    @Test
+    void list_whenCountryCode_addsCountryFilterToRequest(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(POS_PATH))
+                .withQueryParam(PARAM_SELLER_ID, equalTo(SELLER_ID))
+                .withQueryParam(PARAM_COUNTRY_CODE, equalTo(COUNTRY_CODE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(LIST_FIXTURE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<PointOfService> points = allegro.shipping().points().list(SELLER_ID, COUNTRY_CODE);
+
+            // then — both filters reached the wire
+            assertFalse(points.isEmpty());
+            verify(1, getRequestedFor(urlPathEqualTo(POS_PATH))
+                    .withQueryParam(PARAM_SELLER_ID, equalTo(SELLER_ID))
+                    .withQueryParam(PARAM_COUNTRY_CODE, equalTo(COUNTRY_CODE)));
+        }
+    }
+
+    @Test
+    void list_whenServerOmitsPosList_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given — the wrapper arrives with an empty posList
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(POS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(EMPTY_SEARCH_RESULT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<PointOfService> points = allegro.shipping().points().list(SELLER_ID);
+
+            // then — no NPE, a real empty list
+            assertTrue(points.isEmpty());
+        }
+    }
+
+    @Test
+    void update_whenValidRequest_putsPosAndMapsUpdatedRecord(WireMockRuntimeInfo wmInfo) {
+        // given — a full-representation PUT carrying the new name
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlEqualTo(POS_BY_ID_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(matchingJsonPath("$.name", equalTo(UPDATED_NAME)))
+                .withRequestBody(matchingJsonPath("$.address.city", equalTo(CITY)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(UPDATED_FIXTURE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            PointOfService updated = allegro.shipping().points()
+                    .update(POS_ID, sampleRequestBuilder().name(UPDATED_NAME).build());
+
+            // then — the PUT reached the wire and the response mapped
+            assertEquals(POS_ID, updated.id());
+            assertEquals(UPDATED_NAME, updated.name());
+            verify(1, putRequestedFor(urlEqualTo(POS_BY_ID_PATH)));
         }
     }
 

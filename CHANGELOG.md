@@ -54,6 +54,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   `Offer` record with `OfferFormat`/`OfferStatus` enums and the shared `Money` Buy Now price)
   and `changeBuyNowPrice(offerId, Money)` (single-offer price-change command). `docs/offers.md`
   + compiled example + `offer` demo scenario (write→read on the sandbox).
+- Read/query slice: `streamOffers(OfferFilter)` — a lazy `Stream<OfferSummary>` over the
+  seller's offers (offset/limit paging, filter by name/status/format/price/sort) — and
+  `smartClassification(offerId)` (Allegro Smart! report → `SmartClassification` with its
+  per-condition breakdown). New `OfferFilter` builder; `offer` demo lists offers when no
+  `-Pdemo.offerId` is given (live-verified on the sandbox seller account).
 
 ### B — orders-payments
 
@@ -70,6 +75,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `points().delete(id)`, immutable `PointOfService` records with fluent builders
   (fail-fast required fields, replicated length limits) and read-only enum
   fallbacks.
+- `points().list(sellerId)` / `points().list(sellerId, countryCode)` (returns a
+  `List<PointOfService>` — the endpoint is not paginated) and
+  `points().update(id, PointOfServiceRequest)`, completing the points-of-service
+  CRUD surface.
+- `deliveryMethods()` — lists the seller's available delivery methods
+  (`List<DeliveryMethod>`, with `PaymentPolicy`); read-only, works with an
+  application token (no user scope required).
 
 ### D — account-meta
 
@@ -100,6 +112,18 @@ sections. Empty subsections are dropped by the release engineer when folding
   client-credentials token. Includes the `catalog-categories` sandbox
   shape-verification demo scenario. Products and compatibility follow in the
   same bucket.
+- `categories().parameters(categoryId)` — the parameters a category expects on
+  its offers and products, as immutable `CategoryParameter` records: the
+  `CategoryParameterType` (dictionary/float/integer/string), a flattened
+  `ParameterRestrictions` (numeric bounds/precision, text lengths,
+  `multipleChoices`), the dictionary `DictionaryValue`s and
+  `CategoryParameterOptions`. An unmodelled parameter type maps to the mapper's
+  `CategoryParameterType.OTHER` default (today an unknown `type` still fails
+  deserialization on the wire — end-to-end degradation is a tracked core follow-up).
+- `categories().suggest(productName)` — categories whose names best match a
+  product or offer name (`GET /sale/matching-categories`) as `CategorySuggestion`
+  records, each reachable up its parent breadcrumb.
+
 ### F — offers-extras
 
 - `client.classifieds()` accessor with `availablePackages(categoryId)` — read the
@@ -107,6 +131,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /sale/classifieds-packages`). Starter slice of bucket F; immutable
   `ClassifiedPackage` records, WireMock error-path coverage, and a live
   read-shape demo scenario (`-Pdemo.scenario=classifieds`).
+- `classifieds.getPackage(packageId)`, `classifieds.packagesOfOffer(offerId)` and
+  `classifieds.assignPackages(offerId, ClassifiedAssignment)` — read one package
+  configuration, read the packages assigned to an offer, and assign a base plus
+  optional extra packages to an offer (`/sale/classifieds-packages/{packageId}`,
+  `/sale/offer-classifieds-packages/{offerId}`). `ClassifiedAssignment` is built
+  by a fail-fast builder; the write→read demo assigns then reads the packages
+  back. All calls require the seller user token.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with

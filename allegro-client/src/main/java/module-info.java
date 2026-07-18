@@ -54,6 +54,7 @@ module io.github.mgrtomaszzurawski.allegro {
     // Offer lifecycle (bucket A).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
     // Product catalogue: categories, products, compatibility (bucket E).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
@@ -61,6 +62,7 @@ module io.github.mgrtomaszzurawski.allegro {
 
     // Classifieds (advertisement) packages and statistics (bucket F).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
 
     // Pricing: automatic pricing rules, promotions, deposits (bucket G).
