@@ -81,6 +81,10 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `edit(offerId, EditOfferRequest)` — a partial PATCH: only the fields set on the request
   (name / Buy Now price / stock / images) are changed, serialized via the transport's
   `jsonBodyPartial` so untouched fields are absent from the wire rather than reset.
+- `offers().promoOptions()` sub-facade (reads): `availablePackages()` — the promotion packages
+  a seller can apply (`AvailablePromotionPackages` of `PromotionPackage`s) — and
+  `forOffer(offerId)` — the packages currently applied to an offer (`OfferPromoOptions` with
+  base/extra `AppliedPromoOption`s and their validity windows).
 
 ### B — orders-payments
 

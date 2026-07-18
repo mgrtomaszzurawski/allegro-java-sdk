@@ -2,9 +2,9 @@
 
 The offer lifecycle, reached from `client.offers()`.
 
-> Available now: reading a single offer, listing your offers, the Smart! classification, and a
-> single-offer price change. Creating and editing offers, bulk `batch()` commands, promotion
-> options and media land in later releases.
+> Available now: reading/listing offers, the Smart! classification, offers missing parameters,
+> create/edit/delete, single- and bulk price/stock changes, bulk publish/unpublish, and reading
+> promotion packages. The remaining promo write operations and media land in later releases.
 
 ## Read an offer
 
@@ -127,6 +127,24 @@ Offer updated = client.offers().edit("13579", EditOfferRequest.builder()
 ```
 
 Here only the name and stock are sent; the price, images and all other fields are untouched.
+
+## Promotion packages
+
+`offers().promoOptions()` reads the offer promotion packages (bold title, highlight, …):
+
+```java
+AvailablePromotionPackages available = client.offers().promoOptions().availablePackages();
+available.basePackages().forEach(promotionPackage ->
+        System.out.println(promotionPackage.id() + " — " + promotionPackage.name()));
+
+OfferPromoOptions applied = client.offers().promoOptions().forOffer("13579");
+if (applied.basePackage() != null) {
+    System.out.println("base package valid until " + applied.basePackage().validTo());
+}
+```
+
+`availablePackages()` lists what can be applied (base + extra packages); `forOffer(offerId)`
+shows what an offer currently has, with each package's validity window.
 
 ## Change the Buy Now price
 
