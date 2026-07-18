@@ -9,10 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.PointOfServiceRequestBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Address;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Coordinates;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliverySettingsRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.JoinStrategy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.OpenHour;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServiceRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosStatus;
@@ -344,6 +347,61 @@ class ShippingBuildersTest {
     void requestBuilder_whenEmailTooLong_throws() {
         var builder = minimalRequest().email(tooLong(MAX_EMAIL));
         assertMessage("PointOfServiceRequest.email must be at most 64 characters",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    // ---- DeliverySettingsRequestBuilder ----
+
+    @Test
+    void deliverySettingsBuilder_requiredOnly_buildsWithNullOptionals() {
+        // when — joinPolicy is the only required field
+        DeliverySettingsRequest request = DeliverySettingsRequest.builder()
+                .joinPolicy(JoinStrategy.SUM).build();
+
+        // then
+        assertEquals(JoinStrategy.SUM, request.joinPolicy());
+        assertNull(request.marketplaceId());
+        assertNull(request.freeDelivery());
+        assertNull(request.abroadFreeDelivery());
+    }
+
+    @Test
+    void deliverySettingsBuilder_allFieldsSet_builds() {
+        // when
+        DeliverySettingsRequest request = DeliverySettingsRequest.builder()
+                .marketplaceId(COUNTRY_CODE)
+                .freeDelivery(Money.of("200.00", "PLN"))
+                .abroadFreeDelivery(Money.of("500.00", "PLN"))
+                .joinPolicy(JoinStrategy.MAX)
+                .build();
+
+        // then
+        assertEquals(COUNTRY_CODE, request.marketplaceId());
+        assertEquals(Money.of("200.00", "PLN"), request.freeDelivery());
+        assertEquals(Money.of("500.00", "PLN"), request.abroadFreeDelivery());
+        assertEquals(JoinStrategy.MAX, request.joinPolicy());
+    }
+
+    @Test
+    void deliverySettingsBuilder_toBuilder_preservesFields() {
+        // given
+        DeliverySettingsRequest original = DeliverySettingsRequest.builder()
+                .marketplaceId(COUNTRY_CODE)
+                .freeDelivery(Money.of("200.00", "PLN"))
+                .joinPolicy(JoinStrategy.MIN)
+                .build();
+
+        // when
+        DeliverySettingsRequest copy = original.toBuilder().build();
+
+        // then
+        assertEquals(original, copy);
+    }
+
+    @Test
+    void deliverySettingsBuilder_whenJoinPolicyMissing_throws() {
+        var builder = DeliverySettingsRequest.builder().freeDelivery(Money.of("200.00", "PLN"));
+        assertMessage("DeliverySettingsRequest.joinPolicy is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
 

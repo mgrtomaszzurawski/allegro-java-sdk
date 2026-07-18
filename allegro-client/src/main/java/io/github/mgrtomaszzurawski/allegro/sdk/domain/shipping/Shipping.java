@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Shipping operations — reached via {@code AllegroClient.shipping()}: the
  * seller's delivery configuration and points of service. Shipment management
- * (WZA) and shipping-rate configuration land in later bucket-C PRs.
+ * (WZA) lands in a later bucket-C PR.
  *
  * @since 0.2.0
  */
@@ -33,4 +33,11 @@ public interface Shipping {
      * @return the points-of-service sub-facade
      */
     PointsOfService points();
+
+    /**
+     * Delivery settings — the seller's free-delivery thresholds and join policy.
+     *
+     * @return the delivery-settings sub-facade
+     */
+    DeliverySettings settings();
 }
