@@ -48,7 +48,10 @@ String warrantyId = created.id();
 
 `streamWarranties()` returns a **lazy** `Stream`: pages are fetched only as you consume
 them, so `findFirst()` / `limit(n)` never fetch more than they need. The stream yields
-lightweight summaries — call `warranty(id)` for the full definition.
+lightweight summaries — call `warranty(id)` for the full definition. The endpoint serves a
+single page (it caps `offset` at 59 and `limit` at 60), so the stream yields at most the
+first 60 warranties — a seller's warranty set is a small dictionary, so that is the full
+list in practice.
 
 ```java
 // full definition

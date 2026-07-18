@@ -24,7 +24,12 @@ public interface AfterSaleConditions {
      * demand as the stream is consumed; only summaries (id + name) are returned
      * — call {@link #warranty(String)} for the full definition.
      *
-     * @return a lazy stream over the seller's warranties
+     * <p>The endpoint serves a single page: it caps {@code offset} at 59 and
+     * {@code limit} at 60, so the stream yields at most the first 60 warranties.
+     * A seller's warranty definitions are a small dictionary, so in practice
+     * that is the full set.
+     *
+     * @return a lazy stream over the seller's warranties (at most 60)
      */
     Stream<WarrantySummary> streamWarranties();
 

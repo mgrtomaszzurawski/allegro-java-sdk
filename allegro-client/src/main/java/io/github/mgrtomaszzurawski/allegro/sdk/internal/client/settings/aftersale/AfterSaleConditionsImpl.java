@@ -63,11 +63,13 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
                 .fetch(WarrantiesListWarrantyBasicRaw.class);
         List<WarrantyBasicRaw> items = page.getWarranties() == null ? List.of() : page.getWarranties();
         List<WarrantySummary> summaries = items.stream().map(WarrantySummary::from).toList();
-        // This endpoint caps offset at 59, so a page-aligned next offset is out
-        // of range: stop after the first full page rather than send a request the
-        // server would reject. A short page (no totalCount in the body) also ends
-        // the walk.
-        boolean hasMore = summaries.size() == PAGE_LIMIT && offset + PAGE_LIMIT <= MAX_OFFSET;
+        // Single-page endpoint: offset is capped at MAX_OFFSET (59), below one full
+        // page (PAGE_LIMIT = 60), so a page-aligned next offset is always out of
+        // range and the server would reject it. The size check is therefore
+        // defensive, never decisive — the walk always stops after this first page;
+        // the guard still holds should the caps ever widen.
+        int nextOffset = offset + PAGE_LIMIT;
+        boolean hasMore = summaries.size() == PAGE_LIMIT && nextOffset <= MAX_OFFSET;
         return new PagedSpliterator.Page<>(summaries, hasMore);
     }
 

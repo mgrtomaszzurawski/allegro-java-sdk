@@ -194,6 +194,8 @@ class AfterSaleConditionsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(post(urlEqualTo(WARRANTIES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
@@ -218,6 +220,8 @@ class AfterSaleConditionsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(put(urlEqualTo(WARRANTY_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(WARRANTY_RESPONSE)));
 
@@ -284,7 +288,7 @@ class AfterSaleConditionsClientTest {
     }
 
     @Test
-    void streamWarranties_whenNotConsumed_deferstheFetch(WireMockRuntimeInfo wmInfo) {
+    void streamWarranties_whenNotConsumed_defersTheFetch(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(WARRANTIES_PATH))
