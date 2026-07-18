@@ -5,7 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.campaigns;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -160,10 +160,7 @@ class CampaignsBuildersTest {
 
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());
-        assertTrue(first.equals(first));
-        assertFalse(first.equals(finish));
-        assertFalse(first.equals(null));
-        assertFalse(first.equals("not a patch"));
+        assertNotEquals(first, finish);
         assertTrue(first.toString().contains(BARGAIN.amount()));
     }
 }

@@ -5,7 +5,6 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -19,9 +18,13 @@ import org.jspecify.annotations.Nullable;
  *   <li>{@link #changeBargainPrice(Money)} — set a new bargain price.</li>
  * </ul>
  *
+ * @param kind         which change this patch carries
+ * @param bargainPrice the new bargain price for a {@link Kind#CHANGE_BARGAIN_PRICE}
+ *                     patch; {@code null} for {@link Kind#FINISH}
+ *
  * @since 0.2.0
  */
-public final class BadgePatch {
+public record BadgePatch(Kind kind, @Nullable Money bargainPrice) {
 
     /** Which change a {@link BadgePatch} carries. */
     public enum Kind {
@@ -35,12 +38,11 @@ public final class BadgePatch {
 
     private static final String ERR_PRICE_REQUIRED = "bargainPrice must not be null";
 
-    private final Kind kind;
-    private final @Nullable Money bargainPrice;
-
-    private BadgePatch(Kind kind, @Nullable Money bargainPrice) {
-        this.kind = kind;
-        this.bargainPrice = bargainPrice;
+    /** Enforces that a price-change patch always carries a price. */
+    public BadgePatch {
+        if (kind == Kind.CHANGE_BARGAIN_PRICE && bargainPrice == null) {
+            throw new IllegalArgumentException(ERR_PRICE_REQUIRED);
+        }
     }
 
     /** Finish the badge, ending its display. */
@@ -56,40 +58,6 @@ public final class BadgePatch {
      * @throws IllegalArgumentException if {@code bargainPrice} is {@code null}
      */
     public static BadgePatch changeBargainPrice(Money bargainPrice) {
-        if (bargainPrice == null) {
-            throw new IllegalArgumentException(ERR_PRICE_REQUIRED);
-        }
         return new BadgePatch(Kind.CHANGE_BARGAIN_PRICE, bargainPrice);
-    }
-
-    /** Which change this patch carries. */
-    public Kind kind() {
-        return kind;
-    }
-
-    /** The new bargain price for a {@link Kind#CHANGE_BARGAIN_PRICE} patch, else {@code null}. */
-    public @Nullable Money bargainPrice() {
-        return bargainPrice;
-    }
-
-    @Override
-    public boolean equals(@Nullable Object other) {
-        if (this == other) {
-            return true;
-        }
-        if (!(other instanceof BadgePatch patch)) {
-            return false;
-        }
-        return kind == patch.kind && Objects.equals(bargainPrice, patch.bargainPrice);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(kind, bargainPrice);
-    }
-
-    @Override
-    public String toString() {
-        return "BadgePatch{kind=" + kind + ", bargainPrice=" + bargainPrice + '}';
     }
 }
