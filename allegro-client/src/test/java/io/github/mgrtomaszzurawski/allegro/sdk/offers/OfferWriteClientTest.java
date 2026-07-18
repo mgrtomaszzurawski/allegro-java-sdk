@@ -33,6 +33,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRe
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -76,6 +78,15 @@ class OfferWriteClientTest {
     private static final String HANDLING_TIME_JSON_PATH = "$.delivery.handlingTime";
     private static final String IMPLIED_WARRANTY_JSON_PATH = "$.afterSalesServices.impliedWarranty.id";
     private static final String RETURN_POLICY_JSON_PATH = "$.afterSalesServices.returnPolicy.id";
+
+    private static final String STARTING_AMOUNT = "1.00";
+    private static final String MINIMAL_AMOUNT = "150.00";
+    private static final String FORMAT_JSON_PATH = "$.sellingMode.format";
+    private static final String STARTING_PRICE_JSON_PATH = "$.sellingMode.startingPrice.amount";
+    private static final String MINIMAL_PRICE_JSON_PATH = "$.sellingMode.minimalPrice.amount";
+    private static final String STOCK_UNIT_JSON_PATH = "$.stock.unit";
+    private static final String FORMAT_AUCTION = "AUCTION";
+    private static final String UNIT_PAIR = "PAIR";
 
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"bad name\",\"path\":\"name\"}]}";
@@ -198,6 +209,32 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH, equalTo(HANDLING_TIME)))
                 .withRequestBody(matchingJsonPath(IMPLIED_WARRANTY_JSON_PATH, equalTo(IMPLIED_WARRANTY_ID)))
                 .withRequestBody(matchingJsonPath(RETURN_POLICY_JSON_PATH, equalTo(RETURN_POLICY_ID))));
+    }
+
+    @Test
+    void create_whenAuctionSellingTermsSet_serializesFormatPricesAndUnit(WireMockRuntimeInfo wmInfo) {
+        // given — an auction with starting/minimal prices and a PAIR stock unit
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .sellingFormat(OfferFormat.AUCTION)
+                .startingPrice(Money.of(STARTING_AMOUNT, CURRENCY_PLN))
+                .minimalPrice(Money.of(MINIMAL_AMOUNT, CURRENCY_PLN))
+                .stockUnit(StockUnit.PAIR)
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the selling format, auction prices, and stock unit reach the body
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(FORMAT_JSON_PATH, equalTo(FORMAT_AUCTION)))
+                .withRequestBody(matchingJsonPath(STARTING_PRICE_JSON_PATH, equalTo(STARTING_AMOUNT)))
+                .withRequestBody(matchingJsonPath(MINIMAL_PRICE_JSON_PATH, equalTo(MINIMAL_AMOUNT)))
+                .withRequestBody(matchingJsonPath(STOCK_UNIT_JSON_PATH, equalTo(UNIT_PAIR))));
     }
 
     @Test

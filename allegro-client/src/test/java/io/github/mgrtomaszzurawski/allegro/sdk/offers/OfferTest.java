@@ -8,11 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
@@ -20,12 +23,16 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicat
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.WarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +46,9 @@ class OfferTest {
     private static final String HANDLING_TIME = "PT48H";
     private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
     private static final String RETURN_POLICY_ID = "22222222-2222-2222-2222-222222222222";
+    private static final String CURRENCY_PLN = "PLN";
+    private static final String STARTING_AMOUNT = "1.00";
+    private static final String MINIMAL_AMOUNT = "150.00";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -128,5 +138,41 @@ class OfferTest {
         assertEquals(IMPLIED_WARRANTY_ID, afterSales.impliedWarrantyId());
         assertEquals(RETURN_POLICY_ID, afterSales.returnPolicyId());
         assertNull(afterSales.warrantyId());
+    }
+
+    @Test
+    void from_whenAuctionSellingMode_mapsStartingMinimalPriceAndStockUnit() {
+        // given — an auction payload with a starting and minimal price and a PAIR unit
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name("Auction")
+                .sellingMode(new SellingModeRaw()
+                        .format(SellingModeFormatRaw.AUCTION)
+                        .startingPrice(new StartingPriceRaw().amount(STARTING_AMOUNT).currency(CURRENCY_PLN))
+                        .minimalPrice(new MinimalPriceRaw().amount(MINIMAL_AMOUNT).currency(CURRENCY_PLN)))
+                .stock(new StockRaw().available(3).unit(StockRaw.UnitEnum.PAIR));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — the auction prices and the stock unit are projected
+        assertEquals(OfferFormat.AUCTION, offer.format());
+        assertEquals(Money.of(STARTING_AMOUNT, CURRENCY_PLN), offer.startingPrice());
+        assertEquals(Money.of(MINIMAL_AMOUNT, CURRENCY_PLN), offer.minimalPrice());
+        assertNull(offer.buyNowPrice());
+        assertEquals(StockUnit.PAIR, offer.stockUnit());
+    }
+
+    @Test
+    void offerFormatToRaw_whenKnownValue_mapsToWireEnum() {
+        // then — the writable formats map to their wire enum
+        assertEquals(SellingModeFormatRaw.BUY_NOW, OfferFormat.BUY_NOW.toRaw());
+        assertEquals(SellingModeFormatRaw.AUCTION, OfferFormat.AUCTION.toRaw());
+        assertEquals(SellingModeFormatRaw.ADVERTISEMENT, OfferFormat.ADVERTISEMENT.toRaw());
+    }
+
+    @Test
+    void offerFormatToRaw_whenUnknown_throwsBecauseSentinelIsReadOnly() {
+        assertThrows(IllegalStateException.class, OfferFormat.UNKNOWN::toRaw);
     }
 }

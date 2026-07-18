@@ -141,6 +141,27 @@ CreateOfferRequest request = CreateOfferRequest.builder()
 Both blocks are optional, and both are read back on `client.offers().get(offerId)` as
 `offer.delivery()` and `offer.afterSalesServices()`.
 
+### Selling format, auction prices and stock unit
+
+The default is a Buy Now offer counted in single units. For an auction, set the format and the
+starting/minimal prices; set `stockUnit` for offers sold in pairs or sets:
+
+```java
+CreateOfferRequest auction = CreateOfferRequest.builder()
+        .name("Vintage lamp")
+        .categoryId("257")
+        .buyNowPrice(Money.of("300.00", "PLN"))   // optional Buy Now alongside the auction
+        .availableStock(1)
+        .sellingFormat(OfferFormat.AUCTION)
+        .startingPrice(Money.of("1.00", "PLN"))
+        .minimalPrice(Money.of("150.00", "PLN"))  // reserve price
+        .stockUnit(StockUnit.UNIT)
+        .build();
+```
+
+On the read side, `offer.startingPrice()`, `offer.minimalPrice()` and `offer.stockUnit()` are
+populated for auctions; `offer.buyNowPrice()` is `null` for a pure auction.
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its

@@ -7,6 +7,8 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -38,6 +40,10 @@ public final class CreateOfferRequest {
     private final Money buyNowPrice;
     private final int availableStock;
     private final List<String> imageUrls;
+    private final @Nullable OfferFormat sellingFormat;
+    private final @Nullable Money startingPrice;
+    private final @Nullable Money minimalPrice;
+    private final @Nullable StockUnit stockUnit;
     private final @Nullable OfferDelivery delivery;
     private final @Nullable AfterSalesServices afterSalesServices;
 
@@ -47,6 +53,10 @@ public final class CreateOfferRequest {
         this.buyNowPrice = builder.buyNowPrice;
         this.availableStock = builder.availableStock;
         this.imageUrls = List.copyOf(builder.imageUrls);
+        this.sellingFormat = builder.sellingFormat;
+        this.startingPrice = builder.startingPrice;
+        this.minimalPrice = builder.minimalPrice;
+        this.stockUnit = builder.stockUnit;
         this.delivery = builder.delivery;
         this.afterSalesServices = builder.afterSalesServices;
     }
@@ -76,6 +86,26 @@ public final class CreateOfferRequest {
         return imageUrls;
     }
 
+    /** The selling format, or {@code null} to default to {@code BUY_NOW}. */
+    public @Nullable OfferFormat sellingFormat() {
+        return sellingFormat;
+    }
+
+    /** The auction starting price, or {@code null} if not an auction. */
+    public @Nullable Money startingPrice() {
+        return startingPrice;
+    }
+
+    /** The auction minimal (reserve) price, or {@code null} if not set. */
+    public @Nullable Money minimalPrice() {
+        return minimalPrice;
+    }
+
+    /** The unit the stock is counted in, or {@code null} to default to {@code UNIT}. */
+    public @Nullable StockUnit stockUnit() {
+        return stockUnit;
+    }
+
     /** The offer's delivery terms, or {@code null} if not set. */
     public @Nullable OfferDelivery delivery() {
         return delivery;
@@ -99,6 +129,10 @@ public final class CreateOfferRequest {
         private @Nullable Money buyNowPrice;
         private @Nullable Integer availableStock;
         private List<String> imageUrls = List.of();
+        private @Nullable OfferFormat sellingFormat;
+        private @Nullable Money startingPrice;
+        private @Nullable Money minimalPrice;
+        private @Nullable StockUnit stockUnit;
         private @Nullable OfferDelivery delivery;
         private @Nullable AfterSalesServices afterSalesServices;
 
@@ -129,6 +163,30 @@ public final class CreateOfferRequest {
         /** Image URLs, in display order (optional). */
         public Builder imageUrls(List<String> imageUrls) {
             this.imageUrls = List.copyOf(imageUrls);
+            return this;
+        }
+
+        /** Set the selling format (optional; defaults to {@code BUY_NOW}). */
+        public Builder sellingFormat(@Nullable OfferFormat sellingFormat) {
+            this.sellingFormat = sellingFormat;
+            return this;
+        }
+
+        /** Set the auction starting price (optional). */
+        public Builder startingPrice(@Nullable Money startingPrice) {
+            this.startingPrice = startingPrice;
+            return this;
+        }
+
+        /** Set the auction minimal (reserve) price (optional). */
+        public Builder minimalPrice(@Nullable Money minimalPrice) {
+            this.minimalPrice = minimalPrice;
+            return this;
+        }
+
+        /** Set the unit the stock is counted in (optional; defaults to {@code UNIT}). */
+        public Builder stockUnit(@Nullable StockUnit stockUnit) {
+            this.stockUnit = stockUnit;
             return this;
         }
 

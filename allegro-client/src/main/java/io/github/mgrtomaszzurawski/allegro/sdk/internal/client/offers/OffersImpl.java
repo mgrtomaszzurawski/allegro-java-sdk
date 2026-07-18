@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
@@ -23,6 +24,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponse
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
@@ -123,6 +125,35 @@ public final class OffersImpl implements Offers {
         return new BuyNowPriceRaw().amount(money.amount()).currency(money.currency());
     }
 
+    /** The generated selling mode for a create request: format, Buy Now price, and any auction prices. */
+    private static SellingModeRaw sellingModeOf(CreateOfferRequest request) {
+        SellingModeFormatRaw format = request.sellingFormat() == null
+                ? SellingModeFormatRaw.BUY_NOW
+                : request.sellingFormat().toRaw();
+        SellingModeRaw sellingMode = new SellingModeRaw()
+                .format(format)
+                .price(priceOf(request.buyNowPrice()));
+        if (request.startingPrice() != null) {
+            sellingMode.startingPrice(new StartingPriceRaw()
+                    .amount(request.startingPrice().amount()).currency(request.startingPrice().currency()));
+        }
+        if (request.minimalPrice() != null) {
+            sellingMode.minimalPrice(new MinimalPriceRaw()
+                    .amount(request.minimalPrice().amount()).currency(request.minimalPrice().currency()));
+        }
+        return sellingMode;
+    }
+
+    /** The generated stock for a create request: available quantity and optional unit. */
+    private static SaleProductOffersRequestStockRaw stockOf(CreateOfferRequest request) {
+        SaleProductOffersRequestStockRaw stock =
+                new SaleProductOffersRequestStockRaw().available(request.availableStock());
+        if (request.stockUnit() != null) {
+            stock.unit(request.stockUnit().toRaw());
+        }
+        return stock;
+    }
+
     /** The generated delivery block for the SDK delivery terms (only set fields are written). */
     private static SaleProductOfferRequestV1AllOfDeliveryRaw deliveryRawOf(OfferDelivery delivery) {
         SaleProductOfferRequestV1AllOfDeliveryRaw raw = new SaleProductOfferRequestV1AllOfDeliveryRaw();
@@ -161,14 +192,11 @@ public final class OffersImpl implements Offers {
 
     @Override
     public Offer create(CreateOfferRequest request) {
-        SellingModeRaw sellingMode = new SellingModeRaw()
-                .format(SellingModeFormatRaw.BUY_NOW)
-                .price(priceOf(request.buyNowPrice()));
         SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
                 .name(request.name())
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
-                .sellingMode(sellingMode)
-                .stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
+                .sellingMode(sellingModeOf(request))
+                .stock(stockOf(request));
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
         }

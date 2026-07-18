@@ -139,9 +139,12 @@
          - id / url / uri / zip / key / xml / seq: established short names
            ('zip' covers both archives and postal codes)
          - i / j / k loop counters and e / ex catch parameters
-         The allowlist is the ONLY exemption mechanism — no structural
-         (ancestor::) carve-outs, so a stray 2-char lambda parameter is
-         flagged the same as anywhere else. -->
+         The allowlist is the ONLY exemption for variables/parameters — no
+         structural (ancestor::) carve-outs there, so a stray 2-char lambda
+         parameter is flagged the same as anywhere else. The one structural
+         carve-out is ENUM CONSTANTS: they are API/spec identifiers, not
+         variables (Allegro spec enum values such as `SET` stay as-is), so
+         the stock PMD ShortVariable rule exempts them and so do we. -->
     <rule name="ShortVariableWithDomainExceptions"
           language="java"
           message="Avoid variables with short names like {0}"
@@ -155,6 +158,7 @@
 <![CDATA[
 //VariableId[
     string-length(@Name) < 4
+    and not(parent::EnumConstant)
     and not(@Name = ('raw','ean','sku','vat','id','url','uri','zip',
                      'key','xml','seq','i','j','k','e','ex'))
 ]

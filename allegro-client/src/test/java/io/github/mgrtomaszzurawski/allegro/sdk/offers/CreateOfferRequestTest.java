@@ -13,6 +13,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -80,6 +82,39 @@ class CreateOfferRequestTest {
         // then — optional fulfilment blocks default to null (omitted from the wire)
         assertNull(request.delivery());
         assertNull(request.afterSalesServices());
+    }
+
+    @Test
+    void build_whenSellingTermsSet_exposesFormatPricesAndUnit() {
+        // given — an auction with starting and minimal prices, counted in pairs
+        Money starting = Money.of("1.00", "PLN");
+        Money minimal = Money.of("150.00", "PLN");
+
+        // when
+        CreateOfferRequest request = validBuilder()
+                .sellingFormat(OfferFormat.AUCTION)
+                .startingPrice(starting)
+                .minimalPrice(minimal)
+                .stockUnit(StockUnit.PAIR)
+                .build();
+
+        // then
+        assertEquals(OfferFormat.AUCTION, request.sellingFormat());
+        assertEquals(starting, request.startingPrice());
+        assertEquals(minimal, request.minimalPrice());
+        assertEquals(StockUnit.PAIR, request.stockUnit());
+    }
+
+    @Test
+    void build_whenSellingTermsNotSet_leavesThemNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then — format/unit default at the mapper (BUY_NOW/UNIT), so the builder keeps null
+        assertNull(request.sellingFormat());
+        assertNull(request.startingPrice());
+        assertNull(request.minimalPrice());
+        assertNull(request.stockUnit());
     }
 
     @Test

@@ -137,6 +137,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   return-policy, warranty ids) value types — each an immutable record with a fluent builder,
   usable both to configure an offer and to read one back. First step of the bucket-A coverage
   debt: the request builder grows toward every field of `SaleProductOfferRequestV1`.
+- Coverage (selling terms): `CreateOfferRequest` gains `sellingFormat` (`OfferFormat` —
+  `BUY_NOW`/`AUCTION`/`ADVERTISEMENT`), `startingPrice` and `minimalPrice` (auction), and
+  `stockUnit` (new `StockUnit` enum: `UNIT`/`PAIR`/`SET`, forward-compat `UNKNOWN`); the `Offer`
+  read maps them back. `OfferFormat.toRaw()` added for the write path (throws on the read-only
+  `UNKNOWN` sentinel, like `StockUnit.toRaw()`).
 
 ### B — orders-payments
 

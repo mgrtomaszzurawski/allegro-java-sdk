@@ -5,10 +5,13 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import org.jspecify.annotations.Nullable;
 
@@ -30,7 +33,10 @@ import org.jspecify.annotations.Nullable;
  * @param format         how the offer is sold
  * @param status         publication status
  * @param buyNowPrice    fixed Buy Now price, or {@code null} for an auction
+ * @param startingPrice  auction starting price, or {@code null} when not an auction
+ * @param minimalPrice   auction minimal (reserve) price, or {@code null}
  * @param availableStock available quantity, or {@code null} when not tracked
+ * @param stockUnit      the unit the stock is counted in, or {@code null} when not tracked
  * @param delivery       delivery terms (shipping-rate table, handling time), or
  *                       {@code null} if the payload omits them
  * @param afterSalesServices after-sales conditions (implied warranty, return
@@ -44,7 +50,10 @@ public record Offer(
         OfferFormat format,
         OfferStatus status,
         @Nullable Money buyNowPrice,
+        @Nullable Money startingPrice,
+        @Nullable Money minimalPrice,
         @Nullable Integer availableStock,
+        @Nullable StockUnit stockUnit,
         @Nullable OfferDelivery delivery,
         @Nullable AfterSalesServices afterSalesServices) {
 
@@ -60,7 +69,10 @@ public record Offer(
                 OfferFormat.from(sellingMode == null ? null : sellingMode.getFormat()),
                 OfferStatus.from(publication == null ? null : publication.getStatus()),
                 buyNowPriceOf(sellingMode),
+                startingPriceOf(sellingMode),
+                minimalPriceOf(sellingMode),
                 availableStockOf(raw),
+                stockUnitOf(raw),
                 OfferDelivery.from(raw.getDelivery()),
                 AfterSalesServices.from(raw.getAfterSalesServices()));
     }
@@ -73,7 +85,28 @@ public record Offer(
         return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
     }
 
+    private static @Nullable Money startingPriceOf(@Nullable SellingModeRaw sellingMode) {
+        if (sellingMode == null) {
+            return null;
+        }
+        StartingPriceRaw price = sellingMode.getStartingPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money minimalPriceOf(@Nullable SellingModeRaw sellingMode) {
+        if (sellingMode == null) {
+            return null;
+        }
+        MinimalPriceRaw price = sellingMode.getMinimalPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
     private static @Nullable Integer availableStockOf(SaleProductOfferResponseV1Raw raw) {
         return raw.getStock() == null ? null : raw.getStock().getAvailable();
+    }
+
+    private static @Nullable StockUnit stockUnitOf(SaleProductOfferResponseV1Raw raw) {
+        StockRaw stock = raw.getStock();
+        return stock == null || stock.getUnit() == null ? null : StockUnit.from(stock.getUnit());
     }
 }
