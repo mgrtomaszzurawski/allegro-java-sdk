@@ -153,6 +153,25 @@ device-consent, and the web-only buyer actions). Implications, baked into the co
   samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
   discipline (`TESTING.md` §3).
 
+## Fulfillment (bucket I)
+
+### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)
+
+One Fulfillment by Allegro is an invitation-only logistics contract. The shared sandbox seller
+account (`TestBoxSDK`, id `111332841`) is **not enrolled**, so every `/fulfillment/*` call
+returns **HTTP 403**. Verified live through the SDK (`-Pdemo.scenario=fulfillment
+-Pdemo.account=seller`): `fulfillment().removalPreference()` — the first call the probe makes —
+threw a typed `AllegroException` with `statusCode() == 403`, which the demo caught and reported
+("not enrolled ... verified the typed-exception path"). Consequences for bucket I:
+
+- The happy-path write→read DoD is **not live-runnable** on this sandbox; the SDK contract is
+  proven by the WireMock suite instead, and the live layer verifies the **negative path** (the
+  403 typed-exception surfaces correctly).
+- Response fixtures for the fulfillment reports / ASN lifecycle stay marked
+  `// spec-derived: not yet wire-verified` — they cannot be reconciled against real 1F data
+  until an enrolled sandbox account exists. If Allegro enrols the sandbox seller later, re-run
+  the demo and drop the `spec-derived` marks.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
