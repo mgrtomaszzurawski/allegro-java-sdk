@@ -182,6 +182,20 @@ download the same id as a health check; download an attachment you obtained from
 message. The SDK surfaces the 404 correctly; the `messaging` demo verifies declare+upload
 seller-side and treats the immediate download 404 as expected.
 
+## Offers extras (bucket F)
+
+### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
+serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
+Jackson's default `ALWAYS` inclusion. So a title-only update sends
+`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
+whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
+translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
+latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
+handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
+`update` is safe for offers whose description/safety translations are not manually set.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
