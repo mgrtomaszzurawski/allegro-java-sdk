@@ -172,6 +172,11 @@ class ClassifiedsClientTest {
             {"eventStatsTotal":[],
              "eventsPerDay":[{"date":"not-a-date","eventStats":[]}]}
             """;
+    // spec-derived: date is optional; an absent day must not leak a raw NPE.
+    private static final String NULL_DATE_STATS_RESPONSE = """
+            {"eventStatsTotal":[],
+             "eventsPerDay":[{"date":null,"eventStats":[]}]}
+            """;
     // The spec marks offer and eventType optional: an entry without an offer, and
     // a count without an event type, must be skipped rather than NPE.
     private static final String PARTIAL_OFFER_STATS_RESPONSE = """
@@ -671,6 +676,23 @@ class ClassifiedsClientTest {
             var classifieds = allegro.classifieds();
 
             // then — a raw DateTimeParseException never escapes the SDK surface
+            assertThrows(AllegroServerException.class,
+                    () -> classifieds.sellerStats(ClassifiedStatsFilter.all()));
+        }
+    }
+
+    @Test
+    void sellerStats_whenDailyDateNull_throwsServerException(WireMockRuntimeInfo wmInfo) {
+        // given — a daily bucket with an absent (null) date, which the spec allows
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SELLER_STATS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(NULL_DATE_STATS_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — a raw NullPointerException never escapes the SDK surface
             assertThrows(AllegroServerException.class,
                     () -> classifieds.sellerStats(ClassifiedStatsFilter.all()));
         }

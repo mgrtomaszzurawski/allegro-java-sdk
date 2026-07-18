@@ -47,7 +47,8 @@ public record OfferClassifiedStats(
         return raw.getOfferStats() == null
                 ? List.of()
                 : raw.getOfferStats().stream()
-                        .filter(offerStat -> offerStat.getOffer() != null)
+                        .filter(offerStat -> offerStat.getOffer() != null
+                                && offerStat.getOffer().getId() != null)
                         .map(OfferClassifiedStats::from)
                         .toList();
     }
