@@ -7,7 +7,21 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AlleDiscount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AllegroPrices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Badges;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.AllegroPricesOfferQuery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeApplicationFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.EligibleOffersFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountCampaign;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountEligibleOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesOfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesParticipation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.Badge;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.BadgeApplication;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.BadgeCampaign;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.MarketplaceParticipation;
 import java.io.IOException;
 import java.util.List;
 
@@ -26,6 +40,8 @@ final class CampaignsDemo {
     private static final String NO_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String STALE_TOKEN = "(stored token expired - rerun auth-bootstrap)";
+    private static final String MARKETPLACE_PL = "allegro-pl";
+    private static final long READ_SHAPE_SAMPLE = 5L;
 
     private CampaignsDemo() {
     }
@@ -52,6 +68,84 @@ final class CampaignsDemo {
                 System.out.println("  - " + campaign.id() + " [" + campaign.type() + "] eligible="
                         + campaign.eligible());
             }
+            readShapeApplicationsAndBadges(client.campaigns().badges());
+            readShapeAllegroPrices(client.campaigns().allegroPrices());
+            readShapeAlleDiscount(client.campaigns().alleDiscount());
+        }
+    }
+
+    /**
+     * Read-shape check of AlleDiscount through the SDK — the campaign list and, for
+     * the first campaign, a sample of its eligible offers.
+     */
+    private static void readShapeAlleDiscount(AlleDiscount alleDiscount) {
+        List<AlleDiscountCampaign> campaigns = alleDiscount.campaigns();
+        System.out.println("alleDiscount().campaigns(): " + campaigns.size() + " campaign(s)");
+        for (AlleDiscountCampaign campaign : campaigns) {
+            System.out.println("  - " + campaign.id() + " [" + campaign.type() + "] " + campaign.name());
+        }
+        if (!campaigns.isEmpty()) {
+            String campaignId = campaigns.get(0).id();
+            List<AlleDiscountEligibleOffer> eligible = alleDiscount
+                    .streamEligibleOffers(EligibleOffersFilter.builder(campaignId).build())
+                    .limit(READ_SHAPE_SAMPLE)
+                    .toList();
+            System.out.println("alleDiscount().streamEligibleOffers(" + campaignId + "): "
+                    + eligible.size() + " sampled");
+            for (AlleDiscountEligibleOffer offer : eligible) {
+                System.out.println("  - " + offer.offerId() + " requiredMerchantPrice="
+                        + offer.requiredMerchantPrice() + " meetsConditions=" + offer.meetsConditions());
+            }
+        }
+    }
+
+    /**
+     * Read-shape check of Allegro Prices through the SDK — participation across
+     * marketplaces and a sample of per-offer status (which exercises the raw-JSON
+     * {@code oneOf} price-reduction mapping on a live response).
+     */
+    private static void readShapeAllegroPrices(AllegroPrices allegroPrices) {
+        AllegroPricesParticipation participation = allegroPrices.participation();
+        System.out.println("allegroPrices().participation(): "
+                + participation.marketplaces().size() + " marketplace(s)");
+        for (MarketplaceParticipation marketplace : participation.marketplaces()) {
+            System.out.println("  - " + marketplace.marketplaceId() + " → " + marketplace.status());
+        }
+        List<AllegroPricesOfferStatus> statuses = allegroPrices
+                .streamOffersStatus(AllegroPricesOfferQuery.builder(MARKETPLACE_PL).build())
+                .limit(READ_SHAPE_SAMPLE)
+                .toList();
+        System.out.println("allegroPrices().streamOffersStatus(" + MARKETPLACE_PL + "): "
+                + statuses.size() + " sampled");
+        for (AllegroPricesOfferStatus status : statuses) {
+            System.out.println("  - " + status.offerId() + " base=" + status.basePrice()
+                    + " opportunity=" + status.discountOpportunity());
+        }
+    }
+
+    /**
+     * Read-shape check of the seller's badge applications and active badges through
+     * the SDK — a sample is streamed so every mapped field is proven to arrive
+     * parseable on a live response (TESTING.md §2). Bounded to a handful of items.
+     */
+    private static void readShapeApplicationsAndBadges(Badges badges) {
+        List<BadgeApplication> applications = badges.streamApplications(BadgeApplicationFilter.all())
+                .limit(READ_SHAPE_SAMPLE)
+                .toList();
+        System.out.println("badges().streamApplications(): " + applications.size() + " sampled");
+        for (BadgeApplication application : applications) {
+            System.out.println("  - " + application.id() + " " + application.campaignId() + " → "
+                    + application.status());
+        }
+        List<Badge> activeBadges = badges.streamBadges(BadgeFilter.builder()
+                        .marketplaceId(MARKETPLACE_PL).build())
+                .limit(READ_SHAPE_SAMPLE)
+                .toList();
+        System.out.println("badges().streamBadges(" + MARKETPLACE_PL + "): "
+                + activeBadges.size() + " sampled");
+        for (Badge badge : activeBadges) {
+            System.out.println("  - " + badge.offerId() + " " + badge.campaignId() + " → "
+                    + badge.status());
         }
     }
 }

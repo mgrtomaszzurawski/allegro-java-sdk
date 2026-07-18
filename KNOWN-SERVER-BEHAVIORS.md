@@ -43,6 +43,26 @@ The spec declares no `required` fields on `CategoryDto`, but on the wire `id`, `
 is present on children / absent on roots. The SDK's `Category` record therefore treats
 `id`/`name`/`leaf` as always-present and `parentId`/`options` as nullable.
 
+### Category parameters are polymorphic by `type`; suggestions nest parents (verified 2026-07-18, sandbox)
+
+`GET /sale/categories/{id}/parameters` returns `parameters[]` whose element shape depends on
+`type` (`dictionary`/`float`/`integer`/`string`): dictionary parameters carry a `dictionary[]` of
+`{id,value,dependsOnValueIds}` plus `restrictions.multipleChoices`; numeric parameters carry
+`restrictions.{min,max,range[,precision]}`; string parameters carry
+`restrictions.{minLength,maxLength,allowedNumberOfValues}`. Live probe: category `1520`
+("Budownictwo i Akcesoria") returned 7 parameters, the first ("Stan") a required dictionary with
+5 values. The SDK flattens all four onto one `CategoryParameter` record (`CategoryParameterType`
++ nullable `ParameterRestrictions` + a `DictionaryValue` list). NOTE: the Layer-1 parameter DTO
+declares no Jackson `defaultImpl`, so an unrecognised future `type` currently fails
+deserialization (surfaced as `AllegroServerException`) rather than degrading to
+`CategoryParameterType.OTHER`; delivering that degradation is a core follow-up (generator
+`defaultImpl` / mapper `FAIL_ON_INVALID_SUBTYPE`).
+
+`GET /sale/matching-categories?name=` returns `matchingCategories[]`, each a category node whose
+`parent` nests recursively up to the root (`parent` absent on a root match). Live probe:
+`name=iphone` returned 10 matches, the top being `353` "Etui i pokrowce" with a parent chain.
+Both endpoints succeed with an app-only client-credentials token (no user context, no scope).
+
 ## Shipping & delivery (bucket C)
 
 ### `GET /sale/delivery-methods` works with an app-only token (verified 2026-07-18, sandbox)
@@ -107,6 +127,27 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+### `bidding().myBid(offerId)` returns 404 for both "no auction" and "no bid" (verified 2026-07-18, sandbox)
+
+`GET /bidding/offers/{offerId}/bid` answers 404 whether the offer is not an auction (or does
+not exist) or the auction exists but the user has placed no bid — the two cases are not
+distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. Confirmed live
+with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
+the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
+
+## Sale settings (bucket K)
+
+### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/warranties` and `PUT …/warranties/{id}` reject a request
+that omits either buyer-class period with `HTTP 422 UNPROCESSABLE_ENTITY` and a single field
+error whose `path` names the missing one — `path=corporate` when only `individual` is set,
+`path=individual` when only `corporate` is set (both directions verified live on the seller
+sandbox account TestBoxSDK, id 111332841). The spec marks **neither** `required`. A request
+that carries both periods succeeds and reads back cleanly (create→get round-trip green). The
+SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
+a client-side `IllegalStateException` naming the field — no wasted round-trip.
+
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
 ### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
@@ -138,6 +179,107 @@ device-consent, and the web-only buyer actions). Implications, baked into the co
 - DataDome hard-blocks the IP after a burst of rapid logins ("Zostałeś zablokowany… w tej
   samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
   discipline (`TESTING.md` §3).
+
+## Orders (bucket B)
+
+### `/order/events` pages by an exclusive `from` cursor, not offset/limit (spec-derived, pending live verification)
+
+The order event log (`GET /order/events`) is paginated by a **cursor**, not offset/limit: the
+`from` query parameter takes the last event id seen and the response returns the events *after*
+it (exclusive), newest walk terminating on an empty page. The SDK's `streamEvents(...)` therefore
+uses `PagedSpliterator.cursorStream`, advancing `from` to the last event id of each page and
+stopping on the first empty page. Correct termination **depends on `from` being exclusive** — if
+the server were inclusive, a non-empty page repeating the last event would not terminate (the
+empty-page guard does not catch this). The `from`/`type`/`limit` params are confirmed against the
+spec; the exclusivity and the terminal empty-page behaviour are **to be confirmed on the sandbox**
+once a seeded order produces events (the RAG digest generically labels this endpoint
+"offset/limit", which is inaccurate for `/order/events`).
+
+### Customer-returns are BETA; the reject-refund POST needs a beta request Content-Type (core follow-up)
+
+The customer-returns endpoints (`GET /order/customer-returns`, `GET …/{id}`,
+`POST …/{id}/rejection`) speak the **beta** vendor media type. The SDK sends
+`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` — correct for the two
+GETs. But `POST …/rejection` declares its **request body** only as the beta media type, while
+`HttpCall.jsonBody(...)` hard-pins `Content-Type: application/vnd.allegro.public.v1+json` (frozen
+runtime), so `returns().rejectRefund(...)` currently sends a mismatched Content-Type that the beta
+endpoint may reject (415/406). **Core follow-up (agent-1):** add a media-type overload to the JSON
+body helper (e.g. `jsonBody(body, mediaType)`) so beta writes can set the beta Content-Type; it is
+the first beta POST-with-body in the SDK. `rejectRefund` ships wired but must not be relied on live
+until that lands (WireMock covers the request body shape; the mismatch is header-only).
+
+## Payments & billing (bucket B)
+
+### `GET /billing/billing-types` works with an app-only token and returns a bare array (verified 2026-07-18, sandbox)
+
+`billing().types()` succeeds with a client-credentials (application) token — the endpoint
+declares no OAuth scope. The live sandbox returned **234** billing types as a top-level JSON
+array (no wrapper object), each `{id, description}`; the SDK deserializes to `BillingType[]` and
+maps cleanly. Confirmed via the `billing-types` demo.
+
+### Billing-entries, payment-operations and refunds shapes are spec-derived (pending live verification)
+
+`GET /billing/billing-entries`, `GET /payments/payment-operations`, `GET /payments/refunds` and
+`POST /payments/refunds` are wrapped from the spec; their fixtures are `spec-derived` pending the
+§2 sandbox pass (blocked on the shared seller token). Notes for that pass: `BillingEntriesRaw`
+carries **no** `count`/`totalCount` (the SDK paginates by short-page termination); a billing
+entry's `value`/`balance` may be partially populated, so the SDK maps an absent amount/currency
+to a `null` `Money` rather than throwing. `POST /payments/refunds` is a **destructive money
+movement** — verify it only against a disposable sandbox payment, and reuse the idempotency
+`commandId` on any retry.
+
+## Post-sale comms (bucket J)
+
+### Message attachments are not downloadable straight after upload (verified 2026-07-18, sandbox)
+
+The message-attachment flow is `declareAttachment` (POST) → `uploadAttachment` (PUT bytes) →
+reference the id in a message. Both the declare and the upload succeed and return the attachment
+id, but `GET /messaging/message-attachments/{id}` on that just-uploaded id returns
+**`404 NOT_FOUND`** (surfaced as `AllegroNotFoundException`) — the attachment only becomes
+retrievable once it has been referenced in a **delivered** message and scanned (its
+`MessageAttachment.status()` reaches `SAFE`). Consequence for consumers: do not upload-then-
+download the same id as a health check; download an attachment you obtained from a received
+message. The SDK surfaces the 404 correctly; the `messaging` demo verifies declare+upload
+seller-side and treats the immediate download 404 as expected.
+
+## Offers extras (bucket F)
+
+### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
+serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
+Jackson's default `ALWAYS` inclusion. So a title-only update sends
+`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
+whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
+translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
+latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
+handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
+`update` is safe for offers whose description/safety translations are not manually set.
+
+## Offers — create (bucket A)
+
+### `POST /sale/product-offers` rejects `language: null` — send only set fields (verified 2026-07-18, sandbox)
+
+The generated `SaleProductOfferRequestV1` pre-initializes collection fields to empty and leaves
+nullable scalars (notably `language`) null. Serialized with the default mapper, the create body
+carries `"language": null`, which the server rejects with a 400
+`{path: "language", code: "JsonMappingException", userMessage: "Request contains invalid data"}`.
+The SDK therefore serializes create/edit bodies with `HttpCall.jsonBodyPartial` (NON_EMPTY —
+omits nulls and empties), so only the fields actually set reach the wire.
+
+### A sellable offer requires seller-account terms + a default shipping list (verified 2026-07-18, sandbox)
+
+With a valid leaf category and a well-formed request, `create` still 400s on a fresh seller
+account with three account-configuration errors (not SDK/request faults):
+- `afterSalesServices.impliedWarranty` → `ImpliedWarrantyNotDefinedException` ("no Complaints Terms")
+- `afterSalesServices.returnPolicy` → `ReturnPolicyNotDefinedException` ("no Returns Terms")
+- `delivery.shippingRates` → `DefaultShippingRatesNotFoundException` ("no default shipping price list")
+
+So seeding a live offer needs the seller account to first have warranty terms, return terms and a
+default shipping rate list — configured in the sandbox UI, or referenced by id in the create
+request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delivery` refs — future
+work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
+returns `CATEGORY_NOT_EXISTS`.
 
 ## From external sources (to verify on first contact)
 

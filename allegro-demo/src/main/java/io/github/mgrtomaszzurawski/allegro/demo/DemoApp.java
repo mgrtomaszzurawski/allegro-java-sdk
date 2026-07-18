@@ -32,6 +32,7 @@ public final class DemoApp {
     private static final String SCENARIO_ME = "me";
     private static final String SCENARIO_OFFER = "offer";
     private static final String SCENARIO_ORDERS_GET = "orders-get";
+    private static final String SCENARIO_ORDERS_LIST = "orders-list";
     private static final String SCENARIO_MARKETPLACES = "marketplaces";
     private static final String SCENARIO_ACCOUNT = "account";
     private static final String SCENARIO_CLASSIFIEDS = "classifieds";
@@ -39,6 +40,7 @@ public final class DemoApp {
     private static final String SCENARIO_CAMPAIGNS = "campaigns";
     private static final String SCENARIO_POS_ROUNDTRIP = "pos-roundtrip";
     private static final String SCENARIO_CONTACTS = "contacts";
+    private static final String SCENARIO_SETTINGS_WARRANTY = "settings-warranty";
     private static final String CLIENT_ID_ENV = "ALLEGRO_SANDBOX_CLIENT_ID";
     private static final String CLIENT_SECRET_ENV = "ALLEGRO_SANDBOX_CLIENT_SECRET";
     private static final String ACCOUNT_PROPERTY = "demo.account";
@@ -68,15 +70,24 @@ public final class DemoApp {
         // [append point: demo scenarios] One line per bucket, append-only:
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
         SCENARIOS.put(SCENARIO_ORDERS_GET, OrdersDemo::run);
+        SCENARIOS.put(SCENARIO_ORDERS_LIST, OrdersDemo::runList);
+        SCENARIOS.put(BillingDemo.SCENARIO, BillingDemo::run);
         SCENARIOS.put(SCENARIO_MARKETPLACES, MarketplacesDemo::run);
         SCENARIOS.put(SCENARIO_ACCOUNT, AccountDemo::run);
         SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
+        SCENARIOS.put(CatalogProductsDemo.SCENARIO, CatalogProductsDemo::run);
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
+        SCENARIOS.put(OfferTagsDemo.SCENARIO, OfferTagsDemo::run);
+        SCENARIOS.put(OfferExtrasDemo.SCENARIO, OfferExtrasDemo::run);
         SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);
         SCENARIOS.put(SCENARIO_POS_ROUNDTRIP, PointsOfServiceDemo::run);
         SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);
         SCENARIOS.put(SCENARIO_CONTACTS, ContactsDemo::run);
         SCENARIOS.put(DeliveryMethodsDemo.SCENARIO, DeliveryMethodsDemo::run);
+        SCENARIOS.put(MessagingDemo.SCENARIO, MessagingDemo::run);
+        SCENARIOS.put(DisputesDemo.SCENARIO, DisputesDemo::run);
+        SCENARIOS.put(SCENARIO_SETTINGS_WARRANTY, SettingsWarrantyDemo::run);
+        SCENARIOS.put(BiddingDemo.SCENARIO, BiddingDemo::run);
     }
 
     private DemoApp() {
