@@ -29,20 +29,25 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameterType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
  * WireMock contract for the {@code catalog().products()} facade: vendor headers,
  * search query wiring, Raw → {@link ProductSummary} mapping, cursor-pagination
- * laziness ({@code page.id}), and the mandatory error-path table.
+ * laziness ({@code page.id}), the polymorphic {@link ProductParameter} mapping
+ * behind {@code parametersIn} (including the C4 unknown-type degrade), and the
+ * mandatory error-path table.
  */
 @WireMockTest
 class CatalogProductsClientTest {
@@ -112,6 +117,33 @@ class CatalogProductsClientTest {
             {"errors":[{"code":"ProductNotFoundException","message":"Product not found",
               "userMessage":"Nie znaleziono produktu","path":null}]}
             """;
+
+    private static final String PRODUCT_PARAMETERS_PATH =
+            "/sale/categories/" + CATEGORY_ID + "/product-parameters";
+    // One parameter of each modelled wire type, so the polymorphic mapping and the
+    // by-type restriction/dictionary flattening are all exercised. Shapes spec-derived;
+    // wire-verified via the catalog-products demo (see KNOWN-SERVER-BEHAVIORS.md).
+    private static final String PRODUCT_PARAMETERS = """
+            {"parameters":[
+              {"id":"1","name":"Marka","type":"dictionary","required":true,
+               "restrictions":{"multipleChoices":false},
+               "dictionary":[{"id":"1_1","value":"Apple"},{"id":"1_2","value":"Samsung"}]},
+              {"id":"2","name":"Przekatna ekranu","type":"float","required":false,"unit":"cal",
+               "restrictions":{"min":1.0,"max":100.0,"range":false,"precision":2}},
+              {"id":"3","name":"Liczba rdzeni","type":"integer","required":false,
+               "restrictions":{"min":1,"max":64,"range":false}},
+              {"id":"4","name":"Model","type":"string","required":true,
+               "restrictions":{"minLength":1,"maxLength":50,"allowedNumberOfValues":1}}]}
+            """;
+    // A product parameter whose discriminator is outside the four modelled types.
+    private static final String PRODUCT_PARAMETERS_UNKNOWN_TYPE = """
+            {"parameters":[{"id":"9","name":"New kind","type":"quantum","required":false}]}
+            """;
+    private static final String CATEGORY_NOT_FOUND = """
+            {"errors":[{"code":"NotFound","message":"Category not found",
+              "userMessage":"Nie znaleziono kategorii","path":null}]}
+            """;
+    private static final String EMPTY_JSON_OBJECT = "{}";
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -449,6 +481,131 @@ class CatalogProductsClientTest {
             assertFalse(product.hasProtectedBrand());
             assertTrue(product.imageUrls().isEmpty());
             assertTrue(product.parameters().isEmpty());
+        }
+    }
+
+    // ---- parametersIn(categoryId) ----
+
+    @Test
+    void parametersIn_whenCategoryHasParameters_mapsEachPolymorphicType(WireMockRuntimeInfo wmInfo) {
+        // given — one parameter of each modelled wire type
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_PARAMETERS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(PRODUCT_PARAMETERS)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<ProductParameter> parameters =
+                    allegro.catalog().products().parametersIn(CATEGORY_ID);
+
+            // then — one record per wire type, restrictions/dictionary flattened by type
+            assertEquals(4, parameters.size());
+
+            ProductParameter dictionary = parameters.get(0);
+            assertEquals(CategoryParameterType.DICTIONARY, dictionary.type());
+            assertTrue(dictionary.required());
+            assertNull(dictionary.unit());
+            assertFalse(dictionary.restrictions().multipleChoices());
+            assertEquals(2, dictionary.dictionary().size());
+            assertEquals("Apple", dictionary.dictionary().get(0).value());
+            // product-side dictionary values carry no combination dependencies
+            assertTrue(dictionary.dictionary().get(0).dependsOnValueIds().isEmpty());
+
+            ProductParameter floatParam = parameters.get(1);
+            assertEquals(CategoryParameterType.FLOAT, floatParam.type());
+            assertFalse(floatParam.required());
+            assertEquals("cal", floatParam.unit());
+            assertEquals(0, new BigDecimal("1.0").compareTo(floatParam.restrictions().minValue()));
+            assertEquals(0, new BigDecimal("100.0").compareTo(floatParam.restrictions().maxValue()));
+            assertEquals(Integer.valueOf(2), floatParam.restrictions().precision());
+            assertTrue(floatParam.dictionary().isEmpty());
+
+            ProductParameter integerParam = parameters.get(2);
+            assertEquals(CategoryParameterType.INTEGER, integerParam.type());
+            assertEquals(0, new BigDecimal("64").compareTo(integerParam.restrictions().maxValue()));
+            // integers carry no decimal precision
+            assertNull(integerParam.restrictions().precision());
+
+            ProductParameter stringParam = parameters.get(3);
+            assertEquals(CategoryParameterType.STRING, stringParam.type());
+            assertEquals(Integer.valueOf(50), stringParam.restrictions().maxLength());
+            assertEquals(Integer.valueOf(1), stringParam.restrictions().allowedNumberOfValues());
+            verify(1, getRequestedFor(urlEqualTo(PRODUCT_PARAMETERS_PATH)));
+        }
+    }
+
+    @Test
+    void parametersIn_whenTypeUnknown_degradesToOtherRatherThanFailing(WireMockRuntimeInfo wmInfo) {
+        // given — a discriminator outside the four modelled types. The core
+        // UnknownSubtypeToBaseHandler resolves it to the polymorphic base (the Raw
+        // declares no defaultImpl), so the mapper lands it on OTHER instead of failing
+        // the whole response (BACKLOG C4 — forward-compat for discriminated subtypes).
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_PARAMETERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(PRODUCT_PARAMETERS_UNKNOWN_TYPE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<ProductParameter> parameters =
+                    allegro.catalog().products().parametersIn(CATEGORY_ID);
+
+            // then — the unmodelled parameter survives, mapped to OTHER, not thrown
+            assertEquals(1, parameters.size());
+            assertEquals(CategoryParameterType.OTHER, parameters.get(0).type());
+            assertNull(parameters.get(0).restrictions());
+            assertTrue(parameters.get(0).dictionary().isEmpty());
+        }
+    }
+
+    @Test
+    void parametersIn_whenNoParameters_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given — a category that defines no product parameters (absent array)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_PARAMETERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(EMPTY_JSON_OBJECT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // then — an absent array maps to an empty list, never null
+            assertTrue(allegro.catalog().products().parametersIn(CATEGORY_ID).isEmpty());
+        }
+    }
+
+    @Test
+    void parametersIn_when404_throwsNotFoundWithTraceId(WireMockRuntimeInfo wmInfo) {
+        // given — this method addresses a distinct path (a category), so it has its own 404
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_PARAMETERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(CATEGORY_NOT_FOUND)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var products = allegro.catalog().products();
+
+            // then
+            AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
+                    () -> products.parametersIn(CATEGORY_ID));
+            assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
+            assertEquals(TEST_TRACE_ID, failure.traceId());
+            verify(1, getRequestedFor(urlEqualTo(PRODUCT_PARAMETERS_PATH)));
+        }
+    }
+
+    @Test
+    void parametersIn_whenCategoryIdNull_throwsNullPointerExceptionFromTheGuard(
+            WireMockRuntimeInfo wmInfo) {
+        // then — the fail-fast guard (not an incidental deref) rejects a null id
+        try (AllegroClient allegro = client(wmInfo)) {
+            var products = allegro.catalog().products();
+            NullPointerException failure =
+                    assertThrows(NullPointerException.class, () -> products.parametersIn(null));
+            assertTrue(failure.getMessage().contains("categoryId"));
         }
     }
 }
