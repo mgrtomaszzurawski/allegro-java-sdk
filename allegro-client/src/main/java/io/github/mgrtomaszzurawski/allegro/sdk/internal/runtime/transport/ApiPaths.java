@@ -215,6 +215,12 @@ public final class ApiPaths {
     /** Sub-resource: the read-flag toggle of a thread. */
     public static final String READ_SEGMENT = "read";
 
+    // ---- disputes / post-purchase issues (bucket J) ----
+    /** Post-purchase issues ({@code /sale/issues}); append {@code /{issueId}} via subPath. */
+    public static final String ISSUES = "/sale/issues";
+    /** Sub-resource: the chat within an issue. */
+    public static final String CHAT_SEGMENT = "chat";
+
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */
     public static final String AFTER_SALES_WARRANTIES =
