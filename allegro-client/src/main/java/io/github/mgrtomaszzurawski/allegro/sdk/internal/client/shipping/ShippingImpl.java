@@ -4,27 +4,52 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.PointsOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
- * Entry point behind the {@link Shipping} facade. The sub-facades are stateless
- * views over the shared runtime, so each accessor returns a fresh instance
- * rather than caching (and exposing) a mutable field.
+ * Entry point behind the {@link Shipping} facade. Root-level reads (delivery
+ * methods) run through the shared {@link HttpSupport}; the sub-facades are
+ * stateless views over the shared runtime, so each accessor returns a fresh
+ * instance rather than caching (and exposing) a mutable field.
  *
  * @since 0.2.0
  */
 public final class ShippingImpl implements Shipping {
 
+    private static final String OP_DELIVERY_METHODS = "list delivery methods";
+
     private final HttpRuntime runtime;
+    private final HttpSupport http;
 
     public ShippingImpl(HttpRuntime runtime) {
         this.runtime = runtime;
+        this.http = new HttpSupport(runtime);
+    }
+
+    @Override
+    public List<DeliveryMethod> deliveryMethods() {
+        GetListOfDeliveryMethodsUsingGET200ResponseRaw response = http.getAuthenticated(
+                ApiPaths.DELIVERY_METHODS, GetListOfDeliveryMethodsUsingGET200ResponseRaw.class,
+                OP_DELIVERY_METHODS);
+        return mapMethods(response.getDeliveryMethods());
     }
 
     @Override
     public PointsOfService points() {
         return new PointsOfServiceImpl(runtime);
+    }
+
+    private static List<DeliveryMethod> mapMethods(
+            @Nullable List<GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw> raw) {
+        return raw == null ? List.of() : raw.stream().map(DeliveryMethod::from).toList();
     }
 }

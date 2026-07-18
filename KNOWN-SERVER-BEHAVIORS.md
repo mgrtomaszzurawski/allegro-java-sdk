@@ -43,6 +43,32 @@ The spec declares no `required` fields on `CategoryDto`, but on the wire `id`, `
 is present on children / absent on roots. The SDK's `Category` record therefore treats
 `id`/`name`/`leaf` as always-present and `parentId`/`options` as nullable.
 
+## Shipping & delivery (bucket C)
+
+### `GET /sale/delivery-methods` works with an app-only token (verified 2026-07-18, sandbox)
+
+`shipping().deliveryMethods()` succeeds with a client-credentials (application)
+token — the endpoint declares no OAuth scope. The live sandbox returned **571**
+delivery methods; the first mapped cleanly (`paymentPolicy=IN_ADVANCE`,
+`destinationCountry=PL`, `marketplaces=[1]`), confirming the `DeliveryMethod`
+record's field shape against the wire. `dispatchCountry` arrived `null` on that
+method, confirming it is genuinely nullable.
+
+### `deliveryMethods().paymentPolicy` is a closed typed enum (verified 2026-07-18, sandbox)
+
+Each method's `paymentPolicy` is one of a fixed set (`IN_ADVANCE`,
+`CASH_ON_DELIVERY`). In the generated Layer-1 model this field is a typed
+enumeration whose Jackson creator **rejects** any other value, so — unlike the
+free-form string enums on a point of service, which fall back to an `UNKNOWN`
+sentinel — a `paymentPolicy` value Allegro might add in future would fail
+deserialization of the whole response (surfaced as `AllegroServerException`)
+rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
+match, and the raw→domain map is a by-name lookup guarded by a name-parity test
+(`ShippingEnumsTest`) that iterates both enums. If Allegro extends the set, a
+Layer-1 regeneration adds the constant and that test then fails in the build —
+forcing the domain enum to gain the value in the same change, rather than leaking
+a runtime error.
+
 ## Account & meta (bucket D)
 
 ### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)

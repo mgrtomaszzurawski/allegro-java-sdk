@@ -4,16 +4,28 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
+import java.util.List;
+
 /**
- * Shipping operations — reached via {@code AllegroClient.shipping()}.
- *
- * <p>Starter slice of bucket C (shipping): only the {@link #points()}
- * sub-facade ships in this PR. Shipment management, delivery configuration and
- * shipping rates are added in the bucket's volume PR.
+ * Shipping operations — reached via {@code AllegroClient.shipping()}: the
+ * seller's delivery configuration and points of service. Shipment management
+ * (WZA) and shipping-rate configuration land in later bucket-C PRs.
  *
  * @since 0.2.0
  */
 public interface Shipping {
+
+    /**
+     * List the delivery methods Allegro offers the seller. The response is not
+     * paginated, so this returns a plain {@link List}.
+     *
+     * <p>Read-only and available with an application (client-credentials) token —
+     * no user-context scope is required.
+     *
+     * @return the available delivery methods, possibly empty
+     */
+    List<DeliveryMethod> deliveryMethods();
 
     /**
      * Points of service — the seller's personal-collection locations.

@@ -91,6 +91,8 @@ public final class ApiPaths {
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
     public static final String POINTS_OF_SERVICE = "/points-of-service";
+    /** Delivery methods Allegro offers the seller. */
+    public static final String DELIVERY_METHODS = "/sale/delivery-methods";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
