@@ -11,14 +11,18 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,8 +36,12 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferPricingRules;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferRuleAssignment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferRulePriceRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRule;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleConfiguration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleEdit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleType;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
@@ -110,6 +118,42 @@ class PricingAutomationClientTest {
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFound","message":"Rule not found",
               "userMessage":"Not found","path":null}]}
+            """;
+
+    private static final String UPDATED_RULE_NAME = "Follow Allegro minus 8%";
+    private static final String UPDATED_PERCENTAGE = "8";
+    private static final String TEST_OFFER_ID = "12345";
+    private static final String OFFER_RULES_PATH =
+            "/sale/price-automation/offers/" + TEST_OFFER_ID + "/rules";
+    private static final String TEST_MARKETPLACE_ID = "allegro-pl";
+    private static final String MIN_PRICE_AMOUNT = "5.00";
+    private static final String MAX_PRICE_AMOUNT = "500.00";
+
+    // spec-derived: not yet wire-verified (rules-list wrapper: one default rule + one merchant rule)
+    private static final String RULES_LIST_RESPONSE = """
+            {"rules":[
+              {"id":"default-1","type":"FOLLOW_BY_TOP_OFFER_PRICE","name":"%s","default":true,
+               "updatedAt":"2026-07-17T10:15:30Z"},
+              {"id":"%s","type":"FOLLOW_BY_ALLEGRO_MIN_PRICE","name":"%s","default":false,
+               "updatedAt":"2026-07-17T10:15:30Z",
+               "configuration":{"changeByPercentage":{"operation":"SUBTRACT","value":"5"}}}
+            ]}
+            """;
+    // spec-derived: not yet wire-verified (edit response echoes the new name/percentage)
+    private static final String UPDATED_RULE_RESPONSE = """
+            {"id":"%s","type":"FOLLOW_BY_ALLEGRO_MIN_PRICE","name":"%s","default":false,
+             "updatedAt":"2026-07-17T10:15:30Z",
+             "configuration":{"changeByPercentage":{"operation":"SUBTRACT","value":"8"}}}
+            """;
+    // spec-derived: not yet wire-verified (offer-rule assignment with a price-range configuration)
+    private static final String OFFER_RULES_RESPONSE = """
+            {"rules":[
+              {"marketplace":{"id":"allegro-pl"},"rule":{"id":"%s"},
+               "configuration":{"priceRange":{"type":"BASE_MARKETPLACE_CURRENCY",
+                 "minPrice":{"amount":"5.00","currency":"PLN"},
+                 "maxPrice":{"amount":"500.00","currency":"PLN"}}},
+               "updatedAt":"2026-07-17T10:15:30Z"}],
+             "updatedAt":"2026-07-17T10:15:30Z"}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -394,6 +438,101 @@ class PricingAutomationClientTest {
             // then — POST is not retried by default
             assertThrows(AllegroServerException.class, () -> automation.create(request));
             verify(1, postRequestedFor(urlEqualTo(RULES_PATH)));
+        }
+    }
+
+    @Test
+    void rules_whenMultipleRules_mapsAllIncludingDefaultRule(WireMockRuntimeInfo wmInfo) {
+        // given — the collection carries one built-in default rule and one merchant rule
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(RULES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(RULES_LIST_RESPONSE.formatted(
+                                DEFAULT_RULE_NAME, TEST_RULE_ID, TEST_RULE_NAME))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<PricingRule> rules = allegro.pricing().automation().rules();
+
+            // then — both mapped, including the default rule with no configuration
+            assertEquals(2, rules.size());
+            assertTrue(rules.get(0).isDefault());
+            assertNull(rules.get(0).configuration());
+            assertEquals(TEST_RULE_ID, rules.get(1).id());
+            assertInstanceOf(PricingRuleConfiguration.ChangeByPercentage.class,
+                    rules.get(1).configuration());
+            verify(1, getRequestedFor(urlEqualTo(RULES_PATH)));
+        }
+    }
+
+    @Test
+    void update_whenValidEdit_putsNameAndConfigWithoutTypeAndMapsResponse(WireMockRuntimeInfo wmInfo) {
+        // given — the PUT body carries name + configuration but never the immutable type
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlEqualTo(RULE_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(matchingJsonPath("$.name", equalTo(UPDATED_RULE_NAME)))
+                .withRequestBody(matchingJsonPath("$.configuration.changeByPercentage.value",
+                        equalTo(UPDATED_PERCENTAGE)))
+                .withRequestBody(notMatching("(?s).*\"type\".*"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UPDATED_RULE_RESPONSE.formatted(TEST_RULE_ID, UPDATED_RULE_NAME))));
+
+        PricingRuleEdit edit = PricingRuleEdit.builder()
+                .name(UPDATED_RULE_NAME)
+                .configuration(new PricingRuleConfiguration.ChangeByPercentage(
+                        PricingRuleConfiguration.Operation.SUBTRACT, UPDATED_PERCENTAGE))
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            PricingRule rule = allegro.pricing().automation().update(TEST_RULE_ID, edit);
+
+            // then
+            assertEquals(UPDATED_RULE_NAME, rule.name());
+            PricingRuleConfiguration.ChangeByPercentage configuration = assertInstanceOf(
+                    PricingRuleConfiguration.ChangeByPercentage.class, rule.configuration());
+            assertEquals(UPDATED_PERCENTAGE, configuration.value());
+            verify(1, putRequestedFor(urlEqualTo(RULE_PATH)));
+        }
+    }
+
+    @Test
+    void rulesOfOffer_whenAssigned_mapsAssignmentsAndPriceRange(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(OFFER_RULES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(OFFER_RULES_RESPONSE.formatted(TEST_RULE_ID))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            OfferPricingRules offerRules =
+                    allegro.pricing().automation().rulesOfOffer(TEST_OFFER_ID);
+
+            // then — the assignment, its rule id and the price band all survive mapping
+            assertEquals(TEST_UPDATED_AT, offerRules.updatedAt());
+            assertEquals(1, offerRules.rules().size());
+            OfferRuleAssignment assignment = offerRules.rules().get(0);
+            assertEquals(TEST_MARKETPLACE_ID, assignment.marketplaceId());
+            assertEquals(TEST_RULE_ID, assignment.ruleId());
+            OfferRulePriceRange priceRange = assignment.priceRange();
+            assertNotNull(priceRange);
+            assertEquals(OfferRulePriceRange.PriceRangeCurrency.BASE_MARKETPLACE_CURRENCY,
+                    priceRange.currency());
+            assertEquals(Money.of(MIN_PRICE_AMOUNT, TEST_CURRENCY), priceRange.minPrice());
+            assertEquals(Money.of(MAX_PRICE_AMOUNT, TEST_CURRENCY), priceRange.maxPrice());
+            verify(1, getRequestedFor(urlEqualTo(OFFER_RULES_PATH)));
         }
     }
 }

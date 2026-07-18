@@ -25,4 +25,12 @@ public interface Campaigns {
      * @return the badge campaigns sub-facade
      */
     Badges badges();
+
+    /**
+     * Allegro Prices: manage the account's participation, read per-offer status,
+     * and submit or exclude offers from the subsidy programme.
+     *
+     * @return the Allegro Prices sub-facade
+     */
+    AllegroPrices allegroPrices();
 }

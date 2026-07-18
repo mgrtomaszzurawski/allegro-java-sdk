@@ -134,6 +134,14 @@ public final class ApiPaths {
     public static final String BILLING_DOCUMENTS_SEGMENT = "billing-documents";
     /** {@code links} sub-resource segment (under an order's billing documents). */
     public static final String LINKS_SEGMENT = "links";
+    /** Seller payment operations history ({@code /payments/payment-operations}). */
+    public static final String PAYMENT_OPERATIONS = "/payments/payment-operations";
+    /** Refunded payments / refund initiation ({@code /payments/refunds}). */
+    public static final String PAYMENT_REFUNDS = "/payments/refunds";
+    /** Seller billing entries ({@code /billing/billing-entries}). */
+    public static final String BILLING_ENTRIES = "/billing/billing-entries";
+    /** Billing type dictionary ({@code /billing/billing-types}). */
+    public static final String BILLING_TYPES = "/billing/billing-types";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
@@ -142,6 +150,8 @@ public final class ApiPaths {
     public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
     /** Category suggestions matched by name ({@code /sale/matching-categories}). */
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
+    /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
+    public static final String PRODUCTS = "/sale/products";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
@@ -162,10 +172,46 @@ public final class ApiPaths {
     public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
     /** Daily advertisement statistics aggregated for the seller. */
     public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
+    /** Seller's private offer tags ({@code /sale/offer-tags}); append {@code /{tagId}}. */
+    public static final String OFFER_TAGS = "/sale/offer-tags";
+    private static final String TAGS_SEGMENT = "tags";
+
+    /** One offer tag ({@code /sale/offer-tags/{tagId}}). */
+    public static String offerTag(String tagId) {
+        return subPath(OFFER_TAGS, tagId);
+    }
+
+    /** Tags assigned to an offer ({@code /sale/offers/{offerId}/tags}). */
+    public static String offerAssignedTags(String offerId) {
+        return subPath(SALE_OFFERS, offerId, TAGS_SEGMENT);
+    }
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
+    /** Fee-and-commission preview for a draft offer ({@code /pricing/offer-fee-preview}). */
+    public static final String OFFER_FEE_PREVIEW = "/pricing/offer-fee-preview";
+    /** The user's current offer fee quotes ({@code /pricing/offer-quotes}). */
+    public static final String OFFER_QUOTES = "/pricing/offer-quotes";
+    /** Turnover-discount configuration ({@code /sale/turnover-discount}); append {@code /{marketplaceId}} via {@link #subPath}. */
+    public static final String TURNOVER_DISCOUNT = "/sale/turnover-discount";
+    /** Available deposit types ({@code /deposit/types}). */
+    public static final String DEPOSIT_TYPES = "/deposit/types";
+
+    private static final String PRICE_AUTOMATION_OFFERS = "/sale/price-automation/offers";
+    private static final String RULES_SEGMENT = "rules";
+    private static final String DEACTIVATE_SEGMENT = "deactivate";
+
+    /** Automatic pricing rules assigned to one offer ({@code /sale/price-automation/offers/{offerId}/rules}). */
+    public static String priceAutomationOfferRules(String offerId) {
+        return subPath(PRICE_AUTOMATION_OFFERS, offerId, RULES_SEGMENT);
+    }
+
+    /** Deactivate a marketplace's turnover discount ({@code /sale/turnover-discount/{marketplaceId}/deactivate}). */
+    public static String turnoverDiscountDeactivate(String marketplaceId) {
+        return subPath(TURNOVER_DISCOUNT, marketplaceId, DEACTIVATE_SEGMENT);
+    }
+
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
@@ -179,6 +225,17 @@ public final class ApiPaths {
     public static final String BADGE_OFFERS_SEGMENT = "offers";
     /** Path segment for a campaign within the badge update path. */
     public static final String BADGE_CAMPAIGNS_SEGMENT = "campaigns";
+    /** Allegro Prices account participation ({@code /sale/allegro-prices/accounts/participations}). */
+    public static final String ALLEGRO_PRICES_PARTICIPATIONS =
+            "/sale/allegro-prices/accounts/participations";
+    /** Allegro Prices offer-status query ({@code /sale/allegro-prices/offers-queries}). */
+    public static final String ALLEGRO_PRICES_OFFERS_QUERIES = "/sale/allegro-prices/offers-queries";
+    /** Allegro Prices submit-offer commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLEGRO_PRICES_SUBMIT_COMMANDS =
+            "/sale/allegro-prices/offers/submit-offer-commands";
+    /** Allegro Prices exclusion commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLEGRO_PRICES_EXCLUSION_COMMANDS =
+            "/sale/allegro-prices/offers/exclusion-commands";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
@@ -220,6 +277,12 @@ public final class ApiPaths {
     public static final String MESSAGES_SEGMENT = "messages";
     /** Sub-resource: the read-flag toggle of a thread. */
     public static final String READ_SEGMENT = "read";
+
+    // ---- disputes / post-purchase issues (bucket J) ----
+    /** Post-purchase issues ({@code /sale/issues}); append {@code /{issueId}} via subPath. */
+    public static final String ISSUES = "/sale/issues";
+    /** Sub-resource: the chat within an issue. */
+    public static final String CHAT_SEGMENT = "chat";
 
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */
