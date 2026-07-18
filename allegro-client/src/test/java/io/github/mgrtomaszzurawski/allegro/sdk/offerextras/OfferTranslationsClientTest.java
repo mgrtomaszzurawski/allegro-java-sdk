@@ -20,6 +20,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -31,8 +32,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TranslationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.DescriptionItemType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.DescriptionSectionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferTranslation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferTranslationType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.ProductSafetyInformationTranslation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.StandardizedDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
@@ -56,6 +62,10 @@ class OfferTranslationsClientTest {
     private static final String TEST_OFFER_ID = "8235476198";
     private static final String TEST_LANGUAGE = "en-US";
     private static final String TEST_TITLE = "Wireless keyboard";
+    private static final String TEST_DESCRIPTION_TEXT = "A great keyboard";
+    private static final String TEST_IMAGE_URL = "https://images.allegrostatic.pl/kbd.jpg";
+    private static final String TEST_PRODUCT_ID = "8a2b4c6d-0e1f-2a3b-4c5d-6e7f8a9b0c1d";
+    private static final String TEST_SAFETY_TEXT = "Handle with care";
     private static final String TRANSLATIONS_PATH = "/sale/offers/" + TEST_OFFER_ID + "/translations";
     private static final String TRANSLATION_PATH = TRANSLATIONS_PATH + "/" + TEST_LANGUAGE;
     private static final String TEST_TRACE_ID = "4631702648f0524e";
@@ -78,13 +88,41 @@ class OfferTranslationsClientTest {
               {"language":"de-DE","title":{"translation":"Kabellose Tastatur","type":"AUTO"}}
             ]}
             """.formatted(TEST_LANGUAGE, TEST_TITLE);
-    // The shared SDK ObjectMapper serializes with the default ALWAYS inclusion,
-    // so the unset description/safetyInformation go out as explicit nulls. This
-    // pins that actual wire body; whether the server treats those nulls as
-    // "no change" or "clear" is a KNOWN-SERVER-BEHAVIORS to-verify item.
+    // A title-only update is serialized as a PARTIAL (PATCH) body: the unset
+    // description/safetyInformation are OMITTED, not sent as explicit null — so the
+    // server cannot mistake "unchanged" for "clear". See KNOWN-SERVER-BEHAVIORS §247.
     private static final String UPDATE_REQUEST_BODY = """
-            {"description":null,"title":{"translation":"%s"},"safetyInformation":null}
+            {"title":{"translation":"%s"}}
             """.formatted(TEST_TITLE);
+    // A description-only update: the standardized description (a text and an image
+    // item) is the only part sent.
+    private static final String DESCRIPTION_UPDATE_BODY = """
+            {"description":{"translation":{"sections":[{"items":[
+              {"type":"TEXT","content":"%s"},
+              {"type":"IMAGE","url":"%s"}
+            ]}]}}}
+            """.formatted(TEST_DESCRIPTION_TEXT, TEST_IMAGE_URL);
+    // A safety-information-only update: one product's translation keyed by product id.
+    private static final String SAFETY_UPDATE_BODY = """
+            {"safetyInformation":{"products":[{"id":"%s","translation":"%s"}]}}
+            """.formatted(TEST_PRODUCT_ID, TEST_SAFETY_TEXT);
+    // spec-derived: a full translation carrying the title, a two-section description
+    // (a text item, an image item, and a forward-compat unknown item kind), and a
+    // per-product safety-information translation.
+    private static final String FULL_TRANSLATION_RESPONSE = """
+            {"translations":[
+              {"language":"%s",
+               "title":{"translation":"%s","type":"MANUAL"},
+               "description":{"translation":{"sections":[
+                 {"items":[{"type":"TEXT","content":"%s"},{"type":"IMAGE","url":"%s"}]},
+                 {"items":[{"type":"NEWFANGLED_BLOCK","payload":"future"}]}
+               ]},"type":"AUTO"},
+               "safetyInformation":{"products":[
+                 {"id":"%s","translation":"%s","type":"MANUAL"}
+               ]}}
+            ]}
+            """.formatted(TEST_LANGUAGE, TEST_TITLE, TEST_DESCRIPTION_TEXT, TEST_IMAGE_URL,
+            TEST_PRODUCT_ID, TEST_SAFETY_TEXT);
     private static final String BAD_REQUEST_RESPONSE = """
             {"errors":[{"code":"ConstraintViolationException","message":"invalid",
               "userMessage":"Nieprawidłowe","path":"title"}]}
@@ -159,6 +197,91 @@ class OfferTranslationsClientTest {
             // then
             verify(1, patchRequestedFor(urlPathEqualTo(TRANSLATION_PATH))
                     .withRequestBody(equalToJson(UPDATE_REQUEST_BODY)));
+        }
+    }
+
+    @Test
+    void update_whenDescriptionGiven_patchesDescriptionSectionsBody(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(patch(urlPathEqualTo(TRANSLATION_PATH))
+                .withRequestBody(equalToJson(DESCRIPTION_UPDATE_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — a description-only update carries no title or safety-information
+            TranslationRequest request = TranslationRequest.builder()
+                    .description(StandardizedDescription.of(DescriptionSection.of(
+                            DescriptionSectionItem.text(TEST_DESCRIPTION_TEXT),
+                            DescriptionSectionItem.image(TEST_IMAGE_URL))))
+                    .build();
+            allegro.offers().translations().update(TEST_OFFER_ID, TEST_LANGUAGE, request);
+
+            // then — only the description part is on the wire
+            verify(1, patchRequestedFor(urlPathEqualTo(TRANSLATION_PATH))
+                    .withRequestBody(equalToJson(DESCRIPTION_UPDATE_BODY)));
+        }
+    }
+
+    @Test
+    void update_whenSafetyInformationGiven_patchesSafetyProductsBody(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(patch(urlPathEqualTo(TRANSLATION_PATH))
+                .withRequestBody(equalToJson(SAFETY_UPDATE_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            TranslationRequest request = TranslationRequest.builder()
+                    .safetyInformation(List.of(
+                            ProductSafetyInformationTranslation.of(TEST_PRODUCT_ID, TEST_SAFETY_TEXT)))
+                    .build();
+            allegro.offers().translations().update(TEST_OFFER_ID, TEST_LANGUAGE, request);
+
+            // then — the product id and translation are on the wire; no null siblings
+            verify(1, patchRequestedFor(urlPathEqualTo(TRANSLATION_PATH))
+                    .withRequestBody(equalToJson(SAFETY_UPDATE_BODY)));
+        }
+    }
+
+    @Test
+    void ofOffer_whenFullTranslation_mapsDescriptionItemsAndSafety(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(TRANSLATIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(FULL_TRANSLATION_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            OfferTranslation translation = allegro.offers().translations().ofOffer(TEST_OFFER_ID).get(0);
+
+            // then — the description sections and their text/image items map, and the
+            // description type is exposed
+            assertEquals(OfferTranslationType.AUTO, translation.descriptionType());
+            StandardizedDescription description = translation.description();
+            assertEquals(2, description.sections().size());
+            DescriptionSectionItem textItem = description.sections().get(0).items().get(0);
+            DescriptionSectionItem imageItem = description.sections().get(0).items().get(1);
+            assertEquals(DescriptionItemType.TEXT, textItem.type());
+            assertEquals(TEST_DESCRIPTION_TEXT, textItem.content());
+            assertEquals(DescriptionItemType.IMAGE, imageItem.type());
+            assertEquals(TEST_IMAGE_URL, imageItem.url());
+
+            // then — an item kind Allegro added later degrades to UNKNOWN (C4), not a failed read
+            DescriptionSectionItem unknownItem = description.sections().get(1).items().get(0);
+            assertEquals(DescriptionItemType.UNKNOWN, unknownItem.type());
+            assertNull(unknownItem.content());
+
+            // then — the per-product safety information maps
+            assertEquals(1, translation.safetyInformation().size());
+            ProductSafetyInformationTranslation product = translation.safetyInformation().get(0);
+            assertEquals(TEST_PRODUCT_ID, product.productId());
+            assertEquals(TEST_SAFETY_TEXT, product.translation());
+            assertEquals(OfferTranslationType.MANUAL, product.type());
         }
     }
 

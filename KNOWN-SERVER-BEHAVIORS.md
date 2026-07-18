@@ -244,17 +244,19 @@ seller-side and treats the immediate download 404 as expected.
 
 ## Offers extras (bucket F)
 
-### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+### Translation PATCH must omit unset parts, not send them as `null` — FIXED (partial body; spec-derived)
 
-`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
-serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
-Jackson's default `ALWAYS` inclusion. So a title-only update sends
-`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
-whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
-translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
-latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
-handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
-`update` is safe for offers whose description/safety translations are not manually set.
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`) is a
+partial update: the caller may set any subset of title / description / safety-information, and the
+unset parts must be **left untouched**. The earlier implementation serialized through the shared
+SDK ObjectMapper's default `ALWAYS` inclusion, so a title-only update sent
+`{"description":null,"title":{…},"safetyInformation":null}` — risking that the server reads a
+`null` sibling as **"clear the translation"** (latent data loss) rather than "no change". Fixed by
+serializing the body with `HttpCall.jsonBodyPartial` (NON_EMPTY — omits nulls and empties, the
+same approach bucket A adopted for `POST /sale/product-offers`, §below) and building the raw with
+only the parts the request set. A title-only update now sends `{"title":{…}}`; the ambiguity is
+gone regardless of server semantics. **Still to confirm on the sandbox** (needs a live offer): that
+the server does treat an omitted part as "no change" (expected) and accepts a subset PATCH.
 
 ## Offers — create (bucket A)
 

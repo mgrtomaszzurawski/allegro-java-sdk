@@ -271,10 +271,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   fail-fast `TagRequest` builder; `offer-tags` write→read demo. New `offerextras`
   package wired onto the bucket-A `Offers` root.
 - `offers().translations()` — an offer's translations into other languages:
-  `ofOffer` (read), `update` (set the title translation), `delete`. Immutable
-  `OfferTranslation` records (`title` + `titleType`) + `TranslationRequest`
-  builder. Title translation only for now; description/safety-information
-  translations (rich structured content) are a documented follow-up.
+  `ofOffer` (read), `update` (partial PATCH), `delete`. Covers the title, the
+  standardized `description` (`StandardizedDescription` → `DescriptionSection` →
+  text/image `DescriptionSectionItem`, with a forward-compat `UNKNOWN` item kind),
+  and the per-product `safetyInformation` (`ProductSafetyInformationTranslation`).
+  `TranslationRequest` sets any subset of the three parts; the update is serialized
+  as a NON_EMPTY partial body so the unset parts are **omitted, not sent as
+  `null`** — fixing a latent data-loss where a title-only update could clear the
+  description/safety translations (KNOWN-SERVER-BEHAVIORS §247).
 - `offers().rating(offerId)` — an offer's aggregated buyer rating (`OfferRating`:
   average, total, score distribution, size feedback). Read-only.
 - `offers().bundles()` — the seller's fixed offer bundles: `streamBundles()`
