@@ -69,6 +69,17 @@ public final class ApiPaths {
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
     public static final String CLASSIFIEDS_PACKAGES = "/sale/classifieds-packages";
+    private static final String OFFER_CLASSIFIEDS_PACKAGES = "/sale/offer-classifieds-packages";
+
+    /** One classifieds package configuration ({@code /sale/classifieds-packages/{packageId}}). */
+    public static String classifiedsPackage(String packageId) {
+        return subPath(CLASSIFIEDS_PACKAGES, packageId);
+    }
+
+    /** Packages assigned to an offer ({@code /sale/offer-classifieds-packages/{offerId}}). */
+    public static String offerClassifiedsPackages(String offerId) {
+        return subPath(OFFER_CLASSIFIEDS_PACKAGES, offerId);
+    }
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
