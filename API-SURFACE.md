@@ -105,9 +105,9 @@ offers.rating(offerId)                            // GET    /sale/offers/{offerI
 
 // Fixed bundles
 OfferBundles bundles = offers.bundles();
-bundles.streamBundles()                           // GET    /sale/bundles            Stream<Bundle>
+bundles.streamBundles()                           // GET    /sale/bundles            Stream<OfferBundle> (cursor)
 bundles.get(bundleId)                             // GET    /sale/bundles/{bundleId}
-bundles.updateDiscount(bundleId, DiscountRequest) // PUT    /sale/bundles/{bundleId}/discount
+bundles.updateDiscount(bundleId, List<BundleDiscount>) // PUT /sale/bundles/{bundleId}/discount
 bundles.delete(bundleId)                          // DELETE /sale/bundles/{bundleId}
 
 // Flexible bundles

@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Live sandbox probe for bucket F — the read-only offer add-ons (rating and
- * translations). Authenticates with the stored seller <em>user</em> token
+ * Live sandbox probe for bucket F — the read-only offer add-ons (rating,
+ * translations, and bundles). Authenticates with the stored seller <em>user</em> token
  * (device-flow refresh token from the shared store, ADR-008), discovers the
  * seller's first offer via {@code streamOffers} (the demo runner forwards no
  * offer id), then reads that offer's rating and translations through the SDK.
@@ -67,6 +67,9 @@ public final class OfferExtrasDemo {
             List<OfferTranslation> translations = client.offers().translations().ofOffer(offerId);
             System.out.println("offers.translations().ofOffer(" + offerId + "): "
                     + translations.size() + " language(s)");
+
+            long bundleCount = client.offers().bundles().streamBundles().count();
+            System.out.println("offers.bundles().streamBundles(): " + bundleCount + " bundle(s)");
         }
     }
 
