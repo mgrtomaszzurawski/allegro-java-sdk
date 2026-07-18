@@ -6,9 +6,9 @@ fulfils their orders. All operations require an account enrolled in One Fulfillm
 `fulfillment:read` / `fulfillment:write` OAuth scopes; a call from a non-enrolled account is
 rejected with a typed error.
 
-> **Preview.** This bucket lands incrementally. The starter slice below (removal preferences)
-> ships first; advance ship notices, stock, available products, parcels, refund dispositions
-> and tax id follow.
+> **Preview.** This bucket lands incrementally. Removal preferences, the read reports (stock,
+> available products, parcels, refund dispositions) and tax id ship now; the advance-ship-notice
+> lifecycle (create/submit/labels/receiving) follows.
 
 ## Removal preferences
 
@@ -51,6 +51,67 @@ For `DISPOSAL`, omit the address:
 ```java
 client.fulfillment().setRemovalPreference(
         RemovalPreference.builder().operation(RemovalOperation.DISPOSAL).build());
+```
+
+## Stock report
+
+`stock()` streams every stock line lazily; pages are fetched only as the stream is consumed.
+`stock(StockFilter)` narrows the report. Each `StockItem` carries the product, on-hand
+quantities, recent selling stats, reserve health and any storage fee — all optional, because
+the server may omit them for a given line.
+
+```java
+// low-stock products, most-urgent first
+try (Stream<StockItem> stock = client.fulfillment().stock(
+        StockFilter.builder().outOfStockInTo(14).sort("outOfStockIn").build())) {
+    stock.forEach(item -> System.out.println(
+            item.product().name() + " → " + item.quantity().available()
+                    + " (" + item.reserve().status() + ")"));
+}
+```
+
+## Available products
+
+`availableProducts()` streams the products the seller may ship into One Fulfillment.
+
+```java
+long count = client.fulfillment().availableProducts().count();
+```
+
+## Parcels of an order
+
+`parcelsOf(orderId)` returns the parcels shipped from the warehouse for one order, with the
+waybill and the product lines (serial numbers and expiry included).
+
+```java
+FulfillmentOrder order = client.fulfillment().parcelsOf("abc-order-123");
+order.parcels().forEach(parcel -> System.out.println(parcel.waybill()));
+```
+
+## Refund dispositions
+
+`refundDispositions(RefundDispositionFilter)` streams the report of how returned or bounced
+goods were handled. The open-set fields (`type`, `stockStatus`, `accountableForNonSellability`,
+the refund action state) map to forward-compatible enums that resolve to `UNKNOWN` on a value
+Allegro adds later, rather than failing the read.
+
+```java
+try (Stream<RefundDisposition> report = client.fulfillment().refundDispositions(
+        RefundDispositionFilter.builder()
+                .createdFrom(OffsetDateTime.now().minusDays(30))
+                .build())) {
+    report.forEach(row -> System.out.println(row.type() + " / " + row.stockStatus()));
+}
+```
+
+## Tax identification number
+
+Read the registered number and its verification status, register a new one, or replace it.
+
+```java
+TaxId current = client.fulfillment().taxId();
+client.fulfillment().addTaxId("PL1234567890");
+client.fulfillment().updateTaxId("PL9876543210");
 ```
 
 ## Errors

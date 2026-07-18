@@ -124,8 +124,8 @@ classifieds.availablePackages(categoryId)         // GET /sale/classifieds-packa
 classifieds.getPackage(packageId)                 // GET /sale/classifieds-packages/{packageId}
 classifieds.packagesOfOffer(offerId)              // GET /sale/offer-classifieds-packages/{offerId}
 classifieds.assignPackages(offerId, ClassifiedAssignment) // PUT /sale/offer-classifieds-packages/{offerId}
-classifieds.offerStats(ClassifiedsStatsFilter)    // GET /sale/classified-offers-stats
-classifieds.sellerStats(ClassifiedsStatsFilter)   // GET /sale/classified-seller-stats
+classifieds.offerStats(offerIds, ClassifiedStatsFilter)  // GET /sale/classified-offers-stats (offer.id array, ≤50)
+classifieds.sellerStats(ClassifiedStatsFilter)           // GET /sale/classified-seller-stats
 ```
 
 ## B — `client.orders()`, `client.payments()`, `client.billing()`
@@ -354,8 +354,8 @@ fulfillment.refundDispositions(Filter)            // GET /fulfillment/returns/re
 fulfillment.removalPreference()                   // GET /fulfillment/removal/preferences
 fulfillment.setRemovalPreference(Preference)      // PUT /fulfillment/removal/preferences
 fulfillment.taxId()                               // GET /fulfillment/tax-id
-fulfillment.addTaxId(TaxIdRequest)                // POST /fulfillment/tax-id
-fulfillment.updateTaxId(TaxIdRequest)             // PUT /fulfillment/tax-id
+fulfillment.addTaxId(String taxId)                // POST /fulfillment/tax-id (body is a single `taxId` field)
+fulfillment.updateTaxId(String taxId)             // PUT /fulfillment/tax-id (body is a single `taxId` field)
 ```
 
 ## J — `client.messaging()`, `client.disputes()`, `client.contacts()`

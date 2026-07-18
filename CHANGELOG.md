@@ -71,6 +71,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `OrderStatus`, seller-side `SellerStatus`, buyer, line items, and `Money` totals.
   WireMock contract tests (happy path + 400/401-replay/404/429/5xx), `docs/orders.md`,
   a compiled example, and the `orders-get` sandbox probe.
+- Order-management surface: `streamOrders(OrderFilter)` (lazy offset `Stream<Order>`),
+  `streamEvents(OrderEventFilter)` (lazy cursor stream) + `eventStats()`,
+  `markStatus`/`setSerialNumbers` with optional `revision` optimistic concurrency,
+  `attachBillingDocumentLink`, `trackingNumbers`/`addTrackingNumber`, and the
+  `carriers()`/`carrierTracking()`/`allegroPickupPoints()` dictionaries. New models
+  (`OrderEvent`, `OrderEventStats`, `Waybill`, `Carrier`, `CarrierTracking`,
+  `PickupPoint`) and fluent filter/request builders. `orders-list` sandbox probe.
 
 ### C — shipping
 
@@ -142,6 +149,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `/sale/offer-classifieds-packages/{offerId}`). `ClassifiedAssignment` is built
   by a fail-fast builder; the write→read demo assigns then reads the packages
   back. All calls require the seller user token.
+- `classifieds.offerStats(offerIds, ClassifiedStatsFilter)` and
+  `classifieds.sellerStats(ClassifiedStatsFilter)` — daily advertisement
+  statistics for up to 50 selected offers, or aggregated across the seller
+  (`/sale/classified-offers-stats`, `/sale/classified-seller-stats`). Returns
+  per-event totals (`ClassifiedEventType`) and a day-by-day breakdown
+  (`ClassifiedDailyStat`); `ClassifiedStatsFilter` carries the optional
+  `date.gte`/`date.lte` bounds. Completes the standalone `classifieds()` surface.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
@@ -171,12 +185,27 @@ sections. Empty subsections are dropped by the release engineer when folding
   slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
   `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
   enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+- Add the fulfillment read reports and tax-id resource: lazy `stock()` / `stock(StockFilter)`,
+  `availableProducts()` and `refundDispositions()` / `refundDispositions(RefundDispositionFilter)`
+  streams, `parcelsOf(orderId)`, and `taxId()` / `addTaxId(...)` / `updateTaxId(...)`. New immutable
+  records (`StockItem` tree, `AvailableProduct`, `FulfillmentOrder`, `RefundDisposition` tree,
+  `TaxId`), the `StockFilter` / `RefundDispositionFilter` builders, and forward-compatible
+  open-set enums (`ReserveStatus`, `StorageFeeStatus`, `RefundDispositionType`,
+  `RefundStockStatus`, `AccountableParty`, `RefundActionState`) that resolve unknown wire
+  values to `UNKNOWN`.
 
 ### J — post-sale-comms
 
 - Contacts facade (`client.contacts()`) — starter slice: list, get, create and update
   seller contact cards (`/sale/offer-contacts`) with a fluent, fail-fast `ContactRequest`
   builder, immutable `Contact` records, and a `contacts` sandbox write→read demo scenario.
+- Messaging facade (`client.messaging()`) — the message center (`/messaging`, 11 ops):
+  lazy `streamThreads()`/`streamMessages()` pagination, `thread`/`message` reads, `markRead`,
+  `send`/`reply`, `deleteMessage`, and the binary attachment `declare`→`upload`→`download`
+  flow. Immutable records (`MessageThread`, `Message`, `MessageAttachment`, `AttachmentRef`)
+  with `UNKNOWN`-tolerant enums, fail-fast `NewMessageRequest`/`ReplyRequest`/
+  `AttachmentDeclaration`/`MessageFilter` builders, and a `messaging` demo scenario
+  (self-seeded attachment round-trip + threads read / `markRead` write→read).
 
 ### K — sale-settings
 

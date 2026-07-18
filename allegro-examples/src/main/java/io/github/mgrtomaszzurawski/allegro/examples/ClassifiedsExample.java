@@ -7,9 +7,12 @@ package io.github.mgrtomaszzurawski.allegro.examples;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder.ClassifiedStatsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.SellerClassifiedStats;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -46,6 +49,19 @@ public final class ClassifiedsExample {
             client.classifieds().assignPackages(offerId, assignment);
             OfferClassifieds assigned = client.classifieds().packagesOfOffer(offerId);
             return assigned.basePackageId();
+        }
+    }
+
+    static int countSellerStatEvents(String clientId, String clientSecret) {
+        var credentials = DeviceCodeCredentials.of(clientId, clientSecret,
+                auth -> System.out.println("Confirm at: " + auth.verificationUriComplete()));
+        try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
+            ClassifiedStatsFilter lastWeek = ClassifiedStatsFilter.builder()
+                    .eventsFrom(OffsetDateTime.now().minusWeeks(1))
+                    .eventsTo(OffsetDateTime.now())
+                    .build();
+            SellerClassifiedStats stats = client.classifieds().sellerStats(lastWeek);
+            return stats.totals().size();
         }
     }
 }
