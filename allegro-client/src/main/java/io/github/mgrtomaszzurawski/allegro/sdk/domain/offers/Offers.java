@@ -61,6 +61,13 @@ public interface Offers {
      */
     SmartClassification smartClassification(String offerId);
 
+    /**
+     * Bulk offer operations (publish/unpublish in one Allegro batch command).
+     *
+     * @return the batch sub-facade
+     */
+    OfferBatch batch();
+
     // [append point: offers sub-facades] Bucket A appends its own sub-facade
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
     // sub-accessors (tags(), translations(), bundles(), flexibleBundles(),

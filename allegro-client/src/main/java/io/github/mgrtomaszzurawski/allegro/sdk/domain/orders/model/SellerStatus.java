@@ -70,4 +70,19 @@ public enum SellerStatus {
             case RETURNED -> RETURNED;
         };
     }
+
+    /** Map the public status to the generated Layer-1 enum for a status write. */
+    public CheckoutFormFulfillmentStatusRaw toRaw() {
+        return switch (this) {
+            case NEW -> CheckoutFormFulfillmentStatusRaw.NEW;
+            case PROCESSING -> CheckoutFormFulfillmentStatusRaw.PROCESSING;
+            case READY_FOR_SHIPMENT -> CheckoutFormFulfillmentStatusRaw.READY_FOR_SHIPMENT;
+            case READY_FOR_PICKUP -> CheckoutFormFulfillmentStatusRaw.READY_FOR_PICKUP;
+            case SENT -> CheckoutFormFulfillmentStatusRaw.SENT;
+            case PICKED_UP -> CheckoutFormFulfillmentStatusRaw.PICKED_UP;
+            case CANCELLED -> CheckoutFormFulfillmentStatusRaw.CANCELLED;
+            case SUSPENDED -> CheckoutFormFulfillmentStatusRaw.SUSPENDED;
+            case RETURNED -> CheckoutFormFulfillmentStatusRaw.RETURNED;
+        };
+    }
 }
