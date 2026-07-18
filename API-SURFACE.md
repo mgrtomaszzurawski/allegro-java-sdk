@@ -200,8 +200,8 @@ settings.get()                                    // GET  /sale/delivery-setting
 settings.update(DeliverySettingsRequest)          // PUT  /sale/delivery-settings
 
 ShippingRates rates = shipping.rates();
-rates.streamRateSets()                            // GET  /sale/shipping-rates          Stream<ShippingRateSet>
-rates.get(rateSetId)                              // GET  /sale/shipping-rates/{id}
+rates.list()                                      // GET  /sale/shipping-rates          List<ShippingRateSetSummary>  (not paginated; rows carry no rate detail)
+rates.get(rateSetId)                              // GET  /sale/shipping-rates/{id}      ShippingRateSet (full, with rate rows)
 rates.create(ShippingRateSetRequest)              // POST /sale/shipping-rates
 rates.update(rateSetId, ShippingRateSetRequest)   // PUT  /sale/shipping-rates/{id}
 
@@ -397,7 +397,7 @@ SaleSettings settings = client.settings();
 
 // After-sale service conditions (warranty / return policy / implied warranty)
 AfterSaleConditions afterSale = settings.afterSale();
-afterSale.returnPolicies() / .returnPolicy(id)    // GET  /after-sales-service-conditions/return-policies[/{id}]
+afterSale.streamReturnPolicies() / .returnPolicy(id) // GET …/return-policies[/{id}] (lazy Stream of full policies)
 afterSale.createReturnPolicy(ReturnPolicyRequest) // POST /after-sales-service-conditions/return-policies
 afterSale.updateReturnPolicy(id, Request)         // PUT  /after-sales-service-conditions/return-policies/{id}
 afterSale.deleteReturnPolicy(id)                  // DELETE /after-sales-service-conditions/return-policies/{id}

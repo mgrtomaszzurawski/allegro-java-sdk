@@ -22,7 +22,8 @@ import org.jspecify.annotations.Nullable;
  * @param id method identifier
  * @param name human-readable method name
  * @param marketplaces marketplaces the method serves; never {@code null}, possibly empty
- * @param paymentPolicy when the buyer pays, or {@code null} when the server omits it
+ * @param paymentPolicy when the buyer pays ({@link PaymentPolicy#UNKNOWN} for a
+ *     value this release does not model), or {@code null} when the server omits it
  * @param allegroEndorsed whether Allegro endorses (recommends) this method
  * @param dispatchCountry ISO country the parcel is dispatched from, or {@code null}
  * @param destinationCountry ISO destination country, or {@code null}
@@ -59,11 +60,12 @@ public record DeliveryMethod(
         return raw == null ? List.of() : List.copyOf(raw);
     }
 
-    // The raw value is a typed, closed enum, so an unmodelled value is already
-    // rejected during deserialization; by here it is one of the known constants,
-    // which share their names with the domain enum. A ShippingEnumsTest parity
-    // check fails in the build if a future spec regeneration ever breaks that.
+    // A null policy stays null (the server omitted the field); a present value is
+    // mapped fail-soft — an unmodelled value or the generator's forward-compat
+    // sentinel lands on UNKNOWN instead of throwing, so a new server payment
+    // policy never breaks the whole delivery-methods read. A ShippingEnumsTest
+    // parity check guards that the modelled names still line up with the raw enum.
     private static @Nullable PaymentPolicy paymentPolicy(@Nullable PaymentPolicyEnum raw) {
-        return raw == null ? null : PaymentPolicy.valueOf(raw.name());
+        return raw == null ? null : PaymentPolicy.fromWire(raw.name());
     }
 }

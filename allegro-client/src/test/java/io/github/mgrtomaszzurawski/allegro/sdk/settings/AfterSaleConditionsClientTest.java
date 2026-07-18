@@ -5,10 +5,13 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
@@ -33,10 +36,18 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ImpliedWarrantyRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyUpdateRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.WarrantyRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarrantyPeriod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarrantySummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnCostCoveredBy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyAvailability;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyOptions;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnRange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnRestrictionCause;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.Warranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyPeriod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantySummary;
@@ -136,6 +147,33 @@ class AfterSaleConditionsClientTest {
     private static final String IMPLIED_WARRANTY_MINIMAL_RESPONSE = """
             {"id":"%s","name":"%s","individual":{"period":"%s"}}
             """.formatted(IMPLIED_WARRANTY_ID, NAME, IMPLIED_PERIOD);
+
+    private static final String RETURN_POLICIES_PATH = "/after-sales-service-conditions/return-policies";
+    private static final String RETURN_POLICY_ID = "6a8e0f2c-1111-4c0e-b4c7-382a71e810b5";
+    private static final String RETURN_POLICY_PATH = RETURN_POLICIES_PATH + "/" + RETURN_POLICY_ID;
+    private static final String WITHDRAWAL_PERIOD = "P14D";
+    private static final String RESTRICTION_NAME = "SEALED_MEDIA";
+    private static final String SELLER_EMAIL = "seller@example.com";
+    // Live-verified 2026-07-18 (sandbox, seller TestBoxSDK) via the
+    // settings-return-policy demo create->read->update->delete round-trip (green).
+    private static final String RETURN_POLICY_RESPONSE = """
+            {"id":"%s","isFulfillment":false,"seller":{"id":"%s"},"name":"%s",
+             "availability":{"range":"RESTRICTED","restrictionCause":{"name":"%s","description":"d"}},
+             "withdrawalPeriod":"%s","returnCost":{"coveredBy":"SELLER"},
+             "address":{"name":"Allegro sp. z o.o.","street":"Grunwaldzka 182",
+               "postCode":"60-166","city":"%s","countryCode":"PL"},
+             "contact":{"phoneNumber":"123 123 123","email":"%s"},
+             "options":{"cashOnDeliveryNotAllowed":true,"freeAccessoriesReturnRequired":true,
+               "refundLoweredByReceivedDiscount":false,"businessReturnAllowed":false,
+               "collectBySellerOnly":true}}
+            """.formatted(RETURN_POLICY_ID, SELLER_ID, NAME, RESTRICTION_NAME, WITHDRAWAL_PERIOD,
+            ADDRESS_CITY, SELLER_EMAIL);
+    // A DISABLED policy carries no withdrawalPeriod/returnCost/address/contact/
+    // options — pins those nullable-mapping branches in ReturnPolicy.from.
+    private static final String RETURN_POLICY_DISABLED_RESPONSE = """
+            {"id":"%s","isFulfillment":true,"seller":{"id":"%s"},"name":"%s",
+             "availability":{"range":"DISABLED","restrictionCause":{"name":"%s"}}}
+            """.formatted(RETURN_POLICY_ID, SELLER_ID, NAME, RESTRICTION_NAME);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -686,6 +724,292 @@ class AfterSaleConditionsClientTest {
             assertEquals(BAD_REQUEST_PATH, failure.errors().get(0).path());
             assertEquals(TRACE_ID, failure.traceId());
             verify(1, postRequestedFor(urlEqualTo(IMPLIED_WARRANTIES_PATH)));
+        }
+    }
+
+    // ---- return policies ----
+
+    private static String returnPoliciesPage(int count) {
+        StringBuilder items = new StringBuilder();
+        for (int index = 0; index < count; index++) {
+            if (index > 0) {
+                items.append(',');
+            }
+            String suffix = "%02d".formatted(index);
+            items.append("{\"id\":\"00000000-0000-0000-0000-0000000000").append(suffix)
+                    .append("\",\"seller\":{\"id\":\"").append(SELLER_ID)
+                    .append("\"},\"name\":\"").append(WARRANTY_NAME_PREFIX).append(index)
+                    .append("\",\"availability\":{\"range\":\"FULL\"}}");
+        }
+        return "{\"count\":" + count + ",\"returnPolicies\":[" + items + "]}";
+    }
+
+    // The server requires options once availability is enabled (not DISABLED).
+    private static final ReturnPolicyOptions SAMPLE_OPTIONS =
+            new ReturnPolicyOptions(true, false, false, false, false);
+
+    private static ReturnPolicyRequest sampleReturnPolicy() {
+        return ReturnPolicyRequest.builder()
+                .name(NAME)
+                .fulfillment(false)
+                .availability(ReturnPolicyAvailability.restricted(ReturnRestrictionCause.SEALED_MEDIA))
+                .withdrawalPeriod(WITHDRAWAL_PERIOD)
+                .returnCost(ReturnCostCoveredBy.SELLER)
+                .options(SAMPLE_OPTIONS)
+                .build();
+    }
+
+    private static ReturnPolicyUpdateRequest sampleReturnPolicyUpdate() {
+        return ReturnPolicyUpdateRequest.builder()
+                .name(NAME)
+                .availability(ReturnPolicyAvailability.full())
+                .options(SAMPLE_OPTIONS)
+                .build();
+    }
+
+    @Test
+    void returnPolicy_whenFound_mapsFullDefinition(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(RETURN_POLICY_PATH))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(RETURN_POLICY_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            ReturnPolicy policy = allegro.settings().afterSale().returnPolicy(RETURN_POLICY_ID);
+
+            // then — every nested field survives the Raw -> record round-trip
+            assertEquals(RETURN_POLICY_ID, policy.id());
+            assertFalse(policy.fulfillment());
+            assertEquals(SELLER_ID, policy.sellerId());
+            assertEquals(NAME, policy.name());
+            assertEquals(ReturnRange.RESTRICTED, policy.availability().range());
+            assertEquals(ReturnRestrictionCause.SEALED_MEDIA, policy.availability().restrictionCause());
+            assertEquals(WITHDRAWAL_PERIOD, policy.withdrawalPeriod());
+            assertEquals(ReturnCostCoveredBy.SELLER, policy.returnCost());
+            assertNotNull(policy.address());
+            assertEquals(ADDRESS_CITY, policy.address().city());
+            assertNotNull(policy.contact());
+            assertEquals(SELLER_EMAIL, policy.contact().email());
+            assertNotNull(policy.options());
+            assertTrue(policy.options().cashOnDeliveryNotAllowed());
+            verify(1, getRequestedFor(urlEqualTo(RETURN_POLICY_PATH)));
+        }
+    }
+
+    @Test
+    void returnPolicy_whenDisabledRange_mapsAbsentFieldsAsNull(WireMockRuntimeInfo wmInfo) {
+        // given — a DISABLED policy omits withdrawalPeriod/returnCost/address/contact/options
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(RETURN_POLICY_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(RETURN_POLICY_DISABLED_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            ReturnPolicy policy = allegro.settings().afterSale().returnPolicy(RETURN_POLICY_ID);
+
+            // then
+            assertTrue(policy.fulfillment());
+            assertEquals(ReturnRange.DISABLED, policy.availability().range());
+            assertEquals(SELLER_ID, policy.sellerId());
+            assertNull(policy.withdrawalPeriod());
+            assertNull(policy.returnCost());
+            assertNull(policy.address());
+            assertNull(policy.contact());
+            assertNull(policy.options());
+        }
+    }
+
+    @Test
+    void createReturnPolicy_whenValidRequest_postsBodyAndMapsResponse(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(RETURN_POLICIES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBody(RETURN_POLICY_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            ReturnPolicy created = allegro.settings().afterSale().createReturnPolicy(sampleReturnPolicy());
+
+            // then — request body carried the mapped fields; response mapped back
+            assertEquals(RETURN_POLICY_ID, created.id());
+            verify(1, postRequestedFor(urlEqualTo(RETURN_POLICIES_PATH))
+                    .withRequestBody(matchingJsonPath("$.name", equalTo(NAME)))
+                    .withRequestBody(matchingJsonPath("$.isFulfillment", equalTo("false")))
+                    .withRequestBody(matchingJsonPath("$.availability.range", equalTo("RESTRICTED")))
+                    .withRequestBody(matchingJsonPath("$.options.cashOnDeliveryNotAllowed", equalTo("true")))
+                    .withRequestBody(matchingJsonPath("$.availability.restrictionCause.name",
+                            equalTo(RESTRICTION_NAME)))
+                    .withRequestBody(matchingJsonPath("$.returnCost.coveredBy", equalTo("SELLER"))));
+        }
+    }
+
+    @Test
+    void updateReturnPolicy_whenValidRequest_putsBodyAndMapsResponse(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlEqualTo(RETURN_POLICY_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(RETURN_POLICY_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            ReturnPolicy updated = allegro.settings().afterSale()
+                    .updateReturnPolicy(RETURN_POLICY_ID, sampleReturnPolicyUpdate());
+
+            // then — the update body carries no isFulfillment (fixed at creation)
+            assertEquals(RETURN_POLICY_ID, updated.id());
+            verify(1, putRequestedFor(urlEqualTo(RETURN_POLICY_PATH))
+                    .withRequestBody(matchingJsonPath("$.name", equalTo(NAME)))
+                    .withRequestBody(matchingJsonPath("$.availability.range", equalTo("FULL")))
+                    .withRequestBody(notMatching("(?s).*isFulfillment.*")));
+        }
+    }
+
+    @Test
+    void deleteReturnPolicy_whenCalled_sendsDelete(WireMockRuntimeInfo wmInfo) {
+        // given — the server returns the deleted policy; the SDK discards the body
+        stubToken(TEST_TOKEN);
+        stubFor(delete(urlEqualTo(RETURN_POLICY_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(RETURN_POLICY_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.settings().afterSale().deleteReturnPolicy(RETURN_POLICY_ID);
+
+            // then
+            verify(1, deleteRequestedFor(urlEqualTo(RETURN_POLICY_PATH)));
+        }
+    }
+
+    @Test
+    void streamReturnPolicies_whenPartialPage_mapsPoliciesAndStops(WireMockRuntimeInfo wmInfo) {
+        // given — a short page ends the walk
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(RETURN_POLICIES_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(returnPoliciesPage(PARTIAL_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<ReturnPolicy> policies = allegro.settings().afterSale()
+                    .streamReturnPolicies().toList();
+
+            // then — full policies map and the walk stops
+            assertEquals(PARTIAL_PAGE, policies.size());
+            assertEquals(ReturnRange.FULL, policies.get(0).availability().range());
+            verify(1, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
+            verify(0, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_OUT_OF_RANGE)));
+        }
+    }
+
+    @Test
+    void streamReturnPolicies_whenNotConsumed_defersTheFetch(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(RETURN_POLICIES_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(returnPoliciesPage(PARTIAL_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — building the stream must not touch the wire
+            var stream = allegro.settings().afterSale().streamReturnPolicies();
+            verify(0, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH)));
+
+            // then — the first page is fetched only on terminal consumption
+            stream.findFirst();
+            verify(1, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
+        }
+    }
+
+    @Test
+    void returnPolicy_whenNotFound_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(RETURN_POLICY_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TRACE_ID)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var afterSale = allegro.settings().afterSale();
+
+            // then
+            AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
+                    () -> afterSale.returnPolicy(RETURN_POLICY_ID));
+            assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
+            assertEquals(TRACE_ID, failure.traceId());
+        }
+    }
+
+    @Test
+    void createReturnPolicy_whenBadRequest_throwsBadRequestWithParsedFieldErrors(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(RETURN_POLICIES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TRACE_ID)
+                        .withBody(BAD_REQUEST_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var afterSale = allegro.settings().afterSale();
+            ReturnPolicyRequest request = sampleReturnPolicy();
+
+            // then — typed field errors survive; POST is not retried
+            AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
+                    () -> afterSale.createReturnPolicy(request));
+            assertEquals(BAD_REQUEST_CODE, failure.errors().get(0).code());
+            assertEquals(BAD_REQUEST_PATH, failure.errors().get(0).path());
+            assertEquals(TRACE_ID, failure.traceId());
+            verify(1, postRequestedFor(urlEqualTo(RETURN_POLICIES_PATH)));
+        }
+    }
+
+    @Test
+    void streamReturnPolicies_whenFullPage_stopsAtOffsetCeiling(WireMockRuntimeInfo wmInfo) {
+        // given — a full page of 60; the endpoint's offset max is 59, so there is
+        // no legal next page to request
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(RETURN_POLICIES_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(returnPoliciesPage(FULL_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            long total = allegro.settings().afterSale().streamReturnPolicies().count();
+
+            // then — the full page is returned but no out-of-range offset is sent
+            assertEquals(FULL_PAGE, total);
+            verify(1, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
+            verify(0, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_OUT_OF_RANGE)));
         }
     }
 }

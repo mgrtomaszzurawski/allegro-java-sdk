@@ -131,6 +131,20 @@ sections. Empty subsections are dropped by the release engineer when folding
   request type left `language` null and pre-initialized empty collections, which the default
   serializer sent as `"language": null` and Allegro rejected with a 400 (live-caught on the
   sandbox). Only the fields actually set are sent.
+- Coverage (fulfilment): `CreateOfferRequest` and the `Offer` read now carry the offer's
+  delivery terms and after-sales conditions. New `OfferDelivery` (shipping-rate table id,
+  handling time, shipment date, delivery info) and `AfterSalesServices` (implied-warranty,
+  return-policy, warranty ids) value types — each an immutable record with a fluent builder,
+  usable both to configure an offer and to read one back. First step of the bucket-A coverage
+  debt: the request builder grows toward every field of `SaleProductOfferRequestV1`.
+- Coverage (selling terms): `CreateOfferRequest` gains `sellingFormat` (`OfferFormat` —
+  `BUY_NOW`/`AUCTION`/`ADVERTISEMENT`), `startingPrice` and `minimalPrice` (auction), and
+  `stockUnit` (new `StockUnit` enum: `UNIT`/`PAIR`/`SET`, forward-compat `UNKNOWN`); the `Offer`
+  read maps them back. `OfferFormat.toRaw()` added for the write path (throws on the read-only
+  `UNKNOWN` sentinel, like `StockUnit.toRaw()`). Pricing is now format-conditional and validated
+  fail-fast: an `AUCTION` requires `startingPrice` (Buy Now optional — a pure auction), any other
+  format requires `buyNowPrice`. `AfterSalesServices` ids are validated as UUIDs when set on the
+  builder (fail-fast `IllegalArgumentException`) rather than deep in the request.
 
 ### B — orders-payments
 
@@ -192,6 +206,21 @@ sections. Empty subsections are dropped by the release engineer when folding
   `seller.id` in the body (resolved from the token) and `coordinates` on the
   address (now a required builder field), and the update `PUT` requires the `id`
   in the body. create → get → update → delete verified green on the sandbox.
+- `settings().get()` / `settings().update(DeliverySettingsRequest)` — read and
+  replace the seller's delivery settings (`DeliverySettingsView` with the
+  free-delivery thresholds as `Money` and a `JoinStrategy` join policy). The
+  request builder requires the join policy; thresholds and marketplace are
+  optional.
+- `rates().list()` / `get(id)` / `create(ShippingRateSetRequest)` /
+  `update(id, request)` — manage the seller's shipping-rate sets:
+  `ShippingRateSet` with per-delivery-method `ShippingRate` rows (first/next-item
+  rates as `Money`, package weight, dispatch time), a `ShippingRateSetSummary`
+  list row, `RateSetType`, and fluent builders (a set needs a name and at least
+  one rate; a rate needs its method, both rates and a max quantity).
+- `deliveryMethods().paymentPolicy` is now fail-soft on read: an unmodelled
+  server value maps to `PaymentPolicy.UNKNOWN` instead of failing the whole read
+  (forward-compat, matching the bucket's other read enums after the core
+  `enumUnknownDefaultCase` change).
 
 ### D — account-meta
 
@@ -222,6 +251,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   to the read-only `UNKNOWN` sentinel instead of failing the whole stream, and the
   `status` filter drops `UNKNOWN` rather than sending it verbatim (which the server
   would reject).
+- Fixed: `user().smartClassification()` no longer fails to deserialize when a
+  condition's `value`/`threshold` arrives as a boolean. `GET /sale/smart` sends a
+  number for a metric condition but a boolean for a pass/fail one, while the
+  generated DTO types both `BigDecimal` — so the whole response aborted with a
+  `MismatchedInputException` (live-caught on the sandbox seller). The response is
+  now read from a `JsonNode` (`SmartClassificationMapper`): a numeric
+  value/threshold stays typed as `BigDecimal`, a boolean one maps to `null` (the
+  pass/fail outcome is on the condition's `fulfilled` flag). No public API change.
 - `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
   bucket D's live verification, run with a stored buyer token
   (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
@@ -418,13 +455,16 @@ sections. Empty subsections are dropped by the release engineer when folding
   with `UNKNOWN`-tolerant enums, fail-fast `NewMessageRequest`/`ReplyRequest`/
   `AttachmentDeclaration`/`MessageFilter` builders, and a `messaging` demo scenario
   (self-seeded attachment round-trip + threads read / `markRead` write→read).
-- Disputes facade (`client.disputes()`) — read side of post-purchase issues (`/sale/issues`,
-  **beta** media type): lazy `streamIssues(IssueFilter)` (status + checkout-form filter),
-  `get(issueId)`, and lazy `streamChat(issueId)`. Immutable `Issue`/`IssueChatEntry` records
-  with `UNKNOWN`-tolerant enums (`IssueType`, `IssueRight`, `IssueStatus`, `ChatAuthorRole`),
-  a fluent `IssueFilter`, and a `disputes` read-shape demo. The seller-side write operations
-  (add message, change status, attach) follow once the shared transport exposes a beta
-  request-body media type (backlog item).
+- Disputes facade (`client.disputes()`) — post-purchase issues (`/sale/issues`, **beta** media
+  type). Reads: lazy `streamIssues(IssueFilter)` (status + checkout-form filter), `get(issueId)`,
+  lazy `streamChat(issueId)`. Seller writes (beta request-body content type): `addMessage`,
+  `changeStatus`, and the attachment `uploadAttachment` (declare + PUT the bytes to the
+  one-time URL from the declaration's `Location` header, as the spec requires) /
+  `downloadAttachment`. Immutable `Issue`/`IssueChatEntry`/
+  `IssueAttachmentRef` records with `UNKNOWN`-tolerant response enums (`IssueType`,
+  `IssueRight`, `IssueStatus`, `ChatAuthorRole`), request enums (`IssueMessageType`,
+  `ClaimStatus`), fail-fast `IssueFilter`/`IssueMessageRequest`/`ClaimStatusChange`/
+  `IssueAttachmentDeclaration` builders, and a `disputes` demo scenario.
 
 ### K — sale-settings
 
@@ -443,3 +483,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AfterSalesAddress` value type, and a fail-fast `ImpliedWarrantyRequest` builder
   (`name` + `individual` required). Documented in `docs/settings.md`; `settings-implied-warranty`
   write→read demo scenario.
+- `settings().afterSale()` return policies: `streamReturnPolicies()` (lazy, single page,
+  full `ReturnPolicy` records), `returnPolicy(id)`, `createReturnPolicy(...)`,
+  `updateReturnPolicy(...)`, `deleteReturnPolicy(...)`. Immutable `ReturnPolicy` with typed
+  `ReturnPolicyAvailability` (`ReturnRange` + `ReturnRestrictionCause`), `ReturnCostCoveredBy`,
+  `ReturnPolicyContact` and `ReturnPolicyOptions`; separate fail-fast `ReturnPolicyRequest`
+  (create — requires `name`/`fulfillment`/`availability`) and `ReturnPolicyUpdateRequest`
+  (update — no `fulfillment`, which is fixed at creation) builders. Both require `options`
+  when the availability range is not `DISABLED` (live-verified — the server rejects an enabled
+  policy without options). Documented in `docs/settings.md`; `settings-return-policy`
+  write→read→update→delete demo scenario.
