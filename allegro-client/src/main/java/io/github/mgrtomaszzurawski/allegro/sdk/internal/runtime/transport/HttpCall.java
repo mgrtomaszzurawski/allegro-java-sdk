@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +34,7 @@ public final class HttpCall {
     private static final String ACCEPT_LANGUAGE_HEADER = "Accept-Language";
     private static final String IF_MATCH_HEADER = "If-Match";
     private static final String ETAG_HEADER = "ETag";
+    private static final String LOCATION_HEADER = "Location";
     private static final String BEARER_PREFIX = "Bearer ";
 
     private static final String METHOD_GET = "GET";
@@ -48,6 +50,7 @@ public final class HttpCall {
 
     private String method;
     private String path;
+    private String absoluteUrl;
     private Query query = Query.create();
     private String acceptMediaType = HttpSupport.VND_ALLEGRO_V1;
     private String acceptLanguage;
@@ -83,6 +86,18 @@ public final class HttpCall {
     /** DELETE {@code path}. */
     public HttpCall delete(String requestPath) {
         return verb(METHOD_DELETE, requestPath);
+    }
+
+    /**
+     * PUT to an ABSOLUTE URL, bypassing the API base — for the attachment upload
+     * host ({@code upload.allegro.pl}) returned in a declaration's {@code Location}
+     * header. The Bearer token and Accept media type are still sent, so the upload
+     * is authenticated; combine with {@link #binaryBody(byte[], String)}.
+     */
+    public HttpCall putAbsolute(String url) {
+        this.method = METHOD_PUT;
+        this.absoluteUrl = url;
+        return this;
     }
 
     private HttpCall verb(String httpMethod, String requestPath) {
@@ -211,12 +226,26 @@ public final class HttpCall {
         return new Etagged<>(value, response.headers().firstValue(ETAG_HEADER).orElse(null));
     }
 
+    /**
+     * Execute and return the deserialized body together with the response
+     * {@code Location} header — the absolute upload URL an attachment declaration
+     * returns, to PUT the binary to via {@link #putAbsolute(String)}. The
+     * {@code location} is {@code null} when the server sends no such header.
+     */
+    public <T> Located<T> fetchLocation(Class<T> responseType) {
+        HttpResponse<String> response = support.exchangeFor(this::buildRequest, operationName,
+                HttpResponse.BodyHandlers.ofString(), stringBody -> stringBody);
+        T value = support.deserialize(response, responseType);
+        return new Located<>(value, response.headers().firstValue(LOCATION_HEADER).orElse(null));
+    }
+
     private HttpRequest.Builder buildRequest() {
         if (method == null) {
             throw new IllegalStateException(ERR_NO_VERB);
         }
         String fullPath = query.isEmpty() ? path : path + query.render();
-        HttpRequest.Builder builder = HttpRequest.newBuilder(support.uri(fullPath))
+        URI target = absoluteUrl != null ? URI.create(absoluteUrl) : support.uri(fullPath);
+        HttpRequest.Builder builder = HttpRequest.newBuilder(target)
                 .timeout(support.runtime().readTimeout())
                 .header(ACCEPT_HEADER, acceptMediaType)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + support.runtime().requireToken());

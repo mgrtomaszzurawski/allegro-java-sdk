@@ -36,6 +36,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundExceptio
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Etagged;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Located;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
@@ -58,6 +59,9 @@ class HttpCallTest {
     private static final String ETAG = "\"v3\"";
     private static final String IMAGE_CONTENT_TYPE = "image/png";
     private static final byte[] IMAGE_BYTES = {1, 2, 3, 4};
+    private static final String LOCATION_HEADER = "Location";
+    private static final String UPLOAD_PATH = "/sale/offer-attachments/abc-123";
+    private static final String UPLOAD_URL = "http://upload.allegro.pl/sale/offer-attachments/abc-123";
     private static final String PDF_MEDIA_TYPE = "application/pdf";
     private static final byte[] PDF_BYTES = {37, 80, 68, 70, 45, 49, 46, 52};
     private static final String ETAG_HEADER = "ETag";
@@ -181,6 +185,43 @@ class HttpCallTest {
         // then
         assertEquals(OK_VALUE, mapped.get("value"));
         verify(1, putRequestedFor(urlEqualTo(PATH))
+                .withRequestBody(binaryEqualTo(IMAGE_BYTES)));
+    }
+
+    @Test
+    void fetchLocation_whenResponseHasLocationHeader_returnsBodyAndLocation(WireMockRuntimeInfo wmInfo) {
+        // given — an attachment declaration returns the absolute upload URL in Location
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withHeader(LOCATION_HEADER, UPLOAD_URL).withBody(OK_BODY)));
+
+        // when
+        Located<Map> located = support(wmInfo).request(OPERATION).post(PATH)
+                .jsonBody(Map.of("declare", "attachment")).fetchLocation(Map.class);
+
+        // then — the upload URL is exposed alongside the deserialized body
+        assertEquals(UPLOAD_URL, located.location());
+        assertEquals(OK_VALUE, located.value().get("value"));
+    }
+
+    @Test
+    void putAbsolute_whenUploadHost_sendsBinaryToTheAbsoluteUrl(WireMockRuntimeInfo wmInfo) {
+        // given — the absolute upload URL (here pointed back at WireMock) from a Location header
+        stubFor(put(urlEqualTo(UPLOAD_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(IMAGE_CONTENT_TYPE))
+                .withRequestBody(binaryEqualTo(IMAGE_BYTES))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+        String uploadUrl = wmInfo.getHttpBaseUrl() + UPLOAD_PATH;
+
+        // when — PUT the binary to the ABSOLUTE url, bypassing the API base
+        Map<?, ?> mapped = support(wmInfo).request(OPERATION)
+                .putAbsolute(uploadUrl).binaryBody(IMAGE_BYTES, IMAGE_CONTENT_TYPE).fetch(Map.class);
+
+        // then — the request hit the absolute path (not base + path), authenticated, with the bytes
+        assertEquals(OK_VALUE, mapped.get("value"));
+        verify(1, putRequestedFor(urlEqualTo(UPLOAD_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withRequestBody(binaryEqualTo(IMAGE_BYTES)));
     }
 
