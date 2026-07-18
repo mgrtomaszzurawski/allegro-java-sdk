@@ -354,8 +354,8 @@ fulfillment.refundDispositions(Filter)            // GET /fulfillment/returns/re
 fulfillment.removalPreference()                   // GET /fulfillment/removal/preferences
 fulfillment.setRemovalPreference(Preference)      // PUT /fulfillment/removal/preferences
 fulfillment.taxId()                               // GET /fulfillment/tax-id
-fulfillment.addTaxId(TaxIdRequest)                // POST /fulfillment/tax-id
-fulfillment.updateTaxId(TaxIdRequest)             // PUT /fulfillment/tax-id
+fulfillment.addTaxId(String taxId)                // POST /fulfillment/tax-id (body is a single `taxId` field)
+fulfillment.updateTaxId(String taxId)             // PUT /fulfillment/tax-id (body is a single `taxId` field)
 ```
 
 ## J — `client.messaging()`, `client.disputes()`, `client.contacts()`
