@@ -8,7 +8,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
@@ -25,6 +27,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredenti
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreview;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferFeePreviewRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferQuote;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.Instant;
@@ -62,6 +66,14 @@ class PricingClientTest {
     private static final String DEPOSIT_MARKETPLACE = "allegro-pl";
     private static final String DEPOSIT_PRICE_AMOUNT = "0.50";
 
+    private static final String FEE_PREVIEW_PATH = "/pricing/offer-fee-preview";
+    private static final String TEST_CATEGORY_ID = "257";
+    private static final String PRICE_AMOUNT = "99.99";
+    private static final String FEE_OFFER_ID = "654321";
+    private static final String COMMISSION_FEE_AMOUNT = "2.50";
+    private static final String QUOTE_CYCLE = "P1M";
+    private static final String BUY_NOW_FORMAT = "BUY_NOW";
+
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
 
@@ -85,6 +97,13 @@ class PricingClientTest {
               {"id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","name":"Bottle deposit",
                "marketplaceId":"allegro-pl","price":{"amount":"0.50","currency":"PLN"}}
             ]}
+            """;
+    // spec-derived: not yet wire-verified (one sale commission + one recurring quote)
+    private static final String FEE_PREVIEW_RESPONSE = """
+            {"commissions":[{"name":"Sale commission","type":"SALE",
+                "fee":{"amount":"2.50","currency":"PLN"}}],
+             "quotes":[{"name":"Promo","type":"PROMO",
+                "fee":{"amount":"1.00","currency":"PLN"},"cycleDuration":"P1M"}]}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -214,6 +233,61 @@ class PricingClientTest {
             verify(1, getRequestedFor(urlEqualTo(DEPOSIT_TYPES_PATH))
                     .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                             equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_2)));
+        }
+    }
+
+    @Test
+    void feePreview_whenBuyNowRequest_postsOfferBodyAndMapsCommissionsAndQuotes(WireMockRuntimeInfo wmInfo) {
+        // given — the body carries the category and a Buy Now selling mode
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(FEE_PREVIEW_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(matchingJsonPath("$.offer.category.id", equalTo(TEST_CATEGORY_ID)))
+                .withRequestBody(matchingJsonPath("$.offer.sellingMode.format", equalTo(BUY_NOW_FORMAT)))
+                .withRequestBody(matchingJsonPath("$.offer.sellingMode.price.amount", equalTo(PRICE_AMOUNT)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(FEE_PREVIEW_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FeePreview preview = allegro.pricing().feePreview(OfferFeePreviewRequest.builder()
+                    .categoryId(TEST_CATEGORY_ID)
+                    .price(Money.of(PRICE_AMOUNT, TEST_CURRENCY))
+                    .build());
+
+            // then — commissions and recurring quotes both map, including the cycle
+            assertEquals(1, preview.commissions().size());
+            assertEquals(Money.of(COMMISSION_FEE_AMOUNT, TEST_CURRENCY),
+                    preview.commissions().get(0).fee());
+            assertEquals(1, preview.quotes().size());
+            assertEquals(QUOTE_CYCLE, preview.quotes().get(0).cycleDuration());
+            verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
+        }
+    }
+
+    @Test
+    void feePreview_whenOfferIdGiven_includesOfferIdInBody(WireMockRuntimeInfo wmInfo) {
+        // given — an existing offer id must reach the request body
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(FEE_PREVIEW_PATH))
+                .withRequestBody(matchingJsonPath("$.offer.id", equalTo(FEE_OFFER_ID)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(FEE_PREVIEW_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FeePreview preview = allegro.pricing().feePreview(OfferFeePreviewRequest.builder()
+                    .categoryId(TEST_CATEGORY_ID)
+                    .price(Money.of(PRICE_AMOUNT, TEST_CURRENCY))
+                    .offerId(FEE_OFFER_ID)
+                    .build());
+
+            // then
+            assertEquals(1, preview.commissions().size());
+            verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
         }
     }
 }

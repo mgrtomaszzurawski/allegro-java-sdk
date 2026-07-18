@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreview;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferFeePreviewRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferQuote;
 import java.util.List;
 
@@ -31,6 +33,16 @@ public interface Pricing {
      * @return the turnover-discount sub-facade
      */
     TurnoverDiscounts turnoverDiscounts();
+
+    /**
+     * Preview the fees a draft offer would incur (sale commission and any
+     * recurring quotes) before publishing it.
+     *
+     * @param request the draft-offer details, built with
+     *     {@link OfferFeePreviewRequest#builder()}
+     * @return the previewed commissions and quotes
+     */
+    FeePreview feePreview(OfferFeePreviewRequest request);
 
     /**
      * The seller's current fee quotes for the given offers — the recurring fees
