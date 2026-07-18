@@ -1,0 +1,13 @@
+{
+  "alleDiscountCampaigns": [
+    {
+      "id": "winter-sale",
+      "name": "Winter Sale",
+      "type": "DISCOUNT",
+      "marketplace": { "id": "allegro-pl" },
+      "application": { "type": "WITHIN", "from": "2026-07-01T10:00:00Z", "to": "2026-08-01T10:00:00Z" },
+      "visibility": { "type": "WITHIN", "from": "2026-07-01T10:00:00Z", "to": "2026-08-01T10:00:00Z" },
+      "publication": { "type": "WITHIN", "from": "2026-07-05T10:00:00Z", "to": "2026-07-31T10:00:00Z" }
+    }
+  ]
+}

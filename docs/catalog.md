@@ -98,6 +98,33 @@ for (CategorySuggestion match : categories.suggest("wiertarka udarowa Bosch")) {
 }
 ```
 
+## Products
+
+Products are the shared descriptions offers are built from. Search the database lazily — the
+returned stream follows Allegro's opaque `page.id` cursor for you, so a bounded consumer only
+fetches the pages it needs.
+
+```java
+CatalogProducts products = client.catalog().products();
+
+products.search(ProductSearchRequest.builder().phrase("iphone 15").categoryId("257").build())
+        .limit(50)
+        .forEach(summary -> System.out.println(summary.id() + "  " + summary.name()));
+```
+
+A search needs a phrase — `build()` fails fast otherwise; a category is an optional filter that
+Allegro only honours alongside a phrase. Each `ProductSummary` carries the product id, name,
+category id, publication status (`LISTED` / `PROPOSED`) and image URLs.
+
+Read the full product — its parameter values and flags — with `get`:
+
+```java
+Product product = products.get(summary.id());
+for (ProductParameterValue parameter : product.parameters()) {
+    System.out.println(parameter.name() + " = " + String.join(", ", parameter.values()));
+}
+```
+
 ## Verifying against the sandbox
 
 The read-only demo scenario navigates the live category tree and confirms the mapped fields
@@ -105,4 +132,5 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 
 ```bash
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-categories
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products -Pdemo.account=seller
 ```

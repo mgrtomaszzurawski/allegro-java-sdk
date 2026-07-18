@@ -77,10 +77,10 @@ public record CategoryParameter(
             restrictions = ParameterRestrictions.fromString(stringParam.getRestrictions());
             dictionary = List.of();
         } else {
-            // Defensive default for a base/unmodelled parameter type. The standard
-            // wire path does not reach this yet: Jackson rejects an unknown
-            // discriminator (the Raw base has no defaultImpl) before from() runs.
-            // See CategoryParameterType.OTHER.
+            // A base/unmodelled parameter type: the core UnknownSubtypeToBaseHandler
+            // resolves an unknown discriminator to this base (the Raw has no
+            // defaultImpl), so an unmodelled type reaches here and degrades to OTHER
+            // rather than failing the read. See CategoryParameterType.OTHER.
             type = CategoryParameterType.OTHER;
             restrictions = null;
             dictionary = List.of();

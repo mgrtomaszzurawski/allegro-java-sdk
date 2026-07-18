@@ -4,13 +4,19 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.orders;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,20 +32,36 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.OrderEventFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.OrderFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.PointsFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.SerialNumbersRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ShipmentRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Carrier;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CarrierTracking;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Order;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEvent;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventStats;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PickupPoint;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Waybill;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * WireMock contract tests for the orders facade starter slice
- * ({@code orders().get(id)}): happy-path mapping of the flagship order record
- * plus the mandatory error-path table (400 typed / 401 replay / 404 / 429 / 5xx).
+ * WireMock contract tests for the orders facade: the flagship {@code get(id)}
+ * mapping and mandatory error-path table (400 typed / 401 replay / 404 / 429 /
+ * 5xx), plus the order-management surface — lazy offset/cursor streaming, the
+ * status/serial/tracking writes (verified on the wire), and the dictionary reads.
  */
 @WireMockTest
 class OrdersClientTest {
@@ -60,7 +82,8 @@ class OrdersClientTest {
     // wire bytes and the expected mapping share one source of truth.
     private static final String ORDER_ID = "a8f6c3e2-1111-2222-3333-444455556666";
     private static final String ORDER_BODY_FILE = "orders/order.json";
-    private static final String ORDER_PATH = "/order/checkout-forms/" + ORDER_ID;
+    private static final String CHECKOUT_FORMS_PATH = "/order/checkout-forms";
+    private static final String ORDER_PATH = CHECKOUT_FORMS_PATH + "/" + ORDER_ID;
     private static final String EXPECTED_BUYER_LOGIN = "test-buyer";
     private static final String EXPECTED_BUYER_EMAIL = "buyer@example.com";
     private static final String EXPECTED_OFFER_ID = "12345";
@@ -78,6 +101,58 @@ class OrdersClientTest {
     // Original request + one transparent replay/retry = two wire requests.
     private static final int EXPECTED_REQUESTS_WITH_ONE_REPLAY = 2;
     private static final int EXPECTED_REQUESTS_WITH_ONE_RETRY = 2;
+
+    // Order-management paths and query-parameter names under test.
+    private static final String EVENTS_PATH = "/order/events";
+    private static final String EVENT_STATS_PATH = "/order/event-stats";
+    private static final String CARRIERS_PATH = "/order/carriers";
+    private static final String PICKUP_POINTS_PATH = "/order/carriers/ALLEGRO/points";
+    private static final String FULFILLMENT_PATH = ORDER_PATH + "/fulfillment";
+    private static final String SERIAL_NUMBERS_PATH = ORDER_PATH + "/serial-numbers";
+    private static final String SHIPMENTS_PATH = ORDER_PATH + "/shipments";
+    private static final String BILLING_LINKS_PATH = "/order/" + ORDER_ID + "/billing-documents/links";
+    private static final String CARRIER_TRACKING_PATH = "/order/carriers/DPD/tracking";
+    private static final String PARAM_OFFSET = "offset";
+    private static final String PARAM_FROM = "from";
+    private static final String PARAM_WAYBILL = "waybill";
+    private static final String PARAM_CARRIERS = "carriers";
+    private static final String PARAM_REVISION = "checkoutForm.revision";
+    private static final String PARAM_BUYER_LOGIN = "buyer.login";
+    private static final String PARAM_STATUS = "status";
+    private static final String STATUS_READY_FOR_PROCESSING = "READY_FOR_PROCESSING";
+    private static final String JSONPATH_STATUS = "$.status";
+    private static final String JSONPATH_LINE_ITEM_ID = "$.lineItems[0].id";
+    private static final String JSONPATH_SERIAL_VALUE = "$.lineItems[0].serialNumbers.entries[0].value";
+    private static final String JSONPATH_CARRIER_ID = "$.carrierId";
+    private static final String JSONPATH_WAYBILL = "$.waybill";
+    private static final String JSONPATH_URL = "$.url";
+    private static final String EVENT_TIME = "2026-01-01T00:00:00Z";
+    private static final String EVENT_ORDER_ID_PREFIX = "o-";
+    private static final String EVENT_ORDER_REVISION = "r1";
+    private static final String POINT_CITY = "Warsaw";
+    private static final String BLANK_REVISION = "  ";
+
+    // Full first page + short second page prove lazy offset pagination.
+    private static final int FULL_PAGE = 100;
+    private static final int SECOND_PAGE = 50;
+    private static final int TOTAL_ORDERS = FULL_PAGE + SECOND_PAGE;
+    private static final String OFFSET_PAGE_TWO = String.valueOf(FULL_PAGE);
+
+    private static final String CARRIER_ID = "DPD";
+    private static final String CARRIER_NAME = "DPD";
+    private static final String WAYBILL_ONE = "WB-1";
+    private static final String CREATED_WAYBILL_ID = "way-2";
+    private static final String CREATED_WAYBILL = "WB-2";
+    private static final String LINE_ITEM_UUID = "0f3e2b1a-1111-2222-3333-444455556666";
+    private static final String SERIAL_ONE = "SN-1";
+    private static final String DOC_URL = "https://docs.example.com/invoice-1.pdf";
+    private static final String EVENT_ID_ONE = "evt-1";
+    private static final String EVENT_ID_TWO = "evt-2";
+    private static final String EVENT_ID_THREE = "evt-3";
+    private static final String LATEST_EVENT_ID = "evt-9";
+    private static final String TRACKING_CODE = "DELIVERED";
+    private static final String POINT_ID = "point-1";
+    private static final String POINT_CARRIER = "UPS";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -124,6 +199,45 @@ class OrdersClientTest {
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(TOKEN_RESPONSE.formatted(accessToken, EXPIRY_SECONDS))));
+    }
+
+    // spec-derived: minimal but valid checkout-form shape the mapper needs.
+    private static String orderJson(int index) {
+        String orderUuid = String.format("00000000-0000-0000-0000-%012d", index);
+        return "{\"id\":\"" + orderUuid + "\",\"status\":\"" + STATUS_READY_FOR_PROCESSING + "\","
+                + "\"buyer\":{\"id\":\"1\",\"login\":\"b\",\"email\":\"b@example.com\"},"
+                + "\"lineItems\":[],"
+                + "\"summary\":{\"totalToPay\":{\"amount\":\"10.00\",\"currency\":\"PLN\"}}}";
+    }
+
+    private static String ordersPage(int count, int startIndex) {
+        StringBuilder forms = new StringBuilder();
+        for (int index = 0; index < count; index++) {
+            if (index > 0) {
+                forms.append(',');
+            }
+            forms.append(orderJson(startIndex + index));
+        }
+        return "{\"checkoutForms\":[" + forms + "],\"count\":" + count
+                + ",\"totalCount\":" + TOTAL_ORDERS + "}";
+    }
+
+    private static String eventJson(String eventId) {
+        return "{\"id\":\"" + eventId + "\",\"type\":\"" + OrderEventType.BOUGHT.name() + "\","
+                + "\"occurredAt\":\"" + EVENT_TIME + "\","
+                + "\"order\":{\"checkoutForm\":{\"id\":\"" + EVENT_ORDER_ID_PREFIX + eventId
+                + "\",\"revision\":\"" + EVENT_ORDER_REVISION + "\"}}}";
+    }
+
+    private static String eventsBody(String... eventIds) {
+        StringBuilder events = new StringBuilder();
+        for (int index = 0; index < eventIds.length; index++) {
+            if (index > 0) {
+                events.append(',');
+            }
+            events.append(eventJson(eventIds[index]));
+        }
+        return "{\"events\":[" + events + "]}";
     }
 
     @Test
@@ -334,6 +448,424 @@ class OrdersClientTest {
             assertNull(order.buyer().companyName());
             assertNull(order.buyer().phoneNumber());
             assertFalse(order.buyer().guest());
+        }
+    }
+
+    @Test
+    void streamOrders_whenConsumingFirstElement_doesNotFetchSecondPage(WireMockRuntimeInfo wmInfo) {
+        // given — a full first page implies there may be more (totalCount > page)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH)).withQueryParam(PARAM_OFFSET, equalTo("0"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ordersPage(FULL_PAGE, 0))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — consume only the first order
+            List<Order> firstOnly = allegro.orders().streamOrders(OrderFilter.all())
+                    .limit(1).toList();
+
+            // then — page one fetched, page two (offset=100) never requested
+            assertEquals(1, firstOnly.size());
+            verify(1, getRequestedFor(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo("0")));
+            verify(0, getRequestedFor(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO)));
+        }
+    }
+
+    @Test
+    void streamOrders_whenTraversed_fetchesAllPagesAndTerminates(WireMockRuntimeInfo wmInfo) {
+        // given — full page then a short page (offset+count reaches totalCount)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH)).withQueryParam(PARAM_OFFSET, equalTo("0"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ordersPage(FULL_PAGE, 0))));
+        stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ordersPage(SECOND_PAGE, FULL_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            long total = allegro.orders().streamOrders(OrderFilter.all()).count();
+
+            // then — both pages walked exactly once, stream terminated
+            assertEquals(TOTAL_ORDERS, total);
+            verify(1, getRequestedFor(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo("0")));
+            verify(1, getRequestedFor(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO)));
+        }
+    }
+
+    @Test
+    void streamOrders_whenFilterGiven_carriesFilterAcrossPageBoundary(WireMockRuntimeInfo wmInfo) {
+        // given — both pages are stubbed to require the filter query params, so a
+        // request that dropped them on page two would miss the stub and 404
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo("0"))
+                .withQueryParam(PARAM_BUYER_LOGIN, equalTo(EXPECTED_BUYER_LOGIN))
+                .withQueryParam(PARAM_STATUS, equalTo(STATUS_READY_FOR_PROCESSING))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ordersPage(FULL_PAGE, 0))));
+        stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
+                .withQueryParam(PARAM_BUYER_LOGIN, equalTo(EXPECTED_BUYER_LOGIN))
+                .withQueryParam(PARAM_STATUS, equalTo(STATUS_READY_FOR_PROCESSING))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ordersPage(SECOND_PAGE, FULL_PAGE))));
+        OrderFilter filter = OrderFilter.builder()
+                .buyerLogin(EXPECTED_BUYER_LOGIN)
+                .statuses(OrderStatus.READY_FOR_PROCESSING)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            long total = allegro.orders().streamOrders(filter).count();
+
+            // then — page two carried the filter params (else it would not match)
+            assertEquals(TOTAL_ORDERS, total);
+            verify(1, getRequestedFor(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
+                    .withQueryParam(PARAM_BUYER_LOGIN, equalTo(EXPECTED_BUYER_LOGIN)));
+        }
+    }
+
+    @Test
+    void streamEvents_whenConsumingFirstElement_doesNotFetchNextCursorPage(WireMockRuntimeInfo wmInfo) {
+        // given — first page (no cursor) carries two events
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, absent())
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(eventsBody(EVENT_ID_ONE, EVENT_ID_TWO))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — consume only the first event
+            List<OrderEvent> firstOnly =
+                    allegro.orders().streamEvents(OrderEventFilter.all()).limit(1).toList();
+
+            // then — the event's fields are mapped from the Raw graph
+            assertEquals(1, firstOnly.size());
+            OrderEvent event = firstOnly.get(0);
+            assertEquals(EVENT_ID_ONE, event.id());
+            assertEquals(OrderEventType.BOUGHT, event.type());
+            assertEquals(OffsetDateTime.parse(EVENT_TIME), event.occurredAt());
+            assertEquals(EVENT_ORDER_ID_PREFIX + EVENT_ID_ONE, event.orderId());
+            assertEquals(EVENT_ORDER_REVISION, event.orderRevision());
+            // and the next page (from=last id) is never fetched
+            verify(1, getRequestedFor(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, absent()));
+            verify(0, getRequestedFor(urlPathEqualTo(EVENTS_PATH))
+                    .withQueryParam(PARAM_FROM, equalTo(EVENT_ID_TWO)));
+        }
+    }
+
+    @Test
+    void streamEvents_whenTraversed_advancesCursorByLastEventId(WireMockRuntimeInfo wmInfo) {
+        // given — cursor walk: [e1,e2] -> from=e2 [e3] -> from=e3 [] (stop)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, absent())
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(eventsBody(EVENT_ID_ONE, EVENT_ID_TWO))));
+        stubFor(get(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, equalTo(EVENT_ID_TWO))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(eventsBody(EVENT_ID_THREE))));
+        stubFor(get(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, equalTo(EVENT_ID_THREE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(eventsBody())));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            long total = allegro.orders().streamEvents(OrderEventFilter.all()).count();
+
+            // then — all three events read, cursor advanced by the last id each step
+            assertEquals(3, total);
+            verify(1, getRequestedFor(urlPathEqualTo(EVENTS_PATH))
+                    .withQueryParam(PARAM_FROM, equalTo(EVENT_ID_TWO)));
+            verify(1, getRequestedFor(urlPathEqualTo(EVENTS_PATH))
+                    .withQueryParam(PARAM_FROM, equalTo(EVENT_ID_THREE)));
+        }
+    }
+
+    @Test
+    void eventStats_whenCalled_mapsLatestEventMarker(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(EVENT_STATS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"latestEvent\":{\"id\":\"" + LATEST_EVENT_ID
+                                + "\",\"occurredAt\":\"" + EVENT_TIME + "\"}}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            OrderEventStats stats = allegro.orders().eventStats();
+
+            // then
+            assertEquals(LATEST_EVENT_ID, stats.latestEventId());
+            assertEquals(OffsetDateTime.parse(EVENT_TIME), stats.latestEventOccurredAt());
+        }
+    }
+
+    @Test
+    void markStatus_whenNoRevision_putsStatusWithoutRevisionQuery(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlPathEqualTo(FULFILLMENT_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.orders().markStatus(ORDER_ID, SellerStatus.SENT);
+
+            // then — status in the body, no optimistic-concurrency query param
+            verify(1, putRequestedFor(urlPathEqualTo(FULFILLMENT_PATH))
+                    .withQueryParam(PARAM_REVISION, absent())
+                    .withRequestBody(matchingJsonPath(JSONPATH_STATUS,
+                            equalTo(SellerStatus.SENT.name()))));
+        }
+    }
+
+    @Test
+    void markStatus_whenRevisionBlank_throwsIllegalArgumentBeforeWrite(WireMockRuntimeInfo wmInfo) {
+        // given — no fulfillment stub: the guard must reject before any HTTP call
+        try (AllegroClient allegro = client(wmInfo)) {
+            var orders = allegro.orders();
+
+            // then — a blank revision fails fast, never silently degrading to last-write-wins
+            assertThrows(IllegalArgumentException.class,
+                    () -> orders.markStatus(ORDER_ID, SellerStatus.SENT, BLANK_REVISION));
+            verify(0, putRequestedFor(urlPathEqualTo(FULFILLMENT_PATH)));
+        }
+    }
+
+    @Test
+    void markStatus_whenRevisionGiven_putsStatusWithRevisionQuery(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlPathEqualTo(FULFILLMENT_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.orders().markStatus(ORDER_ID, SellerStatus.PROCESSING, EXPECTED_REVISION);
+
+            // then — the revision travels as checkoutForm.revision
+            verify(1, putRequestedFor(urlPathEqualTo(FULFILLMENT_PATH))
+                    .withQueryParam(PARAM_REVISION, equalTo(EXPECTED_REVISION))
+                    .withRequestBody(matchingJsonPath(JSONPATH_STATUS,
+                            equalTo(SellerStatus.PROCESSING.name()))));
+        }
+    }
+
+    @Test
+    void setSerialNumbers_whenCalled_postsNestedSerialNumbersBody(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlPathEqualTo(SERIAL_NUMBERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
+        SerialNumbersRequest request = SerialNumbersRequest.builder()
+                .lineItem(LINE_ITEM_UUID, SERIAL_ONE)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.orders().setSerialNumbers(ORDER_ID, request);
+
+            // then — the nested request body reaches the wire
+            verify(1, postRequestedFor(urlPathEqualTo(SERIAL_NUMBERS_PATH))
+                    .withRequestBody(matchingJsonPath(JSONPATH_LINE_ITEM_ID, equalTo(LINE_ITEM_UUID)))
+                    .withRequestBody(matchingJsonPath(JSONPATH_SERIAL_VALUE, equalTo(SERIAL_ONE))));
+        }
+    }
+
+    @Test
+    void setSerialNumbers_whenRevisionBlank_throwsIllegalArgumentBeforeWrite(WireMockRuntimeInfo wmInfo) {
+        // given
+        SerialNumbersRequest request = SerialNumbersRequest.builder()
+                .lineItem(LINE_ITEM_UUID, SERIAL_ONE)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var orders = allegro.orders();
+
+            // then — a blank revision is rejected before any HTTP call
+            assertThrows(IllegalArgumentException.class,
+                    () -> orders.setSerialNumbers(ORDER_ID, request, BLANK_REVISION));
+            verify(0, postRequestedFor(urlPathEqualTo(SERIAL_NUMBERS_PATH)));
+        }
+    }
+
+    @Test
+    void attachBillingDocumentLink_whenCalled_postsUrl(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlPathEqualTo(BILLING_LINKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.orders().attachBillingDocumentLink(ORDER_ID, DOC_URL);
+
+            // then
+            verify(1, postRequestedFor(urlPathEqualTo(BILLING_LINKS_PATH))
+                    .withRequestBody(matchingJsonPath(JSONPATH_URL, equalTo(DOC_URL))));
+        }
+    }
+
+    @Test
+    void trackingNumbers_whenCalled_mapsWaybills(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SHIPMENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"shipments\":[{\"id\":\"way-1\",\"waybill\":\"" + WAYBILL_ONE
+                                + "\",\"carrierId\":\"" + CARRIER_ID + "\",\"carrierName\":\""
+                                + CARRIER_NAME + "\",\"lineItems\":[{\"id\":\"li-1\"}],"
+                                + "\"createdAt\":\"2026-01-01T00:00:00Z\"}]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<Waybill> waybills = allegro.orders().trackingNumbers(ORDER_ID);
+
+            // then
+            assertEquals(1, waybills.size());
+            assertEquals(WAYBILL_ONE, waybills.get(0).waybill());
+            assertEquals(CARRIER_ID, waybills.get(0).carrierId());
+            assertEquals(List.of("li-1"), waybills.get(0).lineItemIds());
+        }
+    }
+
+    @Test
+    void addTrackingNumber_whenCalled_postsShipmentAndReturnsWaybill(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlPathEqualTo(SHIPMENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBody("{\"id\":\"" + CREATED_WAYBILL_ID + "\",\"waybill\":\""
+                                + CREATED_WAYBILL + "\",\"carrierId\":\"" + CARRIER_ID
+                                + "\",\"lineItems\":[],\"createdAt\":\"2026-01-01T00:00:00Z\"}")));
+        ShipmentRequest request = ShipmentRequest.builder()
+                .carrierId(CARRIER_ID)
+                .waybill(CREATED_WAYBILL)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Waybill created = allegro.orders().addTrackingNumber(ORDER_ID, request);
+
+            // then — response mapped, and the request carried the shipment fields
+            assertEquals(CREATED_WAYBILL_ID, created.id());
+            assertEquals(CREATED_WAYBILL, created.waybill());
+            verify(1, postRequestedFor(urlPathEqualTo(SHIPMENTS_PATH))
+                    .withRequestBody(matchingJsonPath(JSONPATH_CARRIER_ID, equalTo(CARRIER_ID)))
+                    .withRequestBody(matchingJsonPath(JSONPATH_WAYBILL, equalTo(CREATED_WAYBILL))));
+        }
+    }
+
+    @Test
+    void addTrackingNumber_when5xx_doesNotRetryPost(WireMockRuntimeInfo wmInfo) {
+        // given — a POST is not retried by default, even on a transient 500
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlPathEqualTo(SHIPMENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+        ShipmentRequest request = ShipmentRequest.builder()
+                .carrierId(CARRIER_ID)
+                .waybill(CREATED_WAYBILL)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var orders = allegro.orders();
+
+            // then — one attempt only
+            assertThrows(AllegroServerException.class,
+                    () -> orders.addTrackingNumber(ORDER_ID, request));
+            verify(1, postRequestedFor(urlPathEqualTo(SHIPMENTS_PATH)));
+        }
+    }
+
+    @Test
+    void carriers_whenCalled_mapsCarrierDictionary(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CARRIERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"carriers\":[{\"id\":\"DPD\",\"name\":\"DPD\"},"
+                                + "{\"id\":\"UPS\",\"name\":\"UPS\"}]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<Carrier> carriers = allegro.orders().carriers();
+
+            // then
+            assertEquals(2, carriers.size());
+            assertEquals(CARRIER_ID, carriers.get(0).id());
+        }
+    }
+
+    @Test
+    void carrierTracking_whenCalled_sendsWaybillQueryAndMapsHistory(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CARRIER_TRACKING_PATH))
+                .withQueryParam(PARAM_WAYBILL, equalTo(WAYBILL_ONE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"carrierId\":\"DPD\",\"waybills\":[{\"waybill\":\"" + WAYBILL_ONE
+                                + "\",\"trackingDetails\":{\"statuses\":[{\"code\":\"" + TRACKING_CODE
+                                + "\",\"description\":\"Delivered\","
+                                + "\"occurredAt\":\"2026-01-01T00:00:00Z\"}],"
+                                + "\"updatedAt\":\"2026-01-01T00:00:00Z\"}}]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            CarrierTracking tracking = allegro.orders().carrierTracking(CARRIER_ID, WAYBILL_ONE);
+
+            // then
+            assertEquals(CARRIER_ID, tracking.carrierId());
+            assertEquals(1, tracking.waybills().size());
+            assertEquals(TRACKING_CODE, tracking.waybills().get(0).statuses().get(0).code());
+            verify(1, getRequestedFor(urlPathEqualTo(CARRIER_TRACKING_PATH))
+                    .withQueryParam(PARAM_WAYBILL, equalTo(WAYBILL_ONE)));
+        }
+    }
+
+    @Test
+    void allegroPickupPoints_whenCarrierFilter_sendsCarriersQueryAndMapsPoints(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(PICKUP_POINTS_PATH))
+                .withQueryParam(PARAM_CARRIERS, equalTo(POINT_CARRIER))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"points\":[{\"id\":\"" + POINT_ID + "\",\"name\":\"Point 1\","
+                                + "\"type\":\"PUDO\",\"description\":\"desc\","
+                                + "\"address\":{\"street\":\"Main 1\",\"postCode\":\"00-001\","
+                                + "\"city\":\"" + POINT_CITY + "\",\"countryCode\":\"PL\"}}]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<PickupPoint> points = allegro.orders().allegroPickupPoints(
+                    PointsFilter.ofCarriers(POINT_CARRIER));
+
+            // then
+            assertEquals(1, points.size());
+            assertEquals(POINT_ID, points.get(0).id());
+            assertEquals(POINT_CITY, points.get(0).address().city());
+            verify(1, getRequestedFor(urlPathEqualTo(PICKUP_POINTS_PATH))
+                    .withQueryParam(PARAM_CARRIERS, equalTo(POINT_CARRIER)));
         }
     }
 }

@@ -4,7 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.CallContext;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
@@ -50,10 +52,20 @@ public final class HttpSupport {
 
     private final HttpRuntime runtime;
     private final ServerErrorParser errorParser;
+    /**
+     * Omits null AND empty fields — used for partial (PATCH) bodies so unset
+     * fields are not reset. NON_EMPTY (not just NON_NULL) is required because the
+     * generated request DTOs pre-initialize collection fields to empty
+     * ({@code []}/{@code {}}), which NON_NULL would still serialize and thereby
+     * clear those fields server-side.
+     */
+    private final ObjectMapper partialMapper;
 
     public HttpSupport(HttpRuntime runtime) {
         this.runtime = runtime;
         this.errorParser = new ServerErrorParser(runtime.objectMapper());
+        this.partialMapper = runtime.objectMapper().copy()
+                .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     }
 
     /** Resolve an {@link ApiPaths} path against the environment base URL. */
@@ -169,8 +181,21 @@ public final class HttpSupport {
     }
 
     String serialize(Object body) {
+        return serializeWith(runtime.objectMapper(), body);
+    }
+
+    /**
+     * Serialize {@code body} omitting null and empty fields, for a partial
+     * (PATCH) update where an unset field must be absent from the payload rather
+     * than sent as {@code null}/{@code []} (which would reset it server-side).
+     */
+    String serializePartial(Object body) {
+        return serializeWith(partialMapper, body);
+    }
+
+    private String serializeWith(ObjectMapper mapper, Object body) {
         try {
-            String json = runtime.objectMapper().writeValueAsString(body);
+            String json = mapper.writeValueAsString(body);
             SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
             return json;
         } catch (JacksonException e) {

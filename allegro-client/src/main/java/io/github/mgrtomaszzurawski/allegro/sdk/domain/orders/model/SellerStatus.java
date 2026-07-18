@@ -48,7 +48,13 @@ public enum SellerStatus {
     SUSPENDED,
 
     /** The order was returned. */
-    RETURNED;
+    RETURNED,
+
+    /** A status this SDK release does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
+
+    private static final String UNKNOWN_NOT_WRITABLE =
+            "UNKNOWN is a read-only sentinel and cannot be written to Allegro";
 
     /**
      * Map the generated Layer-1 enum to the public status, or {@code null} when
@@ -68,6 +74,23 @@ public enum SellerStatus {
             case CANCELLED -> CANCELLED;
             case SUSPENDED -> SUSPENDED;
             case RETURNED -> RETURNED;
+            default -> UNKNOWN;
+        };
+    }
+
+    /** Map the public status to the generated Layer-1 enum for a status write. */
+    public CheckoutFormFulfillmentStatusRaw toRaw() {
+        return switch (this) {
+            case NEW -> CheckoutFormFulfillmentStatusRaw.NEW;
+            case PROCESSING -> CheckoutFormFulfillmentStatusRaw.PROCESSING;
+            case READY_FOR_SHIPMENT -> CheckoutFormFulfillmentStatusRaw.READY_FOR_SHIPMENT;
+            case READY_FOR_PICKUP -> CheckoutFormFulfillmentStatusRaw.READY_FOR_PICKUP;
+            case SENT -> CheckoutFormFulfillmentStatusRaw.SENT;
+            case PICKED_UP -> CheckoutFormFulfillmentStatusRaw.PICKED_UP;
+            case CANCELLED -> CheckoutFormFulfillmentStatusRaw.CANCELLED;
+            case SUSPENDED -> CheckoutFormFulfillmentStatusRaw.SUSPENDED;
+            case RETURNED -> CheckoutFormFulfillmentStatusRaw.RETURNED;
+            case UNKNOWN -> throw new IllegalStateException(UNKNOWN_NOT_WRITABLE);
         };
     }
 }

@@ -32,6 +32,7 @@ public enum OfferFormat {
             case BUY_NOW -> BUY_NOW;
             case AUCTION -> AUCTION;
             case ADVERTISEMENT -> ADVERTISEMENT;
+            default -> UNKNOWN;
         };
     }
 }

@@ -75,6 +75,12 @@ openApiGenerate {
         // Layer 1 is Jackson-serialized DTOs — force Jackson so no Gson symbol
         // is referenced (models-only generation omits the support classes).
         "serializationLibrary" to "jackson",
+        // Forward compatibility: a generated enum's fromValue() returns the
+        // UNKNOWN_DEFAULT_OPEN_API sentinel for an unrecognized wire value
+        // instead of throwing, so a value Allegro adds later does not fail the
+        // whole response deserialization. Domain enums map that sentinel (and
+        // any unmodelled value) to their own UNKNOWN via a switch default.
+        "enumUnknownDefaultCase" to "true",
     ))
 }
 

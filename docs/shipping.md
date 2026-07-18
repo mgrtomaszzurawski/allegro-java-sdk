@@ -41,16 +41,18 @@ try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment
             .name("Pickup Point Center")
             .type(PosType.PICKUP_POINT)
             .status(PosStatus.ACTIVE)
-            .confirmationType(ConfirmationType.CONTACT_NOT_REQUIRED)
+            .confirmationType(ConfirmationType.AWAIT_CONTACT)
             .address(Address.builder()
                 .street("Grunwaldzka 100")
                 .city("Gdansk")
                 .zipCode("80-244")
                 .state("pomorskie")
                 .countryCode("PL")
+                .coordinates(new Coordinates(54.372158, 18.638306))
                 .build())
             .openHours(List.of(
-                OpenHour.builder().dayOfWeek("MONDAY").fromTime("08:00").toTime("16:00").build()))
+                OpenHour.builder().dayOfWeek("MONDAY")
+                    .fromTime("08:00:00.000").toTime("16:00:00.000").build()))
             .externalId("store-001")   // your own identifier (optional)
             .build());
 
@@ -60,8 +62,12 @@ try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment
 
 `name`, `type`, `status`, `confirmationType` and `address` are required — the
 builder fails fast with an `IllegalStateException` naming the missing field if
-one is omitted. `Address` requires `city`, `zipCode`, `state` and `countryCode`.
-Length limits (e.g. `name` ≤ 80, `zipCode` ≤ 10) are enforced locally.
+one is omitted. `Address` requires `city`, `zipCode`, `state`, `countryCode` and
+`coordinates`. Length limits (e.g. `name` ≤ 80, `zipCode` ≤ 10) are enforced
+locally. Opening-hours times use the ISO `HH:mm:ss.SSS` format. You do **not**
+pass your own seller id — the SDK resolves it from the token and adds it to the
+request. (The live endpoint requires `seller.id` and `coordinates` even though
+the spec marks them optional — see `KNOWN-SERVER-BEHAVIORS.md`.)
 
 ## Read a point of service
 
@@ -76,15 +82,16 @@ a given SDK release does not model, so reads never break on a new server value.
 ## List a seller's points of service
 
 ```java
-List<PointOfService> points = client.shipping().points().list(sellerId);
+List<PointOfService> points = client.shipping().points().list();
 
 // optionally limited to one country
-List<PointOfService> polishPoints = client.shipping().points().list(sellerId, "PL");
+List<PointOfService> polishPoints = client.shipping().points().list("PL");
 ```
 
-`sellerId` is required (Allegro's `seller.id` query parameter). The response is
-not paginated — the seller's full set arrives in one call — so this returns a
-plain `List`, not a lazy `Stream`.
+Allegro requires the `seller.id` query parameter; the SDK resolves it from the
+token, so you don't pass your own id. The response is not paginated — the
+seller's full set arrives in one call — so this returns a plain `List`, not a
+lazy `Stream`.
 
 ## Modify a point of service
 
@@ -94,12 +101,14 @@ PointOfService updated = client.shipping().points().update(pointOfServiceId,
         .name("Pickup Point Center East")
         .type(PosType.PICKUP_POINT)
         .status(PosStatus.ACTIVE)
-        .confirmationType(ConfirmationType.CONTACT_NOT_REQUIRED)
+        .confirmationType(ConfirmationType.AWAIT_CONTACT)
         .address(Address.builder()
             .street("Grunwaldzka 100").city("Gdansk")
-            .zipCode("80-244").state("pomorskie").countryCode("PL").build())
+            .zipCode("80-244").state("pomorskie").countryCode("PL")
+            .coordinates(new Coordinates(54.372158, 18.638306)).build())
         .openHours(List.of(
-            OpenHour.builder().dayOfWeek("MONDAY").fromTime("08:00").toTime("16:00").build()))
+            OpenHour.builder().dayOfWeek("MONDAY")
+                .fromTime("08:00:00.000").toTime("16:00:00.000").build()))
         .build());
 ```
 

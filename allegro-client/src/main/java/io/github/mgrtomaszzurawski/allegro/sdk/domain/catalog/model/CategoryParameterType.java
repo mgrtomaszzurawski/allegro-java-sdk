@@ -31,10 +31,9 @@ public enum CategoryParameterType {
      * and {@link CategoryParameter#dictionary()} is empty.
      *
      * <p>Reachability: the Layer-1 parameter DTO declares no Jackson
-     * {@code defaultImpl}, so an unknown {@code type} on the wire currently fails
-     * deserialization (surfaced as an {@code AllegroServerException}) before the
-     * mapper runs — it does not yet degrade to {@code OTHER}. Delivering that
-     * degradation is a tracked core follow-up.
+     * {@code defaultImpl}, but the core {@code UnknownSubtypeToBaseHandler}
+     * resolves an unknown {@code type} to the polymorphic base, so an unmodelled
+     * parameter type now degrades to {@code OTHER} rather than failing the read.
      */
     OTHER
 }
