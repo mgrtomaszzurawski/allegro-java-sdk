@@ -430,13 +430,16 @@ sections. Empty subsections are dropped by the release engineer when folding
   with `UNKNOWN`-tolerant enums, fail-fast `NewMessageRequest`/`ReplyRequest`/
   `AttachmentDeclaration`/`MessageFilter` builders, and a `messaging` demo scenario
   (self-seeded attachment round-trip + threads read / `markRead` write→read).
-- Disputes facade (`client.disputes()`) — read side of post-purchase issues (`/sale/issues`,
-  **beta** media type): lazy `streamIssues(IssueFilter)` (status + checkout-form filter),
-  `get(issueId)`, and lazy `streamChat(issueId)`. Immutable `Issue`/`IssueChatEntry` records
-  with `UNKNOWN`-tolerant enums (`IssueType`, `IssueRight`, `IssueStatus`, `ChatAuthorRole`),
-  a fluent `IssueFilter`, and a `disputes` read-shape demo. The seller-side write operations
-  (add message, change status, attach) follow once the shared transport exposes a beta
-  request-body media type (backlog item).
+- Disputes facade (`client.disputes()`) — post-purchase issues (`/sale/issues`, **beta** media
+  type). Reads: lazy `streamIssues(IssueFilter)` (status + checkout-form filter), `get(issueId)`,
+  lazy `streamChat(issueId)`. Seller writes (beta request-body content type): `addMessage`,
+  `changeStatus`, and the attachment `uploadAttachment` (declare + PUT the bytes to the
+  one-time URL from the declaration's `Location` header, as the spec requires) /
+  `downloadAttachment`. Immutable `Issue`/`IssueChatEntry`/
+  `IssueAttachmentRef` records with `UNKNOWN`-tolerant response enums (`IssueType`,
+  `IssueRight`, `IssueStatus`, `ChatAuthorRole`), request enums (`IssueMessageType`,
+  `ClaimStatus`), fail-fast `IssueFilter`/`IssueMessageRequest`/`ClaimStatusChange`/
+  `IssueAttachmentDeclaration` builders, and a `disputes` demo scenario.
 
 ### K — sale-settings
 
