@@ -92,6 +92,34 @@ ImpliedWarranty created = afterSale.createImpliedWarranty(request);
 afterSale.streamImpliedWarranties().forEach(summary -> System.out.println(summary.name()));
 ```
 
+## Return policies
+
+Return policies model how a seller accepts returns. `name`, the `fulfillment` flag (fixed at
+creation) and `availability` are required on create; `updateReturnPolicy(...)` takes a separate
+`ReturnPolicyUpdateRequest` that omits `fulfillment` (the server rejects changing it). Return
+policies also support **delete**. `streamReturnPolicies()` returns **full** `ReturnPolicy` records
+(not summaries), lazily, single page ≤ 60.
+
+```java
+ReturnPolicyRequest request = ReturnPolicyRequest.builder()
+        .name("Standard 14-day returns")
+        .fulfillment(false)                                   // required, fixed at creation
+        .availability(ReturnPolicyAvailability.full())        // or .restricted(cause) / .disabled(cause)
+        .withdrawalPeriod("P14D")                             // ISO-8601, whole days
+        .returnCost(ReturnCostCoveredBy.SELLER)
+        .address(new AfterSalesAddress(
+                "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+        .build();
+
+ReturnPolicy created = afterSale.createReturnPolicy(request);
+afterSale.updateReturnPolicy(created.id(), ReturnPolicyUpdateRequest.builder()
+        .name(created.name())
+        .availability(ReturnPolicyAvailability.full())
+        .withdrawalPeriod("P30D")
+        .build());
+afterSale.deleteReturnPolicy(created.id());
+```
+
 ## Errors
 
 All calls surface the SDK's remediation-grouped exceptions: `AllegroBadRequestException`
