@@ -70,13 +70,19 @@ sections. Empty subsections are dropped by the release engineer when folding
   `points().delete(id)`, immutable `PointOfService` records with fluent builders
   (fail-fast required fields, replicated length limits) and read-only enum
   fallbacks.
-- `points().list(sellerId)` / `points().list(sellerId, countryCode)` (returns a
+- `points().list()` / `points().list(countryCode)` (returns a
   `List<PointOfService>` — the endpoint is not paginated) and
   `points().update(id, PointOfServiceRequest)`, completing the points-of-service
-  CRUD surface.
+  CRUD surface. The SDK resolves the seller id from the token, so no `sellerId`
+  argument is needed.
 - `deliveryMethods()` — lists the seller's available delivery methods
   (`List<DeliveryMethod>`, with `PaymentPolicy`); read-only, works with an
   application token (no user scope required).
+- Live sandbox verification of the points-of-service write path surfaced three
+  spec-vs-wire divergences, now handled by the SDK: create/update require
+  `seller.id` in the body (resolved from the token) and `coordinates` on the
+  address (now a required builder field), and the update `PUT` requires the `id`
+  in the body. create → get → update → delete verified green on the sandbox.
 
 ### D — account-meta
 

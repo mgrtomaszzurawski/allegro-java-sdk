@@ -10,11 +10,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCred
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.PointsOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Address;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Coordinates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.OpenHour;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServiceRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosType;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import java.io.IOException;
 import java.util.List;
 
@@ -68,36 +70,76 @@ public final class PointsOfServiceDemo {
     }
 
     private static void roundTrip(PointsOfService points) {
+        // Self-heal: remove any leftover demo points from an interrupted run.
+        for (PointOfService leftover : points.list()) {
+            if (leftover.name().startsWith(DEMO_PREFIX)) {
+                points.delete(leftover.id());
+                System.out.println("cleaned up leftover POS id=" + leftover.id());
+            }
+        }
+
         String uniqueSuffix = Long.toString(System.currentTimeMillis());
+        // openHours use the ISO HH:mm:ss.SSS time format; coordinates are required
+        // on the live create/update (see KNOWN-SERVER-BEHAVIORS.md). The seller id
+        // is resolved by the SDK, not set here.
         PointOfServiceRequest request = PointOfServiceRequest.builder()
                 .name(DEMO_PREFIX + "Pickup " + uniqueSuffix)
                 .type(PosType.PICKUP_POINT)
                 .status(PosStatus.ACTIVE)
-                .confirmationType(ConfirmationType.CONTACT_NOT_REQUIRED)
+                .confirmationType(ConfirmationType.AWAIT_CONTACT)
                 .address(Address.builder()
                         .street("Grunwaldzka 100").city("Gdansk").zipCode("80-244")
-                        .state("pomorskie").countryCode("PL").build())
+                        .state("pomorskie").countryCode("PL")
+                        .coordinates(new Coordinates(54.372158, 18.638306)).build())
                 .openHours(List.of(OpenHour.builder()
-                        .dayOfWeek("MONDAY").fromTime("08:00").toTime("16:00").build()))
+                        .dayOfWeek("MONDAY").fromTime("08:00:00.000").toTime("16:00:00.000").build()))
                 .externalId(EXTERNAL_ID_PREFIX + uniqueSuffix)
                 .build();
 
-        PointOfService created = points.create(request);
-        System.out.println("created POS id=" + created.id() + " status=" + created.status());
+        PointOfService created = createOrReport(points, request);
+        System.out.println("created POS id=" + created.id() + " status=" + created.status()
+                + " confirmationType=" + created.confirmationType());
+        try {
+            PointOfService readBack = points.get(created.id());
+            System.out.println("read-back id=" + readBack.id()
+                    + " name-matches=" + readBack.name().equals(request.name())
+                    + " openHours=" + readBack.openHours());
 
-        PointOfService readBack = points.get(created.id());
-        boolean roundTripOk = readBack.id().equals(created.id())
-                && readBack.name().equals(request.name())
-                && readBack.type() == PosType.PICKUP_POINT;
-        System.out.println("read-back id=" + readBack.id()
-                + " name-matches=" + readBack.name().equals(request.name())
-                + " type=" + readBack.type());
+            // update: full-representation PUT that renames the point
+            PointOfServiceRequest updateRequest = request.toBuilder()
+                    .name(request.name() + " EAST").build();
+            PointOfService updated = points.update(created.id(), updateRequest);
+            System.out.println("updated name=" + updated.name());
 
-        points.delete(created.id());
-        System.out.println("deleted POS id=" + created.id());
+            boolean roundTripOk = readBack.id().equals(created.id())
+                    && readBack.name().equals(request.name())
+                    && readBack.type() == PosType.PICKUP_POINT
+                    && updated.name().equals(updateRequest.name());
+            if (!roundTripOk) {
+                throw new IllegalStateException(ERR_ROUND_TRIP);
+            }
+        } finally {
+            points.delete(created.id());
+            System.out.println("deleted POS id=" + created.id());
+        }
+    }
 
-        if (!roundTripOk) {
-            throw new IllegalStateException(ERR_ROUND_TRIP);
+    /**
+     * Create the point of service, printing the server's parsed field errors
+     * (code + path + technical message) before rethrowing — so a live 400 names
+     * exactly which field the wire rejected, not just that it did.
+     */
+    private static PointOfService createOrReport(PointsOfService points,
+            PointOfServiceRequest request) {
+        try {
+            return points.create(request);
+        } catch (AllegroBadRequestException rejected) {
+            System.out.println("create rejected (400/422); field errors:");
+            rejected.errors().forEach(fieldError -> System.out.println(
+                    "  - code=" + fieldError.code()
+                            + " path=" + fieldError.path()
+                            + " message=" + fieldError.message()));
+            throw rejected;
         }
     }
 }

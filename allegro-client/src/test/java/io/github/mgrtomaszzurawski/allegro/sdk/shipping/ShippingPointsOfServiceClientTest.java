@@ -118,6 +118,11 @@ class ShippingPointsOfServiceClientTest {
     private static final String UPDATED_NAME = "Pickup Point Center East";
     private static final String EMPTY_SEARCH_RESULT = "{\"posList\":[]}";
 
+    // create/update/list resolve the seller id from GET /me (Allegro requires it
+    // in the body/query even though the token identifies the seller).
+    private static final String ME_PATH = "/me";
+    private static final String ME_RESPONSE = "{\"id\":\"" + SELLER_ID + "\"}";
+
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
@@ -163,6 +168,12 @@ class ShippingPointsOfServiceClientTest {
                         .withBody(TOKEN_RESPONSE.formatted(accessToken, EXPIRY_SECONDS))));
     }
 
+    /** Stub {@code GET /me} so the seller-id resolver returns {@link #SELLER_ID}. */
+    private static void stubMe() {
+        stubFor(get(urlEqualTo(ME_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ME_RESPONSE)));
+    }
+
     private static PointOfServiceRequestBuilder sampleRequestBuilder() {
         return PointOfServiceRequest.builder()
                 .name(POS_NAME)
@@ -193,6 +204,7 @@ class ShippingPointsOfServiceClientTest {
     void create_whenValidRequest_postsPosAndMapsRecord(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(post(urlEqualTo(POS_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
@@ -203,6 +215,8 @@ class ShippingPointsOfServiceClientTest {
                 .withRequestBody(matchingJsonPath("$.status", equalTo(STATUS_ACTIVE)))
                 .withRequestBody(matchingJsonPath("$.confirmationType",
                         equalTo(CONFIRMATION_CONTACT_NOT_REQUIRED)))
+                // the SDK injects the seller id (resolved from /me) into the body
+                .withRequestBody(matchingJsonPath("$.seller.id", equalTo(SELLER_ID)))
                 .withRequestBody(matchingJsonPath("$.address.city", equalTo(CITY)))
                 .withRequestBody(matchingJsonPath("$.address.coordinates.lat"))
                 .withRequestBody(matchingJsonPath("$.phoneNumber", equalTo(PHONE_NUMBER)))
@@ -227,9 +241,10 @@ class ShippingPointsOfServiceClientTest {
     }
 
     @Test
-    void list_whenSellerId_returnsAllPointsAndSendsSellerFilter(WireMockRuntimeInfo wmInfo) {
-        // given — seller.id is a required query parameter on the list endpoint
+    void list_whenCalled_returnsAllPointsAndSendsResolvedSellerFilter(WireMockRuntimeInfo wmInfo) {
+        // given — seller.id is a required query parameter, resolved from /me
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(get(urlPathEqualTo(POS_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
@@ -240,7 +255,7 @@ class ShippingPointsOfServiceClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
 
             // when
-            List<PointOfService> points = allegro.shipping().points().list(SELLER_ID);
+            List<PointOfService> points = allegro.shipping().points().list();
 
             // then — every item in the wrapper maps, not just the first
             assertEquals(LIST_SIZE, points.size());
@@ -256,6 +271,7 @@ class ShippingPointsOfServiceClientTest {
     void list_whenCountryCode_addsCountryFilterToRequest(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(get(urlPathEqualTo(POS_PATH))
                 .withQueryParam(PARAM_SELLER_ID, equalTo(SELLER_ID))
                 .withQueryParam(PARAM_COUNTRY_CODE, equalTo(COUNTRY_CODE))
@@ -265,7 +281,7 @@ class ShippingPointsOfServiceClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
 
             // when
-            List<PointOfService> points = allegro.shipping().points().list(SELLER_ID, COUNTRY_CODE);
+            List<PointOfService> points = allegro.shipping().points().list(COUNTRY_CODE);
 
             // then — both filters reached the wire
             assertFalse(points.isEmpty());
@@ -279,6 +295,7 @@ class ShippingPointsOfServiceClientTest {
     void list_whenServerOmitsPosList_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
         // given — the wrapper arrives with an empty posList
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(get(urlPathEqualTo(POS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(EMPTY_SEARCH_RESULT)));
@@ -286,7 +303,7 @@ class ShippingPointsOfServiceClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
 
             // when
-            List<PointOfService> points = allegro.shipping().points().list(SELLER_ID);
+            List<PointOfService> points = allegro.shipping().points().list();
 
             // then — no NPE, a real empty list
             assertTrue(points.isEmpty());
@@ -297,12 +314,16 @@ class ShippingPointsOfServiceClientTest {
     void update_whenValidRequest_putsPosAndMapsUpdatedRecord(WireMockRuntimeInfo wmInfo) {
         // given — a full-representation PUT carrying the new name
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(put(urlEqualTo(POS_BY_ID_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(matchingJsonPath("$.name", equalTo(UPDATED_NAME)))
+                // the PUT body carries the resolved seller id and the path id
+                .withRequestBody(matchingJsonPath("$.seller.id", equalTo(SELLER_ID)))
+                .withRequestBody(matchingJsonPath("$.id", equalTo(POS_ID)))
                 .withRequestBody(matchingJsonPath("$.address.city", equalTo(CITY)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(UPDATED_FIXTURE)));
@@ -382,6 +403,7 @@ class ShippingPointsOfServiceClientTest {
     void create_whenBadRequest_throwsBadRequestWithParsedFieldErrors(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(post(urlEqualTo(POS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
                         .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
@@ -508,6 +530,7 @@ class ShippingPointsOfServiceClientTest {
     void create_when500_isNotRetried(WireMockRuntimeInfo wmInfo) {
         // given — POST is not idempotent; retryPost defaults to false
         stubToken(TEST_TOKEN);
+        stubMe();
         stubFor(post(urlEqualTo(POS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
 

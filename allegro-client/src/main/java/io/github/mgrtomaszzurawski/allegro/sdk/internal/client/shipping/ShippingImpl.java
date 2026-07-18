@@ -29,10 +29,14 @@ public final class ShippingImpl implements Shipping {
 
     private final HttpRuntime runtime;
     private final HttpSupport http;
+    private final SellerIdResolver sellerIdResolver;
 
     public ShippingImpl(HttpRuntime runtime) {
         this.runtime = runtime;
         this.http = new HttpSupport(runtime);
+        // One resolver per client so the seller-id lookup is cached across the
+        // fresh sub-facade instances that points() hands out.
+        this.sellerIdResolver = new SellerIdResolver(runtime);
     }
 
     @Override
@@ -45,7 +49,7 @@ public final class ShippingImpl implements Shipping {
 
     @Override
     public PointsOfService points() {
-        return new PointsOfServiceImpl(runtime);
+        return new PointsOfServiceImpl(runtime, sellerIdResolver::sellerId);
     }
 
     private static List<DeliveryMethod> mapMethods(

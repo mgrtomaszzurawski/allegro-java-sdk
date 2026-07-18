@@ -67,15 +67,23 @@ class ShippingBuildersTest {
     // ---- AddressBuilder ----
 
     @Test
-    void addressBuilder_requiredFieldsOnly_buildsWithNullOptionals() {
-        // when
+    void addressBuilder_requiredFieldsOnly_buildsWithNullStreet() {
+        // when — street is the only optional field; coordinates are required
         Address address = Address.builder()
-                .city(CITY).zipCode(ZIP_CODE).state(STATE).countryCode(COUNTRY_CODE).build();
+                .city(CITY).zipCode(ZIP_CODE).state(STATE).countryCode(COUNTRY_CODE)
+                .coordinates(new Coordinates(54.3, 18.6)).build();
 
         // then
         assertNull(address.street());
-        assertNull(address.coordinates());
         assertEquals(CITY, address.city());
+    }
+
+    @Test
+    void addressBuilder_whenCoordinatesMissing_throws() {
+        var builder = Address.builder().city(CITY).zipCode(ZIP_CODE).state(STATE)
+                .countryCode(COUNTRY_CODE);
+        assertMessage("Address.coordinates is required",
+                assertThrows(IllegalStateException.class, builder::build));
     }
 
     @Test

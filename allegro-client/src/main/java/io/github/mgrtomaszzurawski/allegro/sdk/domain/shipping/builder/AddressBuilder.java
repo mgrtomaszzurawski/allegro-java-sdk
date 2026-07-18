@@ -10,8 +10,11 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Fluent builder for an {@link Address}. {@code city}, {@code zipCode},
- * {@code state} and {@code countryCode} are required; {@code street},
- * {@code city} and {@code state} replicate the server length limits.
+ * {@code state}, {@code countryCode} and {@code coordinates} are required (the
+ * live points-of-service endpoint rejects an address without coordinates, though
+ * the spec marks them optional — see {@code KNOWN-SERVER-BEHAVIORS.md});
+ * {@code street}, {@code city} and {@code state} replicate the server length
+ * limits.
  *
  * @since 0.2.0
  */
@@ -27,6 +30,7 @@ public final class AddressBuilder {
     private static final String FIELD_STATE = "Address.state";
     private static final String FIELD_COUNTRY_CODE = "Address.countryCode";
     private static final String FIELD_STREET = "Address.street";
+    private static final String FIELD_COORDINATES = "Address.coordinates";
 
     private @Nullable String street;
     private @Nullable String city;
@@ -65,7 +69,7 @@ public final class AddressBuilder {
         return this;
     }
 
-    /** Geographic coordinates (optional). */
+    /** Geographic coordinates (required by the live points-of-service endpoint). */
     public AddressBuilder coordinates(@Nullable Coordinates value) {
         this.coordinates = value;
         return this;
@@ -86,6 +90,8 @@ public final class AddressBuilder {
         BuilderValidation.requireMaxLength(validCity, MAX_CITY, FIELD_CITY);
         BuilderValidation.requireMaxLength(validZipCode, MAX_ZIP_CODE, FIELD_ZIP_CODE);
         BuilderValidation.requireMaxLength(validState, MAX_STATE, FIELD_STATE);
-        return new Address(street, validCity, validZipCode, validState, validCountryCode, coordinates);
+        Coordinates validCoordinates = BuilderValidation.requirePresent(coordinates, FIELD_COORDINATES);
+        return new Address(street, validCity, validZipCode, validState, validCountryCode,
+                validCoordinates);
     }
 }
