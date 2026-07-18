@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,7 +94,9 @@ class AlleDiscountClientTest {
     private static final String TEST_MIN_DISCOUNT = "10";
     private static final String TEST_PROPOSED_AMOUNT = "84.99";
     private static final String TEST_SUBMITTED_PROPOSED_AMOUNT = "85.00";
+    private static final String TEST_FAIL_CODE = "PRICE_TOO_HIGH";
     private static final String TEST_FAIL_MESSAGE = "Proposed price above the required merchant price.";
+    private static final String TEST_CODE_ONLY = "UNKNOWN_ERROR";
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String TEST_BAD_REQUEST_CODE = "VALIDATION_ERROR";
     private static final String TEST_BAD_REQUEST_PATH = "input.proposedPrice";
@@ -147,8 +150,19 @@ class AlleDiscountClientTest {
         return SUBMIT_PREVIEW_TEMPLATE.formatted(TEST_COMMAND_ID, status, TEST_PARTICIPATION_ID, errorsJson);
     }
 
+    private static String withdrawPreview(String status, String errorsJson) {
+        return "{\"id\":\"" + TEST_COMMAND_ID + "\",\"output\":{\"status\":\"" + status
+                + "\",\"withdrawnOfferParticipation\":{\"participationId\":\"" + TEST_PARTICIPATION_ID
+                + "\"},\"errors\":" + errorsJson + "}}";
+    }
+
     private static String failureErrors() {
-        return "[{\"errors\":[{\"code\":\"PRICE_TOO_HIGH\",\"message\":\"" + TEST_FAIL_MESSAGE + "\"}]}]";
+        return "[{\"errors\":[{\"code\":\"" + TEST_FAIL_CODE + "\",\"message\":\"" + TEST_FAIL_MESSAGE + "\"}]}]";
+    }
+
+    /** A FAILED command error carrying a code but no message (the {@code List.copyOf} NPE case). */
+    private static String codeOnlyErrors() {
+        return "[{\"errors\":[{\"code\":\"" + TEST_CODE_ONLY + "\"}]}]";
     }
 
     private static String fullPageOfEligible(int count) {
@@ -159,6 +173,20 @@ class AlleDiscountClientTest {
             }
             json.append("{\"id\":\"o").append(index)
                     .append("\",\"alleDiscount\":{\"campaignConditions\":{\"meetsConditions\":true}}}");
+        }
+        return json.append("],\"count\":").append(count).append("}").toString();
+    }
+
+    private static String fullPageOfSubmitted(int count) {
+        StringBuilder json = new StringBuilder("{\"submittedOffers\":[");
+        for (int index = 0; index < count; index++) {
+            if (index > 0) {
+                json.append(',');
+            }
+            json.append("{\"participationId\":\"p").append(index)
+                    .append("\",\"offer\":{\"id\":\"o").append(index)
+                    .append("\"},\"campaign\":{\"id\":\"").append(CAMPAIGN_ID)
+                    .append("\"},\"process\":{\"status\":\"ACTIVE\"}}");
         }
         return json.append("],\"count\":").append(count).append("}").toString();
     }
@@ -213,6 +241,8 @@ class AlleDiscountClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(ELIGIBLE_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBodyFile(ELIGIBLE_FIXTURE)));
         EligibleOffersFilter filter = EligibleOffersFilter.builder(CAMPAIGN_ID).build();
 
@@ -299,6 +329,8 @@ class AlleDiscountClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(SUBMITTED_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBodyFile(SUBMITTED_FIXTURE)));
         SubmittedOffersFilter filter = SubmittedOffersFilter.builder(CAMPAIGN_ID).build();
 
@@ -315,6 +347,31 @@ class AlleDiscountClientTest {
             assertEquals(TEST_OFFER_ID, offer.offerId());
             assertEquals(AlleDiscountOfferStatus.ACTIVE, offer.status());
             assertEquals(Money.of(TEST_SUBMITTED_PROPOSED_AMOUNT, TEST_CURRENCY_PLN), offer.proposedPrice());
+        }
+    }
+
+    @Test
+    void streamSubmittedOffers_whenConsumingFirstElement_doesNotFetchSecondPage(WireMockRuntimeInfo wmInfo) {
+        // given — a full first page implies there may be more
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SUBMITTED_PATH))
+                .withQueryParam(OFFSET_PARAM, equalTo("0"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(fullPageOfSubmitted(PAGE_SIZE))));
+        SubmittedOffersFilter filter = SubmittedOffersFilter.builder(CAMPAIGN_ID).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<AlleDiscountSubmittedOffer> firstOnly =
+                    allegro.campaigns().alleDiscount().streamSubmittedOffers(filter).limit(1).toList();
+
+            // then — page one fetched, page two (offset=100) never requested
+            assertEquals(1, firstOnly.size());
+            verify(1, getRequestedFor(urlPathEqualTo(SUBMITTED_PATH))
+                    .withQueryParam(OFFSET_PARAM, equalTo("0")));
+            verify(0, getRequestedFor(urlPathEqualTo(SUBMITTED_PATH))
+                    .withQueryParam(OFFSET_PARAM, equalTo(String.valueOf(PAGE_SIZE))));
         }
     }
 
@@ -401,10 +458,35 @@ class AlleDiscountClientTest {
             // when
             AlleDiscountSubmitResult result = allegro.campaigns().alleDiscount().submitOffer(request);
 
-            // then — FAILED is terminal; the nested error message maps through
+            // then — FAILED is terminal; the nested error code and message map through
             assertEquals(AlleDiscountCommandStatus.FAILED, result.status());
             assertEquals(1, result.errors().size());
-            assertEquals(TEST_FAIL_MESSAGE, result.errors().get(0));
+            assertEquals(TEST_FAIL_CODE, result.errors().get(0).code());
+            assertEquals(TEST_FAIL_MESSAGE, result.errors().get(0).message());
+        }
+    }
+
+    @Test
+    void submitOffer_whenFailedWithCodeOnlyError_mapsViolationWithoutNpe(WireMockRuntimeInfo wmInfo) {
+        // given — a FAILED command whose error carries a code but no message
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(SUBMIT_PATH))
+                .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(ACCEPTED_RESPONSE)));
+        stubFor(get(urlEqualTo(SUBMIT_POLL_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(submitPreview(STATUS_FAILED, codeOnlyErrors()))));
+        SubmitOfferRequest request = SubmitOfferRequest.builder()
+                .campaignId(CAMPAIGN_ID).offerId(TEST_OFFER_ID)
+                .proposedPrice(Money.of(TEST_PROPOSED_AMOUNT, TEST_CURRENCY_PLN)).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — a null error message must not crash the mapping
+            AlleDiscountSubmitResult result = allegro.campaigns().alleDiscount().submitOffer(request);
+
+            // then — the coded violation surfaces with a null message
+            assertEquals(TEST_CODE_ONLY, result.errors().get(0).code());
+            assertNull(result.errors().get(0).message());
         }
     }
 
@@ -484,6 +566,28 @@ class AlleDiscountClientTest {
             verify(1, postRequestedFor(urlEqualTo(WITHDRAW_PATH))
                     .withRequestBody(matchingJsonPath(JSON_INPUT_PARTICIPATION_ID, equalTo(TEST_PARTICIPATION_ID))));
             verify(1, getRequestedFor(urlEqualTo(WITHDRAW_POLL_PATH)));
+        }
+    }
+
+    @Test
+    void withdrawOffer_whenFailed_reportsFailureWithErrors(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(WITHDRAW_PATH))
+                .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(ACCEPTED_RESPONSE)));
+        stubFor(get(urlEqualTo(WITHDRAW_POLL_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(withdrawPreview(STATUS_FAILED, failureErrors()))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            AlleDiscountWithdrawResult result =
+                    allegro.campaigns().alleDiscount().withdrawOffer(TEST_PARTICIPATION_ID);
+
+            // then — FAILED is terminal; the coded error maps through
+            assertEquals(AlleDiscountCommandStatus.FAILED, result.status());
+            assertEquals(TEST_FAIL_CODE, result.errors().get(0).code());
         }
     }
 

@@ -13,8 +13,9 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Shared mapping helpers for the badge model records: nullable-money assembly and
- * rejection-reason list mapping. Package-private — not part of the public surface.
+ * Shared mapping helpers for the campaigns model records: nullable-money assembly,
+ * badge rejection-reason list mapping, and command-error flattening (badges,
+ * Allegro Prices and AlleDiscount). Package-private — not part of the public surface.
  */
 final class CampaignMappers {
 
@@ -42,20 +43,21 @@ final class CampaignMappers {
 
     /**
      * Flatten the doubly-nested command error structure ({@code errors[].errors[]})
-     * to a flat list of messages, tolerating absent levels.
+     * to a flat list of coded violations, tolerating absent levels (and a
+     * code-only error whose message the server omitted).
      */
-    static List<String> commandErrorMessages(@Nullable List<ErrorsHolderRaw> holders) {
+    static List<ConditionViolation> commandErrorViolations(@Nullable List<ErrorsHolderRaw> holders) {
         if (holders == null) {
             return List.of();
         }
-        List<String> messages = new ArrayList<>();
+        List<ConditionViolation> violations = new ArrayList<>();
         for (ErrorsHolderRaw holder : holders) {
             if (holder.getErrors() != null) {
                 for (ErrorRaw error : holder.getErrors()) {
-                    messages.add(error.getMessage());
+                    violations.add(ConditionViolation.from(error));
                 }
             }
         }
-        return List.copyOf(messages);
+        return List.copyOf(violations);
     }
 }

@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param commandId       the command id
  * @param status          terminal outcome
  * @param participationId the withdrawn participation id on success, else {@code null}
- * @param errors          failure messages when {@code status} is FAILED; empty otherwise
+ * @param errors          coded failure reasons when {@code status} is FAILED; empty otherwise
  *
  * @since 0.2.0
  */
@@ -26,7 +26,7 @@ public record AlleDiscountWithdrawResult(
         String commandId,
         AlleDiscountCommandStatus status,
         @Nullable String participationId,
-        List<String> errors) {
+        List<ConditionViolation> errors) {
 
     public AlleDiscountWithdrawResult {
         errors = List.copyOf(errors);
@@ -41,6 +41,6 @@ public record AlleDiscountWithdrawResult(
                 output.getWithdrawnOfferParticipation() == null
                         ? null
                         : output.getWithdrawnOfferParticipation().getParticipationId(),
-                CampaignMappers.commandErrorMessages(output.getErrors()));
+                CampaignMappers.commandErrorViolations(output.getErrors()));
     }
 }

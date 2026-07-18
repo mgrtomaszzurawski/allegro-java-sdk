@@ -155,6 +155,15 @@ class AlleDiscountBuildersTest {
         assertEquals(CAMPAIGN_ID, copy.campaignId());
         assertEquals(OFFER_ID, copy.offerId());
         assertEquals(PARTICIPATION_ID, copy.participationId());
-        assertNull(SubmittedOffersFilter.builder(CAMPAIGN_ID).build().offerId());
+    }
+
+    @Test
+    void submittedFilter_whenOnlyCampaignSet_leavesOptionalsNull() {
+        // when
+        SubmittedOffersFilter filter = SubmittedOffersFilter.builder(CAMPAIGN_ID).build();
+
+        // then
+        assertNull(filter.offerId());
+        assertNull(filter.participationId());
     }
 }
