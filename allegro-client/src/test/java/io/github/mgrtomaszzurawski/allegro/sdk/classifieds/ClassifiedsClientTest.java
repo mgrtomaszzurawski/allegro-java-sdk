@@ -390,6 +390,8 @@ class ClassifiedsClientTest {
         stubFor(get(urlPathEqualTo(OFFER_PACKAGES_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(OFFER_PACKAGES_RESPONSE)));
 
@@ -446,17 +448,26 @@ class ClassifiedsClientTest {
     }
 
     @Test
-    void assignPackages_whenArgumentsNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
-        stubToken(TEST_TOKEN);
+    void assignPackages_whenOfferIdNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
         ClassifiedAssignment assignment = ClassifiedAssignment.builder()
                 .basePackage(TEST_PACKAGE_ID).build();
 
         try (AllegroClient allegro = client(wmInfo)) {
             var classifieds = allegro.classifieds();
 
-            // then — both the offer id and the assignment are required, fail-fast
+            // then — the offer id is required, fail-fast before the wire
             assertThrows(NullPointerException.class,
                     () -> classifieds.assignPackages(null, assignment));
+            verify(0, putRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH)));
+        }
+    }
+
+    @Test
+    void assignPackages_whenAssignmentNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — the assignment is required, fail-fast before the wire
             assertThrows(NullPointerException.class,
                     () -> classifieds.assignPackages(TEST_OFFER_ID, null));
             verify(0, putRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH)));

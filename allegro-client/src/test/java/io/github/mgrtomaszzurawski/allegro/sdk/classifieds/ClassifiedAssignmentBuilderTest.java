@@ -25,6 +25,7 @@ class ClassifiedAssignmentBuilderTest {
     private static final String EXTRA_PACKAGE_ID = "3b2f0c11-0000-4a5e-a55c-bcb8e7d53cbb";
     private static final String OTHER_EXTRA_ID = "9c1d2e3f-1111-4b6a-8c7d-0a1b2c3d4e5f";
     private static final String BLANK = "   ";
+    private static final String MISSING_BASE_MESSAGE = "basePackageId is required";
 
     @Test
     void build_whenOnlyBasePackage_hasNoExtras() {
@@ -89,8 +90,9 @@ class ClassifiedAssignmentBuilderTest {
     void build_whenBasePackageMissing_throwsIllegalState() {
         var builder = ClassifiedAssignment.builder().addExtraPackage(EXTRA_PACKAGE_ID);
 
-        // then
-        assertThrows(IllegalStateException.class, builder::build);
+        // then — the required-field failure names the missing field
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertEquals(MISSING_BASE_MESSAGE, failure.getMessage());
     }
 
     @Test
@@ -98,6 +100,7 @@ class ClassifiedAssignmentBuilderTest {
         var builder = ClassifiedAssignment.builder().basePackage(BLANK);
 
         // then
-        assertThrows(IllegalStateException.class, builder::build);
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertEquals(MISSING_BASE_MESSAGE, failure.getMessage());
     }
 }
