@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import java.util.stream.Stream;
 
@@ -30,4 +31,12 @@ public interface CatalogProducts {
      * @return a lazy stream of matching product summaries, best match first
      */
     Stream<ProductSummary> search(ProductSearchRequest request);
+
+    /**
+     * A single product by its id, with the parameter values that describe it.
+     *
+     * @param productId the product id (e.g. from a {@link ProductSummary#id()})
+     * @return the full product
+     */
+    Product get(String productId);
 }

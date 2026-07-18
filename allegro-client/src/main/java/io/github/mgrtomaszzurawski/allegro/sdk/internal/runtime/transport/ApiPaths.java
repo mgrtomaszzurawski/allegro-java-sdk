@@ -44,7 +44,8 @@ public final class ApiPaths {
     public static final String REMOVAL_SEGMENT = "removal";
 
     // ---- offers (bucket A) ----
-    private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
+    /** Product-offers collection ({@code /sale/product-offers}); POST to create. */
+    public static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
@@ -58,9 +59,14 @@ public final class ApiPaths {
     /** Seller's offers with missing category parameters ({@code /sale/offers/unfilled-parameters}). */
     public static final String SALE_OFFERS_UNFILLED_PARAMETERS = "/sale/offers/unfilled-parameters";
 
-    /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
+    /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
         return subPath(SALE_PRODUCT_OFFERS, offerId);
+    }
+
+    /** A single offer as a draft resource ({@code /sale/offers/{offerId}}); DELETE to remove a draft. */
+    public static String offerDraft(String offerId) {
+        return subPath(SALE_OFFERS, offerId);
     }
 
     /** Single-offer Buy Now price change command ({@code /offers/{offerId}/change-price-commands/{commandId}}). */
