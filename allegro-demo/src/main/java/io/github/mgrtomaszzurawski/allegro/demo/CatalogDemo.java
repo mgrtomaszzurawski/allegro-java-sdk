@@ -9,6 +9,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogCategories;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategorySuggestion;
 import java.util.List;
 
 /**
@@ -30,6 +32,8 @@ public final class CatalogDemo {
 
     /** Scenario id under which {@link DemoApp} registers this probe. */
     static final String SCENARIO = "catalog-categories";
+
+    private static final String SUGGEST_PHRASE = "iphone";
 
     private static final String ERR_NO_CATEGORIES =
             "sandbox returned no root categories - unexpected, catalogue should never be empty";
@@ -58,6 +62,26 @@ public final class CatalogDemo {
             System.out.println("get(" + fetched.id() + "): name='" + fetched.name()
                     + "', leaf=" + fetched.leaf()
                     + ", optionsPresent=" + (fetched.options() != null));
+
+            // Per-category parameters: confirm the polymorphic type/restrictions map.
+            List<CategoryParameter> parameters = categories.parameters(probeId);
+            System.out.println("parameters(" + probeId + "): " + parameters.size() + " params");
+            if (!parameters.isEmpty()) {
+                CategoryParameter first = parameters.get(0);
+                System.out.println("  first: '" + first.name() + "' type=" + first.type()
+                        + ", required=" + first.required()
+                        + ", dictValues=" + first.dictionary().size()
+                        + ", restrictionsPresent=" + (first.restrictions() != null));
+            }
+
+            // Name-based category suggestions and their parent breadcrumb.
+            List<CategorySuggestion> suggestions = categories.suggest(SUGGEST_PHRASE);
+            System.out.println("suggest('" + SUGGEST_PHRASE + "'): " + suggestions.size() + " matches");
+            if (!suggestions.isEmpty()) {
+                CategorySuggestion top = suggestions.get(0);
+                System.out.println("  top: " + top.id() + " '" + top.name()
+                        + "', hasParent=" + (top.parent() != null));
+            }
         }
     }
 }
