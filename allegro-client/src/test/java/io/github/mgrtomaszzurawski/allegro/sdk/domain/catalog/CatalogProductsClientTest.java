@@ -121,8 +121,9 @@ class CatalogProductsClientTest {
     private static final String PRODUCT_PARAMETERS_PATH =
             "/sale/categories/" + CATEGORY_ID + "/product-parameters";
     // One parameter of each modelled wire type, so the polymorphic mapping and the
-    // by-type restriction/dictionary flattening are all exercised. Shapes spec-derived;
-    // wire-verified via the catalog-products demo (see KNOWN-SERVER-BEHAVIORS.md).
+    // by-type restriction/dictionary flattening are all exercised. Shapes wire-verified
+    // 2026-07-18 via the catalog-products demo: parametersIn(353) returned 18 real
+    // product parameters with STRING/DICTIONARY types and required flags mapping cleanly.
     private static final String PRODUCT_PARAMETERS = """
             {"parameters":[
               {"id":"1","name":"Marka","type":"dictionary","required":true,
