@@ -6,15 +6,28 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Endpoint wrapper behind the {@link Offers} facade.
@@ -25,6 +38,20 @@ public final class OffersImpl implements Offers {
 
     private static final String OP_GET = "get offer";
     private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
+    private static final String OP_STREAM = "stream offers";
+    private static final String OP_SMART = "get offer Smart classification";
+
+    /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
+    private static final int PAGE_SIZE = 100;
+
+    private static final String QUERY_NAME = "name";
+    private static final String QUERY_STATUS = "publication.status";
+    private static final String QUERY_FORMAT = "sellingMode.format";
+    private static final String QUERY_PRICE_FROM = "sellingMode.price.amount.gte";
+    private static final String QUERY_PRICE_TO = "sellingMode.price.amount.lte";
+    private static final String QUERY_SORT = "sort";
+    private static final String QUERY_OFFSET = "offset";
+    private static final String QUERY_LIMIT = "limit";
 
     private final HttpSupport http;
 
@@ -55,5 +82,50 @@ public final class OffersImpl implements Offers {
                 .put(ApiPaths.changePriceCommand(offerId, commandId))
                 .jsonBody(body)
                 .send();
+    }
+
+    @Override
+    public Stream<OfferSummary> streamOffers(OfferFilter filter) {
+        return PagedSpliterator.stream(pageIndex -> fetchPage(filter, pageIndex));
+    }
+
+    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
+        Query query = Query.create()
+                .add(QUERY_NAME, filter.name())
+                .add(QUERY_STATUS, wireValueOf(filter.status()))
+                .add(QUERY_FORMAT, wireValueOf(filter.format()))
+                .add(QUERY_PRICE_FROM, filter.priceFrom())
+                .add(QUERY_PRICE_TO, filter.priceTo())
+                .add(QUERY_SORT, filter.sort())
+                .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
+                .add(QUERY_LIMIT, PAGE_SIZE);
+        OffersSearchResultDtoRaw response = http.request(OP_STREAM)
+                .get(ApiPaths.SALE_OFFERS)
+                .query(query)
+                .fetch(OffersSearchResultDtoRaw.class);
+        List<OfferListingDtoRaw> offers = response.getOffers();
+        List<OfferSummary> items = offers == null
+                ? List.of()
+                : offers.stream().map(OfferSummary::from).toList();
+        // The listing carries totalCount, but a full page is the robust
+        // "there may be more" signal shared with the other SDK streams.
+        boolean hasMore = items.size() == PAGE_SIZE;
+        return new PagedSpliterator.Page<>(items, hasMore);
+    }
+
+    @Override
+    public SmartClassification smartClassification(String offerId) {
+        return SmartClassification.from(http.getAuthenticated(
+                ApiPaths.offerSmart(offerId), SmartOfferClassificationReportRaw.class, OP_SMART));
+    }
+
+    /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */
+    private static @Nullable String wireValueOf(@Nullable OfferStatus status) {
+        return status == null || status == OfferStatus.UNKNOWN ? null : status.name();
+    }
+
+    /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */
+    private static @Nullable String wireValueOf(@Nullable OfferFormat format) {
+        return format == null || format == OfferFormat.UNKNOWN ? null : format.name();
     }
 }

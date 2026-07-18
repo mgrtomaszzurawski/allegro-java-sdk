@@ -47,6 +47,10 @@ public final class ApiPaths {
     private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
+    private static final String SMART_SEGMENT = "smart";
+
+    /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
+    public static final String SALE_OFFERS = "/sale/offers";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
     public static String productOffer(String offerId) {
@@ -56,6 +60,11 @@ public final class ApiPaths {
     /** Single-offer Buy Now price change command ({@code /offers/{offerId}/change-price-commands/{commandId}}). */
     public static String changePriceCommand(String offerId, String commandId) {
         return subPath(OFFERS, offerId, CHANGE_PRICE_COMMANDS, commandId);
+    }
+
+    /** Smart! classification report of one offer ({@code /sale/offers/{offerId}/smart}). */
+    public static String offerSmart(String offerId) {
+        return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
     }
 
     // ---- orders (bucket B) ----
