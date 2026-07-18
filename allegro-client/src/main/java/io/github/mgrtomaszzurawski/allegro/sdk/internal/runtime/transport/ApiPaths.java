@@ -142,6 +142,16 @@ public final class ApiPaths {
     public static final String BILLING_ENTRIES = "/billing/billing-entries";
     /** Billing type dictionary ({@code /billing/billing-types}). */
     public static final String BILLING_TYPES = "/billing/billing-types";
+    /** Customer returns collection ({@code /order/customer-returns}, beta). */
+    public static final String CUSTOMER_RETURNS = "/order/customer-returns";
+    /** Commission refund claims ({@code /order/refund-claims}). */
+    public static final String REFUND_CLAIMS = "/order/refund-claims";
+    /** {@code invoices} sub-resource segment (under an order). */
+    public static final String INVOICES_SEGMENT = "invoices";
+    /** {@code file} sub-resource segment (under an order invoice). */
+    public static final String FILE_SEGMENT = "file";
+    /** {@code rejection} sub-resource segment (under a customer return). */
+    public static final String REJECTION_SEGMENT = "rejection";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */

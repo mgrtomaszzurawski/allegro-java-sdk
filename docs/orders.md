@@ -148,3 +148,48 @@ client.orders().streamEvents(OrderEventFilter.all()).limit(100).forEach(this::ha
 
 client.orders().allegroPickupPoints(PointsFilter.ofCarriers("UPS"));
 ```
+
+## Invoices, customer returns, and commission refunds
+
+Three sub-facades hang off `orders()`.
+
+**Invoices** — declaring an invoice is two steps: register the metadata, then upload the bytes.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.InvoiceDeclaration;
+
+String invoiceId = client.orders().invoices().declare(orderId, InvoiceDeclaration.builder()
+        .invoiceNumber("FV/2026/01")
+        .fileName("invoice.pdf")
+        .build());
+client.orders().invoices().uploadFile(orderId, invoiceId, pdfBytes);
+client.orders().invoices().ofOrder(orderId);          // list registered invoices
+```
+
+**Customer returns (BETA)** — browse buyer returns and reject a refund:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.RejectionRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ReturnFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.ReturnRejectionCode;
+
+client.orders().returns().streamReturns(ReturnFilter.builder().orderId(orderId).build());
+client.orders().returns().rejectRefund(customerReturnId, RejectionRequest.builder()
+        .code(ReturnRejectionCode.ITEM_FIXED)
+        .reason("Repaired under warranty")
+        .build());
+```
+
+**Commission refunds** — reclaim the sales commission on a cancelled line item:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ClaimFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.RefundClaimRequest;
+
+String claimId = client.orders().commissionRefunds().claim(RefundClaimRequest.builder()
+        .lineItemId(lineItemId)
+        .quantity(1)
+        .build());
+client.orders().commissionRefunds().streamClaims(ClaimFilter.all());
+client.orders().commissionRefunds().cancel(claimId);
+```

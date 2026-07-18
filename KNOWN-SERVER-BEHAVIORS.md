@@ -108,6 +108,14 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+### `bidding().myBid(offerId)` returns 404 for both "no auction" and "no bid" (verified 2026-07-18, sandbox)
+
+`GET /bidding/offers/{offerId}/bid` answers 404 whether the offer is not an auction (or does
+not exist) or the auction exists but the user has placed no bid — the two cases are not
+distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. Confirmed live
+with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
+the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
+
 ## Sale settings (bucket K)
 
 ### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
@@ -167,6 +175,19 @@ empty-page guard does not catch this). The `from`/`type`/`limit` params are conf
 spec; the exclusivity and the terminal empty-page behaviour are **to be confirmed on the sandbox**
 once a seeded order produces events (the RAG digest generically labels this endpoint
 "offset/limit", which is inaccurate for `/order/events`).
+
+### Customer-returns are BETA; the reject-refund POST needs a beta request Content-Type (core follow-up)
+
+The customer-returns endpoints (`GET /order/customer-returns`, `GET …/{id}`,
+`POST …/{id}/rejection`) speak the **beta** vendor media type. The SDK sends
+`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` — correct for the two
+GETs. But `POST …/rejection` declares its **request body** only as the beta media type, while
+`HttpCall.jsonBody(...)` hard-pins `Content-Type: application/vnd.allegro.public.v1+json` (frozen
+runtime), so `returns().rejectRefund(...)` currently sends a mismatched Content-Type that the beta
+endpoint may reject (415/406). **Core follow-up (agent-1):** add a media-type overload to the JSON
+body helper (e.g. `jsonBody(body, mediaType)`) so beta writes can set the beta Content-Type; it is
+the first beta POST-with-body in the SDK. `rejectRefund` ships wired but must not be relied on live
+until that lands (WireMock covers the request body shape; the mismatch is header-only).
 
 ## Payments & billing (bucket B)
 
