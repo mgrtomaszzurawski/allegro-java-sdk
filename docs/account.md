@@ -32,6 +32,9 @@ primarily registered on; both are `null` for a personal account that declares
 none. `SalesQuality` exposes one `Day` per reported day (overall score, grade and
 the component `Metric`s). `SmartClassification` tells you whether the account
 qualifies for Smart!, when that last changed, and the per-`Condition` breakdown.
+A `Condition` is either metric-based (numeric `value`/`threshold`) or pass/fail;
+for a pass/fail condition `value`/`threshold` are `null` and the outcome is on
+`fulfilled()`.
 
 ## Ratings
 

@@ -13,6 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -24,6 +25,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredenti
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SalesQuality;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -60,6 +62,23 @@ class UserAccountClientTest {
                "value":1.5,"threshold":2.0,"fulfilled":true,"required":true}],
              "excludedDeliveryMethods":[{"id":"dm-1"}]}
             """.formatted(METRIC_CODE);
+    private static final String BOOLEAN_CONDITION_CODE = "FREE_RETURNS";
+    // Live-verified shape (sandbox 2026-07-18): a condition's value/threshold is
+    // a NUMBER for a metric condition but a BOOLEAN for a pass/fail one. The
+    // generated DTO types both BigDecimal, so this response fails to deserialize
+    // without the JsonNode mapper — the fix must degrade the boolean to null.
+    private static final String SMART_MIXED_RESPONSE = """
+            {"classification":{"fulfilled":false},
+             "conditions":[
+               {"code":"%s","name":"Shipment time","value":1.5,"threshold":2.0,
+                "fulfilled":true,"required":true},
+               {"code":"%s","name":"Free returns","value":false,"threshold":false,
+                "fulfilled":false,"required":true}],
+             "excludedDeliveryMethods":[]}
+            """.formatted(METRIC_CODE, BOOLEAN_CONDITION_CODE);
+    private static final String SMART_MINIMAL_RESPONSE = """
+            {"classification":{"fulfilled":false}}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
@@ -111,6 +130,55 @@ class UserAccountClientTest {
             assertEquals(METRIC_CODE, report.conditions().get(0).code());
             assertEquals(List.of("dm-1"), report.excludedDeliveryMethodIds());
             verify(1, getRequestedFor(urlEqualTo(SMART_PATH)));
+        }
+    }
+
+    @Test
+    void smartClassification_whenConditionValueIsBoolean_mapsToNullAndKeepsNumericTyped(
+            WireMockRuntimeInfo wmInfo) {
+        // given — one metric condition (numeric value) and one pass/fail condition
+        // (boolean value); the generated DTO cannot deserialize the latter
+        stubFor(get(urlEqualTo(SMART_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(SMART_MIXED_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — the whole response deserializes (would abort without the mapper)
+            SmartClassification report = allegro.user().smartClassification();
+
+            // then — the metric condition keeps its numeric value/threshold typed
+            assertEquals(2, report.conditions().size());
+            SmartClassification.Condition metric = report.conditions().get(0);
+            assertEquals(METRIC_CODE, metric.code());
+            assertEquals(0, new BigDecimal("1.5").compareTo(metric.value()));
+            assertEquals(0, new BigDecimal("2.0").compareTo(metric.threshold()));
+            // and — the pass/fail condition drops the boolean value/threshold to null,
+            // the outcome staying on `fulfilled`
+            SmartClassification.Condition passFail = report.conditions().get(1);
+            assertEquals(BOOLEAN_CONDITION_CODE, passFail.code());
+            assertNull(passFail.value());
+            assertNull(passFail.threshold());
+            assertFalse(passFail.fulfilled());
+        }
+    }
+
+    @Test
+    void smartClassification_whenConditionsAbsent_returnsEmptyBreakdown(WireMockRuntimeInfo wmInfo) {
+        // given — a minimal report with neither conditions nor excluded methods
+        stubFor(get(urlEqualTo(SMART_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(SMART_MINIMAL_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            SmartClassification report = allegro.user().smartClassification();
+
+            // then — empty lists, not null; missing lastChanged tolerated
+            assertFalse(report.fulfilled());
+            assertTrue(report.conditions().isEmpty());
+            assertTrue(report.excludedDeliveryMethodIds().isEmpty());
+            assertNull(report.lastChanged());
         }
     }
 
