@@ -168,6 +168,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   per-event totals (`ClassifiedEventType`) and a day-by-day breakdown
   (`ClassifiedDailyStat`); `ClassifiedStatsFilter` carries the optional
   `date.gte`/`date.lte` bounds. Completes the standalone `classifieds()` surface.
+- `offers().tags()` — the first offers-attached sub-facade: the seller's private
+  offer tags (`streamTags()` lazy, `create`/`rename`/`delete`) and their
+  per-offer assignment (`ofOffer`, `assignToOffer`). Immutable `Tag` records +
+  fail-fast `TagRequest` builder; `offer-tags` write→read demo. New `offerextras`
+  package wired onto the bucket-A `Offers` root.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with

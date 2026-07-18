@@ -6,6 +6,34 @@ packages and statistics, offer tags, translations, rating, and bundles.
 This bucket is landing incrementally. Sections appear as each area ships; the
 authoritative method layout is [`API-SURFACE.md`](../API-SURFACE.md) §F.
 
+## Offer tags
+
+Tags are a seller-only organisation aid (buyers never see them). Reach them via
+`client.offers().tags()`. Manage the tag catalogue and assign tags to offers:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TagRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.Tag;
+import java.util.List;
+
+OfferTags tags = client.offers().tags();
+
+String tagId = tags.create(TagRequest.builder().name("Priority").build());
+tags.streamTags().forEach(tag -> System.out.println(tag.name() + " hidden=" + tag.hidden()));
+
+tags.assignToOffer(offerId, List.of(tagId));
+List<Tag> assigned = tags.ofOffer(offerId);
+
+tags.rename(tagId, TagRequest.builder().name("Top priority").hidden(true).build());
+tags.delete(tagId);
+```
+
+`streamTags()` is lazy (paged on demand). `create` returns the new tag's id; the
+name is required (fail-fast) and `hidden` is optional. The tag catalogue
+operations use the `sale:settings:*` scopes and the per-offer assignment uses
+`sale:offers:*` — both need a **user (seller) access token**.
+
 ## Classifieds
 
 Classifieds are Allegro's advertisement listings (for example automotive or
