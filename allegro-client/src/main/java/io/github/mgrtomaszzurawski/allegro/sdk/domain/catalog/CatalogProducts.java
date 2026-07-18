@@ -6,7 +6,9 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -39,4 +41,18 @@ public interface CatalogProducts {
      * @return the full product
      */
     Product get(String productId);
+
+    /**
+     * The parameters a product in a category expects, so a caller can learn a
+     * category's product schema before building a product for it. This is the
+     * product-side counterpart of
+     * {@code catalog().categories().parameters(categoryId)} (which lists the
+     * parameters an <em>offer</em> expects).
+     *
+     * @param categoryId the leaf category id (e.g. from a category-tree walk or a
+     *     {@code categories().suggest(...)} match)
+     * @return the product parameters, in the order Allegro returns them; empty
+     *     when the category defines none
+     */
+    List<ProductParameter> parametersIn(String categoryId);
 }
