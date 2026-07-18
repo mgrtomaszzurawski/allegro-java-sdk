@@ -11,6 +11,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
@@ -21,6 +23,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
@@ -43,6 +46,7 @@ public final class OffersImpl implements Offers {
     private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
     private static final String OP_STREAM = "stream offers";
     private static final String OP_SMART = "get offer Smart classification";
+    private static final String OP_UNFILLED = "stream offers with unfilled parameters";
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
@@ -124,6 +128,27 @@ public final class OffersImpl implements Offers {
     public SmartClassification smartClassification(String offerId) {
         return SmartClassification.from(http.getAuthenticated(
                 ApiPaths.offerSmart(offerId), SmartOfferClassificationReportRaw.class, OP_SMART));
+    }
+
+    @Override
+    public Stream<UnfilledParameters> streamUnfilledParameters() {
+        return PagedSpliterator.stream(this::fetchUnfilledPage);
+    }
+
+    private PagedSpliterator.Page<UnfilledParameters> fetchUnfilledPage(int pageIndex) {
+        Query query = Query.create()
+                .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
+                .add(QUERY_LIMIT, PAGE_SIZE);
+        UnfilledParametersResponseRaw response = http.request(OP_UNFILLED)
+                .get(ApiPaths.SALE_OFFERS_UNFILLED_PARAMETERS)
+                .query(query)
+                .fetch(UnfilledParametersResponseRaw.class);
+        List<UnfilledParametersResponseOffersInnerRaw> offers = response.getOffers();
+        List<UnfilledParameters> items = offers == null
+                ? List.of()
+                : offers.stream().map(UnfilledParameters::from).toList();
+        boolean hasMore = items.size() == PAGE_SIZE;
+        return new PagedSpliterator.Page<>(items, hasMore);
     }
 
     @Override

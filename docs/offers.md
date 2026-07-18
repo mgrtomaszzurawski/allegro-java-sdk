@@ -46,6 +46,15 @@ Use `OfferFilter.all()` to list every offer. `OfferSummary` is a lighter project
 `Offer` — id, name, category, format, status, Buy Now price, available/sold stock and the
 primary image URL — with the same null rules (no `buyNowPrice` for an auction, etc.).
 
+To find offers that still need work, `streamUnfilledParameters()` lists those missing category
+parameters:
+
+```java
+client.offers().streamUnfilledParameters()
+        .forEach(entry -> System.out.println(
+                entry.offerId() + " missing " + entry.parameterIds().size() + " parameter(s)"));
+```
+
 ## Smart! classification
 
 ```java

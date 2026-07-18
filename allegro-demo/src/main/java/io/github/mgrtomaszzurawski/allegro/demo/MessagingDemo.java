@@ -11,6 +11,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.Messaging;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.builder.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.model.AttachmentRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.model.MessageThread;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
@@ -73,13 +74,19 @@ public final class MessagingDemo {
                 clientId, clientSecret,
                 ignored -> System.out.println(MSG_EXPIRED), storedRefreshToken);
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-            Messaging messaging = client.messaging();
-            verifyAttachmentRoundTrip(messaging);
-            verifyThreads(messaging);
-            // Rotation: the refresh we just did invalidated the stored token.
-            String rotatedRefreshToken = client.refreshToken();
-            if (rotatedRefreshToken != null) {
-                tokenStore.store(account, rotatedRefreshToken);
+            try {
+                Messaging messaging = client.messaging();
+                verifyAttachmentRoundTrip(messaging);
+                verifyThreads(messaging);
+            } finally {
+                // Allegro rotates the refresh token on the FIRST call, so the stored token is
+                // ALREADY dead by the time any probe runs. Persist the rotation in a finally —
+                // before a probe failure can propagate — or the shared store keeps a dead token
+                // and every seller-side demo breaks (pre-mortem B1). Mirrors authBootstrap.
+                String rotatedRefreshToken = client.refreshToken();
+                if (rotatedRefreshToken != null) {
+                    tokenStore.store(account, rotatedRefreshToken);
+                }
             }
         }
     }
@@ -91,11 +98,21 @@ public final class MessagingDemo {
                 .size(bytes.length)
                 .build());
         AttachmentRef uploaded = messaging.uploadAttachment(declared.id(), bytes, PROBE_MIME);
-        byte[] downloaded = messaging.downloadAttachment(uploaded.id());
-        boolean roundTripMatches = Arrays.equals(bytes, downloaded);
-        System.out.println("attachment write->read: id=" + uploaded.id()
-                + ", bytes=" + bytes.length
-                + ", roundTrip=" + roundTripMatches);
+        System.out.println("attachment declare+upload: declaredId=" + declared.id()
+                + ", uploadedId=" + uploaded.id() + ", bytes=" + bytes.length);
+        // Live finding (2026-07-18, sandbox): an attachment is NOT downloadable straight
+        // after upload — the server 404s until it is referenced in a delivered message and
+        // scanned SAFE (see KNOWN-SERVER-BEHAVIORS.md). So this seller-only probe verifies
+        // declare+upload; the download half is exercised via the read side once a real
+        // message carries an attachment.
+        try {
+            byte[] downloaded = messaging.downloadAttachment(uploaded.id());
+            System.out.println("attachment download: unexpectedly available, bytes="
+                    + downloaded.length + ", roundTrip=" + Arrays.equals(bytes, downloaded));
+        } catch (AllegroNotFoundException expected) {
+            System.out.println("attachment download: 404 as expected "
+                    + "(unreferenced/unscanned attachment - see KNOWN-SERVER-BEHAVIORS.md)");
+        }
     }
 
     private static void verifyThreads(Messaging messaging) {
