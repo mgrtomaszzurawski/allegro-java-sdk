@@ -107,6 +107,31 @@ create → get → update → delete round-trips green. Opening-hours `from`/`to
 the ISO `HH:mm:ss.SSS` time format (spec example `10:30:00.000`);
 `confirmationType` `AWAIT_CONTACT` is accepted.
 
+### Delivery settings read + write verified; free-delivery thresholds may be null (verified 2026-07-18, sandbox)
+
+`GET /sale/delivery-settings` maps cleanly (`marketplace.id`, `joinPolicy.strategy`,
+`updatedAt`) and an **idempotent** `PUT` (re-sending the read state) round-trips
+green — unlike the point-of-service write path, delivery settings need no
+`seller.id` or other undocumented field. On the sandbox seller the
+`freeDelivery` / `abroadFreeDelivery` objects are **absent** (the seller offers no
+free-delivery threshold), so the SDK maps them to a `null` `Money`; `joinPolicy`
+came back `MAX`. The PUT `Content-Type` is the vendor `v1` media type (not beta).
+
+### Shipping-rate sets: read verified deep; every sandbox set is Allegro-managed (verified 2026-07-18, sandbox)
+
+`GET /sale/shipping-rates` returned **7** sets and `GET /sale/shipping-rates/{id}`
+mapped a 47-row set in full (each row's `deliveryMethod.id`, `firstItemRate` /
+`nextItemRate` as `Money` — a `0.00` next-item rate is normal, `maxQuantityPerPackage`,
+and the optional `maxPackageWeight` / `shippingTime` arriving `null`). **All 7 sets
+report `features.managedByAllegro = true`** (One Fulfillment sets), so the write
+path could not be exercised idempotently on this account, and the delivery API
+subset has **no delete** operation — a probe-created set would linger permanently.
+The rates **write** path (create/PUT) is therefore pinned by the WireMock contract
+tests (body serialization incl. nested rows, path, headers, and the id echoed in
+the PUT body) rather than live-verified; it shares the exact transport plumbing
+that the delivery-settings PUT proved live. Re-verify a live write if a
+seller-editable (non-managed) set is created on the sandbox account.
+
 ## Account & meta (bucket D)
 
 ### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)

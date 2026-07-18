@@ -46,8 +46,11 @@ import org.junit.jupiter.api.Test;
  * domain by {@link ShippingPointsOfServiceClientTest}; this class adds the write
  * bad-request field-error path.
  *
- * <p>Fixture provenance: {@code spec-derived}; the {@code shipping-rates} demo
- * probe confirms the field shape on the live sandbox before this bucket's PR.
+ * <p>Fixture provenance: the read shape is wire-verified 2026-07-18 (sandbox) —
+ * the {@code shipping-rates} demo probe read 7 live sets and a 47-row set in
+ * full. The write shape stays contract-pinned here (every sandbox set is
+ * Allegro-managed, so a live write could not be exercised); see
+ * {@code KNOWN-SERVER-BEHAVIORS.md}.
  */
 @WireMockTest
 class ShippingRatesClientTest {
