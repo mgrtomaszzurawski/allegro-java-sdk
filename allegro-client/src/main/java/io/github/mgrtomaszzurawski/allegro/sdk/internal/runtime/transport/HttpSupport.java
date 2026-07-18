@@ -175,13 +175,7 @@ public final class HttpSupport {
     }
 
     String serialize(Object body) {
-        try {
-            String json = runtime.objectMapper().writeValueAsString(body);
-            SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
-            return json;
-        } catch (JacksonException e) {
-            throw new AllegroException(ERR_SERIALIZE, e);
-        }
+        return serializeWith(runtime.objectMapper(), body);
     }
 
     /**
@@ -190,8 +184,12 @@ public final class HttpSupport {
      * {@code null} (which would reset it server-side).
      */
     String serializeNonNull(Object body) {
+        return serializeWith(nonNullMapper, body);
+    }
+
+    private String serializeWith(ObjectMapper mapper, Object body) {
         try {
-            String json = nonNullMapper.writeValueAsString(body);
+            String json = mapper.writeValueAsString(body);
             SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
             return json;
         } catch (JacksonException e) {

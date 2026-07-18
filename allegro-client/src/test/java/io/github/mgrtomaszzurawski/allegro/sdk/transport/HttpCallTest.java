@@ -317,10 +317,11 @@ class HttpCallTest {
         support(wmInfo).request(OPERATION).post(PATH)
                 .jsonBody(new Payload(PRESENT_VALUE, null)).send();
 
-        // then — the default serializer keeps the null field (the contrast that makes
-        // jsonBodyNonNull necessary for a PATCH)
+        // then — the default serializer keeps the null field as JSON null (the contrast
+        // that makes jsonBodyNonNull necessary for a PATCH)
         verify(1, postRequestedFor(urlEqualTo(PATH))
-                .withRequestBody(containing("absent")));
+                .withRequestBody(equalToJson(
+                        "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null}", true, false)));
     }
 
     /** A partial payload where {@code absent} may be null (a PATCH-style body). */
