@@ -74,8 +74,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `carriers()`/`carrierTracking()`/`allegroPickupPoints()` dictionaries. New models
   (`OrderEvent`, `OrderEventStats`, `Waybill`, `Carrier`, `CarrierTracking`,
   `PickupPoint`) and fluent filter/request builders. `orders-list` sandbox probe.
-
-### C — shipping
+- `client.payments()` facade: `streamOperations(PaymentOperationFilter)` and
+  `streamRefunds(RefundFilter)` (lazy offset streams) and `refund(RefundRequest)`
+  — initiate a full refund with an idempotency `commandId` and typed `RefundReason`
+  (UUID-validated fail-fast). Models `PaymentOperation`/`PaymentRefund`; `docs/payments.md`.
+- `client.billing()` facade: `streamEntries(BillingFilter)` (lazy stream) and `types()`
+  (billing-type dictionary; public, app-token friendly). Models `BillingEntry`/`BillingType`;
+  `docs/billing.md` and the `billing-types` sandbox probe.
 
 - `shipping()` facade with the points-of-service sub-facade (starter slice):
   `points().create(PointOfServiceRequest)`, `points().get(id)` and
