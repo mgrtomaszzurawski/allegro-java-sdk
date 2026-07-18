@@ -1,0 +1,6 @@
+{
+  "marketplaces": [
+    { "id": "allegro-pl", "status": "ALLOWED" },
+    { "id": "allegro-cz", "status": "DENIED" }
+  ]
+}
