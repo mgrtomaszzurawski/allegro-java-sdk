@@ -118,6 +118,11 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `categories().suggest(productName)` — categories whose names best match a
   product or offer name (`GET /sale/matching-categories`) as `CategorySuggestion`
   records, each reachable up its parent breadcrumb.
+- `client.catalog().products().search(ProductSearchRequest)` — lazily search the
+  product database (`GET /sale/products`), returning a `Stream<ProductSummary>`
+  (id, name, category, image URLs) that follows Allegro's opaque `page.id` cursor
+  automatically. The fail-fast `ProductSearchRequest` builder requires at least a
+  phrase or a category. Live `catalog-products` demo scenario.
 
 ### F — offers-extras
 
