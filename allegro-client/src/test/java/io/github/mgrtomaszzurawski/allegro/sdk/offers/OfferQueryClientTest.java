@@ -245,17 +245,6 @@ class OfferQueryClientTest {
         assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
     }
 
-    private static String unfilledPage(int size) {
-        StringBuilder body = new StringBuilder("{\"offers\":[");
-        for (int index = 0; index < size; index++) {
-            if (index > 0) {
-                body.append(',');
-            }
-            body.append("{\"id\":\"").append(index).append("\"}");
-        }
-        return body.append("],\"count\":").append(size).append('}').toString();
-    }
-
     @Test
     void streamUnfilledParameters_whenEntry_mapsOfferCategoryAndMissingParams(WireMockRuntimeInfo wmInfo) {
         // given — one offer missing two parameters
@@ -276,9 +265,9 @@ class OfferQueryClientTest {
             WireMockRuntimeInfo wmInfo) {
         // given — two available pages
         stubFor(get(urlPathEqualTo(UNFILLED_PATH)).withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(unfilledPage(FULL_PAGE))));
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(offerPage(FULL_PAGE))));
         stubFor(get(urlPathEqualTo(UNFILLED_PATH)).withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(unfilledPage(SECOND_PAGE))));
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(offerPage(SECOND_PAGE))));
 
         // when — take only the first page
         long taken = offers(wmInfo).streamUnfilledParameters().limit(FULL_PAGE).count();
