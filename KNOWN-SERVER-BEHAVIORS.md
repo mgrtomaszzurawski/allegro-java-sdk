@@ -62,6 +62,23 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+### `bidding().myBid(offerId)` returns 404 for both "no auction" and "no bid" (verified 2026-07-18, sandbox)
+
+`GET /bidding/offers/{offerId}/bid` answers 404 whether the offer is not an auction (or does
+not exist) or the auction exists but the user has placed no bid — the two cases are not
+distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. Confirmed live
+with a buyer user token against a non-existent offer id.
+
+### The device-flow consent page is DataDome-fronted (verified 2026-07-18, sandbox)
+
+Minting a buyer token via the device flow drives the browser to
+`…/uzytkownik/bezpieczenstwo/skojarz-aplikacje?code=…`, which is behind the same DataDome
+anti-bot as the login page. A JS interstitial clears with one settle-and-reload; a datacenter
+IP that navigates it repeatedly is escalated to a full captcha that does **not** clear there.
+Mitigation (in `BuyerAuthentication` / `allegro-e2e`): mint **once** from a cooled session,
+then reuse the persisted refresh token — the reuse path makes no navigation and never meets
+DataDome. A sandbox buyer account authenticates as a user id distinct from the seller's.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
