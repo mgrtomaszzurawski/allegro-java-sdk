@@ -1,9 +1,28 @@
 # Shipping
 
 `client.shipping()` groups the seller's logistics: shipment management, delivery
-configuration, and points of service. This starter slice ships the
-**points-of-service** sub-facade; the remaining shipping operations land in the
-bucket's volume PR.
+configuration, and points of service. Available today: the **points-of-service**
+sub-facade (full CRUD) and the seller's **delivery methods** listing. Shipping-rate
+configuration, delivery settings and shipment management (WZA) land in later
+bucket-C PRs.
+
+## List delivery methods
+
+```java
+List<DeliveryMethod> methods = client.shipping().deliveryMethods();
+for (DeliveryMethod method : methods) {
+    System.out.println(method.id() + " " + method.name() + " " + method.paymentPolicy());
+}
+```
+
+Returns the delivery methods Allegro offers the seller — each method's `id` is
+what a shipping-rate row references to price it. The call is read-only and works
+with an application (client-credentials) token; no user-context scope is needed.
+The response is not paginated, so it is a plain `List`.
+
+`paymentPolicy` (`IN_ADVANCE` / `CASH_ON_DELIVERY`) is a closed server enum: a
+value outside the set would fail deserialization rather than mapping to a
+sentinel — see `KNOWN-SERVER-BEHAVIORS.md`.
 
 Points of service are a seller's personal-collection locations (click &amp;
 collect). They require a user-context token with `sale:settings:read` (to read)

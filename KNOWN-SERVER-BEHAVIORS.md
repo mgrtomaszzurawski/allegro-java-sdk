@@ -43,6 +43,22 @@ The spec declares no `required` fields on `CategoryDto`, but on the wire `id`, `
 is present on children / absent on roots. The SDK's `Category` record therefore treats
 `id`/`name`/`leaf` as always-present and `parentId`/`options` as nullable.
 
+## Shipping & delivery (bucket C)
+
+### `deliveryMethods().paymentPolicy` is a closed typed enum (spec-derived)
+
+`GET /sale/delivery-methods` returns each method's `paymentPolicy` as one of a
+fixed set (`IN_ADVANCE`, `CASH_ON_DELIVERY`). In the generated Layer-1 model this
+field is a typed enumeration whose Jackson creator **rejects** any other value,
+so — unlike the free-form string enums on a point of service, which fall back to
+an `UNKNOWN` sentinel — a `paymentPolicy` value Allegro might add in future would
+fail deserialization of the whole response (surfaced as `AllegroServerException`)
+rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
+match. If Allegro extends the set, the fix is a Layer-1 regeneration (open-enum),
+not a domain change. To be confirmed live once the sandbox seller token is
+restored; `deliveryMethods()` is expected to work with an application (no-scope)
+token.
+
 ## Account & meta (bucket D)
 
 ### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)

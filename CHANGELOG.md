@@ -74,6 +74,9 @@ sections. Empty subsections are dropped by the release engineer when folding
   `List<PointOfService>` — the endpoint is not paginated) and
   `points().update(id, PointOfServiceRequest)`, completing the points-of-service
   CRUD surface.
+- `deliveryMethods()` — lists the seller's available delivery methods
+  (`List<DeliveryMethod>`, with `PaymentPolicy`); read-only, works with an
+  application token (no user scope required).
 
 ### D — account-meta
 
