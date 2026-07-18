@@ -32,6 +32,11 @@ public interface OfferTags {
     /**
      * Create a tag.
      *
+     * <p>Returns the new tag's id (the endpoint responds with only the id, not a
+     * full tag) — deliberately a bare {@code String} rather than a record, since
+     * every other tag operation ({@link #rename}, {@link #delete},
+     * {@link #assignToOffer}) also identifies a tag by its id string.
+     *
      * @param request the tag name (and optional hidden flag)
      * @return the identifier of the created tag
      */

@@ -4,6 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.offerextras;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
@@ -72,6 +74,9 @@ class OfferTagsClientTest {
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
+    private static final String SCENARIO_5XX_RECOVERY = "5xx-recovery";
+    private static final String STATE_RECOVERED = "recovered";
+    private static final String EXPECTED_ERROR_CODE = "ConstraintViolationException";
     private static final long EXPIRY_SECONDS = 3600L;
     private static final long RETRY_AFTER_SECONDS = 1L;
     private static final int FAST_MAX_ATTEMPTS = 2;
@@ -90,7 +95,7 @@ class OfferTagsClientTest {
             {"id":"%s"}
             """.formatted(TEST_TAG_ID);
     // The exact bodies the writes must send.
-    private static final String CREATE_REQUEST_BODY = """
+    private static final String TAG_REQUEST_BODY = """
             {"name":"%s","hidden":true}
             """.formatted(TEST_TAG_NAME);
     private static final String ASSIGN_REQUEST_BODY = """
@@ -143,7 +148,7 @@ class OfferTagsClientTest {
     }
 
     @Test
-    void streamTags_whenMultiplePages_streamsAllAndPagesLazily(WireMockRuntimeInfo wmInfo) {
+    void streamTags_whenMultiplePages_streamsAllAcrossPages(WireMockRuntimeInfo wmInfo) {
         // given — a full first page (implying more) then a short second page
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(TAGS_PATH)).withQueryParam(OFFSET_PARAM, equalTo(OFFSET_FIRST))
@@ -216,8 +221,8 @@ class OfferTagsClientTest {
         stubToken(TEST_TOKEN);
         stubFor(post(urlPathEqualTo(TAGS_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
-                .withRequestBody(equalToJson(CREATE_REQUEST_BODY))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(CREATE_RESPONSE)));
+                .withRequestBody(equalToJson(TAG_REQUEST_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(CREATE_RESPONSE)));
 
         try (AllegroClient allegro = client(wmInfo)) {
 
@@ -227,7 +232,7 @@ class OfferTagsClientTest {
 
             // then — the created id comes back and the body went out once
             assertEquals(TEST_TAG_ID, newId);
-            verify(1, postRequestedFor(urlPathEqualTo(TAGS_PATH)).withRequestBody(equalToJson(CREATE_REQUEST_BODY)));
+            verify(1, postRequestedFor(urlPathEqualTo(TAGS_PATH)).withRequestBody(equalToJson(TAG_REQUEST_BODY)));
         }
     }
 
@@ -236,7 +241,7 @@ class OfferTagsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(put(urlPathEqualTo(TAG_PATH))
-                .withRequestBody(equalToJson(CREATE_REQUEST_BODY))
+                .withRequestBody(equalToJson(TAG_REQUEST_BODY))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
 
         try (AllegroClient allegro = client(wmInfo)) {
@@ -246,7 +251,7 @@ class OfferTagsClientTest {
                     TagRequest.builder().name(TEST_TAG_NAME).hidden(true).build());
 
             // then
-            verify(1, putRequestedFor(urlPathEqualTo(TAG_PATH)).withRequestBody(equalToJson(CREATE_REQUEST_BODY)));
+            verify(1, putRequestedFor(urlPathEqualTo(TAG_PATH)).withRequestBody(equalToJson(TAG_REQUEST_BODY)));
         }
     }
 
@@ -318,7 +323,8 @@ class OfferTagsClientTest {
             assertThrows(NullPointerException.class, () -> tags.ofOffer(null));
             assertThrows(NullPointerException.class, () -> tags.assignToOffer(null, List.of(TEST_TAG_ID)));
             assertThrows(NullPointerException.class, () -> tags.assignToOffer(TEST_OFFER_ID, null));
-            verify(0, postRequestedFor(urlPathEqualTo(TAGS_PATH)));
+            // no method reached the wire — none of the seven guarded calls sent a request
+            verify(0, anyRequestedFor(anyUrl()));
         }
     }
 
@@ -339,7 +345,7 @@ class OfferTagsClientTest {
                     () -> tags.ofOffer(TEST_OFFER_ID));
             List<AllegroFieldError> errors = failure.errors();
             assertEquals(1, errors.size());
-            assertEquals("ConstraintViolationException", errors.get(0).code());
+            assertEquals(EXPECTED_ERROR_CODE, errors.get(0).code());
         }
     }
 
@@ -421,11 +427,11 @@ class OfferTagsClientTest {
         // given — first 500, retry returns 200
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(OFFER_TAGS_PATH))
-                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(Scenario.STARTED)
+                .inScenario(SCENARIO_5XX_RECOVERY).whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR))
-                .willSetStateTo(STATE_REAUTHED));
+                .willSetStateTo(STATE_RECOVERED));
         stubFor(get(urlPathEqualTo(OFFER_TAGS_PATH))
-                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(STATE_REAUTHED)
+                .inScenario(SCENARIO_5XX_RECOVERY).whenScenarioStateIs(STATE_RECOVERED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TAG_LIST_RESPONSE)));
 
         try (AllegroClient allegro = client(wmInfo, oneRetry())) {
