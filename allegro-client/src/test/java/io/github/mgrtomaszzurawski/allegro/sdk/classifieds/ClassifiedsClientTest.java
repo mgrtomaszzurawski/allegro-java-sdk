@@ -6,9 +6,12 @@ package io.github.mgrtomaszzurawski.allegro.sdk.classifieds;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
@@ -25,8 +28,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackageType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -38,10 +43,12 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * WireMock coverage of the classifieds facade — the starter slice of bucket F.
- * Pins the {@code category.id} query, the vendor headers, the Raw → record
- * mapping, and the mandatory error-path table (400 typed field errors,
- * 401 replay, 404, 429 with Retry-After, 5xx retry).
+ * WireMock coverage of the classifieds facade. Pins the {@code category.id}
+ * query, the single-package and offer-assignment reads, the {@code PUT} that
+ * assigns packages (request body verified), the vendor headers, the Raw → record
+ * mapping, and the mandatory error-path table (400 typed field errors, 401
+ * replay, 404, 429 with Retry-After, 5xx retry) exercised on
+ * {@code availablePackages} as the facade's representative endpoint.
  */
 @WireMockTest
 class ClassifiedsClientTest {
@@ -53,6 +60,11 @@ class ClassifiedsClientTest {
     private static final String PACKAGES_PATH = "/sale/classifieds-packages";
     private static final String CATEGORY_ID_PARAM = "category.id";
     private static final String TEST_CATEGORY_ID = "3928";
+    private static final String TEST_PACKAGE_ID = "6174be19-56f9-484b-b72c-43b0b00785e8";
+    private static final String TEST_EXTRA_PACKAGE_ID = "3b2f0c11-0000-4a5e-a55c-bcb8e7d53cbb";
+    private static final String TEST_OFFER_ID = "8235476198";
+    private static final String PACKAGE_PATH = PACKAGES_PATH + "/" + TEST_PACKAGE_ID;
+    private static final String OFFER_PACKAGES_PATH = "/sale/offer-classifieds-packages/" + TEST_OFFER_ID;
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
@@ -98,6 +110,25 @@ class ClassifiedsClientTest {
                "publication":null}
             ]}
             """;
+    // spec-derived: not yet wire-verified. A single ClassifiedPackageConfig, the
+    // shape returned by GET /sale/classifieds-packages/{packageId}.
+    private static final String SINGLE_PACKAGE_RESPONSE = """
+            {"id":"%s","name":"Power","type":"BASE",
+             "extensions":[{"name":"autocentrumExport","description":"Autocentrum.pl"}],
+             "promotions":[{"name":"emphasized","duration":"PT240H"}],
+             "publication":{"duration":"PT720H"}}
+            """.formatted(TEST_PACKAGE_ID);
+    // spec-derived: not yet wire-verified. A ClassifiedResponse — one base
+    // package plus one extra carrying the republish flag.
+    private static final String OFFER_PACKAGES_RESPONSE = """
+            {"basePackage":{"id":"%s"},
+             "extraPackages":[{"id":"%s","republish":true}]}
+            """.formatted(TEST_PACKAGE_ID, TEST_EXTRA_PACKAGE_ID);
+    // The exact body assignPackages must PUT for a base + one republishing extra.
+    private static final String ASSIGN_REQUEST_BODY = """
+            {"basePackage":{"id":"%s"},
+             "extraPackages":[{"id":"%s","republish":true}]}
+            """.formatted(TEST_PACKAGE_ID, TEST_EXTRA_PACKAGE_ID);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -312,6 +343,123 @@ class ClassifiedsClientTest {
             // then — a raw DateTimeParseException never escapes the SDK surface
             assertThrows(AllegroServerException.class,
                     () -> classifieds.availablePackages(TEST_CATEGORY_ID));
+        }
+    }
+
+    @Test
+    void getPackage_whenPackageIdGiven_readsFromPathAndMapsPackage(WireMockRuntimeInfo wmInfo) {
+        // given — the package id is a path segment, not a query parameter
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(PACKAGE_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(SINGLE_PACKAGE_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            ClassifiedPackage packageConfig = allegro.classifieds().getPackage(TEST_PACKAGE_ID);
+
+            // then — the single package is mapped from the path resource
+            assertEquals(TEST_PACKAGE_ID, packageConfig.id());
+            assertEquals("Power", packageConfig.name());
+            assertEquals(ClassifiedPackageType.BASE, packageConfig.type());
+            assertEquals(Duration.ofHours(720), packageConfig.publication().duration());
+            verify(1, getRequestedFor(urlPathEqualTo(PACKAGE_PATH)));
+        }
+    }
+
+    @Test
+    void getPackage_whenPackageIdNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — fail-fast on the required input
+            assertThrows(NullPointerException.class, () -> classifieds.getPackage(null));
+            verify(0, getRequestedFor(urlPathEqualTo(PACKAGE_PATH)));
+        }
+    }
+
+    @Test
+    void packagesOfOffer_whenOfferIdGiven_mapsBaseAndExtraPackages(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(OFFER_PACKAGES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(OFFER_PACKAGES_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            OfferClassifieds assigned = allegro.classifieds().packagesOfOffer(TEST_OFFER_ID);
+
+            // then — base id and the extra (with its republish flag) both survive
+            assertEquals(TEST_PACKAGE_ID, assigned.basePackageId());
+            assertEquals(1, assigned.extraPackages().size());
+            assertEquals(TEST_EXTRA_PACKAGE_ID, assigned.extraPackages().get(0).id());
+            assertEquals(Boolean.TRUE, assigned.extraPackages().get(0).republish());
+            verify(1, getRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH)));
+        }
+    }
+
+    @Test
+    void packagesOfOffer_whenOfferIdNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then
+            assertThrows(NullPointerException.class, () -> classifieds.packagesOfOffer(null));
+            verify(0, getRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH)));
+        }
+    }
+
+    @Test
+    void assignPackages_whenAssignmentGiven_putsBaseAndExtraBody(WireMockRuntimeInfo wmInfo) {
+        // given — the PUT returns no content
+        stubToken(TEST_TOKEN);
+        stubFor(put(urlPathEqualTo(OFFER_PACKAGES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(equalToJson(ASSIGN_REQUEST_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NO_CONTENT)));
+        ClassifiedAssignment assignment = ClassifiedAssignment.builder()
+                .basePackage(TEST_PACKAGE_ID)
+                .addExtraPackage(TEST_EXTRA_PACKAGE_ID, true)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.classifieds().assignPackages(TEST_OFFER_ID, assignment);
+
+            // then — the write went out exactly once with the assignment body
+            verify(1, putRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH))
+                    .withRequestBody(equalToJson(ASSIGN_REQUEST_BODY)));
+        }
+    }
+
+    @Test
+    void assignPackages_whenArgumentsNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        stubToken(TEST_TOKEN);
+        ClassifiedAssignment assignment = ClassifiedAssignment.builder()
+                .basePackage(TEST_PACKAGE_ID).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — both the offer id and the assignment are required, fail-fast
+            assertThrows(NullPointerException.class,
+                    () -> classifieds.assignPackages(null, assignment));
+            assertThrows(NullPointerException.class,
+                    () -> classifieds.assignPackages(TEST_OFFER_ID, null));
+            verify(0, putRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH)));
         }
     }
 }
