@@ -135,6 +135,19 @@ distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. 
 with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
 the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
 
+### Smart! condition `value`/`threshold` is boolean OR number on the wire (verified 2026-07-18, sandbox)
+
+`GET /sale/smart` returns each entry in `conditions[]` with a `value` and `threshold` that are a
+JSON **number** for a metric condition (e.g. `1.5` days) but a JSON **boolean** for a pass/fail
+condition (e.g. `false`) — the spec types both as `number`, so the generated Layer-1 DTO
+(`SmartSellerClassificationReportConditionsInnerRaw`) fields are `BigDecimal` and Jackson aborts
+the WHOLE response with `MismatchedInputException` the moment a boolean value appears. Live-caught
+running the `account` seller demo (`me()` and `salesQuality()` succeed; `smartClassification()`
+threw). The SDK now reads the response from a `JsonNode` (`SmartClassificationMapper`), keeping a
+numeric value/threshold typed as `BigDecimal` and mapping a boolean one to `null` — the pass/fail
+outcome is carried by the condition's `fulfilled` flag. Not a `oneOf`/enum/subtype case, so the
+core C3–C5 forward-compat handlers do not apply.
+
 ## Sale settings (bucket K)
 
 ### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
@@ -256,17 +269,19 @@ seller-side and treats the immediate download 404 as expected.
 
 ## Offers extras (bucket F)
 
-### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+### Translation PATCH must omit unset parts, not send them as `null` — FIXED (partial body; spec-derived)
 
-`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
-serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
-Jackson's default `ALWAYS` inclusion. So a title-only update sends
-`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
-whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
-translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
-latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
-handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
-`update` is safe for offers whose description/safety translations are not manually set.
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`) is a
+partial update: the caller may set any subset of title / description / safety-information, and the
+unset parts must be **left untouched**. The earlier implementation serialized through the shared
+SDK ObjectMapper's default `ALWAYS` inclusion, so a title-only update sent
+`{"description":null,"title":{…},"safetyInformation":null}` — risking that the server reads a
+`null` sibling as **"clear the translation"** (latent data loss) rather than "no change". Fixed by
+serializing the body with `HttpCall.jsonBodyPartial` (NON_EMPTY — omits nulls and empties, the
+same approach bucket A adopted for `POST /sale/product-offers`, §below) and building the raw with
+only the parts the request set. A title-only update now sends `{"title":{…}}`; the ambiguity is
+gone regardless of server semantics. **Still to confirm on the sandbox** (needs a live offer): that
+the server does treat an omitted part as "no change" (expected) and accepts a subset PATCH.
 
 ## Offers — create (bucket A)
 
@@ -292,6 +307,34 @@ default shipping rate list — configured in the sandbox UI, or referenced by id
 request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delivery` refs — future
 work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
 returns `CATEGORY_NOT_EXISTS`.
+
+## Campaigns (bucket H)
+
+### Allegro Prices offer-status query requires `offer.ids` 1..1000 (verified 2026-07-18, sandbox)
+
+`POST /sale/allegro-prices/offers-queries` (`allegroPrices().streamOffersStatus(...)`) rejects a
+marketplace-only query with `400 VALIDATION_ERROR`, `message: "Validation error: offer.ids size
+must be between 1 and 1,000"` (example `trace-id` `2b6432bc191218e0`) — even though the vendored
+spec types `offer` and `offer.ids` as OPTIONAL. In practice at least one offer id is mandatory.
+The SDK stays spec-faithful (the builder does not force `offerId`, so it can serialise a
+marketplace-only query) and surfaces the rejection as `AllegroBadRequestException` with the parsed
+`errors[]`; consumers must supply `AllegroPricesOfferQuery.builder(marketplace).addOfferId(...)`.
+The `campaigns` demo now sources a few of the seller's own offer ids before querying, and skips the
+probe when the account has no offers.
+
+### Allegro Prices participation spans four marketplaces (verified 2026-07-18, sandbox)
+
+`GET /sale/allegro-prices/accounts/participations` (`allegroPrices().participation()`) returned four
+marketplaces for the sandbox seller — `allegro-pl`, `allegro-cz`, `allegro-sk`, `allegro-hu`, all
+`ALLOWED` — confirming the `MarketplaceParticipation` mapping across markets on a live response.
+
+### AlleDiscount exposes SOURCING and DISCOUNT campaign types (verified 2026-07-18, sandbox)
+
+`GET /sale/alle-discount/campaigns` (`alleDiscount().campaigns()`) returned 12 campaigns for the
+sandbox seller, spanning both `SOURCING` (co-finance) and `DISCOUNT` (AlleObniżka) campaign types,
+confirming the `AlleDiscountCampaign` / `AlleDiscountCampaignType` mapping. Every listed campaign
+showed the seller as not enrolled, so `streamEligibleOffers`/`streamSubmittedOffers` returned empty
+without error — the write→read command cycles still need an enrolled campaign (risk R5).
 
 ## From external sources (to verify on first contact)
 

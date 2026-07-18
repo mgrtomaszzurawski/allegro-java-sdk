@@ -25,7 +25,23 @@
       "boughtAt": "2026-07-15T10:30:00Z"
     }
   ],
-  "surcharges": [],
+  "payment": {
+    "id": "9a8b7c6d-1111-2222-3333-444455556666",
+    "type": "ONLINE",
+    "provider": "PAYU",
+    "finishedAt": "2026-07-15T10:32:00Z",
+    "paidAmount": { "amount": "44.98", "currency": "PLN" },
+    "features": []
+  },
+  "surcharges": [
+    {
+      "id": "5f4e3d2c-1111-2222-3333-444455556666",
+      "type": "ONLINE",
+      "provider": "PAYU",
+      "paidAmount": { "amount": "5.00", "currency": "PLN" }
+    }
+  ],
+  "note": { "text": "Fragile - handle with care" },
   "summary": {
     "totalToPay": { "amount": "39.98", "currency": "PLN" }
   },
