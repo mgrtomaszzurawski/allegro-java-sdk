@@ -46,6 +46,7 @@ public final class PromotionsImpl implements Promotions {
 
     private static final String ERR_NULL_TYPE = "type must not be null";
     private static final String ERR_NULL_REQUEST = "request must not be null";
+    private static final String ERR_NULL_PROMOTION_ID = "promotionId must not be null";
 
     private final HttpSupport http;
 
@@ -82,9 +83,9 @@ public final class PromotionsImpl implements Promotions {
                 .get(ApiPaths.LOYALTY_PROMOTIONS)
                 .query(query)
                 .fetch(SellerRebatesDtoRaw.class);
-        List<Promotion> items = response.getPromotions() == null
-                ? List.of()
-                : response.getPromotions().stream().map(PromotionsMapper::from).toList();
+        List<Promotion> items = response.getPromotions().stream()
+                .map(PromotionsMapper::from)
+                .toList();
         return new PagedSpliterator.Page<>(items, hasMore(offset, items.size(), response.getTotalCount()));
     }
 
@@ -94,6 +95,9 @@ public final class PromotionsImpl implements Promotions {
 
     @Override
     public Promotion get(String promotionId) {
+        if (promotionId == null) {
+            throw new IllegalArgumentException(ERR_NULL_PROMOTION_ID);
+        }
         SellerRebateDtoRaw response = http.request(OP_GET)
                 .get(ApiPaths.subPath(ApiPaths.LOYALTY_PROMOTIONS, promotionId))
                 .fetch(SellerRebateDtoRaw.class);
@@ -114,6 +118,9 @@ public final class PromotionsImpl implements Promotions {
 
     @Override
     public Promotion modify(String promotionId, PromotionRequest request) {
+        if (promotionId == null) {
+            throw new IllegalArgumentException(ERR_NULL_PROMOTION_ID);
+        }
         if (request == null) {
             throw new IllegalArgumentException(ERR_NULL_REQUEST);
         }
@@ -126,6 +133,9 @@ public final class PromotionsImpl implements Promotions {
 
     @Override
     public void deactivate(String promotionId) {
+        if (promotionId == null) {
+            throw new IllegalArgumentException(ERR_NULL_PROMOTION_ID);
+        }
         http.request(OP_DEACTIVATE)
                 .delete(ApiPaths.subPath(ApiPaths.LOYALTY_PROMOTIONS, promotionId))
                 .send();

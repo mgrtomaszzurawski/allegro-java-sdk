@@ -24,6 +24,7 @@ public final class PricingPromotionsExample {
 
     private static final String CATEGORY_OFFER_ID = "12345";
     private static final String CURRENCY = "PLN";
+    private static final int MAX_PROMOTIONS = 50;
 
     private PricingPromotionsExample() {
     }
@@ -31,7 +32,7 @@ public final class PricingPromotionsExample {
     static Stream<Promotion> listLargeOrderPromotions(AllegroClient client) {
         return client.pricing().promotions()
                 .streamPromotions(PromotionType.LARGE_ORDER_DISCOUNT)
-                .limit(50);
+                .limit(MAX_PROMOTIONS);
     }
 
     static Stream<Promotion> listForOffer(AllegroClient client) {

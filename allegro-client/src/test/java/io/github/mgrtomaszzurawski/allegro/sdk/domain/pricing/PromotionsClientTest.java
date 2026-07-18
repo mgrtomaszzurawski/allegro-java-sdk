@@ -66,8 +66,10 @@ class PromotionsClientTest {
 
     private static final String PROMOTIONS_PATH = "/sale/loyalty/promotions";
     private static final String TEST_PROMOTION_ID = "promo-1";
+    private static final String PROMOTION_ID_0 = "promo-0";
     private static final String PROMOTION_PATH = PROMOTIONS_PATH + "/" + TEST_PROMOTION_ID;
     private static final String TEST_OFFER_ID = "12345";
+    private static final String UNKNOWN_BENEFIT_TYPE = "FUTURE_FAMILY";
 
     private static final String PROMOTION_TYPE_PARAM = "promotionType";
     private static final String OFFER_ID_PARAM = "offer.id";
@@ -122,10 +124,11 @@ class PromotionsClientTest {
                  {"quantity":{"lowerBound":10},"discount":{"percentage":"15"}}]}}],
              "offerCriteria":[{"type":"CONTAINS_OFFERS","offers":[{"id":"12345"}]}]}
             """;
-    // spec-derived: not yet wire-verified (a benefit family this SDK version does not model)
+    // spec-derived: not yet wire-verified (a benefit family this SDK version does not model);
+    // the %s is filled with UNKNOWN_BENEFIT_TYPE so the fixture and the assertions cannot drift
     private static final String UNKNOWN_BENEFIT_RESPONSE = """
             {"id":"promo-2","status":"SUSPENDED",
-             "benefits":[{"specification":{"type":"FUTURE_FAMILY","payload":{"x":1}}}],
+             "benefits":[{"specification":{"type":"%s","payload":{"x":1}}}],
              "offerCriteria":[{"type":"ALL_OFFERS"}]}
             """;
     // spec-derived: not yet wire-verified (a status and criterion type this SDK version does not model)
@@ -195,10 +198,10 @@ class PromotionsClientTest {
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(PROMOTIONS_PATH)).withQueryParam(OFFSET_PARAM, equalTo(FIRST_PAGE_OFFSET))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(promotionsPage(minimalPromotion("promo-0"), 2))));
+                        .withBody(promotionsPage(minimalPromotion(PROMOTION_ID_0), 2))));
         stubFor(get(urlPathEqualTo(PROMOTIONS_PATH)).withQueryParam(OFFSET_PARAM, equalTo(SECOND_PAGE_OFFSET))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(promotionsPage(minimalPromotion("promo-1"), 2))));
+                        .withBody(promotionsPage(minimalPromotion(TEST_PROMOTION_ID), 2))));
 
         try (AllegroClient allegro = client(wmInfo)) {
 
@@ -208,7 +211,7 @@ class PromotionsClientTest {
                     .findFirst().orElseThrow();
 
             // then — the second page was never requested (laziness)
-            assertEquals("promo-0", first.id());
+            assertEquals(PROMOTION_ID_0, first.id());
             verify(1, getRequestedFor(urlPathEqualTo(PROMOTIONS_PATH))
                     .withQueryParam(OFFSET_PARAM, equalTo(FIRST_PAGE_OFFSET)));
             verify(0, getRequestedFor(urlPathEqualTo(PROMOTIONS_PATH))
@@ -222,10 +225,10 @@ class PromotionsClientTest {
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(PROMOTIONS_PATH)).withQueryParam(OFFSET_PARAM, equalTo(FIRST_PAGE_OFFSET))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(promotionsPage(minimalPromotion("promo-0"), 2))));
+                        .withBody(promotionsPage(minimalPromotion(PROMOTION_ID_0), 2))));
         stubFor(get(urlPathEqualTo(PROMOTIONS_PATH)).withQueryParam(OFFSET_PARAM, equalTo(SECOND_PAGE_OFFSET))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(promotionsPage(minimalPromotion("promo-1"), 2))));
+                        .withBody(promotionsPage(minimalPromotion(TEST_PROMOTION_ID), 2))));
 
         try (AllegroClient allegro = client(wmInfo)) {
 
@@ -235,7 +238,7 @@ class PromotionsClientTest {
                     .map(Promotion::id).toList();
 
             // then — both pages walked, and both requests carried the type filter
-            assertEquals(List.of("promo-0", "promo-1"), promotionIds);
+            assertEquals(List.of(PROMOTION_ID_0, TEST_PROMOTION_ID), promotionIds);
             verify(1, getRequestedFor(urlPathEqualTo(PROMOTIONS_PATH))
                     .withQueryParam(OFFSET_PARAM, equalTo(FIRST_PAGE_OFFSET))
                     .withQueryParam(PROMOTION_TYPE_PARAM, equalTo(LARGE_ORDER_TYPE)));
@@ -295,13 +298,13 @@ class PromotionsClientTest {
             Benefit.MultiPackDiscount multi = assertInstanceOf(
                     Benefit.MultiPackDiscount.class, promotion.benefits().get(1));
             assertEquals(MULTIPACK_PERCENTAGE, multi.discountPercentage());
-            assertEquals(new BigDecimal(3), multi.buyQuantity());
-            assertEquals(new BigDecimal(1), multi.discountedQuantity());
+            assertEquals(new BigDecimal(MULTIPACK_BUY_QUANTITY), multi.buyQuantity());
+            assertEquals(new BigDecimal(MULTIPACK_DISCOUNTED_QUANTITY), multi.discountedQuantity());
 
             Benefit.WholesalePriceList wholesale = assertInstanceOf(
                     Benefit.WholesalePriceList.class, promotion.benefits().get(2));
             assertEquals(WHOLESALE_NAME, wholesale.name());
-            assertEquals(new BigDecimal(10), wholesale.thresholds().get(0).quantityFrom());
+            assertEquals(new BigDecimal(WHOLESALE_QUANTITY), wholesale.thresholds().get(0).quantityFrom());
             assertEquals(WHOLESALE_PERCENTAGE, wholesale.thresholds().get(0).discountPercentage());
 
             OfferCriterion criterion = promotion.offerCriteria().get(0);
@@ -316,7 +319,7 @@ class PromotionsClientTest {
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(PROMOTION_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBody(UNKNOWN_BENEFIT_RESPONSE)));
+                        .withBody(UNKNOWN_BENEFIT_RESPONSE.formatted(UNKNOWN_BENEFIT_TYPE))));
 
         try (AllegroClient allegro = client(wmInfo)) {
 
@@ -327,7 +330,7 @@ class PromotionsClientTest {
             assertEquals(Promotion.Status.SUSPENDED, promotion.status());
             Benefit.UnknownBenefit unknown = assertInstanceOf(
                     Benefit.UnknownBenefit.class, promotion.benefits().get(0));
-            assertEquals("FUTURE_FAMILY", unknown.type());
+            assertEquals(UNKNOWN_BENEFIT_TYPE, unknown.type());
             assertEquals(OfferCriterion.Type.ALL_OFFERS, promotion.offerCriteria().get(0).type());
             assertTrue(promotion.offerCriteria().get(0).offerIds().isEmpty());
         }
@@ -399,7 +402,7 @@ class PromotionsClientTest {
     void create_whenUnknownBenefit_throwsBeforeSending(WireMockRuntimeInfo wmInfo) {
         // given — a read-only sentinel benefit that cannot be serialized
         PromotionRequest request = PromotionRequest.builder()
-                .addBenefit(new Benefit.UnknownBenefit("FUTURE_FAMILY"))
+                .addBenefit(new Benefit.UnknownBenefit(UNKNOWN_BENEFIT_TYPE))
                 .addOfferCriterion(OfferCriterion.allOffers())
                 .build();
 
@@ -432,6 +435,20 @@ class PromotionsClientTest {
                     IllegalArgumentException.class, () -> promotions.create(request));
             assertEquals(ERR_UNSERIALIZABLE_CRITERION, failure.getMessage());
             verify(0, postRequestedFor(urlEqualTo(PROMOTIONS_PATH)));
+        }
+    }
+
+    @Test
+    void whenNullPromotionId_throwsBeforeSending(WireMockRuntimeInfo wmInfo) {
+        // given
+        try (AllegroClient allegro = client(wmInfo)) {
+            Promotions promotions = allegro.pricing().promotions();
+            PromotionRequest request = largeOrderRequest();
+
+            // then — every id-taking op rejects a null id client-side (no request sent)
+            assertThrows(IllegalArgumentException.class, () -> promotions.get(null));
+            assertThrows(IllegalArgumentException.class, () -> promotions.modify(null, request));
+            assertThrows(IllegalArgumentException.class, () -> promotions.deactivate(null));
         }
     }
 
@@ -526,6 +543,7 @@ class PromotionsClientTest {
             assertEquals(1, failure.errors().size());
             assertEquals(ERROR_CODE_VALIDATION, failure.errors().get(0).code());
             assertEquals("benefits", failure.errors().get(0).path());
+            verify(1, postRequestedFor(urlEqualTo(PROMOTIONS_PATH)));
         }
     }
 

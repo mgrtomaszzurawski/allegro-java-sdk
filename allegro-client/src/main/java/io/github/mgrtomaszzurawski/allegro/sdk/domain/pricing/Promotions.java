@@ -38,7 +38,9 @@ public interface Promotions {
      * offer.
      *
      * @param type the promotion type to list (required by the endpoint)
-     * @param offerId the offer to filter by (sent as the {@code offer.id} filter)
+     * @param offerId the offer to filter by (sent as the {@code offer.id}
+     *     filter); a {@code null} offer id yields the same result as
+     *     {@link #streamPromotions(PromotionType)} (no offer filter)
      * @return a lazy stream over the matching promotions
      * @throws IllegalArgumentException if {@code type} is null
      */

@@ -55,10 +55,11 @@ final class PromotionsMapper {
 
     /** Map a promotion response DTO to the public record. */
     static Promotion from(SellerRebateDtoRaw raw) {
+        var createdAt = raw.getCreatedAt();
         return new Promotion(
                 raw.getId(),
                 statusFrom(raw.getStatus()),
-                raw.getCreatedAt() == null ? null : raw.getCreatedAt().toInstant(),
+                createdAt == null ? null : createdAt.toInstant(),
                 raw.getBenefits().stream().map(benefit -> benefitFrom(benefit.getSpecification())).toList(),
                 raw.getOfferCriteria().stream().map(PromotionsMapper::criterionFrom).toList());
     }
