@@ -335,10 +335,48 @@ public final class ApiPaths {
     public static final String FULFILLMENT_TAX_ID = "/fulfillment/tax-id";
     private static final String FULFILLMENT_ORDERS = "/fulfillment/orders";
     private static final String PARCELS_SEGMENT = "parcels";
+    /** Advance Ship Notices collection ({@code /fulfillment/advance-ship-notices}). */
+    public static final String FULFILLMENT_ADVANCE_SHIP_NOTICES = "/fulfillment/advance-ship-notices";
+    /** ASN submit-command resource ({@code /fulfillment/submit-commands}). */
+    public static final String FULFILLMENT_SUBMIT_COMMANDS = "/fulfillment/submit-commands";
+    private static final String ASN_CANCEL_SEGMENT = "cancel";
+    private static final String ASN_LABELS_SEGMENT = "labels";
+    private static final String ASN_SUBMITTED_SEGMENT = "submitted";
+    private static final String ASN_RECEIVING_STATE_SEGMENT = "receiving-state";
 
     /** Parcels shipped for one fulfillment order ({@code /fulfillment/orders/{orderId}/parcels}). */
     public static String fulfillmentOrderParcels(String orderId) {
         return subPath(FULFILLMENT_ORDERS, orderId, PARCELS_SEGMENT);
+    }
+
+    /** A single Advance Ship Notice ({@code /fulfillment/advance-ship-notices/{id}}). */
+    public static String advanceShipNotice(String asnId) {
+        return subPath(FULFILLMENT_ADVANCE_SHIP_NOTICES, asnId);
+    }
+
+    /** Cancel an Advance Ship Notice ({@code .../advance-ship-notices/{id}/cancel}). */
+    public static String advanceShipNoticeCancel(String asnId) {
+        return subPath(FULFILLMENT_ADVANCE_SHIP_NOTICES, asnId, ASN_CANCEL_SEGMENT);
+    }
+
+    /** Printable labels for an Advance Ship Notice ({@code .../advance-ship-notices/{id}/labels}). */
+    public static String advanceShipNoticeLabels(String asnId) {
+        return subPath(FULFILLMENT_ADVANCE_SHIP_NOTICES, asnId, ASN_LABELS_SEGMENT);
+    }
+
+    /** Amend a submitted Advance Ship Notice ({@code .../advance-ship-notices/{id}/submitted}). */
+    public static String advanceShipNoticeSubmitted(String asnId) {
+        return subPath(FULFILLMENT_ADVANCE_SHIP_NOTICES, asnId, ASN_SUBMITTED_SEGMENT);
+    }
+
+    /** Receiving state of an Advance Ship Notice ({@code .../advance-ship-notices/{id}/receiving-state}). */
+    public static String advanceShipNoticeReceivingState(String asnId) {
+        return subPath(FULFILLMENT_ADVANCE_SHIP_NOTICES, asnId, ASN_RECEIVING_STATE_SEGMENT);
+    }
+
+    /** A single ASN submit command ({@code /fulfillment/submit-commands/{command-id}}). */
+    public static String fulfillmentSubmitCommand(String commandId) {
+        return subPath(FULFILLMENT_SUBMIT_COMMANDS, commandId);
     }
 
     // ---- contacts (bucket J) ----

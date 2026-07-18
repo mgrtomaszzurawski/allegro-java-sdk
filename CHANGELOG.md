@@ -442,6 +442,19 @@ sections. Empty subsections are dropped by the release engineer when folding
   open-set enums (`ReserveStatus`, `StorageFeeStatus`, `RefundDispositionType`,
   `RefundStockStatus`, `AccountableParty`, `RefundActionState`) that resolve unknown wire
   values to `UNKNOWN`.
+- Add the Advance Ship Notices lifecycle sub-facade `fulfillment().advanceShipNotices()` (11 ops):
+  `streamNotices()` / `streamNotices(AsnFilter)` lazy stream, `get(id)` (captures the `ETag` as
+  `version()`), `create(AsnRequest)`, `update(id, request, version)` and
+  `updateSubmitted(id, update, version)` (optimistic-concurrency `If-Match`), `submit(id)` /
+  `submit(id, Duration)` (async submit command polled to a terminal `SubmitStatus`),
+  `cancel(id)`, `delete(id)`, `labels(id)` (PDF `byte[]`), and `receivingState(id)`. New immutable
+  records (`AdvanceShipNotice`, `AsnItem`, `HandlingUnit`, `ReceivingState` tree), the `AsnRequest`
+  / `SubmittedAsnUpdate` / `AsnFilter` builders, and open-set enums (`AsnStatus`, `ReceivingStage`,
+  `ReceivedType`, `ReasonCode`, `SubmitStatus`) that degrade unknown wire values to `UNKNOWN`. The
+  polymorphic `shipping` declaration is a deferred follow-up.
+- The forward-compatibility of the fulfillment open-set enums is now proven end-to-end: with the
+  Layer-1 `enumUnknownDefaultCase` fallback in place, an unrecognized wire enum value degrades to
+  the domain `UNKNOWN` instead of failing the response.
 
 ### J — post-sale-comms
 

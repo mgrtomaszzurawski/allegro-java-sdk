@@ -345,6 +345,43 @@ request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delive
 work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
 returns `CATEGORY_NOT_EXISTS`.
 
+## Fulfillment (bucket I)
+
+### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)
+
+One Fulfillment by Allegro is an invitation-only logistics contract. The shared sandbox seller
+account (`TestBoxSDK`, id `111332841`) is **not enrolled**, so every `/fulfillment/*` call
+returns **HTTP 403**. Verified live through the SDK (`-Pdemo.scenario=fulfillment
+-Pdemo.account=seller`): `fulfillment().removalPreference()` — the first call the probe makes —
+threw a typed `AllegroException` with `statusCode() == 403`, which the demo caught and reported
+("not enrolled ... verified the typed-exception path"). Consequences for bucket I:
+
+- The happy-path write→read DoD is **not live-runnable** on this sandbox; the SDK contract is
+  proven by the WireMock suite instead, and the live layer verifies the **negative path** (the
+  403 typed-exception surfaces correctly).
+- Response fixtures for the fulfillment reports / ASN lifecycle stay marked
+  `// spec-derived: not yet wire-verified` — they cannot be reconciled against real 1F data
+  until an enrolled sandbox account exists. If Allegro enrols the sandbox seller later, re-run
+  the demo and drop the `spec-derived` marks.
+
+### Advance Ship Notice writes need `If-Match`; submit is a client-keyed async command (spec-derived, pending live verification)
+
+Both `PUT /fulfillment/advance-ship-notices/{id}` (update) and `PUT .../{id}/submitted`
+(updateSubmitted) declare the `If-Match` header **required** and echo an `etag` on every
+single-notice read/write — optimistic concurrency, not last-write-wins. The SDK surfaces that
+`ETag` as `AdvanceShipNotice.version()` and threads it back as the `If-Match` token, so
+`update`/`updateSubmitted` take the version explicitly rather than silently re-fetching it.
+
+Submitting a notice is an async command the **client** keys: `PUT
+/fulfillment/submit-commands/{command-id}` with a client-generated UUID and body
+`{input:{advanceShipNoticeId}}`, then poll `GET .../submit-commands/{command-id}` until
+`output.status` leaves `RUNNING` (terminal `SUCCESSFUL` / `FAILED`; the SDK treats any
+non-`RUNNING` value as terminal so a future status cannot hang the poll). The SDK generates the
+id, polls to a terminal `SubmitStatus`, and returns it (a `FAILED` command is terminal data, not
+an exception). The notice's `shipping` is polymorphic (`COURIER_BY_SELLER` / `OWN_TRANSPORT` /
+`THIRD_PARTY_DELIVERY`, each with its own required sub-fields) and is a deferred follow-up. None
+of this is live-verifiable on the shared sandbox seller (403, not enrolled in One Fulfillment).
+
 ## Campaigns (bucket H)
 
 ### Allegro Prices offer-status query requires `offer.ids` 1..1000 (verified 2026-07-18, sandbox)

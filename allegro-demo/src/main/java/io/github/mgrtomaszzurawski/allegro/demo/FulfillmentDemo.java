@@ -18,10 +18,11 @@ import java.io.IOException;
  * Sandbox probe for the fulfillment facade: reads the seller's active removal
  * preference, writes it back unchanged, and reads again to prove the write→read
  * cycle through the SDK (TESTING.md §2); then reads the stock / available-product
- * / refund-disposition reports and the tax id. Writing the current preference
- * value back keeps the seller's configuration untouched; the reports are
- * read-only and only counts (never product names, buyer logins or the tax
- * number) are logged.
+ * / refund-disposition reports, the advance-ship-notice stream and the tax id.
+ * Writing the current preference value back keeps the seller's configuration
+ * untouched; the reports and the ASN stream are read-only and only counts (never
+ * product names, buyer logins or the tax number) are logged. The ASN write→read
+ * cycle needs an account enrolled in One Fulfillment and is not exercised here.
  *
  * <p>One Fulfillment is an enrolled-account service; on a non-enrolled sandbox
  * seller the calls are rejected, and the probe then verifies the typed-exception
@@ -92,6 +93,9 @@ public final class FulfillmentDemo {
         long dispositions = fulfillment.refundDispositions(RefundDispositionFilter.all())
                 .limit(REPORT_SAMPLE).count();
         System.out.println("refund dispositions (first " + REPORT_SAMPLE + "): " + dispositions);
+        long advanceShipNotices = fulfillment.advanceShipNotices().streamNotices()
+                .limit(REPORT_SAMPLE).count();
+        System.out.println("advance ship notices (first " + REPORT_SAMPLE + "): " + advanceShipNotices);
         TaxId taxId = fulfillment.taxId();
         System.out.println("tax id present: " + (taxId.taxId() != null)
                 + ", verification status: " + taxId.verificationStatus());
