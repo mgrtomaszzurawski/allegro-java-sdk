@@ -200,8 +200,8 @@ settings.get()                                    // GET  /sale/delivery-setting
 settings.update(DeliverySettingsRequest)          // PUT  /sale/delivery-settings
 
 ShippingRates rates = shipping.rates();
-rates.streamRateSets()                            // GET  /sale/shipping-rates          Stream<ShippingRateSet>
-rates.get(rateSetId)                              // GET  /sale/shipping-rates/{id}
+rates.list()                                      // GET  /sale/shipping-rates          List<ShippingRateSetSummary>  (not paginated; rows carry no rate detail)
+rates.get(rateSetId)                              // GET  /sale/shipping-rates/{id}      ShippingRateSet (full, with rate rows)
 rates.create(ShippingRateSetRequest)              // POST /sale/shipping-rates
 rates.update(rateSetId, ShippingRateSetRequest)   // PUT  /sale/shipping-rates/{id}
 

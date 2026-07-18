@@ -43,42 +43,34 @@ public record ShippingRateSet(
 
     /** Map the {@code GET /sale/shipping-rates/{id}} DTO to the public record. */
     public static ShippingRateSet from(GetShippingRatesSetUsingGET200ResponseRaw raw) {
-        return new ShippingRateSet(
-                raw.getId(),
-                raw.getName(),
-                type(raw.getType() == null ? null : raw.getType().getValue()),
-                raw.getDispatchCountry(),
-                raw.getLastModified(),
-                rates(raw.getRates()),
+        return assemble(raw.getId(), raw.getName(),
+                raw.getType() == null ? null : raw.getType().getValue(),
+                raw.getDispatchCountry(), raw.getLastModified(), raw.getRates(),
                 raw.getFeatures() == null ? null : RateSetFeatures.from(raw.getFeatures()));
     }
 
     /** Map the {@code POST /sale/shipping-rates} response DTO to the public record. */
     public static ShippingRateSet from(CreateShippingRatesSetUsingPOST201ResponseRaw raw) {
-        return new ShippingRateSet(
-                raw.getId(),
-                raw.getName(),
-                type(raw.getType() == null ? null : raw.getType().getValue()),
-                raw.getDispatchCountry(),
-                raw.getLastModified(),
-                rates(raw.getRates()),
-                null);
+        return assemble(raw.getId(), raw.getName(),
+                raw.getType() == null ? null : raw.getType().getValue(),
+                raw.getDispatchCountry(), raw.getLastModified(), raw.getRates(), null);
     }
 
     /** Map the {@code PUT /sale/shipping-rates/{id}} response DTO to the public record. */
     public static ShippingRateSet from(ModifyShippingRatesSetUsingPUT200ResponseRaw raw) {
-        return new ShippingRateSet(
-                raw.getId(),
-                raw.getName(),
-                type(raw.getType() == null ? null : raw.getType().getValue()),
-                raw.getDispatchCountry(),
-                raw.getLastModified(),
-                rates(raw.getRates()),
-                null);
+        return assemble(raw.getId(), raw.getName(),
+                raw.getType() == null ? null : raw.getType().getValue(),
+                raw.getDispatchCountry(), raw.getLastModified(), raw.getRates(), null);
     }
 
-    private static @Nullable RateSetType type(@Nullable String wire) {
-        return wire == null ? null : RateSetType.fromWire(wire);
+    // The three response DTOs (GET/POST/PUT) share this shape but no supertype, so
+    // each factory extracts its own fields and delegates the common assembly here.
+    private static ShippingRateSet assemble(String id, String name, @Nullable String typeWire,
+            @Nullable String dispatchCountry, @Nullable String lastModified,
+            @Nullable List<ShippingRateRaw> ratesRaw, @Nullable RateSetFeatures features) {
+        return new ShippingRateSet(id, name,
+                typeWire == null ? null : RateSetType.fromWire(typeWire),
+                dispatchCountry, lastModified, rates(ratesRaw), features);
     }
 
     private static List<ShippingRate> rates(@Nullable List<ShippingRateRaw> raw) {

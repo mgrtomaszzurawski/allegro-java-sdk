@@ -153,13 +153,13 @@ class ShippingRatesClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
 
             // when
-            ShippingRateSet set = allegro.shipping().rates().get(RATE_SET_ID);
+            ShippingRateSet rateSet = allegro.shipping().rates().get(RATE_SET_ID);
 
             // then — set metadata and the single rate row's nested fields all map
-            assertEquals(RateSetType.PHYSICAL, set.type());
-            assertEquals(DISPATCH_COUNTRY, set.dispatchCountry());
-            assertEquals(1, set.rates().size());
-            ShippingRate rate = set.rates().get(0);
+            assertEquals(RateSetType.PHYSICAL, rateSet.type());
+            assertEquals(DISPATCH_COUNTRY, rateSet.dispatchCountry());
+            assertEquals(1, rateSet.rates().size());
+            ShippingRate rate = rateSet.rates().get(0);
             assertEquals(METHOD_ID, rate.deliveryMethodId());
             assertEquals(Money.of(FIRST_AMOUNT, CURRENCY), rate.firstItemRate());
             assertEquals(Money.of(NEXT_AMOUNT, CURRENCY), rate.nextItemRate());
@@ -174,6 +174,8 @@ class ShippingRatesClientTest {
         // given
         stubToken();
         stubFor(post(urlEqualTo(RATES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(matchingJsonPath("$.name", equalTo(NEW_SET_NAME)))
@@ -208,6 +210,8 @@ class ShippingRatesClientTest {
         // given
         stubToken();
         stubFor(put(urlEqualTo(RATE_SET_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withRequestBody(matchingJsonPath("$.id", equalTo(RATE_SET_ID)))
                 .withRequestBody(matchingJsonPath("$.name", equalTo(NEW_SET_NAME)))
                 .withRequestBody(matchingJsonPath("$.rates[0].deliveryMethod.id", equalTo(METHOD_ID)))

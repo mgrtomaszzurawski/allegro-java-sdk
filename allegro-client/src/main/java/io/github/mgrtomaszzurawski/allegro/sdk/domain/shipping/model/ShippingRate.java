@@ -21,9 +21,10 @@ import org.jspecify.annotations.Nullable;
  *
  * @param deliveryMethodId the delivery method this row prices (see
  *     {@code shipping.deliveryMethods()})
- * @param firstItemRate the charge for the first item, or {@code null} on read when
- *     the server omits it
- * @param nextItemRate the charge for each further item, or {@code null}
+ * @param firstItemRate the charge for the first item; {@code null} only if the
+ *     server sends the (spec-required) rate object without an amount
+ * @param nextItemRate the charge for each further item; {@code null} only if the
+ *     server sends the (spec-required) rate object without an amount
  * @param maxQuantityPerPackage the most items a single package may hold, or {@code null}
  * @param maxPackageWeight the heaviest a single package may be, or {@code null}
  * @param shippingTime the promised dispatch-time range, or {@code null}

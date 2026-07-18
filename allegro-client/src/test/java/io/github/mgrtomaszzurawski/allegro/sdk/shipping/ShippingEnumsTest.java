@@ -4,7 +4,6 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.shipping;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

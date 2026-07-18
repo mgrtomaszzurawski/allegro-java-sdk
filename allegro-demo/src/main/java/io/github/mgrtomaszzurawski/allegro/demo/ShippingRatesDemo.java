@@ -77,27 +77,27 @@ public final class ShippingRatesDemo {
 
         ShippingRateSetSummary editable = firstEditable(summaries);
         ShippingRateSetSummary target = editable == null ? summaries.get(0) : editable;
-        ShippingRateSet set = rates.get(target.id());
-        System.out.println("rates().get(" + set.id() + "): name='" + set.name()
-                + "', type=" + set.type() + ", dispatch=" + set.dispatchCountry()
-                + ", rows=" + set.rates().size());
-        if (!set.rates().isEmpty()) {
-            ShippingRate row = set.rates().get(0);
-            System.out.println("first row: method=" + row.deliveryMethodId()
-                    + ", firstItemRate=" + row.firstItemRate()
-                    + ", nextItemRate=" + row.nextItemRate()
-                    + ", maxQuantity=" + row.maxQuantityPerPackage()
-                    + ", maxWeight=" + row.maxPackageWeight()
-                    + ", shippingTime=" + row.shippingTime());
+        ShippingRateSet rateSet = rates.get(target.id());
+        System.out.println("rates().get(" + rateSet.id() + "): name='" + rateSet.name()
+                + "', type=" + rateSet.type() + ", dispatch=" + rateSet.dispatchCountry()
+                + ", rows=" + rateSet.rates().size());
+        if (!rateSet.rates().isEmpty()) {
+            ShippingRate rateRow = rateSet.rates().get(0);
+            System.out.println("first row: method=" + rateRow.deliveryMethodId()
+                    + ", firstItemRate=" + rateRow.firstItemRate()
+                    + ", nextItemRate=" + rateRow.nextItemRate()
+                    + ", maxQuantity=" + rateRow.maxQuantityPerPackage()
+                    + ", maxWeight=" + rateRow.maxPackageWeight()
+                    + ", shippingTime=" + rateRow.shippingTime());
         }
 
         if (editable == null) {
             System.out.println("(no seller-editable set - skipping idempotent write check)");
             return;
         }
-        ShippingRateSet updated = rates.update(set.id(), requestFrom(set));
+        ShippingRateSet updated = rates.update(rateSet.id(), requestFrom(rateSet));
         System.out.println("rates().update() ok: name='" + updated.name() + "'");
-        if (!set.name().equals(updated.name())) {
+        if (!rateSet.name().equals(updated.name())) {
             throw new IllegalStateException(ERR_ROUND_TRIP);
         }
     }
@@ -109,13 +109,13 @@ public final class ShippingRatesDemo {
                 .orElse(null);
     }
 
-    private static ShippingRateSetRequest requestFrom(ShippingRateSet set) {
-        RateSetType type = set.type() == RateSetType.UNKNOWN ? null : set.type();
+    private static ShippingRateSetRequest requestFrom(ShippingRateSet rateSet) {
+        RateSetType type = rateSet.type() == RateSetType.UNKNOWN ? null : rateSet.type();
         return ShippingRateSetRequest.builder()
-                .name(set.name())
+                .name(rateSet.name())
                 .type(type)
-                .dispatchCountry(set.dispatchCountry())
-                .rates(set.rates())
+                .dispatchCountry(rateSet.dispatchCountry())
+                .rates(rateSet.rates())
                 .build();
     }
 }
