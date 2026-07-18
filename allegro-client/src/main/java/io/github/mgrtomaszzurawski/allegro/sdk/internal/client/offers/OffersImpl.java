@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
@@ -53,9 +54,11 @@ public final class OffersImpl implements Offers {
     private static final String QUERY_LIMIT = "limit";
 
     private final HttpSupport http;
+    private final OfferBatch batch;
 
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
+        this.batch = new OfferBatchImpl(runtime);
         // [append point: offers sub-facade wiring] Bucket A constructs its own
         // sub-facades here (batch/promoOptions/media); bucket F constructs its
         // sub-facades (tags/translations/bundles/flexibleBundles/rating) from
@@ -115,6 +118,11 @@ public final class OffersImpl implements Offers {
     public SmartClassification smartClassification(String offerId) {
         return SmartClassification.from(http.getAuthenticated(
                 ApiPaths.offerSmart(offerId), SmartOfferClassificationReportRaw.class, OP_SMART));
+    }
+
+    @Override
+    public OfferBatch batch() {
+        return batch;
     }
 
     /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */
