@@ -30,14 +30,23 @@ public final class DemoApp {
 
     private static final String SCENARIO_AUTH_BOOTSTRAP = "auth-bootstrap";
     private static final String SCENARIO_ME = "me";
+    private static final String SCENARIO_OFFER = "offer";
+    private static final String SCENARIO_ORDERS_GET = "orders-get";
+    private static final String SCENARIO_MARKETPLACES = "marketplaces";
+    private static final String SCENARIO_ACCOUNT = "account";
+    private static final String SCENARIO_CLASSIFIEDS = "classifieds";
+    private static final String SCENARIO_PRICING = "pricing";
+    private static final String SCENARIO_CAMPAIGNS = "campaigns";
+    private static final String SCENARIO_POS_ROUNDTRIP = "pos-roundtrip";
+    private static final String SCENARIO_CONTACTS = "contacts";
     private static final String SCENARIO_SETTINGS_WARRANTY = "settings-warranty";
     private static final String CLIENT_ID_ENV = "ALLEGRO_SANDBOX_CLIENT_ID";
     private static final String CLIENT_SECRET_ENV = "ALLEGRO_SANDBOX_CLIENT_SECRET";
     private static final String ACCOUNT_PROPERTY = "demo.account";
     private static final String DEFAULT_ACCOUNT = "seller";
     private static final String ERR_NO_SCENARIO =
-            "Usage: run -Pdemo.scenario=<auth-bootstrap|me|settings-warranty> "
-                    + "[-Pdemo.account=seller|buyer]";
+            "Usage: run -Pdemo.scenario=<%s> [-Pdemo.account=seller|buyer]";
+    private static final String SCENARIO_NAME_SEPARATOR = "|";
     private static final String ERR_NO_CREDENTIALS =
             "Missing env vars %s / %s - source /workspace/shared/secrets/allegro-sandbox.env first";
     private static final String ERR_UNKNOWN_SCENARIO = "Unknown scenario: ";
@@ -55,8 +64,19 @@ public final class DemoApp {
     static {
         SCENARIOS.put(SCENARIO_AUTH_BOOTSTRAP, DemoApp::authBootstrap);
         SCENARIOS.put(SCENARIO_ME, DemoApp::currentUser);
+        SCENARIOS.put(SCENARIO_OFFER, OffersDemo::run);
+        SCENARIOS.put(SCENARIO_PRICING, PricingDemo::run);
         // [append point: demo scenarios] One line per bucket, append-only:
         //   SCENARIOS.put("<scenario-name>", <Feature>Demo::run);
+        SCENARIOS.put(SCENARIO_ORDERS_GET, OrdersDemo::run);
+        SCENARIOS.put(SCENARIO_MARKETPLACES, MarketplacesDemo::run);
+        SCENARIOS.put(SCENARIO_ACCOUNT, AccountDemo::run);
+        SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
+        SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
+        SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);
+        SCENARIOS.put(SCENARIO_POS_ROUNDTRIP, PointsOfServiceDemo::run);
+        SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);
+        SCENARIOS.put(SCENARIO_CONTACTS, ContactsDemo::run);
         SCENARIOS.put(SCENARIO_SETTINGS_WARRANTY, SettingsWarrantyDemo::run);
     }
 
@@ -65,7 +85,8 @@ public final class DemoApp {
 
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
-            System.out.println(ERR_NO_SCENARIO);
+            System.out.println(ERR_NO_SCENARIO.formatted(
+                    String.join(SCENARIO_NAME_SEPARATOR, SCENARIOS.keySet())));
             System.exit(2);
         }
         String clientId = System.getenv(CLIENT_ID_ENV);

@@ -49,20 +49,98 @@ sections. Empty subsections are dropped by the release engineer when folding
   bucket I (PDF, `If-Match`) and bucket J (attachment downloads).
 
 ### A — offers-core
+
+- `client.offers()` starter slice: `get(offerId)` (full product-offer read → immutable
+  `Offer` record with `OfferFormat`/`OfferStatus` enums and the shared `Money` Buy Now price)
+  and `changeBuyNowPrice(offerId, Money)` (single-offer price-change command). `docs/offers.md`
+  + compiled example + `offer` demo scenario (write→read on the sandbox).
+
 ### B — orders-payments
+
+- Orders facade (`AllegroClient.orders()`) starter slice: `get(orderId)` fetches a
+  single order (checkout form) as an immutable `Order` record — buyer-side
+  `OrderStatus`, seller-side `SellerStatus`, buyer, line items, and `Money` totals.
+  WireMock contract tests (happy path + 400/401-replay/404/429/5xx), `docs/orders.md`,
+  a compiled example, and the `orders-get` sandbox probe.
+
 ### C — shipping
+
+- `shipping()` facade with the points-of-service sub-facade (starter slice):
+  `points().create(PointOfServiceRequest)`, `points().get(id)` and
+  `points().delete(id)`, immutable `PointOfService` records with fluent builders
+  (fail-fast required fields, replicated length limits) and read-only enum
+  fallbacks.
+
 ### D — account-meta
+
+- `client.marketplaces().list()` — the platform's marketplaces with their
+  languages, currencies and shipping countries (`GET /marketplaces`; public,
+  works with an app-only token). Bucket D starter slice.
+- `client.user()` reports: `salesQuality()` (`GET /sale/quality`) and
+  `smartClassification()[(marketplaceId)]` (`GET /sale/smart`).
+- `client.user().ratings()`: lazy `stream(RatingFilter)` (`GET /sale/user-ratings`,
+  short-page termination), `get`, `answer` (`PUT …/answer`), `requestRemoval`
+  (`PUT …/removal`) and `summaryOf(userId)` (`GET /users/{userId}/ratings-summary`).
+- `client.user().additionalEmails()`: `list`/`get`/`add`/`delete`
+  (`/account/additional-emails`).
+- `client.bidding()`: `myBid` and `placeBid` (`/bidding/offers/{offerId}/bid`),
+  using the shared `sdk.core.Money`.
+- `client.charity().searchCampaigns(CharitySearch)`
+  (`GET /charity/fundraising-campaigns`, beta).
+- `client.affiliate().streamCpsConversions(ConversionFilter)`
+  (`GET /affiliate/conversions/cps`, beta, lazy stream).
+- New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
+  `RatingFilter`, `CharitySearch`, `ConversionFilter`.
+
 ### E — catalog-products
+
+- Starter slice: `client.catalog().categories()` — the category tree
+  (`roots()`, `childrenOf(parentId)`, `get(categoryId)`) with the immutable
+  `Category` / `CategoryOptions` records. Read-only, works with an app-only
+  client-credentials token. Includes the `catalog-categories` sandbox
+  shape-verification demo scenario. Products and compatibility follow in the
+  same bucket.
 ### F — offers-extras
+
+- `client.classifieds()` accessor with `availablePackages(categoryId)` — read the
+  advertisement package configurations available in a category
+  (`GET /sale/classifieds-packages`). Starter slice of bucket F; immutable
+  `ClassifiedPackage` records, WireMock error-path coverage, and a live
+  read-shape demo scenario (`-Pdemo.scenario=classifieds`).
+
 ### G — pricing
+- Automatic pricing rules starter slice: `client.pricing().automation()` with
+  `create` / `get` / `delete`, the immutable `PricingRule` record (sealed
+  `PricingRuleConfiguration` for amount/percentage adjustments, shared `Money`),
+  and the fail-fast `PricingRuleRequest` fluent builder. WireMock-covered
+  (request shape, oneOf mapping, full error-path table) with the `pricing` demo
+  performing a live sandbox write→read→teardown.
+
 ### H — campaigns
+
+- `client.campaigns().badges().availableCampaigns()` — list badge campaigns available to the
+  authenticated seller (GET `/sale/badge-campaigns`), with an optional per-marketplace overload.
+  Immutable `BadgeCampaign` model with eligibility, refusal reasons and the application/visibility/
+  publication schedules. Starter slice of bucket H.
+
 ### I — fulfillment
+
+- Add `client.fulfillment()` (One Fulfillment by Allegro) with the removal-preference starter
+  slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
+  `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
+  enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+
 ### J — post-sale-comms
+
+- Contacts facade (`client.contacts()`) — starter slice: list, get, create and update
+  seller contact cards (`/sale/offer-contacts`) with a fluent, fail-fast `ContactRequest`
+  builder, immutable `Contact` records, and a `contacts` sandbox write→read demo scenario.
+
 ### K — sale-settings
 
 - `settings().afterSale()` starter slice: seller **warranty** definitions —
   `streamWarranties()` (lazy offset/limit `Stream`), `warranty(id)`,
   `createWarranty(...)`, `updateWarranty(...)`. Immutable `Warranty` /
   `WarrantySummary` records, `WarrantyType` / `WarrantyPeriod` value types, and a
-  fail-fast `WarrantyRequest` builder. Documented in `docs/settings.md`; verified
-  on the sandbox with the `settings-warranty` write→read demo.
+  fail-fast `WarrantyRequest` builder. Documented in `docs/settings.md`; a
+  `settings-warranty` write→read demo scenario ships for live sandbox verification.

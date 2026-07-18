@@ -1,0 +1,35 @@
+{
+  "id": "a8f6c3e2-1111-2222-3333-444455556666",
+  "messageToSeller": "Please ship fast",
+  "status": "READY_FOR_PROCESSING",
+  "fulfillment": {
+    "status": "NEW",
+    "shipmentSummary": { "lineItemsSent": "NONE" }
+  },
+  "buyer": {
+    "id": "44556677",
+    "email": "buyer@example.com",
+    "login": "test-buyer",
+    "firstName": "Anna",
+    "lastName": "Nowak",
+    "guest": false,
+    "phoneNumber": "+48500100200"
+  },
+  "lineItems": [
+    {
+      "id": "11112222-aaaa-bbbb-cccc-333344445555",
+      "offer": { "id": "12345", "name": "Test Widget" },
+      "quantity": 2,
+      "originalPrice": { "amount": "24.99", "currency": "PLN" },
+      "price": { "amount": "19.99", "currency": "PLN" },
+      "boughtAt": "2026-07-15T10:30:00Z"
+    }
+  ],
+  "surcharges": [],
+  "summary": {
+    "totalToPay": { "amount": "39.98", "currency": "PLN" }
+  },
+  "marketplace": { "id": "allegro-pl" },
+  "updatedAt": "2026-07-15T10:31:00Z",
+  "revision": "abc123"
+}

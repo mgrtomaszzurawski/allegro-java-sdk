@@ -13,6 +13,9 @@ OpenAPI-first, typed Java SDK for the Allegro REST API. Multi-module Gradle proj
 - `allegro-client` — the SDK library (hand-written Layers 2–3). Published artefact.
 - `allegro-demo` — live sandbox probe runner (manual execution; not published).
 - `allegro-examples` — compile-only check of consumer examples (not published).
+- `allegro-e2e` — live E2E layer: Java tests that drive the SDK AND (via Playwright-Java,
+  in-process) the buyer-side web UI for flows the REST API can't reach. `@Tag("e2e")`,
+  excluded from `check`, run with `-Pe2e`; not published.
 - `allegro-jpms-consumer` — JPMS consumer compile gate over the exported surface.
 
 Coordinates: `io.github.mgrtomaszzurawski:allegro-client` (version in `gradle.properties`).
@@ -166,6 +169,11 @@ drive-by edit in a domain PR.
   wire-touching facade area is verified on the sandbox with the write→read cycle THROUGH the
   SDK (create with POST/PUT, read back with GET, assert the round-trip) before its PR is
   merge-ready; server surprises go to `KNOWN-SERVER-BEHAVIORS.md`.
+- **`allegro-e2e` is the buyer-side E2E layer** (Playwright-Java in-process): for flows whose
+  E2E needs a web-only buyer action (buy-now, disputes, device-flow consent), a Java test drives
+  the browser AND the SDK. `@Tag("e2e")`, excluded from `check`, run with `-Pe2e`; **serial +
+  rate-limited** and reuses a `0600` `storageState` (login once) — rapid logins trip DataDome's
+  IP block. See `TESTING.md` §3.
 
 ## Quality gates
 
@@ -179,8 +187,11 @@ Release boundary (`develop`→`main`) only: OWASP `dependencyCheckAggregate` (fa
 + **PIT mutation testing** (report-only, hand-written `allegro-client` code, target band
 ~70–85% — surviving mutants in token manager / retry / error parser are missing tests, fix
 before tagging). Live sandbox demo scenarios (`allegro-demo`) per bucket at PR DoD; the
-Playwright buyer-bot (`tools/buyer-bot/`, experiment) seeds web-only flows — see
-`ARCHITECTURE.md` §10.
+buyer-side web-only flows (device-flow consent click for a buyer token; buy-now/disputes)
+are driven in-process by **Playwright-Java** from the `allegro-e2e` module — a Java E2E test
+interleaves web actions with SDK calls and assertions. Full Chromium under Xvfb beats DataDome
+(headless is blocked); logins MUST reuse a saved `storageState` (login once — a fresh login per
+run from a datacenter IP trips DataDome's hard IP block). Design: `ARCHITECTURE.md` §10.6.
 
 ## Allegro API facts the code relies on
 

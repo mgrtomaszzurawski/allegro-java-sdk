@@ -12,10 +12,36 @@ import org.openapitools.jackson.nullable.JsonNullableModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Affiliate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Bidding;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Charity;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Marketplaces;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Campaigns;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.Contacts;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.AffiliateImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.BiddingImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.CharityImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.MarketplacesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account.UserAccountImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns.CampaignsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog.CatalogImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.contacts.ContactsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.FulfillmentImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing.PricingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.SaleSettingsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2TokenManager;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -66,6 +92,19 @@ public final class AllegroClient implements AutoCloseable {
 
     private final OAuth2TokenManager tokenManager;
     private final UserAccount userAccount;
+    private final Offers offers;
+    private final Orders orders;
+    private final Marketplaces marketplaces;
+    private final Bidding bidding;
+    private final Charity charity;
+    private final Affiliate affiliate;
+    private final Catalog catalog;
+    private final Classifieds classifieds;
+    private final Pricing pricing;
+    private final Campaigns campaigns;
+    private final Shipping shipping;
+    private final Fulfillment fulfillment;
+    private final Contacts contacts;
     private final SaleSettings saleSettings;
     private volatile boolean closed;
 
@@ -95,9 +134,22 @@ public final class AllegroClient implements AutoCloseable {
                 tokenManager,
                 config.executionInterceptor());
         this.userAccount = new UserAccountImpl(runtime);
-        this.saleSettings = new SaleSettingsImpl(runtime);
+        this.offers = new OffersImpl(runtime);
+        this.orders = new OrdersImpl(runtime);
+        this.marketplaces = new MarketplacesImpl(runtime);
+        this.bidding = new BiddingImpl(runtime);
+        this.charity = new CharityImpl(runtime);
+        this.affiliate = new AffiliateImpl(runtime);
+        this.catalog = new CatalogImpl(runtime);
+        this.classifieds = new ClassifiedsImpl(runtime);
+        this.pricing = new PricingImpl(runtime);
+        this.fulfillment = new FulfillmentImpl(runtime);
         // [append point: domain wiring] Each domain bucket appends its
         // accessor field construction here, one line per bucket, BACKLOG order.
+        this.campaigns = new CampaignsImpl(runtime);
+        this.shipping = new ShippingImpl(runtime);
+        this.contacts = new ContactsImpl(runtime);
+        this.saleSettings = new SaleSettingsImpl(runtime);
     }
 
     /** Client with explicit configuration. */
@@ -119,14 +171,93 @@ public final class AllegroClient implements AutoCloseable {
         return userAccount;
     }
 
+    /** The offer lifecycle (bucket A). */
+    public Offers offers() {
+        ensureOpen();
+        return offers;
+    }
+
+    /** Orders, payments and billing. */
+    public Orders orders() {
+        ensureOpen();
+        return orders;
+    }
+
+    /** Details of the platform's marketplaces (public; app-token friendly). */
+    public Marketplaces marketplaces() {
+        ensureOpen();
+        return marketplaces;
+    }
+
+    /** Auction bidding (buyer side; needs a buyer user-token). */
+    public Bidding bidding() {
+        ensureOpen();
+        return bidding;
+    }
+
+    /** Charity fundraising-campaign search (beta). */
+    public Charity charity() {
+        ensureOpen();
+        return charity;
+    }
+
+    /** Affiliate CPS conversions (beta; needs the affiliate:read scope). */
+    public Affiliate affiliate() {
+        ensureOpen();
+        return affiliate;
+    }
+
+    /** Product catalogue: categories, products, and compatibility (bucket E). */
+    public Catalog catalog() {
+        ensureOpen();
+        return catalog;
+    }
+
+    /** Classifieds (advertisement) packages and statistics. */
+    public Classifieds classifieds() {
+        ensureOpen();
+        return classifieds;
+    }
+
+    /** Pricing tools: automatic pricing rules, promotions, deposits (bucket G). */
+    public Pricing pricing() {
+        ensureOpen();
+        return pricing;
+    }
+
+    /** One Fulfillment by Allegro — removal preferences (and, per the plan,
+     * advance ship notices, stock, parcels, refund dispositions, tax id). */
+    public Fulfillment fulfillment() {
+        ensureOpen();
+        return fulfillment;
+    }
+
+    // [append point: domain accessors] Each domain bucket appends its public
+    // accessor method here, one block per bucket, in BACKLOG order.
+
+    /** Marketing campaigns: badge campaigns, Allegro Prices, AlleDiscount. */
+    public Campaigns campaigns() {
+        ensureOpen();
+        return campaigns;
+    }
+
+    /** Shipping: shipment management, delivery configuration, points of service. */
+    public Shipping shipping() {
+        ensureOpen();
+        return shipping;
+    }
+
+    /** Seller contact cards (bucket J — post-sale-comms). */
+    public Contacts contacts() {
+        ensureOpen();
+        return contacts;
+    }
+
     /** Seller sale settings (after-sale conditions, and more per bucket K). */
     public SaleSettings settings() {
         ensureOpen();
         return saleSettings;
     }
-
-    // [append point: domain accessors] Each domain bucket appends its public
-    // accessor method here, one block per bucket, in BACKLOG order.
 
     /**
      * Refresh token currently held by the SDK (Allegro rotates it on every
