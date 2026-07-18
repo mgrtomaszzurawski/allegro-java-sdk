@@ -48,6 +48,8 @@ public final class ApiPaths {
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
+    private static final String SALE_OFFER_PUBLICATION_COMMANDS = "/sale/offer-publication-commands";
+    private static final String TASKS_SEGMENT = "tasks";
 
     /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
     public static final String SALE_OFFERS = "/sale/offers";
@@ -65,6 +67,16 @@ public final class ApiPaths {
     /** Smart! classification report of one offer ({@code /sale/offers/{offerId}/smart}). */
     public static String offerSmart(String offerId) {
         return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
+    }
+
+    /** Batch publish/unpublish command ({@code /sale/offer-publication-commands/{commandId}}). */
+    public static String offerPublicationCommand(String commandId) {
+        return subPath(SALE_OFFER_PUBLICATION_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a publish/unpublish command ({@code …/{commandId}/tasks}). */
+    public static String offerPublicationCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_PUBLICATION_COMMANDS, commandId, TASKS_SEGMENT);
     }
 
     // ---- orders (bucket B) ----

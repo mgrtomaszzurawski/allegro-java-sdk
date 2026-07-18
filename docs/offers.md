@@ -60,6 +60,23 @@ if (!smart.fulfilled()) {
 `fulfilled()` says whether the offer currently qualifies for Allegro Smart!; `conditions()`
 breaks down each requirement and whether the offer meets it.
 
+## Bulk publish / unpublish
+
+`offers().batch()` runs bulk commands. The SDK submits the command, waits for Allegro to
+finish it, and gathers the per-offer results — you get one terminal `BatchReport` back, no
+polling or futures to manage.
+
+```java
+BatchReport report = client.offers().batch().publish(List.of("13579", "24680"));
+System.out.println(report.success() + "/" + report.total() + " published");
+report.tasks().stream()
+        .filter(task -> !"SUCCESS".equals(task.status()))
+        .forEach(task -> System.out.println("failed " + task.offerId() + ": " + task.message()));
+```
+
+`unpublish(offerIds)` is the same shape. `BatchReport` carries the `total`/`success`/`failed`
+counts and a `TaskResult` per offer (its `offerId`, `status`, and a `message` on failure).
+
 ## Change the Buy Now price
 
 ```java
