@@ -39,8 +39,8 @@ public enum OrderEventType {
 
     /**
      * An event type this SDK release does not model yet (read-only forward-compat
-     * sentinel). Do NOT pass it as a {@code streamEvents} type filter — it is not a
-     * real wire value; the filter path should drop it (guard pending, BACKLOG C3).
+     * sentinel). It is not a real wire value, so passing it as a {@code streamEvents}
+     * type filter has no effect: the filter path drops it rather than sending it.
      */
     UNKNOWN;
 

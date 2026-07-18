@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.Affiliate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.builder.ConversionFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.ConversionStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CpsConversion;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
@@ -58,7 +59,7 @@ public final class AffiliateImpl implements Affiliate {
                 .add(QUERY_ORDER_LTE, filter.orderCreatedTo())
                 .add(QUERY_MODIFIED_GTE, filter.lastModifiedFrom())
                 .add(QUERY_MODIFIED_LTE, filter.lastModifiedTo())
-                .add(QUERY_STATUS, filter.status())
+                .add(QUERY_STATUS, wireValueOf(filter.status()))
                 .add(QUERY_INCLUDE_PARAMS, includeKeys(filter))
                 .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
                 .add(QUERY_LIMIT, PAGE_SIZE);
@@ -78,5 +79,15 @@ public final class AffiliateImpl implements Affiliate {
     private static @Nullable String includeKeys(ConversionFilter filter) {
         List<String> keys = filter.includePublisherUrlParameterKeys();
         return keys.isEmpty() ? null : String.join(KEY_SEPARATOR, keys);
+    }
+
+    /**
+     * The wire token for the status filter, or {@code null} to omit the
+     * parameter. The forward-compat {@code UNKNOWN} sentinel is never a valid
+     * request value, so it is dropped rather than sent verbatim (which the
+     * server would reject) — mirrors {@code OffersImpl.wireValueOf}.
+     */
+    private static @Nullable String wireValueOf(@Nullable ConversionStatus status) {
+        return status == null || status == ConversionStatus.UNKNOWN ? null : status.name();
     }
 }

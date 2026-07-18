@@ -53,6 +53,12 @@ public final class AccountDemo {
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             CurrentUser currentUser = client.user().me();
             System.out.println("me(): login=" + currentUser.login() + ", id=" + currentUser.id());
+            CurrentUser.Company company = currentUser.company();
+            System.out.println("me(): baseMarketplaceId=" + currentUser.baseMarketplaceId()
+                    + ", company=" + (company == null
+                            ? "none"
+                            : "name/present=" + (company.name() != null)
+                                    + ", taxId/present=" + (company.taxId() != null)));
             String rotated = client.refreshToken();
             if (rotated != null) {
                 tokenStore.store(account, rotated);

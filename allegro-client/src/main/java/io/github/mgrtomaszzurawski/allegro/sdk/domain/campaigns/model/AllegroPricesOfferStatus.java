@@ -16,9 +16,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The reduction percentages are the seller's maximum declared percentage for
  * each stage and are {@code null} when that stage does not apply to the offer.
- * (The response's per-stage reduction objects are a generated {@code oneOf}; the
- * SDK reads them from the raw JSON to avoid the generator's over-matching
- * deserializer — see {@code KNOWN-SERVER-BEHAVIORS.md} / BACKLOG Phase 1.1.)
+ * (The response's per-stage reduction objects are a generated {@code oneOf};
+ * the SDK's strict {@code oneOf} mapper resolves each to its concrete reduction
+ * type, so they map through typed getters like every other field.)
  *
  * @param offerId                        the offer
  * @param name                           the offer's name
