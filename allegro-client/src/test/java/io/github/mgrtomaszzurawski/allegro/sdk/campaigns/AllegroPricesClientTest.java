@@ -54,10 +54,10 @@ import org.junit.jupiter.api.Test;
 
 /**
  * WireMock proof of the Allegro Prices sub-facade: participation read/update,
- * the offer-status query mapped from raw JSON (the {@code oneOf} price-reduction
- * workaround), lazy pagination in the POST body, the submit/exclude command
- * state machines (poll to terminal, failure, timeout), and the mandatory
- * error-path table (TESTING.md §1).
+ * the offer-status query whose {@code oneOf} price-reduction fields are resolved by
+ * the strict {@code oneOf} mapper (populated and empty/partial shapes), lazy
+ * pagination in the POST body, the submit/exclude command state machines (poll to
+ * terminal, failure, timeout), and the mandatory error-path table (TESTING.md §1).
  */
 @WireMockTest
 class AllegroPricesClientTest {
@@ -129,6 +129,14 @@ class AllegroPricesClientTest {
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFound","message":"Not found","userMessage":"Nie znaleziono","path":null}]}
             """;
+    private static final String PARTIAL_REDUCTIONS_RESPONSE = """
+            {"offers":[{"id":"%s","name":"n","marketplace":{"id":"%s"},
+              "discount":{"opportunity":false},
+              "recommendedPriceReduction":{},
+              "declaredPriceReduction":{},
+              "actualPriceReduction":{"sellerMaxDeclaredPercentage":"%s"}}],
+             "count":1,"totalCount":1}
+            """.formatted(TEST_OFFER_ID, MARKETPLACE_PL, TEST_DECLARED_PCT);
     private static final String ACCEPTED_RESPONSE = """
             {"commandId":"%s","status":"IN_PROGRESS","createdAt":"2026-07-16T10:00:00Z"}
             """.formatted(TEST_COMMAND_ID);
@@ -260,7 +268,7 @@ class AllegroPricesClientTest {
             List<AllegroPricesOfferStatus> statuses =
                     allegro.campaigns().allegroPrices().streamOffersStatus(query).toList();
 
-            // then — the raw-JSON mapping reads through the oneOf reductions
+            // then — the strict oneOf mapper resolves each reduction to its typed DTO
             assertEquals(1, statuses.size());
             AllegroPricesOfferStatus status = statuses.get(0);
             assertEquals(TEST_OFFER_ID, status.offerId());
@@ -271,6 +279,39 @@ class AllegroPricesClientTest {
             assertEquals(Money.of(TEST_FINAL_AMOUNT, TEST_CURRENCY_PLN), status.finalBuyerPrice());
             assertEquals(OffsetDateTime.parse(TEST_DISCOUNTED_AT), status.discountedAt());
             assertNull(status.excludedAt());
+        }
+    }
+
+    @Test
+    void streamOffersStatus_whenReductionsEmptyOrPartial_degradesToNull(WireMockRuntimeInfo wmInfo) {
+        // given — the recommended/declared reductions are the empty oneOf object ({})
+        // and the actual reduction carries a percentage but no final buyer price. The
+        // strict oneOf mapper must resolve each wrapper to its DTO (never re-ambiguate
+        // on the Object branch) and the absent inner fields must degrade to null
+        // rather than throw — the property this bucket relied on the JsonNode
+        // workaround for, now provided by the core strict oneOf resolver (C5).
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(OFFERS_QUERIES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(PARTIAL_REDUCTIONS_RESPONSE)));
+        AllegroPricesOfferQuery query = AllegroPricesOfferQuery.builder(MARKETPLACE_PL).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<AllegroPricesOfferStatus> statuses =
+                    allegro.campaigns().allegroPrices().streamOffersStatus(query).toList();
+
+            // then — empty reductions and the missing final price map to null, the
+            // present percentage still maps through
+            assertEquals(1, statuses.size());
+            AllegroPricesOfferStatus status = statuses.get(0);
+            assertNull(status.basePrice());
+            assertNull(status.recommendedReductionPercentage());
+            assertNull(status.declaredReductionPercentage());
+            assertEquals(TEST_DECLARED_PCT, status.actualReductionPercentage());
+            assertNull(status.finalBuyerPrice());
+            verify(1, postRequestedFor(urlEqualTo(OFFERS_QUERIES_PATH)));
         }
     }
 
