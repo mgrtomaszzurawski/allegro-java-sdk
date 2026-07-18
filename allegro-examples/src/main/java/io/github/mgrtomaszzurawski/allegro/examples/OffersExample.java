@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.examples;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
@@ -75,5 +76,12 @@ public final class OffersExample {
                 .availableStock(10)
                 .build();
         return client.offers().create(request).id();
+    }
+
+    static String renameOffer(AllegroClient client, String offerId) {
+        Offer updated = client.offers().edit(offerId, EditOfferRequest.builder()
+                .name("Mechanical keyboard (2026 edition)")
+                .build());
+        return updated.name();
     }
 }

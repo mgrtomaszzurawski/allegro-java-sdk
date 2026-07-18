@@ -27,6 +27,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRat
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -55,6 +56,7 @@ public final class OffersImpl implements Offers {
 
     private static final String OP_GET = "get offer";
     private static final String OP_CREATE = "create offer";
+    private static final String OP_EDIT = "edit offer";
     private static final String OP_DELETE_DRAFT = "delete draft offer";
     private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
     private static final String OP_STREAM = "stream offers";
@@ -97,13 +99,16 @@ public final class OffersImpl implements Offers {
                 ApiPaths.productOffer(offerId), SaleProductOfferResponseV1Raw.class, OP_GET));
     }
 
+    /** The generated Buy Now price DTO for a {@link Money} amount. */
+    private static BuyNowPriceRaw priceOf(Money money) {
+        return new BuyNowPriceRaw().amount(money.amount()).currency(money.currency());
+    }
+
     @Override
     public Offer create(CreateOfferRequest request) {
         SellingModeRaw sellingMode = new SellingModeRaw()
                 .format(SellingModeFormatRaw.BUY_NOW)
-                .price(new BuyNowPriceRaw()
-                        .amount(request.buyNowPrice().amount())
-                        .currency(request.buyNowPrice().currency()));
+                .price(priceOf(request.buyNowPrice()));
         SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
                 .name(request.name())
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
@@ -115,6 +120,31 @@ public final class OffersImpl implements Offers {
         return Offer.from(http.request(OP_CREATE)
                 .post(ApiPaths.SALE_PRODUCT_OFFERS)
                 .jsonBody(body)
+                .fetch(SaleProductOfferResponseV1Raw.class));
+    }
+
+    @Override
+    public Offer edit(String offerId, EditOfferRequest request) {
+        // A partial PATCH: build only the changed fields and serialize omitting
+        // null AND empty fields (jsonBodyPartial), so untouched fields — including
+        // the request type's pre-initialized empty collections — are absent from
+        // the wire rather than sent and reset.
+        SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw();
+        if (request.name() != null) {
+            body.name(request.name());
+        }
+        if (request.buyNowPrice() != null) {
+            body.sellingMode(new SellingModeRaw().price(priceOf(request.buyNowPrice())));
+        }
+        if (request.availableStock() != null) {
+            body.stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
+        }
+        if (request.imageUrls() != null) {
+            body.images(request.imageUrls());
+        }
+        return Offer.from(http.request(OP_EDIT)
+                .patch(ApiPaths.productOffer(offerId))
+                .jsonBodyPartial(body)
                 .fetch(SaleProductOfferResponseV1Raw.class));
     }
 

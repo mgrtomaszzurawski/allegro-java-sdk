@@ -47,10 +47,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   generic over the body type, so a byte download still shares retry, 401 replay
   and typed error mapping (the error body is decoded from bytes). Unblocks
   bucket I (PDF, `If-Match`) and bucket J (attachment downloads).
-- `HttpCall.jsonBodyNonNull(body)` — serialize a request body omitting null
-  fields, for partial (PATCH) updates where an unset field must be absent from
-  the payload rather than sent as `null` (which would reset it server-side).
-  Reusable by every bucket's partial-update endpoints.
+- `HttpCall.jsonBodyPartial(body)` — serialize a request body omitting null AND
+  empty fields, for partial (PATCH) updates where an unset field must be absent
+  from the payload rather than sent as `null`/`[]` (which would reset it
+  server-side). NON_EMPTY is required because the generated request DTOs
+  pre-initialize collection fields to empty. Reusable by every bucket's
+  partial-update endpoints.
 
 ### A — offers-core
 
@@ -75,8 +77,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   category, and the missing parameter ids.
 - Write slice: `create(CreateOfferRequest)` — create a Buy Now offer (name, category, price, stock,
   optional images) via a fail-fast builder, returning the created `Offer` (starts as a draft;
-  publish with `batch().publish(...)`) — and `deleteDraft(offerId)`. (`edit` follows once the
-  transport gains non-null partial-body serialization for a safe PATCH.)
+  publish with `batch().publish(...)`) — and `deleteDraft(offerId)`.
+- `edit(offerId, EditOfferRequest)` — a partial PATCH: only the fields set on the request
+  (name / Buy Now price / stock / images) are changed, serialized via the transport's
+  `jsonBodyPartial` so untouched fields are absent from the wire rather than reset.
 
 ### B — orders-payments
 

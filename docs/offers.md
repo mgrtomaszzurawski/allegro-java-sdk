@@ -114,6 +114,20 @@ builder. The offer is created as a **draft** — publish it with
 `client.offers().batch().publish(List.of(created.id()))`. Delete an unpublished draft with
 `client.offers().deleteDraft(offerId)`.
 
+## Edit an offer
+
+`edit` is a **partial** update — only the fields you set are changed; everything else keeps its
+current value.
+
+```java
+Offer updated = client.offers().edit("13579", EditOfferRequest.builder()
+        .name("Mechanical keyboard (2026 edition)")
+        .availableStock(25)
+        .build());
+```
+
+Here only the name and stock are sent; the price, images and all other fields are untouched.
+
 ## Change the Buy Now price
 
 ```java
