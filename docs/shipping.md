@@ -2,9 +2,9 @@
 
 `client.shipping()` groups the seller's logistics: shipment management, delivery
 configuration, and points of service. Available today: the **points-of-service**
-sub-facade (full CRUD) and the seller's **delivery methods** listing. Shipping-rate
-configuration, delivery settings and shipment management (WZA) land in later
-bucket-C PRs.
+sub-facade (full CRUD), the seller's **delivery methods** listing, **delivery
+settings** (`settings()`) and **shipping rates** (`rates()`). Shipment management
+(WZA) lands in a later bucket-C PR.
 
 ## List delivery methods
 
@@ -121,6 +121,74 @@ change. The same required fields and length limits as `create` apply.
 ```java
 client.shipping().points().delete(pointOfServiceId);
 ```
+
+## Delivery settings
+
+`client.shipping().settings()` reads and updates the seller's delivery
+configuration for their default marketplace: the domestic and cross-border
+free-delivery thresholds and the join policy (how a multi-item order's delivery
+cost is combined). Reads need `sale:settings:read`, updates
+`sale:settings:write`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+
+DeliverySettingsView current = client.shipping().settings().get();
+System.out.println(current.joinPolicy() + " free-from " + current.freeDelivery());
+
+// update has PUT semantics — send the full desired state
+DeliverySettingsView updated = client.shipping().settings().update(
+    DeliverySettingsRequest.builder()
+        .joinPolicy(JoinStrategy.SUM)                 // MIN / MAX / SUM (required)
+        .freeDelivery(Money.of("200.00", "PLN"))      // optional threshold
+        .abroadFreeDelivery(Money.of("500.00", "PLN"))
+        .build());
+```
+
+Amounts are the SDK-wide `Money` (`{amount, currency}`). `joinPolicy` is required
+on the request; the thresholds and marketplace are optional. On read,
+`joinPolicy` falls back to `JoinStrategy.UNKNOWN` for a value this release does
+not model.
+
+## Shipping rates
+
+`client.shipping().rates()` manages the seller's shipping-rate sets — a set
+groups per-delivery-method price rows a seller attaches to their offers.
+`list()` returns lightweight summaries; `get(id)` returns the full set with its
+rate rows.
+
+```java
+List<ShippingRateSetSummary> sets = client.shipping().rates().list();
+ShippingRateSet set = client.shipping().rates().get(sets.get(0).id());
+for (ShippingRate rate : set.rates()) {
+    System.out.println(rate.deliveryMethodId() + " " + rate.firstItemRate());
+}
+```
+
+Create or replace a set (PUT semantics on `update`):
+
+```java
+ShippingRateSet created = client.shipping().rates().create(
+    ShippingRateSetRequest.builder()
+        .name("Domestic rates")
+        .type(RateSetType.PHYSICAL)
+        .dispatchCountry("PL")
+        .rates(List.of(
+            ShippingRate.builder()
+                .deliveryMethodId(methodId)            // from deliveryMethods()
+                .firstItemRate(Money.of("12.99", "PLN"))
+                .nextItemRate(Money.of("2.00", "PLN"))
+                .maxQuantityPerPackage(10)
+                .maxPackageWeight(new Weight("30.0", "KILOGRAMS"))  // optional
+                .build()))
+        .build());
+```
+
+A rate row requires the delivery method, the first- and next-item rates and the
+maximum quantity per package; the package-weight limit and dispatch-time range
+are optional. A rate-set request requires a `name` and at least one rate. Each
+row's `deliveryMethodId` is an id from `deliveryMethods()`. `RateSetType` reads
+fail-soft (`UNKNOWN`) and writes strict.
 
 ## Notes
 

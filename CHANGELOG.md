@@ -182,6 +182,21 @@ sections. Empty subsections are dropped by the release engineer when folding
   `seller.id` in the body (resolved from the token) and `coordinates` on the
   address (now a required builder field), and the update `PUT` requires the `id`
   in the body. create → get → update → delete verified green on the sandbox.
+- `settings().get()` / `settings().update(DeliverySettingsRequest)` — read and
+  replace the seller's delivery settings (`DeliverySettingsView` with the
+  free-delivery thresholds as `Money` and a `JoinStrategy` join policy). The
+  request builder requires the join policy; thresholds and marketplace are
+  optional.
+- `rates().list()` / `get(id)` / `create(ShippingRateSetRequest)` /
+  `update(id, request)` — manage the seller's shipping-rate sets:
+  `ShippingRateSet` with per-delivery-method `ShippingRate` rows (first/next-item
+  rates as `Money`, package weight, dispatch time), a `ShippingRateSetSummary`
+  list row, `RateSetType`, and fluent builders (a set needs a name and at least
+  one rate; a rate needs its method, both rates and a max quantity).
+- `deliveryMethods().paymentPolicy` is now fail-soft on read: an unmodelled
+  server value maps to `PaymentPolicy.UNKNOWN` instead of failing the whole read
+  (forward-compat, matching the bucket's other read enums after the core
+  `enumUnknownDefaultCase` change).
 
 ### D — account-meta
 

@@ -84,6 +84,8 @@ public final class DemoApp {
         SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);
         SCENARIOS.put(SCENARIO_CONTACTS, ContactsDemo::run);
         SCENARIOS.put(DeliveryMethodsDemo.SCENARIO, DeliveryMethodsDemo::run);
+        SCENARIOS.put(DeliverySettingsDemo.SCENARIO, DeliverySettingsDemo::run);
+        SCENARIOS.put(ShippingRatesDemo.SCENARIO, ShippingRatesDemo::run);
         SCENARIOS.put(MessagingDemo.SCENARIO, MessagingDemo::run);
         SCENARIOS.put(DisputesDemo.SCENARIO, DisputesDemo::run);
         SCENARIOS.put(SCENARIO_SETTINGS_WARRANTY, SettingsWarrantyDemo::run);
