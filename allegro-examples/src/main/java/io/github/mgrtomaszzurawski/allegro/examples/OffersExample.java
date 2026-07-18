@@ -6,7 +6,10 @@ package io.github.mgrtomaszzurawski.allegro.examples;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
@@ -49,5 +52,36 @@ public final class OffersExample {
         return smart.conditions().stream()
                 .filter(condition -> !condition.fulfilled())
                 .count();
+    }
+
+    static int publishOffers(AllegroClient client, List<String> offerIds) {
+        BatchReport report = client.offers().batch().publish(offerIds);
+        return report.success();
+    }
+
+    static int repriceOffers(AllegroClient client, List<String> offerIds) {
+        BatchReport report = client.offers().batch().changePrices(offerIds, Money.of("129.00", "PLN"));
+        return report.success();
+    }
+
+    static long offersMissingParameters(AllegroClient client) {
+        return client.offers().streamUnfilledParameters().count();
+    }
+
+    static String createDraftOffer(AllegroClient client) {
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name("Mechanical keyboard")
+                .categoryId("257")
+                .buyNowPrice(Money.of("199.99", "PLN"))
+                .availableStock(10)
+                .build();
+        return client.offers().create(request).id();
+    }
+
+    static String renameOffer(AllegroClient client, String offerId) {
+        Offer updated = client.offers().edit(offerId, EditOfferRequest.builder()
+                .name("Mechanical keyboard (2026 edition)")
+                .build());
+        return updated.name();
     }
 }

@@ -128,6 +128,18 @@ public final class HttpCall {
         return this;
     }
 
+    /**
+     * Serialize {@code body} as the vendor JSON request body, omitting null and
+     * empty fields (null, empty strings, empty collections and maps) — for a
+     * partial (PATCH) update where unset fields must be absent rather than sent
+     * as {@code null}/{@code []} (which would reset them server-side).
+     */
+    public HttpCall jsonBodyPartial(Object body) {
+        this.contentType = HttpSupport.VND_ALLEGRO_V1;
+        this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serializePartial(body));
+        return this;
+    }
+
     /** Send raw bytes with the caller's content type (image/attachment upload). */
     public HttpCall binaryBody(byte[] bytes, String bodyContentType) {
         this.contentType = bodyContentType;

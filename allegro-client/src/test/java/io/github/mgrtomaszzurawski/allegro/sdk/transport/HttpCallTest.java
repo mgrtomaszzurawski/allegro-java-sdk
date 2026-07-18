@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.binaryEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.patch;
@@ -40,6 +41,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -51,6 +53,7 @@ class HttpCallTest {
     private static final String OK_BODY = "{\"value\":\"ok\"}";
     private static final String OK_VALUE = "ok";
     private static final String OPERATION = "exercise call";
+    private static final String PRESENT_VALUE = "here";
     private static final String LANGUAGE = "pl-PL";
     private static final String ETAG = "\"v3\"";
     private static final String IMAGE_CONTENT_TYPE = "image/png";
@@ -288,5 +291,42 @@ class HttpCallTest {
         // then — the wire saw the diacritics intact (would fail on ISO-8859-1)
         verify(1, postRequestedFor(urlEqualTo(PATH))
                 .withRequestBody(containing(diacritics)));
+    }
+
+    @Test
+    void jsonBodyPartial_whenFieldNullOrEmpty_omitsThemFromBody(WireMockRuntimeInfo wmInfo) {
+        // given — a partial payload with a null field and an empty collection
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        support(wmInfo).request(OPERATION).post(PATH)
+                .jsonBodyPartial(new Payload(PRESENT_VALUE, null, List.of())).send();
+
+        // then — only the set field survives (a strict match rejects any extra field,
+        // so a serialized null OR an empty [] would fail this)
+        verify(1, postRequestedFor(urlEqualTo(PATH))
+                .withRequestBody(equalToJson("{\"present\":\"" + PRESENT_VALUE + "\"}", true, false)));
+    }
+
+    @Test
+    void jsonBody_whenFieldNullOrEmpty_keepsThemInBody(WireMockRuntimeInfo wmInfo) {
+        // given — the same payload sent with the plain serializer
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        support(wmInfo).request(OPERATION).post(PATH)
+                .jsonBody(new Payload(PRESENT_VALUE, null, List.of())).send();
+
+        // then — the default serializer keeps the null field and empty collection (the
+        // contrast that makes jsonBodyPartial necessary for a PATCH)
+        verify(1, postRequestedFor(urlEqualTo(PATH))
+                .withRequestBody(equalToJson(
+                        "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null,\"items\":[]}", true, false)));
+    }
+
+    /** A partial payload with a nullable field and a collection (a PATCH-style body). */
+    private record Payload(String present, String absent, List<String> items) {
     }
 }

@@ -5,13 +5,17 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BadgeApplicationRejectionReasonRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ErrorRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ErrorsHolderRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Shared mapping helpers for the badge model records: nullable-money assembly and
- * rejection-reason list mapping. Package-private — not part of the public surface.
+ * Shared mapping helpers for the campaigns model records: nullable-money assembly,
+ * badge rejection-reason list mapping, and command-error flattening (badges,
+ * Allegro Prices and AlleDiscount). Package-private — not part of the public surface.
  */
 final class CampaignMappers {
 
@@ -35,5 +39,25 @@ final class CampaignMappers {
         return reasons == null
                 ? List.of()
                 : reasons.stream().map(CampaignRefusalReason::from).toList();
+    }
+
+    /**
+     * Flatten the doubly-nested command error structure ({@code errors[].errors[]})
+     * to a flat list of coded violations, tolerating absent levels (and a
+     * code-only error whose message the server omitted).
+     */
+    static List<ConditionViolation> commandErrorViolations(@Nullable List<ErrorsHolderRaw> holders) {
+        if (holders == null) {
+            return List.of();
+        }
+        List<ConditionViolation> violations = new ArrayList<>();
+        for (ErrorsHolderRaw holder : holders) {
+            if (holder.getErrors() != null) {
+                for (ErrorRaw error : holder.getErrors()) {
+                    violations.add(ConditionViolation.from(error));
+                }
+            }
+        }
+        return List.copyOf(violations);
     }
 }

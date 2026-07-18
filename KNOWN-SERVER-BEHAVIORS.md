@@ -161,6 +161,82 @@ device-consent, and the web-only buyer actions). Implications, baked into the co
   samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
   discipline (`TESTING.md` §3).
 
+## Orders (bucket B)
+
+### `/order/events` pages by an exclusive `from` cursor, not offset/limit (spec-derived, pending live verification)
+
+The order event log (`GET /order/events`) is paginated by a **cursor**, not offset/limit: the
+`from` query parameter takes the last event id seen and the response returns the events *after*
+it (exclusive), newest walk terminating on an empty page. The SDK's `streamEvents(...)` therefore
+uses `PagedSpliterator.cursorStream`, advancing `from` to the last event id of each page and
+stopping on the first empty page. Correct termination **depends on `from` being exclusive** — if
+the server were inclusive, a non-empty page repeating the last event would not terminate (the
+empty-page guard does not catch this). The `from`/`type`/`limit` params are confirmed against the
+spec; the exclusivity and the terminal empty-page behaviour are **to be confirmed on the sandbox**
+once a seeded order produces events (the RAG digest generically labels this endpoint
+"offset/limit", which is inaccurate for `/order/events`).
+
+### Customer-returns are BETA; the reject-refund POST needs a beta request Content-Type (core follow-up)
+
+The customer-returns endpoints (`GET /order/customer-returns`, `GET …/{id}`,
+`POST …/{id}/rejection`) speak the **beta** vendor media type. The SDK sends
+`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` — correct for the two
+GETs. But `POST …/rejection` declares its **request body** only as the beta media type, while
+`HttpCall.jsonBody(...)` hard-pins `Content-Type: application/vnd.allegro.public.v1+json` (frozen
+runtime), so `returns().rejectRefund(...)` currently sends a mismatched Content-Type that the beta
+endpoint may reject (415/406). **Core follow-up (agent-1):** add a media-type overload to the JSON
+body helper (e.g. `jsonBody(body, mediaType)`) so beta writes can set the beta Content-Type; it is
+the first beta POST-with-body in the SDK. `rejectRefund` ships wired but must not be relied on live
+until that lands (WireMock covers the request body shape; the mismatch is header-only).
+
+## Payments & billing (bucket B)
+
+### `GET /billing/billing-types` works with an app-only token and returns a bare array (verified 2026-07-18, sandbox)
+
+`billing().types()` succeeds with a client-credentials (application) token — the endpoint
+declares no OAuth scope. The live sandbox returned **234** billing types as a top-level JSON
+array (no wrapper object), each `{id, description}`; the SDK deserializes to `BillingType[]` and
+maps cleanly. Confirmed via the `billing-types` demo.
+
+### Billing-entries, payment-operations and refunds shapes are spec-derived (pending live verification)
+
+`GET /billing/billing-entries`, `GET /payments/payment-operations`, `GET /payments/refunds` and
+`POST /payments/refunds` are wrapped from the spec; their fixtures are `spec-derived` pending the
+§2 sandbox pass (blocked on the shared seller token). Notes for that pass: `BillingEntriesRaw`
+carries **no** `count`/`totalCount` (the SDK paginates by short-page termination); a billing
+entry's `value`/`balance` may be partially populated, so the SDK maps an absent amount/currency
+to a `null` `Money` rather than throwing. `POST /payments/refunds` is a **destructive money
+movement** — verify it only against a disposable sandbox payment, and reuse the idempotency
+`commandId` on any retry.
+
+## Post-sale comms (bucket J)
+
+### Message attachments are not downloadable straight after upload (verified 2026-07-18, sandbox)
+
+The message-attachment flow is `declareAttachment` (POST) → `uploadAttachment` (PUT bytes) →
+reference the id in a message. Both the declare and the upload succeed and return the attachment
+id, but `GET /messaging/message-attachments/{id}` on that just-uploaded id returns
+**`404 NOT_FOUND`** (surfaced as `AllegroNotFoundException`) — the attachment only becomes
+retrievable once it has been referenced in a **delivered** message and scanned (its
+`MessageAttachment.status()` reaches `SAFE`). Consequence for consumers: do not upload-then-
+download the same id as a health check; download an attachment you obtained from a received
+message. The SDK surfaces the 404 correctly; the `messaging` demo verifies declare+upload
+seller-side and treats the immediate download 404 as expected.
+
+## Offers extras (bucket F)
+
+### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
+serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
+Jackson's default `ALWAYS` inclusion. So a title-only update sends
+`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
+whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
+translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
+latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
+handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
+`update` is safe for offers whose description/safety translations are not manually set.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
