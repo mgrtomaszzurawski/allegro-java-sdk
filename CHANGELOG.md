@@ -92,6 +92,8 @@ sections. Empty subsections are dropped by the release engineer when folding
   (billing-type dictionary; public, app-token friendly). Models `BillingEntry`/`BillingType`;
   `docs/billing.md` and the `billing-types` sandbox probe.
 
+### C — shipping
+
 - `shipping()` facade with the points-of-service sub-facade (starter slice):
   `points().create(PointOfServiceRequest)`, `points().get(id)` and
   `points().delete(id)`, immutable `PointOfService` records with fluent builders
