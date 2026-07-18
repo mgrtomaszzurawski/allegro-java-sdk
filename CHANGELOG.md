@@ -316,6 +316,16 @@ sections. Empty subsections are dropped by the release engineer when folding
   `TurnoverThreshold` ladders) and its fail-fast request builder.
 - `pricing().depositTypes()` — the deposit types available for offers, mapped to
   `DepositType`.
+- `pricing().promotions()` — rebate promotions: `streamPromotions(PromotionType)`
+  / `streamPromotions(PromotionType, offerId)` (lazy offset/limit `Stream`),
+  `get` / `create` / `modify` / `deactivate`. The polymorphic `benefits[]` map to
+  a sealed `Benefit` hierarchy (`LargeOrderDiscount` / `MultiPackDiscount` /
+  `WholesalePriceList`), with `OfferCriterion` targeting and the fail-fast
+  `PromotionRequest` builder. Benefit families deserialize natively; an unknown
+  family degrades to `Benefit.UnknownBenefit` (unknown-subtype forward-compat
+  core) and an unmodelled promotion status or offer-criterion type degrades to
+  its `UNKNOWN` enum constant instead of failing the read, completing bucket G at
+  17/17 ops.
 
 ### H — campaigns
 

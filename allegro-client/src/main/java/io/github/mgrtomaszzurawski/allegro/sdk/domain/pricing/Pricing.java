@@ -27,6 +27,15 @@ public interface Pricing {
     PricingAutomation automation();
 
     /**
+     * Rebate promotions — large-order discounts, wholesale price lists and
+     * multipack rewards the seller targets at chosen offers.
+     *
+     * @return the promotions sub-facade
+     * @since 0.4.0
+     */
+    Promotions promotions();
+
+    /**
      * Marketplace turnover discounts — reward a buyer's cumulated turnover with
      * a percentage discount.
      *
