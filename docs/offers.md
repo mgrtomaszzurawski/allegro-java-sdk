@@ -96,6 +96,24 @@ client.offers().batch().changeQuantities(List.of("13579", "24680"), 50);
 `changePrices` sets a fixed Buy Now price on every listed offer; `changeQuantities` sets their
 available stock. Both return the same terminal `BatchReport`.
 
+## Create an offer
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .build();
+
+Offer created = client.offers().create(request);
+```
+
+The required fields (name, category, Buy Now price, stock) are validated fail-fast by the
+builder. The offer is created as a **draft** — publish it with
+`client.offers().batch().publish(List.of(created.id()))`. Delete an unpublished draft with
+`client.offers().deleteDraft(offerId)`.
+
 ## Change the Buy Now price
 
 ```java

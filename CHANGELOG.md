@@ -69,6 +69,10 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.
+- Write slice: `create(CreateOfferRequest)` — create a Buy Now offer (name, category, price, stock,
+  optional images) via a fail-fast builder, returning the created `Offer` (starts as a draft;
+  publish with `batch().publish(...)`) — and `deleteDraft(offerId)`. (`edit` follows once the
+  transport gains non-null partial-body serialization for a safe PATCH.)
 
 ### B — orders-payments
 

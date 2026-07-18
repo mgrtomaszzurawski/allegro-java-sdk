@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -45,6 +46,22 @@ public interface Offers {
      * @param buyNowPrice the new Buy Now price
      */
     void changeBuyNowPrice(String offerId, Money buyNowPrice);
+
+    /**
+     * Create a new Buy Now offer. The offer is created as a draft; publish it
+     * with {@code batch().publish(...)} once ready.
+     *
+     * @param request the offer to create
+     * @return the created offer
+     */
+    Offer create(CreateOfferRequest request);
+
+    /**
+     * Delete a draft (unpublished) offer.
+     *
+     * @param offerId the draft offer to delete
+     */
+    void deleteDraft(String offerId);
 
     /**
      * Stream the seller's offers matching a filter, fetched page by page and
