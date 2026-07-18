@@ -346,8 +346,8 @@ sections. Empty subsections are dropped by the release engineer when folding
   `BadgeFilter` builders and the `BadgePatch` change type.
 - Add the Allegro Prices sub-facade `client.campaigns().allegroPrices()`: `participation` /
   `updateParticipation(ParticipationUpdate)` (GET/PATCH `/sale/allegro-prices/accounts/participations`),
-  `streamOffersStatus(AllegroPricesOfferQuery)` (POST `/sale/allegro-prices/offers-queries`, lazy
-  stream mapped from raw JSON to side-step the generated `oneOf` price-reduction deserializer), and
+  `streamOffersStatus(AllegroPricesOfferQuery)` (POST `/sale/allegro-prices/offers-queries`, a lazy
+  stream whose `oneOf` price-reduction fields are resolved by the strict `oneOf` mapper), and
   the subsidy commands `submitOffers`/`excludeOffers(...[, Duration])` (POST, polled to a terminal
   per-offer report). Adds `AllegroPricesParticipation`/`MarketplaceParticipation`/`ParticipationStatus`,
   `AllegroPricesOfferStatus`, `SubsidyCommandReport`/`SubsidyOfferResult`/`SubsidyOfferStatus` models
