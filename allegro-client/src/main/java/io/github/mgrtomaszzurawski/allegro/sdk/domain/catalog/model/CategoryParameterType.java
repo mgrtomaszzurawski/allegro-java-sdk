@@ -26,10 +26,15 @@ public enum CategoryParameterType {
     STRING,
 
     /**
-     * A parameter type this SDK version does not model. Future Allegro parameter
-     * types map here so consumers never break on an unrecognised value — for
-     * such a parameter {@link CategoryParameter#restrictions()} is {@code null}
+     * The mapper's default for a parameter whose concrete type is none of the
+     * four above; {@link CategoryParameter#restrictions()} is then {@code null}
      * and {@link CategoryParameter#dictionary()} is empty.
+     *
+     * <p>Reachability: the Layer-1 parameter DTO declares no Jackson
+     * {@code defaultImpl}, so an unknown {@code type} on the wire currently fails
+     * deserialization (surfaced as an {@code AllegroServerException}) before the
+     * mapper runs — it does not yet degrade to {@code OTHER}. Delivering that
+     * degradation is a tracked core follow-up.
      */
     OTHER
 }

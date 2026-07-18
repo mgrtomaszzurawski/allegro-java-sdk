@@ -105,8 +105,9 @@ sections. Empty subsections are dropped by the release engineer when folding
   `CategoryParameterType` (dictionary/float/integer/string), a flattened
   `ParameterRestrictions` (numeric bounds/precision, text lengths,
   `multipleChoices`), the dictionary `DictionaryValue`s and
-  `CategoryParameterOptions`. An unmodelled future type maps to `OTHER` rather
-  than failing the call.
+  `CategoryParameterOptions`. An unmodelled parameter type maps to the mapper's
+  `CategoryParameterType.OTHER` default (today an unknown `type` still fails
+  deserialization on the wire — end-to-end degradation is a tracked core follow-up).
 - `categories().suggest(productName)` — categories whose names best match a
   product or offer name (`GET /sale/matching-categories`) as `CategorySuggestion`
   records, each reachable up its parent breadcrumb.

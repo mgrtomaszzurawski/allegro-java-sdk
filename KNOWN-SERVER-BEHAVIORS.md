@@ -52,8 +52,11 @@ is present on children / absent on roots. The SDK's `Category` record therefore 
 `restrictions.{minLength,maxLength,allowedNumberOfValues}`. Live probe: category `1520`
 ("Budownictwo i Akcesoria") returned 7 parameters, the first ("Stan") a required dictionary with
 5 values. The SDK flattens all four onto one `CategoryParameter` record (`CategoryParameterType`
-+ nullable `ParameterRestrictions` + a `DictionaryValue` list); an unrecognised future `type`
-maps to `OTHER` instead of failing the call.
++ nullable `ParameterRestrictions` + a `DictionaryValue` list). NOTE: the Layer-1 parameter DTO
+declares no Jackson `defaultImpl`, so an unrecognised future `type` currently fails
+deserialization (surfaced as `AllegroServerException`) rather than degrading to
+`CategoryParameterType.OTHER`; delivering that degradation is a core follow-up (generator
+`defaultImpl` / mapper `FAIL_ON_INVALID_SUBTYPE`).
 
 `GET /sale/matching-categories?name=` returns `matchingCategories[]`, each a category node whose
 `parent` nests recursively up to the root (`parent` absent on a root match). Live probe:

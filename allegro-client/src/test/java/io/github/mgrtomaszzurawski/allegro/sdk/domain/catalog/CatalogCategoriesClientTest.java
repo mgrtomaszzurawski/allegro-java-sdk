@@ -108,6 +108,9 @@ class CatalogCategoriesClientTest {
     private static final String NAME_PARAM = "name";
     private static final String SUGGEST_NAME = "iphone";
     private static final String NO_MATCHES = "{\"matchingCategories\":[]}";
+    private static final String NULL_MATCHES = "{\"matchingCategories\":null}";
+    private static final String UNKNOWN_TYPE_PARAM =
+            "{\"parameters\":[{\"id\":\"1\",\"name\":\"Geo\",\"type\":\"geo\"}]}";
     // Shapes spec-derived; wire-verified on the sandbox via the catalog-categories
     // demo (see KNOWN-SERVER-BEHAVIORS.md). One parameter of each of the four types.
     private static final String CATEGORY_PARAMETERS = """
@@ -115,7 +118,7 @@ class CatalogCategoriesClientTest {
               {"id":"11323","name":"Marka","type":"dictionary","required":true,"requiredForProduct":true,
                "options":{"describesProduct":true,"customValuesEnabled":false,
                           "ambiguousValueId":"11323_0","dependsOnParameterId":null},
-               "restrictions":{"multipleChoices":false},
+               "restrictions":{"multipleChoices":true},
                "dictionary":[{"id":"11323_1","value":"Bosch","dependsOnValueIds":[]},
                              {"id":"11323_2","value":"Makita","dependsOnValueIds":["11323_1"]}]},
               {"id":"medium","name":"Moc","type":"float","required":false,"requiredForProduct":false,
@@ -440,7 +443,7 @@ class CatalogCategoriesClientTest {
             assertEquals("11323_0", dictionary.options().ambiguousValueId());
             assertNull(dictionary.options().dependsOnParameterId());
             assertNotNull(dictionary.restrictions());
-            assertFalse(dictionary.restrictions().multipleChoices());
+            assertTrue(dictionary.restrictions().multipleChoices());
             assertEquals(2, dictionary.dictionary().size());
             assertEquals("11323_1", dictionary.dictionary().get(0).id());
             assertEquals("Bosch", dictionary.dictionary().get(0).value());
@@ -450,6 +453,9 @@ class CatalogCategoriesClientTest {
             assertEquals(CategoryParameterType.FLOAT, floatParam.type());
             assertEquals("W", floatParam.unit());
             assertNotNull(floatParam.restrictions());
+            BigDecimal floatMin = floatParam.restrictions().minValue();
+            assertNotNull(floatMin);
+            assertEquals(0, floatMin.compareTo(new BigDecimal("0.0")));
             BigDecimal floatMax = floatParam.restrictions().maxValue();
             assertNotNull(floatMax);
             assertEquals(0, floatMax.compareTo(new BigDecimal("2000.5")));
@@ -462,6 +468,9 @@ class CatalogCategoriesClientTest {
             BigDecimal integerMin = integerParam.restrictions().minValue();
             assertNotNull(integerMin);
             assertEquals(0, integerMin.compareTo(BigDecimal.ONE));
+            BigDecimal integerMax = integerParam.restrictions().maxValue();
+            assertNotNull(integerMax);
+            assertEquals(0, integerMax.compareTo(new BigDecimal("100")));
             assertTrue(integerParam.restrictions().range());
             assertNull(integerParam.restrictions().precision());
 
@@ -503,8 +512,10 @@ class CatalogCategoriesClientTest {
 
     @Test
     void from_whenParameterTypeIsUnmodeled_mapsToOtherWithoutRestrictionsOrDictionary() {
-        // given — a base parameter DTO whose type this SDK version does not model
-        // (a future Allegro parameter type): it maps to the resilient OTHER, not a throw
+        // given — a base parameter DTO whose concrete type this SDK version does not
+        // model. This exercises the mapper's OTHER default DIRECTLY; note the live wire
+        // cannot yet produce it (Jackson rejects an unknown discriminator before the
+        // mapper runs — see parameters_whenTypeUnknown_... and CategoryParameterType.OTHER).
         CategoryParameterRaw raw = new CategoryParameterRaw();
         raw.setId("999");
         raw.setName("Nowość");
@@ -519,6 +530,26 @@ class CatalogCategoriesClientTest {
         assertTrue(parameter.required());
         assertNull(parameter.restrictions());
         assertTrue(parameter.dictionary().isEmpty());
+    }
+
+    @Test
+    void parameters_whenTypeUnknown_failsDeserializationRatherThanDegrading(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a parameter whose discriminator is outside the four modelled types.
+        // The generated Raw base declares no @JsonSubTypes defaultImpl, so Jackson rejects
+        // it during deserialization. This pins the CURRENT wire behaviour: an unknown type
+        // surfaces as a deserialization failure, NOT CategoryParameterType.OTHER. (Letting
+        // unknown types degrade needs a core change — generator defaultImpl / mapper config.)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(CATEGORY_PARAMETERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_TYPE_PARAM)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var categories = allegro.catalog().categories();
+            // then
+            assertThrows(AllegroServerException.class, () -> categories.parameters(CATEGORY_ID));
+        }
     }
 
     // ---- category suggestions (matching-categories) ----
@@ -567,6 +598,19 @@ class CatalogCategoriesClientTest {
             // then
             assertTrue(allegro.catalog().categories().suggest(SUGGEST_NAME).isEmpty());
             verify(1, getRequestedFor(urlPathEqualTo(MATCHING_PATH)));
+        }
+    }
+
+    @Test
+    void suggest_whenMatchingCategoriesNull_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given — an explicit null array (the impl's null-guard branch, distinct from [])
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(MATCHING_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NULL_MATCHES)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // then — never null
+            assertTrue(allegro.catalog().categories().suggest(SUGGEST_NAME).isEmpty());
         }
     }
 
