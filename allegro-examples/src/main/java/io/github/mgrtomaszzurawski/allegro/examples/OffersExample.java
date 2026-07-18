@@ -61,4 +61,8 @@ public final class OffersExample {
         BatchReport report = client.offers().batch().changePrices(offerIds, Money.of("129.00", "PLN"));
         return report.success();
     }
+
+    static long offersMissingParameters(AllegroClient client) {
+        return client.offers().streamUnfilledParameters().count();
+    }
 }
