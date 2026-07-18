@@ -43,4 +43,14 @@ public record Buyer(
                 Boolean.TRUE.equals(raw.getGuest()),
                 raw.getPhoneNumber());
     }
+
+    /**
+     * Redacts the buyer's personal data (login, e-mail, name, phone) so an
+     * accidental log or trace of a {@code Buyer} never leaks it; use the typed
+     * accessors to read the fields deliberately.
+     */
+    @Override
+    public String toString() {
+        return "Buyer[id=" + id + ", guest=" + guest + ", personal data redacted]";
+    }
 }

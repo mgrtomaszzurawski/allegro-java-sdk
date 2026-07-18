@@ -103,6 +103,14 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `client.billing()` facade: `streamEntries(BillingFilter)` (lazy stream) and `types()`
   (billing-type dictionary; public, app-token friendly — **live-verified on the sandbox: 234
   types**). Models `BillingEntry`/`BillingType`; `docs/billing.md` and the `billing-types` probe.
+- Orders sub-facades: `orders().invoices()` (`ofOrder`, `declare`, binary `uploadFile`),
+  `orders().returns()` (BETA: `streamReturns`, `get`, `rejectRefund` with a typed
+  `ReturnRejectionCode`) and `orders().commissionRefunds()` (`streamClaims`, `get`, `claim`,
+  `cancel`). New models `OrderInvoice`/`CustomerReturn`/`RefundClaim`/`ReturnRejectionCode` and
+  fluent request/filter builders. **All 27 bucket-B operations are now on the SDK surface.**
+  Live write→read verification of the order-keyed endpoints remains tracked (needs a seeded
+  buyer order; `returns().rejectRefund` also needs the core beta JSON-body Content-Type fix —
+  see `KNOWN-SERVER-BEHAVIORS.md`), so their WireMock fixtures stay `spec-derived` meanwhile.
 
 ### C — shipping
 
