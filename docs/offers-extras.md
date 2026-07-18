@@ -165,3 +165,31 @@ rating.scoreDistribution().forEach(bucket ->
 `averageScore` is a decimal string (or `null` when the offer has no ratings yet).
 `scoreDistribution` and `sizeFeedback` break the responses down by score and by
 size feedback. Read-only, `sale:offers:read` (user token).
+
+## Fixed offer bundles
+
+A fixed bundle groups offers a buyer can buy together at a per-marketplace
+discount. Reach them via `client.offers().bundles()`:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferBundles;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.BundleDiscount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferBundle;
+import java.util.List;
+
+OfferBundles bundles = client.offers().bundles();
+
+bundles.streamBundles().forEach(bundle ->
+        System.out.println(bundle.id() + ": " + bundle.offers().size() + " offer(s)"));
+
+OfferBundle bundle = bundles.get(bundleId);
+OfferBundle updated = bundles.updateDiscount(bundleId,
+        List.of(new BundleDiscount("allegro-pl", Money.of("15.00", "PLN"))));
+bundles.delete(bundleId);
+```
+
+`streamBundles()` is a lazy **cursor** stream. Each `OfferBundle` carries its
+bundled `offers` (with `requiredQuantity`/`entryPoint`), the per-marketplace
+`discounts` (as `Money`) and `publications`, and who created it. All operations
+use `sale:offers:*` and need a **user (seller) access token**.

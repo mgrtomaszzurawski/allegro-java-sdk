@@ -21,6 +21,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassification
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferBundles;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
@@ -36,6 +37,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferBundlesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTranslationsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
@@ -83,6 +85,7 @@ public final class OffersImpl implements Offers {
     // ---- bucket F sub-facades ----
     private final OfferTags tags;
     private final OfferTranslations translations;
+    private final OfferBundles bundles;
 
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
@@ -94,6 +97,7 @@ public final class OffersImpl implements Offers {
         // this same runtime. One block per bucket, append-only, BACKLOG order.
         this.tags = new OfferTagsImpl(runtime);
         this.translations = new OfferTranslationsImpl(runtime);
+        this.bundles = new OfferBundlesImpl(runtime);
     }
 
     @Override
@@ -251,6 +255,11 @@ public final class OffersImpl implements Offers {
     public OfferRating rating(String offerId) {
         return OfferRating.from(http.getAuthenticated(
                 ApiPaths.offerRating(offerId), OfferRatingRaw.class, OP_RATING));
+    }
+
+    @Override
+    public OfferBundles bundles() {
+        return bundles;
     }
 
     /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */
