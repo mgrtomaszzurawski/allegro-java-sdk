@@ -7,7 +7,6 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.BaseSaleProductResponseDtoPublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BaseSaleProductResponseDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImageUrlRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ProductCategoryWithPathRaw;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -45,16 +44,17 @@ public record ProductSummary(
 
     /** Map a generated Layer-1 search-result DTO to the public record. */
     public static ProductSummary from(BaseSaleProductResponseDtoRaw raw) {
-        ProductCategoryWithPathRaw category = raw.getCategory();
         List<String> imageUrls = raw.getImages() == null ? List.of()
                 : raw.getImages().stream()
                         .map(ImageUrlRaw::getUrl)
                         .filter(Objects::nonNull)
                         .toList();
+        // `category` is a spec-required field; trust the contract (its nested id
+        // is optional, so categoryId stays nullable).
         return new ProductSummary(
                 raw.getId(),
                 raw.getName(),
-                category == null ? null : category.getId(),
+                raw.getCategory().getId(),
                 publicationStatusOf(raw.getPublication()),
                 imageUrls);
     }

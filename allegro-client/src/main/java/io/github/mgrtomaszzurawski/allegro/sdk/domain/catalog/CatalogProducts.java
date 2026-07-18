@@ -26,7 +26,7 @@ public interface CatalogProducts {
      * automatically, so a bounded consumer (e.g. {@code limit}) fetches only the
      * pages it needs.
      *
-     * @param request the search criteria (at least a phrase or a category)
+     * @param request the search criteria (a phrase, with an optional category filter)
      * @return a lazy stream of matching product summaries, best match first
      */
     Stream<ProductSummary> search(ProductSearchRequest request);
