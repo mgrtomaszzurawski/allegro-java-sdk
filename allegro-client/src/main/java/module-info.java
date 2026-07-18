@@ -94,6 +94,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.model;
 
+    // Post-purchase issues: disputes and claims (bucket J — post-sale-comms).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model;
+
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;
 

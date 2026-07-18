@@ -36,6 +36,7 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - [`docs/shipping.md`](docs/shipping.md) — shipping domain (points of service; more to come)
 - [`docs/contacts.md`](docs/contacts.md) — seller contact cards
 - [`docs/messaging.md`](docs/messaging.md) — message center: threads, messages, attachments
+- [`docs/disputes.md`](docs/disputes.md) — post-purchase issues: disputes and claims (read)
 - `docs/<domain>.md` — per-domain usage guides, added as each
   domain lands
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)

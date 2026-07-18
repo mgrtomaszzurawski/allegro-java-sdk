@@ -21,6 +21,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Campaigns;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.Contacts;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.Disputes;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.Messaging;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
@@ -37,6 +38,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns.Campaig
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog.CatalogImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.contacts.ContactsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.disputes.DisputesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.FulfillmentImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.messaging.MessagingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -108,6 +110,7 @@ public final class AllegroClient implements AutoCloseable {
     private final Fulfillment fulfillment;
     private final Contacts contacts;
     private final Messaging messaging;
+    private final Disputes disputes;
     private final SaleSettings saleSettings;
     private volatile boolean closed;
 
@@ -153,6 +156,7 @@ public final class AllegroClient implements AutoCloseable {
         this.shipping = new ShippingImpl(runtime);
         this.contacts = new ContactsImpl(runtime);
         this.messaging = new MessagingImpl(runtime);
+        this.disputes = new DisputesImpl(runtime);
         this.saleSettings = new SaleSettingsImpl(runtime);
     }
 
@@ -261,6 +265,12 @@ public final class AllegroClient implements AutoCloseable {
     public Messaging messaging() {
         ensureOpen();
         return messaging;
+    }
+
+    /** Post-purchase issues: disputes and claims read side (bucket J). */
+    public Disputes disputes() {
+        ensureOpen();
+        return disputes;
     }
 
     /** Seller sale settings (after-sale conditions, and more per bucket K). */
