@@ -7,11 +7,15 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder.ClassifiedStatsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackageType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifiedStats;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.SellerClassifiedStats;
 import java.io.IOException;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -34,13 +38,16 @@ import java.util.List;
  * advertisement {@code -Pdemo.offerId} is also supplied, the scenario runs the
  * full write→read cycle (TESTING.md §2): it assigns the category's first base
  * package to the offer with {@code assignPackages} and reads it back with
- * {@code packagesOfOffer}, asserting the base package id round-trips. Output is
- * status-level only — never bodies or tokens.
+ * {@code packagesOfOffer}, asserting the base package id round-trips. It also
+ * reads the advertisement statistics — {@code sellerStats} (seller token only)
+ * always, and {@code offerStats} for the supplied offer. Output is status-level
+ * only — never bodies or tokens.
  */
 public final class ClassifiedsDemo {
 
     private static final String CATEGORY_ID_PROPERTY = "demo.categoryId";
     private static final String OFFER_ID_PROPERTY = "demo.offerId";
+    private static final int STATS_WINDOW_DAYS = 30;
     private static final String ERR_NO_CATEGORY =
             "Provide -Pdemo.categoryId=<classifieds-enabled category id>";
     private static final String ERR_NO_STORED_TOKEN =
@@ -84,7 +91,33 @@ public final class ClassifiedsDemo {
             }
             verifySinglePackageRead(client, packages);
             verifyAssignmentCycle(client, packages);
+            verifyStats(client);
         }
+    }
+
+    /**
+     * Read-shape verification of the statistics endpoints over the last month.
+     * {@code sellerStats} needs only the seller token; {@code offerStats}
+     * additionally needs an advertisement {@code -Pdemo.offerId}.
+     */
+    private static void verifyStats(AllegroClient client) {
+        ClassifiedStatsFilter lastMonth = ClassifiedStatsFilter.builder()
+                .eventsFrom(OffsetDateTime.now().minusDays(STATS_WINDOW_DAYS))
+                .eventsTo(OffsetDateTime.now())
+                .build();
+        SellerClassifiedStats sellerStats = client.classifieds().sellerStats(lastMonth);
+        System.out.println("classifieds.sellerStats(last " + STATS_WINDOW_DAYS + "d): totals="
+                + sellerStats.totals().size() + " days=" + sellerStats.perDay().size());
+
+        String offerId = System.getProperty(OFFER_ID_PROPERTY);
+        if (offerId == null || offerId.isBlank()) {
+            System.out.println("(no -Pdemo.offerId - skipping offerStats)");
+            return;
+        }
+        List<OfferClassifiedStats> offerStats = client.classifieds()
+                .offerStats(List.of(offerId), lastMonth);
+        System.out.println("classifieds.offerStats(" + offerId + "): " + offerStats.size()
+                + " offer(s) with data");
     }
 
     /** Read one package back by id (getPackage), confirming the single-read shape. */

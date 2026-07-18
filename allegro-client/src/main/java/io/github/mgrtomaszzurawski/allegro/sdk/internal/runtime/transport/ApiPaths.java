@@ -94,6 +94,11 @@ public final class ApiPaths {
         return subPath(OFFER_CLASSIFIEDS_PACKAGES, offerId);
     }
 
+    /** Daily advertisement statistics for selected offers ({@code offer.id} query). */
+    public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
+    /** Daily advertisement statistics aggregated for the seller. */
+    public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
+
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
