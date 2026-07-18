@@ -63,8 +63,11 @@ free-form string enums on a point of service, which fall back to an `UNKNOWN`
 sentinel — a `paymentPolicy` value Allegro might add in future would fail
 deserialization of the whole response (surfaced as `AllegroServerException`)
 rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
-match. If Allegro extends the set, the fix is a Layer-1 regeneration (open-enum),
-not a domain change.
+match, and the raw→domain map is a by-name lookup guarded by a name-parity test
+(`ShippingEnumsTest`) that iterates both enums. If Allegro extends the set, a
+Layer-1 regeneration adds the constant and that test then fails in the build —
+forcing the domain enum to gain the value in the same change, rather than leaking
+a runtime error.
 
 ## Account & meta (bucket D)
 

@@ -105,7 +105,7 @@ class ShippingDeliveryMethodsClientTest {
             // when
             List<DeliveryMethod> methods = allegro.shipping().deliveryMethods();
 
-            // then — both methods map, including the enum, flag and country fields
+            // then — all three methods map, including the enum, flag and country fields
             assertEquals(METHODS_SIZE, methods.size());
             DeliveryMethod courier = methods.get(0);
             assertEquals(COURIER_ID, courier.id());
@@ -126,7 +126,7 @@ class ShippingDeliveryMethodsClientTest {
     }
 
     @Test
-    void deliveryMethods_whenServerOmitsMethods_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
+    void deliveryMethods_whenServerReturnsEmptyList_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken();
         stubFor(get(urlEqualTo(DELIVERY_METHODS_PATH))
@@ -135,8 +135,11 @@ class ShippingDeliveryMethodsClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
 
+            // when
+            List<DeliveryMethod> methods = allegro.shipping().deliveryMethods();
+
             // then — no NPE, a real empty list
-            assertTrue(allegro.shipping().deliveryMethods().isEmpty());
+            assertTrue(methods.isEmpty());
         }
     }
 

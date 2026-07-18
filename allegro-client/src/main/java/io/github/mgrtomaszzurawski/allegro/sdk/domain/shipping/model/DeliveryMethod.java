@@ -15,8 +15,9 @@ import org.jspecify.annotations.Nullable;
  * rate row references to price that method.
  *
  * <p>The spec marks every field optional, but on the wire {@code id} and
- * {@code name} always arrive (spec-derived; to be wire-confirmed once the
- * sandbox seller token is restored — see {@code KNOWN-SERVER-BEHAVIORS.md}).
+ * {@code name} arrive (wire-verified 2026-07-18 against 571 live sandbox
+ * methods; see {@code KNOWN-SERVER-BEHAVIORS.md}), so they are modelled
+ * non-null.
  *
  * @param id method identifier
  * @param name human-readable method name
@@ -59,7 +60,9 @@ public record DeliveryMethod(
     }
 
     // The raw value is a typed, closed enum, so an unmodelled value is already
-    // rejected during deserialization; by here it is one of the known constants.
+    // rejected during deserialization; by here it is one of the known constants,
+    // which share their names with the domain enum. A ShippingEnumsTest parity
+    // check fails in the build if a future spec regeneration ever breaks that.
     private static @Nullable PaymentPolicy paymentPolicy(@Nullable PaymentPolicyEnum raw) {
         return raw == null ? null : PaymentPolicy.valueOf(raw.name());
     }

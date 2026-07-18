@@ -32,11 +32,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.PointOfServiceRequestBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Address;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Coordinates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.OpenHour;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.PointOfServiceRequestBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServiceRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosStatus;
@@ -277,7 +277,7 @@ class ShippingPointsOfServiceClientTest {
 
     @Test
     void list_whenServerOmitsPosList_returnsEmptyList(WireMockRuntimeInfo wmInfo) {
-        // given — the wrapper may arrive with an empty (or absent) posList
+        // given — the wrapper arrives with an empty posList
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(POS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
