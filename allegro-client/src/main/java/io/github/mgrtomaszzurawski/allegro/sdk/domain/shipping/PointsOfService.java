@@ -21,27 +21,25 @@ import org.jspecify.annotations.Nullable;
 public interface PointsOfService {
 
     /**
-     * List a seller's points of service.
+     * List the authenticated seller's points of service.
      *
-     * <p>The response is not paginated — Allegro returns the seller's full set
-     * in one call, so this is a plain {@link List}, not a lazy stream.
+     * <p>Allegro requires the seller id as a query parameter; the SDK resolves it
+     * from the token, so the consumer does not pass their own id. The response is
+     * not paginated — the seller's full set arrives in one call — so this is a
+     * plain {@link List}, not a lazy stream.
      *
-     * @param sellerId the owning seller's id (the {@code seller.id} query
-     *     parameter, required by Allegro)
      * @return the seller's points of service, possibly empty
      */
-    List<PointOfService> list(String sellerId);
+    List<PointOfService> list();
 
     /**
-     * List a seller's points of service, optionally limited to one country.
+     * List the authenticated seller's points of service in one country.
      *
-     * @param sellerId the owning seller's id (the {@code seller.id} query
-     *     parameter, required by Allegro)
      * @param countryCode ISO-3166 alpha-2 country filter (e.g. {@code "PL"}), or
      *     {@code null} to list points in every country
      * @return the seller's points of service, possibly empty
      */
-    List<PointOfService> list(String sellerId, @Nullable String countryCode);
+    List<PointOfService> list(@Nullable String countryCode);
 
     /**
      * Create a point of service.

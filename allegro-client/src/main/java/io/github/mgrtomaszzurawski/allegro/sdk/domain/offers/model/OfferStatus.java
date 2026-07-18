@@ -35,6 +35,7 @@ public enum OfferStatus {
             case ACTIVATING -> ACTIVATING;
             case ACTIVE -> ACTIVE;
             case ENDED -> ENDED;
+            default -> UNKNOWN;
         };
     }
 }

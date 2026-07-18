@@ -4,9 +4,11 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * Fluent, single-use description of one authenticated Allegro request.
@@ -33,6 +35,13 @@ public final class HttpCall {
     private static final String ACCEPT_LANGUAGE_HEADER = "Accept-Language";
     private static final String IF_MATCH_HEADER = "If-Match";
     private static final String ETAG_HEADER = "ETag";
+    private static final String LOCATION_HEADER = "Location";
+    private static final String HTTPS_SCHEME = "https";
+    private static final String ALLEGRO_HOST_SUFFIX = ".allegro.pl";
+    private static final String ALLEGRO_SANDBOX_HOST_SUFFIX = ".allegrosandbox.pl";
+    private static final String ERR_UPLOAD_URL_NO_HOST = "Upload URL has no host: ";
+    private static final String ERR_UPLOAD_HOST_NOT_ALLOWED =
+            "Refusing to send the access token to a non-Allegro upload host: ";
     private static final String BEARER_PREFIX = "Bearer ";
 
     private static final String METHOD_GET = "GET";
@@ -48,6 +57,7 @@ public final class HttpCall {
 
     private String method;
     private String path;
+    private String absoluteUrl;
     private Query query = Query.create();
     private String acceptMediaType = HttpSupport.VND_ALLEGRO_V1;
     private String acceptLanguage;
@@ -83,6 +93,18 @@ public final class HttpCall {
     /** DELETE {@code path}. */
     public HttpCall delete(String requestPath) {
         return verb(METHOD_DELETE, requestPath);
+    }
+
+    /**
+     * PUT to an ABSOLUTE URL, bypassing the API base — for the attachment upload
+     * host ({@code upload.allegro.pl}) returned in a declaration's {@code Location}
+     * header. The Bearer token and Accept media type are still sent, so the upload
+     * is authenticated; combine with {@link #binaryBody(byte[], String)}.
+     */
+    public HttpCall putAbsolute(String url) {
+        this.method = METHOD_PUT;
+        this.absoluteUrl = url;
+        return this;
     }
 
     private HttpCall verb(String httpMethod, String requestPath) {
@@ -123,8 +145,49 @@ public final class HttpCall {
 
     /** Serialize {@code body} as the vendor JSON request body. */
     public HttpCall jsonBody(Object body) {
-        this.contentType = HttpSupport.VND_ALLEGRO_V1;
+        return fullJsonBody(body, HttpSupport.VND_ALLEGRO_V1);
+    }
+
+    /**
+     * Serialize {@code body} as the vendor JSON request body, omitting null and
+     * empty fields (null, empty strings, empty collections and maps) — for a
+     * partial (PATCH) update where unset fields must be absent rather than sent
+     * as {@code null}/{@code []} (which would reset them server-side).
+     */
+    public HttpCall jsonBodyPartial(Object body) {
+        return partialJsonBody(body, HttpSupport.VND_ALLEGRO_V1);
+    }
+
+    /**
+     * Serialize {@code body} as the BETA vendor JSON request body
+     * ({@code application/vnd.allegro.beta.v1+json}). Beta write surfaces (e.g.
+     * post-purchase issues, customer-return rejection) reject the {@code public.v1}
+     * content type, so a beta write must set it on the request body — {@link
+     * #acceptBeta()} only flips the {@code Accept} header.
+     */
+    public HttpCall betaJsonBody(Object body) {
+        return fullJsonBody(body, HttpSupport.VND_ALLEGRO_BETA_V1);
+    }
+
+    /**
+     * Beta counterpart of {@link #jsonBodyPartial(Object)}: a partial body (null
+     * and empty fields omitted) with the beta vendor content type — beta write
+     * DTOs are generated too, so they carry the same pre-initialized empty
+     * collections that a full serialization would reset server-side.
+     */
+    public HttpCall betaJsonBodyPartial(Object body) {
+        return partialJsonBody(body, HttpSupport.VND_ALLEGRO_BETA_V1);
+    }
+
+    private HttpCall fullJsonBody(Object body, String mediaType) {
+        this.contentType = mediaType;
         this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serialize(body));
+        return this;
+    }
+
+    private HttpCall partialJsonBody(Object body, String mediaType) {
+        this.contentType = mediaType;
+        this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serializePartial(body));
         return this;
     }
 
@@ -170,12 +233,28 @@ public final class HttpCall {
         return new Etagged<>(value, response.headers().firstValue(ETAG_HEADER).orElse(null));
     }
 
+    /**
+     * Execute and return the deserialized body together with the response
+     * {@code Location} header — the absolute upload URL an attachment declaration
+     * returns, to PUT the binary to via {@link #putAbsolute(String)}. The
+     * {@code location} is {@code null} when the server sends no such header.
+     */
+    public <T> Located<T> fetchLocation(Class<T> responseType) {
+        HttpResponse<String> response = support.exchangeFor(this::buildRequest, operationName,
+                HttpResponse.BodyHandlers.ofString(), stringBody -> stringBody);
+        T value = support.deserialize(response, responseType);
+        return new Located<>(value, response.headers().firstValue(LOCATION_HEADER).orElse(null));
+    }
+
     private HttpRequest.Builder buildRequest() {
         if (method == null) {
             throw new IllegalStateException(ERR_NO_VERB);
         }
         String fullPath = query.isEmpty() ? path : path + query.render();
-        HttpRequest.Builder builder = HttpRequest.newBuilder(support.uri(fullPath))
+        URI target = absoluteUrl != null
+                ? secureUploadTarget(absoluteUrl, support.runtime().baseUrl())
+                : support.uri(fullPath);
+        HttpRequest.Builder builder = HttpRequest.newBuilder(target)
                 .timeout(support.runtime().readTimeout())
                 .header(ACCEPT_HEADER, acceptMediaType)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + support.runtime().requireToken());
@@ -189,5 +268,38 @@ public final class HttpCall {
             builder.header(CONTENT_TYPE_HEADER, contentType);
         }
         return builder.method(method, bodyPublisher);
+    }
+
+    /**
+     * Resolve an absolute upload URL to a SAFE target for a token-bearing request.
+     * The Bearer access token must never travel to a foreign host or over plaintext:
+     * Allegro returns the upload host in a {@code Location} header as {@code http}, so
+     * this forces {@code https} for an Allegro upload host (a sibling of the API base),
+     * mirrors the base's own scheme when the target host IS the base host, and rejects
+     * any other host outright. Package-visible {@code public} for direct unit testing;
+     * {@code internal.*} is not exported.
+     */
+    public static URI secureUploadTarget(String rawUrl, String baseUrl) {
+        URI upload = URI.create(rawUrl);
+        String host = upload.getHost();
+        if (host == null) {
+            throw new IllegalArgumentException(ERR_UPLOAD_URL_NO_HOST + rawUrl);
+        }
+        URI base = URI.create(baseUrl);
+        if (host.equalsIgnoreCase(base.getHost())) {
+            return withScheme(upload, base.getScheme());
+        }
+        String lowerHost = host.toLowerCase(Locale.ROOT);
+        if (lowerHost.endsWith(ALLEGRO_HOST_SUFFIX) || lowerHost.endsWith(ALLEGRO_SANDBOX_HOST_SUFFIX)) {
+            return withScheme(upload, HTTPS_SCHEME);
+        }
+        throw new IllegalArgumentException(ERR_UPLOAD_HOST_NOT_ALLOWED + host);
+    }
+
+    private static URI withScheme(URI uri, String scheme) {
+        if (scheme.equalsIgnoreCase(uri.getScheme())) {
+            return uri;
+        }
+        return URI.create(scheme + uri.toString().substring(uri.getScheme().length()));
     }
 }

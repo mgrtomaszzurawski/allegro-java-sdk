@@ -13,9 +13,9 @@ import org.jspecify.annotations.Nullable;
  * constraints the SDK can check cheaply (required {@code name}/{@code individual},
  * name and description length caps) and fails fast at {@link #build()}.
  *
- * <p>The implied-warranty period accepts <strong>whole-year</strong> ISO-8601
- * durations only (e.g. {@code P2Y}); the server owns that check and rejects a
- * sub-year value.
+ * <p>The implied-warranty period accepts <strong>whole years, at least two</strong>
+ * (e.g. {@code P2Y}); the server owns that check and rejects month-form
+ * ({@code P12M}) or sub-two-year ({@code P1Y}) values with {@code 422}.
  *
  * @since 0.3.0
  */

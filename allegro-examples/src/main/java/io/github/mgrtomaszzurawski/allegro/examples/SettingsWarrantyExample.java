@@ -51,7 +51,7 @@ public final class SettingsWarrantyExample {
         ImpliedWarrantyRequest request = ImpliedWarrantyRequest.builder()
                 .name("2 year implied warranty")
                 .individual(ImpliedWarrantyPeriod.of("P2Y"))
-                .corporate(ImpliedWarrantyPeriod.of("P1Y"))
+                .corporate(ImpliedWarrantyPeriod.of("P2Y"))
                 .address(new AfterSalesAddress(
                         "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
                 .description("Statutory warranty of conformity")

@@ -25,8 +25,9 @@ import java.util.List;
  * write&rarr;read&rarr;delete cycle on additional e-mail addresses.
  *
  * <p>Status-level output only. The bidding/charity/affiliate probes are omitted
- * here: bidding needs a buyer token and a live auction, and the beta
- * charity/affiliate resources may be unavailable on the sandbox seller account.
+ * here: bidding is the buyer half and lives in its own {@link BiddingDemo}
+ * ({@code -Pdemo.account=buyer}), and the beta charity/affiliate resources may be
+ * unavailable on the sandbox seller account.
  */
 public final class AccountDemo {
 
@@ -52,6 +53,12 @@ public final class AccountDemo {
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             CurrentUser currentUser = client.user().me();
             System.out.println("me(): login=" + currentUser.login() + ", id=" + currentUser.id());
+            CurrentUser.Company company = currentUser.company();
+            System.out.println("me(): baseMarketplaceId=" + currentUser.baseMarketplaceId()
+                    + ", company=" + (company == null
+                            ? "none"
+                            : "name/present=" + (company.name() != null)
+                                    + ", taxId/present=" + (company.taxId() != null)));
             String rotated = client.refreshToken();
             if (rotated != null) {
                 tokenStore.store(account, rotated);

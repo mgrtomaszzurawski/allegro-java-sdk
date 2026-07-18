@@ -66,6 +66,12 @@ class ShippingEnumsTest {
         // fails the build if a future spec regeneration ever adds a value on one
         // side only (the closed enum has no UNKNOWN fallback to absorb it).
         for (PaymentPolicyEnum raw : PaymentPolicyEnum.values()) {
+            // Skip the generator's forward-compat sentinel (added by the core
+            // enumUnknownDefaultCase change): it is a synthetic unknown-value
+            // landing, not a real wire value that needs a domain counterpart.
+            if (raw == PaymentPolicyEnum.UNKNOWN_DEFAULT_OPEN_API) {
+                continue;
+            }
             assertDoesNotThrow(() -> PaymentPolicy.valueOf(raw.name()),
                     "no PaymentPolicy models the raw value " + raw.name());
         }

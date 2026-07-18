@@ -20,13 +20,26 @@ dependencies {
     // during live probes (enable with -Dorg.slf4j.simpleLogger.log.io.github
     // .mgrtomaszzurawski.allegro=debug).
     runtimeOnly(libs.slf4j.simple)
+
+    // The shared token store is agent infrastructure that has caused real data
+    // loss; it carries a regression test (no live traffic — pure filesystem).
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// Pass -Pdemo.scenario=<name> (and optional -Pdemo.account=seller|buyer)
-// through to the runner.
+tasks.named<Test>("test") {
+    useJUnitPlatform()
+}
+
+// Pass -Pdemo.scenario=<name> as the runner argument, and forward EVERY other
+// -Pdemo.* gradle property as a system property so scenarios can read their
+// parameters via System.getProperty (offerId, createName, publishIds, ...).
+// gradlePropertiesPrefixedBy is config-cache safe.
+val demoProperties = providers.gradlePropertiesPrefixedBy("demo.")
 tasks.named<JavaExec>("run") {
     providers.gradleProperty("demo.scenario").orNull?.let { args = listOf(it) }
-    providers.gradleProperty("demo.account").orNull?.let { systemProperty("demo.account", it) }
+    demoProperties.get().forEach { (key, value) -> systemProperty(key, value) }
     standardInput = System.`in`
 }
 

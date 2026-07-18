@@ -9,16 +9,19 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.AddressBu
 import org.jspecify.annotations.Nullable;
 
 /**
- * Postal address of a point of service. Built with {@link #builder()}; the
- * {@code city}, {@code zipCode}, {@code state} and {@code countryCode} fields
- * are required by the Allegro contract.
+ * Postal address of a point of service. When built for a create/update via
+ * {@link #builder()}, {@code city}, {@code zipCode}, {@code state},
+ * {@code countryCode} and {@code coordinates} are required (the live endpoint
+ * rejects an address without coordinates — see {@code KNOWN-SERVER-BEHAVIORS.md});
+ * as a read model, {@code coordinates} may be absent.
  *
  * @param street street and building number, or {@code null} when not set
  * @param city city (required)
  * @param zipCode postal code (required)
  * @param state region / voivodeship (required)
  * @param countryCode ISO 3166-1 alpha-2 country code (required)
- * @param coordinates geographic coordinates, or {@code null} when not set
+ * @param coordinates geographic coordinates; required on write, may be
+ *     {@code null} on a read
  *
  * @since 0.2.0
  */

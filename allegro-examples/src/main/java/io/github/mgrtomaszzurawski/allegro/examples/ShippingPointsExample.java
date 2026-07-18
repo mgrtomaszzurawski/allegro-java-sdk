@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.AllegroCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Address;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Coordinates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.OpenHour;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServiceRequest;
@@ -33,16 +34,18 @@ public final class ShippingPointsExample {
                             .name("Pickup Point Center")
                             .type(PosType.PICKUP_POINT)
                             .status(PosStatus.ACTIVE)
-                            .confirmationType(ConfirmationType.CONTACT_NOT_REQUIRED)
+                            .confirmationType(ConfirmationType.AWAIT_CONTACT)
                             .address(Address.builder()
                                     .street("Grunwaldzka 100")
                                     .city("Gdansk")
                                     .zipCode("80-244")
                                     .state("pomorskie")
                                     .countryCode("PL")
+                                    .coordinates(new Coordinates(54.372158, 18.638306))
                                     .build())
                             .openHours(List.of(OpenHour.builder()
-                                    .dayOfWeek("MONDAY").fromTime("08:00").toTime("16:00").build()))
+                                    .dayOfWeek("MONDAY").fromTime("08:00:00.000")
+                                    .toTime("16:00:00.000").build()))
                             .externalId("store-001")
                             .build());
 
