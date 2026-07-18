@@ -22,11 +22,14 @@ dependencies {
     runtimeOnly(libs.slf4j.simple)
 }
 
-// Pass -Pdemo.scenario=<name> (and optional -Pdemo.account=seller|buyer)
-// through to the runner.
+// Pass -Pdemo.scenario=<name> as the runner argument, and forward EVERY other
+// -Pdemo.* gradle property as a system property so scenarios can read their
+// parameters via System.getProperty (offerId, createName, publishIds, ...).
+// gradlePropertiesPrefixedBy is config-cache safe.
+val demoProperties = providers.gradlePropertiesPrefixedBy("demo.")
 tasks.named<JavaExec>("run") {
     providers.gradleProperty("demo.scenario").orNull?.let { args = listOf(it) }
-    providers.gradleProperty("demo.account").orNull?.let { systemProperty("demo.account", it) }
+    demoProperties.get().forEach { (key, value) -> systemProperty(key, value) }
     standardInput = System.`in`
 }
 

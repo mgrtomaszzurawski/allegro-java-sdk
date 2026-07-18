@@ -85,6 +85,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   a seller can apply (`AvailablePromotionPackages` of `PromotionPackage`s) — and
   `forOffer(offerId)` — the packages currently applied to an offer (`OfferPromoOptions` with
   base/extra `AppliedPromoOption`s and their validity windows).
+- Fix: `create` now serializes its body with `jsonBodyPartial` (like `edit`) — the generated
+  request type left `language` null and pre-initialized empty collections, which the default
+  serializer sent as `"language": null` and Allegro rejected with a 400 (live-caught on the
+  sandbox). Only the fields actually set are sent.
 
 ### B — orders-payments
 
