@@ -398,7 +398,7 @@ SaleSettings settings = client.settings();
 
 // After-sale service conditions (warranty / return policy / implied warranty)
 AfterSaleConditions afterSale = settings.afterSale();
-afterSale.returnPolicies() / .returnPolicy(id)    // GET  /after-sales-service-conditions/return-policies[/{id}]
+afterSale.streamReturnPolicies() / .returnPolicy(id) // GET …/return-policies[/{id}] (lazy Stream of full policies)
 afterSale.createReturnPolicy(ReturnPolicyRequest) // POST /after-sales-service-conditions/return-policies
 afterSale.updateReturnPolicy(id, Request)         // PUT  /after-sales-service-conditions/return-policies/{id}
 afterSale.deleteReturnPolicy(id)                  // DELETE /after-sales-service-conditions/return-policies/{id}

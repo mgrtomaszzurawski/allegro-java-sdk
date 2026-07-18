@@ -4,19 +4,27 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestImpliedWarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestReturnPolicyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfDeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
@@ -32,7 +40,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.PromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -115,18 +125,87 @@ public final class OffersImpl implements Offers {
         return new BuyNowPriceRaw().amount(money.amount()).currency(money.currency());
     }
 
+    /** The generated selling mode for a create request: format, Buy Now price, and any auction prices. */
+    private static SellingModeRaw sellingModeOf(CreateOfferRequest request) {
+        SellingModeFormatRaw format = request.sellingFormat() == null
+                ? SellingModeFormatRaw.BUY_NOW
+                : request.sellingFormat().toRaw();
+        SellingModeRaw sellingMode = new SellingModeRaw().format(format);
+        if (request.buyNowPrice() != null) {
+            sellingMode.price(priceOf(request.buyNowPrice()));
+        }
+        if (request.startingPrice() != null) {
+            sellingMode.startingPrice(new StartingPriceRaw()
+                    .amount(request.startingPrice().amount()).currency(request.startingPrice().currency()));
+        }
+        if (request.minimalPrice() != null) {
+            sellingMode.minimalPrice(new MinimalPriceRaw()
+                    .amount(request.minimalPrice().amount()).currency(request.minimalPrice().currency()));
+        }
+        return sellingMode;
+    }
+
+    /** The generated stock for a create request: available quantity and optional unit. */
+    private static SaleProductOffersRequestStockRaw stockOf(CreateOfferRequest request) {
+        SaleProductOffersRequestStockRaw stock =
+                new SaleProductOffersRequestStockRaw().available(request.availableStock());
+        if (request.stockUnit() != null) {
+            stock.unit(request.stockUnit().toRaw());
+        }
+        return stock;
+    }
+
+    /** The generated delivery block for the SDK delivery terms (only set fields are written). */
+    private static SaleProductOfferRequestV1AllOfDeliveryRaw deliveryRawOf(OfferDelivery delivery) {
+        SaleProductOfferRequestV1AllOfDeliveryRaw raw = new SaleProductOfferRequestV1AllOfDeliveryRaw();
+        if (delivery.shippingRatesId() != null) {
+            raw.shippingRates(new JustIdRaw().id(delivery.shippingRatesId()));
+        }
+        if (delivery.handlingTime() != null) {
+            raw.handlingTime(delivery.handlingTime());
+        }
+        if (delivery.shipmentDate() != null) {
+            raw.shipmentDate(delivery.shipmentDate());
+        }
+        if (delivery.additionalInfo() != null) {
+            raw.additionalInfo(delivery.additionalInfo());
+        }
+        return raw;
+    }
+
+    /** The generated after-sales block for the SDK conditions; the ids are parsed as Allegro UUIDs. */
+    private static AfterSalesServicesProductOfferRequestRaw afterSalesRawOf(AfterSalesServices services) {
+        AfterSalesServicesProductOfferRequestRaw raw = new AfterSalesServicesProductOfferRequestRaw();
+        if (services.impliedWarrantyId() != null) {
+            raw.impliedWarranty(new AfterSalesServicesProductOfferRequestImpliedWarrantyRaw()
+                    .id(UUID.fromString(services.impliedWarrantyId())));
+        }
+        if (services.returnPolicyId() != null) {
+            raw.returnPolicy(new AfterSalesServicesProductOfferRequestReturnPolicyRaw()
+                    .id(UUID.fromString(services.returnPolicyId())));
+        }
+        if (services.warrantyId() != null) {
+            raw.warranty(new AfterSalesServicesProductOfferRequestWarrantyRaw()
+                    .id(UUID.fromString(services.warrantyId())));
+        }
+        return raw;
+    }
+
     @Override
     public Offer create(CreateOfferRequest request) {
-        SellingModeRaw sellingMode = new SellingModeRaw()
-                .format(SellingModeFormatRaw.BUY_NOW)
-                .price(priceOf(request.buyNowPrice()));
         SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
                 .name(request.name())
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
-                .sellingMode(sellingMode)
-                .stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
+                .sellingMode(sellingModeOf(request))
+                .stock(stockOf(request));
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
+        }
+        if (request.delivery() != null) {
+            body.delivery(deliveryRawOf(request.delivery()));
+        }
+        if (request.afterSalesServices() != null) {
+            body.afterSalesServices(afterSalesRawOf(request.afterSalesServices()));
         }
         // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
         // empty collections and leaves nullable scalars (e.g. `language`) null, and

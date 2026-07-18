@@ -4,9 +4,10 @@ Post-purchase **issues** — disputes and claims a buyer raises against an order
 the client via `disputes()`.
 
 Backed by Allegro's `/sale/issues` resource, a **beta** API served with the
-`application/vnd.allegro.beta.v1+json` media type (the SDK sets it for you). Every operation
-requires the `disputes` OAuth scope. Issues are opened by buyers, so this facade is
-**read-oriented**: list the issues on the account, read one, and read its chat.
+`application/vnd.allegro.beta.v1+json` media type (the SDK sets it on both the `Accept` and the
+request-body `Content-Type` for you). Every operation requires the `disputes` OAuth scope.
+Issues are opened by buyers: read the issues on the account, read one, read its chat, then
+respond as the seller — post a message, change a claim's status, or attach a file.
 
 ```java
 try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.PRODUCTION)) {
@@ -59,11 +60,61 @@ client.disputes().streamChat(issueId).forEach(entry ->
 An `IssueChatEntry` carries `id()`, `text()`, `createdAt()`, `author()` (login + `role()`:
 `BUYER`/`SELLER`/`ADMIN`/`SYSTEM`/`FULFILLMENT`), and `attachments()` (file name + URL).
 
-## Responding to a dispute
+## Post a message
 
-The seller-side writes of this resource — add a message, change a claim's status, attach a
-file — need a beta request-body media type that the shared transport does not yet expose. They
-ship in a follow-up once that core capability lands.
+Add a seller message to an issue. A message must carry text, at least one attachment, or both;
+the type defaults to `REGULAR`:
+
+```java
+IssueMessageRequest reply = IssueMessageRequest.builder()
+        .text("Thank you — a replacement ships today.")
+        .build();
+
+IssueChatEntry added = client.disputes().addMessage(issueId, reply);
+```
+
+A non-`REGULAR` type drives a formal transition: `END_REQUEST` ends a dispute, while the
+`RETURN_*` types answer a return on a claim. Allegro restricts each type to the right context
+(dispute vs. claim).
+
+## Change a claim's status
+
+Accept a claim (optionally with a partial refund) or reject it with a documented reason. Valid
+for claims only, never for disputes:
+
+```java
+ClaimStatusChange decision = ClaimStatusChange.builder()
+        .status(ClaimStatus.ACCEPTED_PARTIAL_REFUND)
+        .message("We agree to a partial refund.")
+        .partialRefund(Money.of("12.50", "PLN"))   // only for ACCEPTED_PARTIAL_REFUND
+        .build();
+
+client.disputes().changeStatus(issueId, decision);
+```
+
+## Attach a file to a message
+
+Upload the file, then reference the returned id when posting a message. The SDK declares the
+attachment and streams the bytes to the one-time upload location Allegro returns — you never
+handle that URL:
+
+```java
+byte[] bytes = Files.readAllBytes(path);
+IssueAttachmentDeclaration declaration = IssueAttachmentDeclaration.builder()
+        .filename("evidence.jpg")
+        .size(bytes.length)          // must equal the byte count
+        .build();
+
+IssueAttachmentRef attachment = client.disputes()
+        .uploadAttachment(declaration, bytes, "image/jpeg");
+
+client.disputes().addMessage(issueId, IssueMessageRequest.builder()
+        .text("Please see the attached photo.")
+        .attachment(attachment.id())
+        .build());
+```
+
+Read an attachment's bytes back with `downloadAttachment(attachmentId)`.
 
 ## Errors
 
