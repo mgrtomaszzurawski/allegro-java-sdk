@@ -4,8 +4,8 @@ Marketing-campaign programmes, reached from `client.campaigns()` (bucket H). Eve
 needs a **seller user-context token** with the `allegro:api:campaigns` scope — an app-only
 client-credentials token cannot see a seller's campaigns.
 
-The bucket covers three programmes: **badge campaigns**, **Allegro Prices**, and **AlleDiscount**.
-Badge campaigns and Allegro Prices are complete; AlleDiscount lands next.
+The bucket covers three programmes: **badge campaigns**, **Allegro Prices**, and **AlleDiscount** —
+all complete.
 
 ## Badge campaigns
 
@@ -174,6 +174,56 @@ Between 1 and 1000 offers per command. A `Duration` overload bounds the wait; on
 throws `AllegroAsyncTimeoutException` (the command may still complete server-side — re-read the
 offer status rather than resubmitting). `excludeOffers` works the same way with
 `ExcludeOffersRequest`.
+
+## AlleDiscount
+
+`client.campaigns().alleDiscount()` covers the AlleDiscount programme: discover campaigns, read
+which offers are eligible or already submitted, and submit or withdraw an offer.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.EligibleOffersFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.SubmitOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountCampaign;
+
+for (AlleDiscountCampaign campaign : client.campaigns().alleDiscount().campaigns()) {
+    // eligible offers for this campaign (lazy Stream)
+    client.campaigns().alleDiscount()
+            .streamEligibleOffers(EligibleOffersFilter.builder(campaign.id())
+                    .meetsConditions(true)
+                    .build())
+            .forEach(offer -> System.out.println(
+                    offer.offerId() + " ≤ " + offer.requiredMerchantPrice()));
+}
+```
+
+`campaigns()` returns a `List` (the endpoint is not paginated); `streamEligibleOffers` and
+`streamSubmittedOffers` are lazy `Stream`s. Each eligible offer exposes the `requiredMerchantPrice`
+(the price ceiling for participation), the minimum guaranteed discount, and whether it
+`meetsConditions()` (with `conditionViolations()` explaining any gap).
+
+Submitting and withdrawing are commands — the call blocks until the command reaches a terminal
+state:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountSubmitResult;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountWithdrawResult;
+
+AlleDiscountSubmitResult submitted = client.campaigns().alleDiscount().submitOffer(
+        SubmitOfferRequest.builder()
+                .campaignId("winter-sale")
+                .offerId("12345678")
+                .proposedPrice(Money.of("24.99", "PLN"))   // must not exceed requiredMerchantPrice
+                .build());
+// submitted.status() is SUCCESSFUL or FAILED; submitted.participationId() on success
+
+AlleDiscountWithdrawResult withdrawn =
+        client.campaigns().alleDiscount().withdrawOffer(submitted.participationId());
+```
+
+Withdrawal keys on the `participationId` (from a submitted offer or a successful submit result).
+Both commands take an optional `Duration` timeout; on expiry the SDK throws
+`AllegroAsyncTimeoutException` (the command may still complete server-side).
 
 ## Errors
 

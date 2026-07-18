@@ -52,14 +52,20 @@ public final class HttpSupport {
 
     private final HttpRuntime runtime;
     private final ServerErrorParser errorParser;
-    /** Omits null fields — used for partial (PATCH) bodies so unset fields are not reset. */
-    private final ObjectMapper nonNullMapper;
+    /**
+     * Omits null AND empty fields — used for partial (PATCH) bodies so unset
+     * fields are not reset. NON_EMPTY (not just NON_NULL) is required because the
+     * generated request DTOs pre-initialize collection fields to empty
+     * ({@code []}/{@code {}}), which NON_NULL would still serialize and thereby
+     * clear those fields server-side.
+     */
+    private final ObjectMapper partialMapper;
 
     public HttpSupport(HttpRuntime runtime) {
         this.runtime = runtime;
         this.errorParser = new ServerErrorParser(runtime.objectMapper());
-        this.nonNullMapper = runtime.objectMapper().copy()
-                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        this.partialMapper = runtime.objectMapper().copy()
+                .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     }
 
     /** Resolve an {@link ApiPaths} path against the environment base URL. */
@@ -179,12 +185,12 @@ public final class HttpSupport {
     }
 
     /**
-     * Serialize {@code body} omitting null fields, for a partial (PATCH) update
-     * where an unset field must be absent from the payload rather than sent as
-     * {@code null} (which would reset it server-side).
+     * Serialize {@code body} omitting null and empty fields, for a partial
+     * (PATCH) update where an unset field must be absent from the payload rather
+     * than sent as {@code null}/{@code []} (which would reset it server-side).
      */
-    String serializeNonNull(Object body) {
-        return serializeWith(nonNullMapper, body);
+    String serializePartial(Object body) {
+        return serializeWith(partialMapper, body);
     }
 
     private String serializeWith(ObjectMapper mapper, Object body) {

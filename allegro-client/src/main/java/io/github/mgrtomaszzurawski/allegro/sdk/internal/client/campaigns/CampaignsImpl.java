@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AlleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AllegroPrices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Badges;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Campaigns;
@@ -19,10 +20,12 @@ public final class CampaignsImpl implements Campaigns {
 
     private final Badges badges;
     private final AllegroPrices allegroPrices;
+    private final AlleDiscount alleDiscount;
 
     public CampaignsImpl(HttpRuntime runtime) {
         this.badges = new BadgesClient(runtime);
         this.allegroPrices = new AllegroPricesClient(runtime);
+        this.alleDiscount = new AlleDiscountClient(runtime);
     }
 
     @Override
@@ -33,5 +36,10 @@ public final class CampaignsImpl implements Campaigns {
     @Override
     public AllegroPrices allegroPrices() {
         return allegroPrices;
+    }
+
+    @Override
+    public AlleDiscount alleDiscount() {
+        return alleDiscount;
     }
 }

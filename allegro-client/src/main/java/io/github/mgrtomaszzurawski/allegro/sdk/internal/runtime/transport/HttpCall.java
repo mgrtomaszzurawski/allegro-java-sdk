@@ -129,13 +129,14 @@ public final class HttpCall {
     }
 
     /**
-     * Serialize {@code body} as the vendor JSON request body, omitting null
-     * fields — for a partial (PATCH) update where unset fields must be absent
-     * rather than sent as {@code null} (which would reset them server-side).
+     * Serialize {@code body} as the vendor JSON request body, omitting null and
+     * empty fields (null, empty strings, empty collections and maps) — for a
+     * partial (PATCH) update where unset fields must be absent rather than sent
+     * as {@code null}/{@code []} (which would reset them server-side).
      */
-    public HttpCall jsonBodyNonNull(Object body) {
+    public HttpCall jsonBodyPartial(Object body) {
         this.contentType = HttpSupport.VND_ALLEGRO_V1;
-        this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serializeNonNull(body));
+        this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serializePartial(body));
         return this;
     }
 

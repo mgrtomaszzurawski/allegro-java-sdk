@@ -8,7 +8,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.patch;
+import static com.github.tomakehurst.wiremock.client.WireMock.patchRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -26,6 +29,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionIntercepto
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -46,6 +50,10 @@ class OfferWriteClientTest {
     private static final String CREATED_OFFER_ID = "13579";
     private static final String DELETE_OFFER_ID = "97531";
     private static final String DELETE_PATH = "/sale/offers/" + DELETE_OFFER_ID;
+    private static final String EDIT_OFFER_ID = "654321";
+    private static final String EDIT_PATH = "/sale/product-offers/" + EDIT_OFFER_ID;
+    private static final String EDIT_NAME = "Renamed keyboard";
+    private static final int EDIT_STOCK = 25;
     private static final String OFFER_FIXTURE = "offers/product-offer.json";
 
     private static final String NAME = "Mechanical keyboard";
@@ -167,6 +175,57 @@ class OfferWriteClientTest {
         AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                 () -> offers(wmInfo).create(validRequest()));
         assertEquals("name", failure.errors().get(0).path());
+    }
+
+    @Test
+    void edit_whenPartialFields_patchesOnlyThoseFields(WireMockRuntimeInfo wmInfo) {
+        // given — an edit that changes only the name and stock
+        stubFor(patch(urlEqualTo(EDIT_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBodyFile(OFFER_FIXTURE)));
+        EditOfferRequest request = EditOfferRequest.builder()
+                .name(EDIT_NAME).availableStock(EDIT_STOCK).build();
+
+        // when
+        Offer updated = offers(wmInfo).edit(EDIT_OFFER_ID, request);
+
+        // then — the PATCH body carries ONLY the changed fields. A strict match
+        // (no extra elements) proves the request type's pre-initialized empty
+        // collections (images/parameters/...) and the untouched sellingMode are
+        // absent — i.e. jsonBodyPartial omitted null AND empty.
+        verify(1, patchRequestedFor(urlEqualTo(EDIT_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(equalToJson(
+                        "{\"name\":\"" + EDIT_NAME + "\",\"stock\":{\"available\":" + EDIT_STOCK + "}}",
+                        true, false)));
+        assertEquals(CREATED_OFFER_ID, updated.id());
+    }
+
+    @Test
+    void edit_whenPriceAndImages_serializesThoseFields(WireMockRuntimeInfo wmInfo) {
+        // given — an edit that changes only the price and images
+        stubFor(patch(urlEqualTo(EDIT_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBodyFile(OFFER_FIXTURE)));
+        EditOfferRequest request = EditOfferRequest.builder()
+                .buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN)).imageUrls(List.of(IMAGE_URL)).build();
+
+        // when
+        offers(wmInfo).edit(EDIT_OFFER_ID, request);
+
+        // then — the PATCH carries the selling-mode price and the image, and nothing else
+        verify(1, patchRequestedFor(urlEqualTo(EDIT_PATH))
+                .withRequestBody(matchingJsonPath(PRICE_JSON_PATH, equalTo(AMOUNT)))
+                .withRequestBody(matchingJsonPath(IMAGES_JSON_PATH, equalTo(IMAGE_URL))));
+    }
+
+    @Test
+    void edit_whenOfferMissing_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(patch(urlEqualTo(EDIT_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND).withBody(NOT_FOUND_BODY)));
+
+        // then
+        assertThrows(AllegroNotFoundException.class,
+                () -> offers(wmInfo).edit(EDIT_OFFER_ID, EditOfferRequest.builder().name(EDIT_NAME).build()));
     }
 
     @Test
