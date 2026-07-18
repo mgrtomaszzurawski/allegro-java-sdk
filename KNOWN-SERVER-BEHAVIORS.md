@@ -43,6 +43,23 @@ The spec declares no `required` fields on `CategoryDto`, but on the wire `id`, `
 is present on children / absent on roots. The SDK's `Category` record therefore treats
 `id`/`name`/`leaf` as always-present and `parentId`/`options` as nullable.
 
+### Category parameters are polymorphic by `type`; suggestions nest parents (verified 2026-07-18, sandbox)
+
+`GET /sale/categories/{id}/parameters` returns `parameters[]` whose element shape depends on
+`type` (`dictionary`/`float`/`integer`/`string`): dictionary parameters carry a `dictionary[]` of
+`{id,value,dependsOnValueIds}` plus `restrictions.multipleChoices`; numeric parameters carry
+`restrictions.{min,max,range[,precision]}`; string parameters carry
+`restrictions.{minLength,maxLength,allowedNumberOfValues}`. Live probe: category `1520`
+("Budownictwo i Akcesoria") returned 7 parameters, the first ("Stan") a required dictionary with
+5 values. The SDK flattens all four onto one `CategoryParameter` record (`CategoryParameterType`
++ nullable `ParameterRestrictions` + a `DictionaryValue` list); an unrecognised future `type`
+maps to `OTHER` instead of failing the call.
+
+`GET /sale/matching-categories?name=` returns `matchingCategories[]`, each a category node whose
+`parent` nests recursively up to the root (`parent` absent on a root match). Live probe:
+`name=iphone` returned 10 matches, the top being `353` "Etui i pokrowce" with a parent chain.
+Both endpoints succeed with an app-only client-credentials token (no user context, no scope).
+
 ## Account & meta (bucket D)
 
 ### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)
