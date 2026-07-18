@@ -66,6 +66,9 @@ sections. Empty subsections are dropped by the release engineer when folding
 - Batch price/quantity: `batch().changePrices(offerIds, Money)` sets a fixed Buy Now price and
   `batch().changeQuantities(offerIds, quantity)` sets available stock across many offers — same
   submit→poll→gather `BatchReport` flow, on the price-change and quantity-change command endpoints.
+- `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
+  are still missing category parameters (offset/limit paging), each carrying the offer id, its
+  category, and the missing parameter ids.
 
 ### B — orders-payments
 
