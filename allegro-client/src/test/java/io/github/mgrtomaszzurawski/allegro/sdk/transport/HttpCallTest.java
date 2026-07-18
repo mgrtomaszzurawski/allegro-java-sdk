@@ -34,12 +34,14 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionIntercepto
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Etagged;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpCall;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Located;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
@@ -62,6 +64,16 @@ class HttpCallTest {
     private static final String LOCATION_HEADER = "Location";
     private static final String UPLOAD_PATH = "/sale/offer-attachments/abc-123";
     private static final String UPLOAD_URL = "http://upload.allegro.pl/sale/offer-attachments/abc-123";
+    private static final String UPLOAD_URL_HTTPS = "https://upload.allegro.pl/sale/offer-attachments/abc-123";
+    private static final String API_BASE = "https://api.allegro.pl";
+    private static final String SANDBOX_BASE = "https://api.allegro.pl.allegrosandbox.pl";
+    private static final String SANDBOX_UPLOAD_HTTP = "http://upload.allegro.pl.allegrosandbox.pl/x";
+    private static final String SANDBOX_UPLOAD_HTTPS = "https://upload.allegro.pl.allegrosandbox.pl/x";
+    private static final String FOREIGN_UPLOAD = "http://upload.evil.example.com/steal";
+    private static final String LOCAL_BASE = "http://localhost:8080";
+    private static final String LOCAL_UPLOAD = "http://localhost:8080/x";
+    private static final String SAME_HOST_HTTP_UPLOAD = "http://api.allegro.pl/x";
+    private static final String SAME_HOST_HTTPS_UPLOAD = "https://api.allegro.pl/x";
     private static final String PDF_MEDIA_TYPE = "application/pdf";
     private static final byte[] PDF_BYTES = {37, 80, 68, 70, 45, 49, 46, 52};
     private static final String ETAG_HEADER = "ETag";
@@ -223,6 +235,55 @@ class HttpCallTest {
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withRequestBody(binaryEqualTo(IMAGE_BYTES)));
+    }
+
+    @Test
+    void fetchLocation_whenNoLocationHeader_locationIsNull(WireMockRuntimeInfo wmInfo) {
+        // given — a response without a Location header
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        Located<Map> located = support(wmInfo).request(OPERATION).post(PATH)
+                .jsonBody(Map.of("declare", "attachment")).fetchLocation(Map.class);
+
+        // then — the nullable location is null, the body still deserialized
+        assertNull(located.location());
+        assertEquals(OK_VALUE, located.value().get("value"));
+    }
+
+    @Test
+    void secureUploadTarget_whenHttpAllegroHost_forcesHttps() {
+        // Allegro returns the upload host as plaintext http; the Bearer must not be
+        // sent in the clear, so an Allegro upload host is forced to https.
+        assertEquals(URI.create(UPLOAD_URL_HTTPS), HttpCall.secureUploadTarget(UPLOAD_URL, API_BASE));
+    }
+
+    @Test
+    void secureUploadTarget_whenSandboxUploadHost_forcesHttps() {
+        assertEquals(URI.create(SANDBOX_UPLOAD_HTTPS),
+                HttpCall.secureUploadTarget(SANDBOX_UPLOAD_HTTP, SANDBOX_BASE));
+    }
+
+    @Test
+    void secureUploadTarget_whenNonAllegroHost_refusesToSendToken() {
+        // never forward the access token to a host outside allegro.pl
+        assertThrows(IllegalArgumentException.class,
+                () -> HttpCall.secureUploadTarget(FOREIGN_UPLOAD, API_BASE));
+    }
+
+    @Test
+    void secureUploadTarget_whenSameHostAsBase_keepsBaseScheme() {
+        // the WireMock/local case: base and upload share the host, so the base's own
+        // (here plaintext) scheme is used verbatim — no forced https to a dead port
+        assertEquals(URI.create(LOCAL_UPLOAD), HttpCall.secureUploadTarget(LOCAL_UPLOAD, LOCAL_BASE));
+    }
+
+    @Test
+    void secureUploadTarget_whenBaseHostButHttpAgainstHttpsBase_upgradesToBaseHttps() {
+        // a Location naming the base host over http must still not downgrade the token
+        assertEquals(URI.create(SAME_HOST_HTTPS_UPLOAD),
+                HttpCall.secureUploadTarget(SAME_HOST_HTTP_UPLOAD, API_BASE));
     }
 
     @Test

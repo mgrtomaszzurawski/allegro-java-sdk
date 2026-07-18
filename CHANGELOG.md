@@ -82,7 +82,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   PUTs a binary body to an ABSOLUTE URL, bypassing the API base. Allegro declares an
   attachment (`POST .../attachments`) and returns the upload URL on a different host
   (`upload.allegro.pl`) in `Location`; the binary is then PUT there (still Bearer-authed).
-  Unblocks offer/after-sales/issue attachment uploads (buckets A, K, J).
+  Because that `Location` is plaintext `http`, the token-bearing request FORCES `https`
+  for an Allegro upload host (and mirrors the base scheme for the base host), and REFUSES
+  to send the access token to any non-Allegro host — the Bearer never travels in the clear
+  or to a foreign host. Unblocks offer/after-sales/issue attachment uploads (buckets A, K, J).
 - Strict `oneOf` resolution (`StrictOneOfModule`): the generated `oneOf` wrappers
   trial each branch with the lenient mapper (`FAIL_ON_UNKNOWN_PROPERTIES=false`), so
   a payload for one branch also "matches" a sibling by ignoring foreign properties —
