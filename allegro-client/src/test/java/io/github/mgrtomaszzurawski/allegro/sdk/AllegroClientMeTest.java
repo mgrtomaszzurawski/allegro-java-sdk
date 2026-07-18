@@ -58,6 +58,11 @@ class AllegroClientMeTest {
              "email":"seller@example.com","features":["feature-a"],
              "company":{"name":"test"},"baseMarketplace":{"id":"allegro-pl"}}
             """;
+    // A personal account: no company block, no baseMarketplace — both must map
+    // to null rather than fabricating empty objects.
+    private static final String ME_PERSONAL_RESPONSE = """
+            {"id":"456","login":"buyer-login","email":"buyer@example.com","features":[]}
+            """;
     // spec-derived: not yet wire-verified (errors[] contract shape; a live 404
     // capture during any bucket's exploration pass will confirm or correct it)
     private static final String NOT_FOUND_RESPONSE = """
@@ -102,7 +107,31 @@ class AllegroClientMeTest {
             assertEquals("seller-login", currentUser.login());
             assertEquals("seller@example.com", currentUser.email());
             assertEquals(1, currentUser.features().size());
+            // and — company (VAT) block + base marketplace are mapped
+            assertEquals("test", currentUser.company().name());
+            assertNull(currentUser.company().taxId());
+            assertEquals("allegro-pl", currentUser.baseMarketplaceId());
             verify(1, getRequestedFor(urlEqualTo(ME_PATH)));
+        }
+    }
+
+    @Test
+    void me_whenPersonalAccount_mapsCompanyAndBaseMarketplaceToNull(WireMockRuntimeInfo wmInfo) {
+        // given — a response with neither company nor baseMarketplace
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(ME_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ME_PERSONAL_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            CurrentUser currentUser = allegro.user().me();
+
+            // then — optional blocks are null, not empty objects
+            assertEquals("456", currentUser.id());
+            assertNull(currentUser.company());
+            assertNull(currentUser.baseMarketplaceId());
         }
     }
 
