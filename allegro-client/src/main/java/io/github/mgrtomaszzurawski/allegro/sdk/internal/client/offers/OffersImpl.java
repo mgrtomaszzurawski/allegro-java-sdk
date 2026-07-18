@@ -4,13 +4,19 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestImpliedWarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestReturnPolicyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfDeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
@@ -32,7 +38,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.PromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -115,6 +123,42 @@ public final class OffersImpl implements Offers {
         return new BuyNowPriceRaw().amount(money.amount()).currency(money.currency());
     }
 
+    /** The generated delivery block for the SDK delivery terms (only set fields are written). */
+    private static SaleProductOfferRequestV1AllOfDeliveryRaw deliveryRawOf(OfferDelivery delivery) {
+        SaleProductOfferRequestV1AllOfDeliveryRaw raw = new SaleProductOfferRequestV1AllOfDeliveryRaw();
+        if (delivery.shippingRatesId() != null) {
+            raw.shippingRates(new JustIdRaw().id(delivery.shippingRatesId()));
+        }
+        if (delivery.handlingTime() != null) {
+            raw.handlingTime(delivery.handlingTime());
+        }
+        if (delivery.shipmentDate() != null) {
+            raw.shipmentDate(delivery.shipmentDate());
+        }
+        if (delivery.additionalInfo() != null) {
+            raw.additionalInfo(delivery.additionalInfo());
+        }
+        return raw;
+    }
+
+    /** The generated after-sales block for the SDK conditions; the ids are parsed as Allegro UUIDs. */
+    private static AfterSalesServicesProductOfferRequestRaw afterSalesRawOf(AfterSalesServices services) {
+        AfterSalesServicesProductOfferRequestRaw raw = new AfterSalesServicesProductOfferRequestRaw();
+        if (services.impliedWarrantyId() != null) {
+            raw.impliedWarranty(new AfterSalesServicesProductOfferRequestImpliedWarrantyRaw()
+                    .id(UUID.fromString(services.impliedWarrantyId())));
+        }
+        if (services.returnPolicyId() != null) {
+            raw.returnPolicy(new AfterSalesServicesProductOfferRequestReturnPolicyRaw()
+                    .id(UUID.fromString(services.returnPolicyId())));
+        }
+        if (services.warrantyId() != null) {
+            raw.warranty(new AfterSalesServicesProductOfferRequestWarrantyRaw()
+                    .id(UUID.fromString(services.warrantyId())));
+        }
+        return raw;
+    }
+
     @Override
     public Offer create(CreateOfferRequest request) {
         SellingModeRaw sellingMode = new SellingModeRaw()
@@ -127,6 +171,12 @@ public final class OffersImpl implements Offers {
                 .stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
+        }
+        if (request.delivery() != null) {
+            body.delivery(deliveryRawOf(request.delivery()));
+        }
+        if (request.afterSalesServices() != null) {
+            body.afterSalesServices(afterSalesRawOf(request.afterSalesServices()));
         }
         // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
         // empty collections and leaves nullable scalars (e.g. `language`) null, and

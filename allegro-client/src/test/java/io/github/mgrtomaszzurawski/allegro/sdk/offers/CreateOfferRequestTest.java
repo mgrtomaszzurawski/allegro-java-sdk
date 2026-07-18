@@ -5,11 +5,14 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -20,6 +23,8 @@ class CreateOfferRequestTest {
     private static final Money PRICE = Money.of("199.99", "PLN");
     private static final int STOCK = 10;
     private static final String IMAGE_URL = "https://img.example/x.jpg";
+    private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+    private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -49,6 +54,32 @@ class CreateOfferRequestTest {
 
         // then
         assertTrue(request.imageUrls().isEmpty());
+    }
+
+    @Test
+    void build_whenDeliveryAndAfterSalesSet_exposesThem() {
+        // given
+        OfferDelivery delivery = OfferDelivery.builder().shippingRatesId(SHIPPING_RATES_ID).build();
+        AfterSalesServices afterSales =
+                AfterSalesServices.builder().impliedWarrantyId(IMPLIED_WARRANTY_ID).build();
+
+        // when
+        CreateOfferRequest request = validBuilder()
+                .delivery(delivery).afterSalesServices(afterSales).build();
+
+        // then
+        assertEquals(delivery, request.delivery());
+        assertEquals(afterSales, request.afterSalesServices());
+    }
+
+    @Test
+    void build_whenFulfilmentNotSet_leavesThoseFieldsNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then — optional fulfilment blocks default to null (omitted from the wire)
+        assertNull(request.delivery());
+        assertNull(request.afterSalesServices());
     }
 
     @Test

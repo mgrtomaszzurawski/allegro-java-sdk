@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -36,6 +38,8 @@ public final class CreateOfferRequest {
     private final Money buyNowPrice;
     private final int availableStock;
     private final List<String> imageUrls;
+    private final @Nullable OfferDelivery delivery;
+    private final @Nullable AfterSalesServices afterSalesServices;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -43,6 +47,8 @@ public final class CreateOfferRequest {
         this.buyNowPrice = builder.buyNowPrice;
         this.availableStock = builder.availableStock;
         this.imageUrls = List.copyOf(builder.imageUrls);
+        this.delivery = builder.delivery;
+        this.afterSalesServices = builder.afterSalesServices;
     }
 
     /** The offer title. */
@@ -70,6 +76,16 @@ public final class CreateOfferRequest {
         return imageUrls;
     }
 
+    /** The offer's delivery terms, or {@code null} if not set. */
+    public @Nullable OfferDelivery delivery() {
+        return delivery;
+    }
+
+    /** The offer's after-sales conditions, or {@code null} if not set. */
+    public @Nullable AfterSalesServices afterSalesServices() {
+        return afterSalesServices;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -83,6 +99,8 @@ public final class CreateOfferRequest {
         private @Nullable Money buyNowPrice;
         private @Nullable Integer availableStock;
         private List<String> imageUrls = List.of();
+        private @Nullable OfferDelivery delivery;
+        private @Nullable AfterSalesServices afterSalesServices;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -111,6 +129,18 @@ public final class CreateOfferRequest {
         /** Image URLs, in display order (optional). */
         public Builder imageUrls(List<String> imageUrls) {
             this.imageUrls = List.copyOf(imageUrls);
+            return this;
+        }
+
+        /** Set the offer's delivery terms (optional). */
+        public Builder delivery(@Nullable OfferDelivery delivery) {
+            this.delivery = delivery;
+            return this;
+        }
+
+        /** Set the offer's after-sales conditions (optional). */
+        public Builder afterSalesServices(@Nullable AfterSalesServices afterSalesServices) {
+            this.afterSalesServices = afterSalesServices;
             return this;
         }
 

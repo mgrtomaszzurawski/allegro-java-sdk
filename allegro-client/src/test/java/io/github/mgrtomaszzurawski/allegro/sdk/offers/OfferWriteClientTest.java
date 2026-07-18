@@ -30,7 +30,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -65,6 +67,15 @@ class OfferWriteClientTest {
     private static final String PRICE_JSON_PATH = "$.sellingMode.price.amount";
     private static final String IMAGES_JSON_PATH = "$.images[0]";
     private static final String IMAGE_URL = "https://img.example/keyboard.jpg";
+
+    private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+    private static final String HANDLING_TIME = "PT24H";
+    private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
+    private static final String RETURN_POLICY_ID = "22222222-2222-2222-2222-222222222222";
+    private static final String SHIPPING_RATES_JSON_PATH = "$.delivery.shippingRates.id";
+    private static final String HANDLING_TIME_JSON_PATH = "$.delivery.handlingTime";
+    private static final String IMPLIED_WARRANTY_JSON_PATH = "$.afterSalesServices.impliedWarranty.id";
+    private static final String RETURN_POLICY_JSON_PATH = "$.afterSalesServices.returnPolicy.id";
 
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"bad name\",\"path\":\"name\"}]}";
@@ -160,6 +171,33 @@ class OfferWriteClientTest {
         // then — the image URL reaches the request body
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(IMAGES_JSON_PATH, equalTo(IMAGE_URL))));
+    }
+
+    @Test
+    void create_whenDeliveryAndAfterSalesSet_serializesNestedBlocks(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying delivery terms and after-sales conditions
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .delivery(OfferDelivery.builder()
+                        .shippingRatesId(SHIPPING_RATES_ID).handlingTime(HANDLING_TIME).build())
+                .afterSalesServices(AfterSalesServices.builder()
+                        .impliedWarrantyId(IMPLIED_WARRANTY_ID).returnPolicyId(RETURN_POLICY_ID).build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the shipping-rate reference, handling time, and after-sales ids reach the body;
+        // the after-sales ids are serialized as {"id": "<uuid>"} objects
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(SHIPPING_RATES_JSON_PATH, equalTo(SHIPPING_RATES_ID)))
+                .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH, equalTo(HANDLING_TIME)))
+                .withRequestBody(matchingJsonPath(IMPLIED_WARRANTY_JSON_PATH, equalTo(IMPLIED_WARRANTY_ID)))
+                .withRequestBody(matchingJsonPath(RETURN_POLICY_JSON_PATH, equalTo(RETURN_POLICY_ID))));
     }
 
     @Test

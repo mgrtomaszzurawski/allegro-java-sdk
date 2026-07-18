@@ -6,17 +6,27 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.WarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class OfferTest {
@@ -25,6 +35,10 @@ class OfferTest {
     private static final String CATEGORY_ID = "257";
     private static final String TEST_UNKNOWN_FORMAT = "FUTURE_FORMAT";
     private static final String TEST_UNKNOWN_STATUS = "FUTURE_STATUS";
+    private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+    private static final String HANDLING_TIME = "PT48H";
+    private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
+    private static final String RETURN_POLICY_ID = "22222222-2222-2222-2222-222222222222";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -83,5 +97,36 @@ class OfferTest {
         assertEquals(OfferStatus.UNKNOWN, offer.status());
         assertNull(offer.buyNowPrice());
         assertNull(offer.availableStock());
+        assertNull(offer.delivery());
+        assertNull(offer.afterSalesServices());
+    }
+
+    @Test
+    void from_whenDeliveryAndAfterSalesPresent_mapsBothNestedBlocks() {
+        // given — a payload carrying delivery terms and after-sales conditions
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name("Full")
+                .delivery(new DeliveryProductOfferResponseRaw()
+                        .shippingRates(new JustIdRaw().id(SHIPPING_RATES_ID))
+                        .handlingTime(HANDLING_TIME))
+                .afterSalesServices(new AfterSalesServicesRaw()
+                        .impliedWarranty(new ImpliedWarrantyRaw().id(UUID.fromString(IMPLIED_WARRANTY_ID)))
+                        .returnPolicy(new ReturnPolicyRaw().id(UUID.fromString(RETURN_POLICY_ID)))
+                        .warranty(new WarrantyRaw()));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — both nested blocks are projected onto the consumer records
+        OfferDelivery delivery = offer.delivery();
+        assertNotNull(delivery);
+        assertEquals(SHIPPING_RATES_ID, delivery.shippingRatesId());
+        assertEquals(HANDLING_TIME, delivery.handlingTime());
+        AfterSalesServices afterSales = offer.afterSalesServices();
+        assertNotNull(afterSales);
+        assertEquals(IMPLIED_WARRANTY_ID, afterSales.impliedWarrantyId());
+        assertEquals(RETURN_POLICY_ID, afterSales.returnPolicyId());
+        assertNull(afterSales.warrantyId());
     }
 }

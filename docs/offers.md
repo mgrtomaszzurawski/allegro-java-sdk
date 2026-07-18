@@ -114,6 +114,33 @@ builder. The offer is created as a **draft** — publish it with
 `client.offers().batch().publish(List.of(created.id()))`. Delete an unpublished draft with
 `client.offers().deleteDraft(offerId)`.
 
+### Delivery terms and after-sales conditions
+
+An offer can reference the seller's configured **shipping-rate table** and **after-sales
+conditions** (implied warranty, return policy, warranty) by id — the same ids Allegro assigns
+to those templates:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .delivery(OfferDelivery.builder()
+                .shippingRatesId("a1b2c3d4-…")   // sale delivery-settings shipping-rate id
+                .handlingTime("PT24H")            // ISO-8601 duration
+                .build())
+        .afterSalesServices(AfterSalesServices.builder()
+                .impliedWarrantyId("11111111-…")
+                .returnPolicyId("22222222-…")
+                .warrantyId("33333333-…")
+                .build())
+        .build();
+```
+
+Both blocks are optional, and both are read back on `client.offers().get(offerId)` as
+`offer.delivery()` and `offer.afterSalesServices()`.
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its

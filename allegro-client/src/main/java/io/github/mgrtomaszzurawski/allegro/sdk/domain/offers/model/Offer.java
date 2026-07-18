@@ -31,6 +31,10 @@ import org.jspecify.annotations.Nullable;
  * @param status         publication status
  * @param buyNowPrice    fixed Buy Now price, or {@code null} for an auction
  * @param availableStock available quantity, or {@code null} when not tracked
+ * @param delivery       delivery terms (shipping-rate table, handling time), or
+ *                       {@code null} if the payload omits them
+ * @param afterSalesServices after-sales conditions (implied warranty, return
+ *                       policy, warranty), or {@code null} if omitted
  * @since 0.2.0
  */
 public record Offer(
@@ -40,7 +44,9 @@ public record Offer(
         OfferFormat format,
         OfferStatus status,
         @Nullable Money buyNowPrice,
-        @Nullable Integer availableStock) {
+        @Nullable Integer availableStock,
+        @Nullable OfferDelivery delivery,
+        @Nullable AfterSalesServices afterSalesServices) {
 
     /** Project a generated product-offer response onto the consumer record. */
     public static Offer from(SaleProductOfferResponseV1Raw raw) {
@@ -54,7 +60,9 @@ public record Offer(
                 OfferFormat.from(sellingMode == null ? null : sellingMode.getFormat()),
                 OfferStatus.from(publication == null ? null : publication.getStatus()),
                 buyNowPriceOf(sellingMode),
-                availableStockOf(raw));
+                availableStockOf(raw),
+                OfferDelivery.from(raw.getDelivery()),
+                AfterSalesServices.from(raw.getAfterSalesServices()));
     }
 
     private static @Nullable Money buyNowPriceOf(@Nullable SellingModeRaw sellingMode) {
