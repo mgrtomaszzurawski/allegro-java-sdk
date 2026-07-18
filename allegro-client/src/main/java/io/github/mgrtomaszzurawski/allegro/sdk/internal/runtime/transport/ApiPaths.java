@@ -73,6 +73,31 @@ public final class ApiPaths {
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
+    /** Fee-and-commission preview for a draft offer ({@code /pricing/offer-fee-preview}). */
+    public static final String OFFER_FEE_PREVIEW = "/pricing/offer-fee-preview";
+    /** The user's current offer fee quotes ({@code /pricing/offer-quotes}). */
+    public static final String OFFER_QUOTES = "/pricing/offer-quotes";
+    /** Seller promotions collection ({@code /sale/loyalty/promotions}); append {@code /{promotionId}} via {@link #subPath}. */
+    public static final String LOYALTY_PROMOTIONS = "/sale/loyalty/promotions";
+    /** Turnover-discount configuration ({@code /sale/turnover-discount}); append {@code /{marketplaceId}} via {@link #subPath}. */
+    public static final String TURNOVER_DISCOUNT = "/sale/turnover-discount";
+    /** Available deposit types ({@code /deposit/types}). */
+    public static final String DEPOSIT_TYPES = "/deposit/types";
+
+    private static final String PRICE_AUTOMATION_OFFERS = "/sale/price-automation/offers";
+    private static final String RULES_SEGMENT = "rules";
+    private static final String DEACTIVATE_SEGMENT = "deactivate";
+
+    /** Automatic pricing rules assigned to one offer ({@code /sale/price-automation/offers/{offerId}/rules}). */
+    public static String priceAutomationOfferRules(String offerId) {
+        return subPath(PRICE_AUTOMATION_OFFERS, offerId, RULES_SEGMENT);
+    }
+
+    /** Deactivate a marketplace's turnover discount ({@code /sale/turnover-discount/{marketplaceId}/deactivate}). */
+    public static String turnoverDiscountDeactivate(String marketplaceId) {
+        return subPath(TURNOVER_DISCOUNT, marketplaceId, DEACTIVATE_SEGMENT);
+    }
+
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";

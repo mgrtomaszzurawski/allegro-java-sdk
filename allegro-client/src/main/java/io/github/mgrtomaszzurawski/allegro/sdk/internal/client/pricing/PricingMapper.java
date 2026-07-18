@@ -12,10 +12,12 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConf
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationChangeByPercentageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRulePostRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRulePutRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleTypeRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRule;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleConfiguration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleEdit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleType;
 import java.time.Instant;
@@ -40,6 +42,7 @@ import org.jspecify.annotations.Nullable;
  */
 final class PricingMapper {
 
+    private static final String FIELD_RULES = "rules";
     private static final String FIELD_ID = "id";
     private static final String FIELD_TYPE = "type";
     private static final String FIELD_NAME = "name";
@@ -69,6 +72,29 @@ final class PricingMapper {
             raw.setConfiguration(configurationToRaw(configuration));
         }
         return raw;
+    }
+
+    /** Map a rule-edit request to the generated PUT body DTO (no {@code type}). */
+    static AutomaticPricingRulePutRequestRaw editToRaw(PricingRuleEdit edit) {
+        AutomaticPricingRulePutRequestRaw raw = new AutomaticPricingRulePutRequestRaw()
+                .name(edit.name());
+        PricingRuleConfiguration configuration = edit.configuration();
+        if (configuration != null) {
+            raw.setConfiguration(configurationToRaw(configuration));
+        }
+        return raw;
+    }
+
+    /** Map a rules-list response (as raw JSON) to public records. */
+    static List<PricingRule> toRules(JsonNode wrapper) {
+        List<PricingRule> rules = new ArrayList<>();
+        JsonNode rulesArray = wrapper.get(FIELD_RULES);
+        if (rulesArray != null) {
+            for (JsonNode ruleNode : rulesArray) {
+                rules.add(toRule(ruleNode));
+            }
+        }
+        return List.copyOf(rules);
     }
 
     /** Map a rule response (as raw JSON) to the public record. */
