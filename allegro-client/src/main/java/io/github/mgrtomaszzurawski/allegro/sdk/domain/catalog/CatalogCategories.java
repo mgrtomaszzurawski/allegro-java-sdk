@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategorySuggestion;
 import java.util.List;
 
 /**
@@ -43,4 +45,24 @@ public interface CatalogCategories {
      *     never {@code null}, empty when the parent is a leaf
      */
     List<Category> childrenOf(String parentCategoryId);
+
+    /**
+     * The parameters a category expects on the offers and products classified
+     * under it — their types, value restrictions and dictionaries.
+     *
+     * @param categoryId the category identifier
+     * @return the category's parameters, in the order Allegro returns them;
+     *     never {@code null}, empty when the category defines none
+     */
+    List<CategoryParameter> parameters(String categoryId);
+
+    /**
+     * Categories whose names best match a product or offer name — the same
+     * suggestion Allegro's sell form makes for a title.
+     *
+     * @param productName the product or offer name to match against
+     * @return the matching categories, best match first; never {@code null},
+     *     possibly empty
+     */
+    List<CategorySuggestion> suggest(String productName);
 }

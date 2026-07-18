@@ -5,7 +5,11 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
+import java.util.stream.Stream;
 
 /**
  * The offer lifecycle — reached via {@code AllegroClient.offers()} (bucket A).
@@ -37,6 +41,24 @@ public interface Offers {
      * @param buyNowPrice the new Buy Now price
      */
     void changeBuyNowPrice(String offerId, Money buyNowPrice);
+
+    /**
+     * Stream the seller's offers matching a filter, fetched page by page and
+     * lazily — later pages are requested only as the stream is consumed.
+     *
+     * @param filter which offers to include (use {@link OfferFilter#all()} for all)
+     * @return a lazy stream of offer summaries
+     */
+    Stream<OfferSummary> streamOffers(OfferFilter filter);
+
+    /**
+     * The Allegro Smart! classification report for one offer — whether it
+     * qualifies and the per-condition breakdown.
+     *
+     * @param offerId the offer identifier
+     * @return the Smart! classification report
+     */
+    SmartClassification smartClassification(String offerId);
 
     // [append point: offers sub-facades] Bucket A appends its own sub-facade
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
