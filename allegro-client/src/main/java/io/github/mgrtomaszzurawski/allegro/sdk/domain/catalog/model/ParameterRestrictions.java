@@ -5,14 +5,18 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.DictionaryCategoryParameterAllOfRestrictionsRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DictionaryCategoryProductParameterAllOfRestrictionsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.FloatCategoryParameterAllOfRestrictionsRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.FloatCategoryProductParameterAllOfRestrictionsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.IntegerCategoryParameterAllOfRestrictionsRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.IntegerCategoryProductParameterAllOfRestrictionsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StringCategoryProductParameterAllOfRestrictionsRaw;
 import java.math.BigDecimal;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The constraints Allegro places on a {@link CategoryParameter}'s value. Which
+ * The constraints Allegro places on a {@link CategoryParameter}'s or
+ * {@link ProductParameter}'s value. Which
  * components are populated follows the {@link CategoryParameterType}: numeric
  * parameters use {@code min}/{@code max}/{@code range} (and {@code precision}
  * for floats), string parameters use the length limits, and dictionary
@@ -62,6 +66,37 @@ public record ParameterRestrictions(
 
     static @Nullable ParameterRestrictions fromDictionary(
             @Nullable DictionaryCategoryParameterAllOfRestrictionsRaw raw) {
+        if (raw == null) {
+            return null;
+        }
+        return new ParameterRestrictions(null, null, null, false,
+                Boolean.TRUE.equals(raw.getMultipleChoices()), null, null, null);
+    }
+
+    // --- product-parameter variants: structurally identical to the category ones
+    //     above but distinct generated Raw types (the string restriction type is
+    //     shared, so fromString(...) already serves both). ---
+
+    static @Nullable ParameterRestrictions fromFloat(
+            @Nullable FloatCategoryProductParameterAllOfRestrictionsRaw raw) {
+        if (raw == null) {
+            return null;
+        }
+        return new ParameterRestrictions(raw.getMin(), raw.getMax(), raw.getPrecision(),
+                Boolean.TRUE.equals(raw.getRange()), false, null, null, null);
+    }
+
+    static @Nullable ParameterRestrictions fromInteger(
+            @Nullable IntegerCategoryProductParameterAllOfRestrictionsRaw raw) {
+        if (raw == null) {
+            return null;
+        }
+        return new ParameterRestrictions(toDecimal(raw.getMin()), toDecimal(raw.getMax()), null,
+                Boolean.TRUE.equals(raw.getRange()), false, null, null, null);
+    }
+
+    static @Nullable ParameterRestrictions fromDictionary(
+            @Nullable DictionaryCategoryProductParameterAllOfRestrictionsRaw raw) {
         if (raw == null) {
             return null;
         }

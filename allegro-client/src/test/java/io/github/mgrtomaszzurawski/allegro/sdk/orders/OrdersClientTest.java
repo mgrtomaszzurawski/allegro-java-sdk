@@ -44,6 +44,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventStats;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentProvider;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PickupPoint;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Waybill;
@@ -95,6 +97,13 @@ class OrdersClientTest {
     private static final String EXPECTED_MARKETPLACE_ID = "allegro-pl";
     private static final String EXPECTED_REVISION = "abc123";
     private static final String EXPECTED_MESSAGE = "Please ship fast";
+    private static final String EXPECTED_PAID_AMOUNT = "44.98";
+    private static final String EXPECTED_PAYMENT_FINISHED_AT = "2026-07-15T10:32:00Z";
+    private static final String EXPECTED_SURCHARGE_AMOUNT = "5.00";
+    private static final String EXPECTED_SELLER_NOTE = "Fragile - handle with care";
+    private static final String FUTURE_PAYMENT_TYPE = "SOME_FUTURE_PAYMENT_TYPE";
+    private static final String FUTURE_PAYMENT_PROVIDER = "SOME_FUTURE_PROVIDER";
+    private static final String PAYMENT_ID = "9a8b7c6d-1111-2222-3333-444455556666";
 
     private static final long RETRY_AFTER_SECONDS = 120L;
     private static final int FAST_MAX_ATTEMPTS = 2;
@@ -119,7 +128,14 @@ class OrdersClientTest {
     private static final String PARAM_REVISION = "checkoutForm.revision";
     private static final String PARAM_BUYER_LOGIN = "buyer.login";
     private static final String PARAM_STATUS = "status";
+    private static final String PARAM_FULFILLMENT_STATUS = "fulfillment.status";
+    private static final String PARAM_TYPE = "type";
     private static final String STATUS_READY_FOR_PROCESSING = "READY_FOR_PROCESSING";
+    // Wire values no current SDK release models — used to prove forward-compat:
+    // an unknown enum value degrades to the UNKNOWN sentinel instead of throwing,
+    // and the UNKNOWN sentinel is never sent back as a filter query parameter.
+    private static final String FUTURE_STATUS = "SOME_FUTURE_STATUS";
+    private static final String FUTURE_EVENT_TYPE = "SOME_FUTURE_EVENT_TYPE";
     private static final String JSONPATH_STATUS = "$.status";
     private static final String JSONPATH_LINE_ITEM_ID = "$.lineItems[0].id";
     private static final String JSONPATH_SERIAL_VALUE = "$.lineItems[0].serialNumbers.entries[0].value";
@@ -180,6 +196,16 @@ class OrdersClientTest {
              "lineItems":[],
              "summary":{"totalToPay":{"amount":"0.00","currency":"PLN"}}}
             """;
+    // spec-derived: forward-compat probe. A wire status/fulfillment.status the SDK
+    // does not model must degrade to the UNKNOWN sentinel, not fail the response.
+    // Built by concatenation (not a text block) so the FUTURE_STATUS constant is
+    // the single source of the unmodelled wire value.
+    private static final String UNKNOWN_ENUM_ORDER_BODY =
+            "{\"id\":\"a8f6c3e2-1111-2222-3333-444455556666\",\"status\":\"" + FUTURE_STATUS + "\","
+            + "\"buyer\":{\"id\":\"44556677\",\"email\":\"buyer@example.com\",\"login\":\"test-buyer\"},"
+            + "\"lineItems\":[],"
+            + "\"fulfillment\":{\"status\":\"" + FUTURE_STATUS + "\"},"
+            + "\"summary\":{\"totalToPay\":{\"amount\":\"0.00\",\"currency\":\"PLN\"}}}";
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -279,6 +305,16 @@ class OrdersClientTest {
 
             assertEquals(EXPECTED_TOTAL_AMOUNT, order.totalToPay().amount());
             assertEquals(EXPECTED_CURRENCY, order.totalToPay().currency());
+
+            // payment breakdown, surcharges, and the seller's private note
+            assertEquals(PaymentType.ONLINE, order.payment().type());
+            assertEquals(PaymentProvider.PAYU, order.payment().provider());
+            assertEquals(EXPECTED_PAID_AMOUNT, order.payment().paidAmount().amount());
+            assertEquals(OffsetDateTime.parse(EXPECTED_PAYMENT_FINISHED_AT),
+                    order.payment().finishedAt());
+            assertEquals(1, order.surcharges().size());
+            assertEquals(EXPECTED_SURCHARGE_AMOUNT, order.surcharges().get(0).paidAmount().amount());
+            assertEquals(EXPECTED_SELLER_NOTE, order.sellerNote());
             verify(1, getRequestedFor(urlEqualTo(ORDER_PATH)));
         }
     }
@@ -441,7 +477,10 @@ class OrdersClientTest {
             assertNull(order.sellerStatus());
             assertNull(order.marketplaceId());
             assertNull(order.messageToSeller());
+            assertNull(order.payment());
+            assertNull(order.sellerNote());
             assertTrue(order.lineItems().isEmpty());
+            assertTrue(order.surcharges().isEmpty());
             // and optional buyer fields map to null, guest defaults to false
             assertNull(order.buyer().firstName());
             assertNull(order.buyer().lastName());
@@ -866,6 +905,121 @@ class OrdersClientTest {
             assertEquals(POINT_CITY, points.get(0).address().city());
             verify(1, getRequestedFor(urlPathEqualTo(PICKUP_POINTS_PATH))
                     .withQueryParam(PARAM_CARRIERS, equalTo(POINT_CARRIER)));
+        }
+    }
+
+    @Test
+    void get_whenEnumValuesAreUnknownFutureValues_mapToUnknownSentinel(WireMockRuntimeInfo wmInfo) {
+        // given — the order carries a buyer status and a fulfillment status this
+        // SDK release does not model (a spec value added after this release)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(ORDER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_ENUM_ORDER_BODY)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — an unknown enum value must not fail the whole response
+            Order order = allegro.orders().get(ORDER_ID);
+
+            // then — both enums degrade to the forward-compat UNKNOWN sentinel
+            assertEquals(OrderStatus.UNKNOWN, order.status());
+            assertEquals(SellerStatus.UNKNOWN, order.sellerStatus());
+        }
+    }
+
+    @Test
+    void get_whenPaymentEnumsAreUnknownFutureValues_mapToUnknownSentinel(WireMockRuntimeInfo wmInfo) {
+        // given — the payment carries a type and provider this SDK release does not model
+        stubToken(TEST_TOKEN);
+        String body = "{\"id\":\"" + ORDER_ID + "\",\"status\":\"BOUGHT\","
+                + "\"buyer\":{\"id\":\"1\",\"login\":\"b\",\"email\":\"b@example.com\"},"
+                + "\"lineItems\":[],"
+                + "\"payment\":{\"id\":\"" + PAYMENT_ID + "\",\"type\":\"" + FUTURE_PAYMENT_TYPE
+                + "\",\"provider\":\"" + FUTURE_PAYMENT_PROVIDER + "\"},"
+                + "\"summary\":{\"totalToPay\":{\"amount\":\"0.00\",\"currency\":\"PLN\"}}}";
+        stubFor(get(urlEqualTo(ORDER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(body)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Order order = allegro.orders().get(ORDER_ID);
+
+            // then — the unknown payment enums degrade to UNKNOWN, the payment still maps
+            assertEquals(PAYMENT_ID, order.payment().id());
+            assertEquals(PaymentType.UNKNOWN, order.payment().type());
+            assertEquals(PaymentProvider.UNKNOWN, order.payment().provider());
+        }
+    }
+
+    @Test
+    void streamEvents_whenEventTypeIsUnknownFutureValue_mapsToUnknownSentinel(WireMockRuntimeInfo wmInfo) {
+        // given — an event whose type this SDK release does not model
+        stubToken(TEST_TOKEN);
+        String eventBody = "{\"events\":[{\"id\":\"" + EVENT_ID_ONE + "\",\"type\":\""
+                + FUTURE_EVENT_TYPE + "\",\"occurredAt\":\"" + EVENT_TIME + "\","
+                + "\"order\":{\"checkoutForm\":{\"id\":\"" + EVENT_ORDER_ID_PREFIX + EVENT_ID_ONE
+                + "\"}}}]}";
+        stubFor(get(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, absent())
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(eventBody)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<OrderEvent> events =
+                    allegro.orders().streamEvents(OrderEventFilter.all()).limit(1).toList();
+
+            // then — the unknown type degrades to UNKNOWN, the event still maps
+            assertEquals(1, events.size());
+            assertEquals(OrderEventType.UNKNOWN, events.get(0).type());
+        }
+    }
+
+    @Test
+    void streamOrders_whenFilterHasUnknownStatuses_omitsThemFromQuery(WireMockRuntimeInfo wmInfo) {
+        // given — a filter carrying only the read-only UNKNOWN sentinels plus a real
+        // (non-enum) filter; the sentinels must never be serialized to the wire
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ordersPage(1, 0))));
+        OrderFilter filter = OrderFilter.builder()
+                .statuses(OrderStatus.UNKNOWN)
+                .fulfillmentStatuses(SellerStatus.UNKNOWN)
+                .buyerLogin(EXPECTED_BUYER_LOGIN)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.orders().streamOrders(filter).limit(1).toList();
+
+            // then — UNKNOWN dropped (would 400 as status=UNKNOWN), real filter kept
+            verify(1, getRequestedFor(urlPathEqualTo(CHECKOUT_FORMS_PATH))
+                    .withQueryParam(PARAM_STATUS, absent())
+                    .withQueryParam(PARAM_FULFILLMENT_STATUS, absent())
+                    .withQueryParam(PARAM_BUYER_LOGIN, equalTo(EXPECTED_BUYER_LOGIN)));
+        }
+    }
+
+    @Test
+    void streamEvents_whenFilterHasUnknownType_omitsTypeFromQuery(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(EVENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(eventsBody(EVENT_ID_ONE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — the UNKNOWN sentinel is not a real event type filter
+            allegro.orders().streamEvents(OrderEventFilter.ofTypes(OrderEventType.UNKNOWN))
+                    .limit(1).toList();
+
+            // then — no type query param sent (dropped rather than type=UNKNOWN)
+            verify(1, getRequestedFor(urlPathEqualTo(EVENTS_PATH))
+                    .withQueryParam(PARAM_TYPE, absent()));
         }
     }
 }
