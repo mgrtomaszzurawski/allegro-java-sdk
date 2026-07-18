@@ -14,6 +14,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.JoinStrateg
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PaymentPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.RateSetType;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,6 +35,7 @@ class ShippingEnumsTest {
         assertEquals(PosStatus.TEMPORARILY_CLOSED, PosStatus.fromWire("TEMPORARILY_CLOSED"));
         assertEquals(ConfirmationType.AWAIT_CONTACT, ConfirmationType.fromWire("AWAIT_CONTACT"));
         assertEquals(JoinStrategy.SUM, JoinStrategy.fromWire("SUM"));
+        assertEquals(RateSetType.PHYSICAL, RateSetType.fromWire("PHYSICAL"));
     }
 
     @Test
@@ -42,6 +44,7 @@ class ShippingEnumsTest {
         assertEquals(PosStatus.UNKNOWN, PosStatus.fromWire(UNMODELLED));
         assertEquals(ConfirmationType.UNKNOWN, ConfirmationType.fromWire(UNMODELLED));
         assertEquals(JoinStrategy.UNKNOWN, JoinStrategy.fromWire(UNMODELLED));
+        assertEquals(RateSetType.UNKNOWN, RateSetType.fromWire(UNMODELLED));
     }
 
     @Test
@@ -50,6 +53,7 @@ class ShippingEnumsTest {
         assertEquals(PosStatus.UNKNOWN, PosStatus.fromWire(null));
         assertEquals(ConfirmationType.UNKNOWN, ConfirmationType.fromWire(null));
         assertEquals(JoinStrategy.UNKNOWN, JoinStrategy.fromWire(null));
+        assertEquals(RateSetType.UNKNOWN, RateSetType.fromWire(null));
     }
 
     @Test
@@ -58,6 +62,7 @@ class ShippingEnumsTest {
         assertEquals("ACTIVE", PosStatus.ACTIVE.wireValue());
         assertEquals("CONTACT_NOT_REQUIRED", ConfirmationType.CONTACT_NOT_REQUIRED.wireValue());
         assertEquals("MIN", JoinStrategy.MIN.wireValue());
+        assertEquals("ELECTRONIC", RateSetType.ELECTRONIC.wireValue());
     }
 
     @Test
@@ -66,6 +71,7 @@ class ShippingEnumsTest {
         assertThrows(IllegalStateException.class, PosStatus.UNKNOWN::wireValue);
         assertThrows(IllegalStateException.class, ConfirmationType.UNKNOWN::wireValue);
         assertThrows(IllegalStateException.class, JoinStrategy.UNKNOWN::wireValue);
+        assertThrows(IllegalStateException.class, RateSetType.UNKNOWN::wireValue);
     }
 
     @Test

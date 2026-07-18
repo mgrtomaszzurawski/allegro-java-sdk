@@ -40,4 +40,11 @@ public interface Shipping {
      * @return the delivery-settings sub-facade
      */
     DeliverySettings settings();
+
+    /**
+     * Shipping rates — the seller's per-delivery-method price sets.
+     *
+     * @return the shipping-rates sub-facade
+     */
+    ShippingRates rates();
 }

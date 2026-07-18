@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.PointOfServiceRequestBuilder;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.ShippingRateBuilder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Address;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Coordinates;
@@ -20,6 +21,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.OpenHour;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServiceRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.RateSetType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingRate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingRateSetRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingTime;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Weight;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -402,6 +408,148 @@ class ShippingBuildersTest {
     void deliverySettingsBuilder_whenJoinPolicyMissing_throws() {
         var builder = DeliverySettingsRequest.builder().freeDelivery(Money.of("200.00", "PLN"));
         assertMessage("DeliverySettingsRequest.joinPolicy is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    // ---- ShippingRateBuilder ----
+
+    private static final String METHOD_ID = "method-courier";
+
+    private static ShippingRateBuilder minimalRate() {
+        return ShippingRate.builder()
+                .deliveryMethodId(METHOD_ID)
+                .firstItemRate(Money.of("12.99", "PLN"))
+                .nextItemRate(Money.of("2.00", "PLN"))
+                .maxQuantityPerPackage(10);
+    }
+
+    @Test
+    void rateBuilder_requiredFieldsOnly_buildsWithNullOptionals() {
+        // when
+        ShippingRate rate = minimalRate().build();
+
+        // then
+        assertEquals(METHOD_ID, rate.deliveryMethodId());
+        assertNull(rate.maxPackageWeight());
+        assertNull(rate.shippingTime());
+    }
+
+    @Test
+    void rateBuilder_allFieldsSet_builds() {
+        // when
+        ShippingRate rate = minimalRate()
+                .maxPackageWeight(new Weight("30.0", "KILOGRAMS"))
+                .shippingTime(new ShippingTime("24", "48"))
+                .build();
+
+        // then
+        assertEquals(Money.of("12.99", "PLN"), rate.firstItemRate());
+        assertEquals(Money.of("2.00", "PLN"), rate.nextItemRate());
+        assertEquals(10, rate.maxQuantityPerPackage());
+        assertEquals("KILOGRAMS", rate.maxPackageWeight().unit());
+        assertEquals("48", rate.shippingTime().toTime());
+    }
+
+    @Test
+    void rateBuilder_toBuilder_preservesFields() {
+        // given
+        ShippingRate original = minimalRate()
+                .maxPackageWeight(new Weight("30.0", "KILOGRAMS")).build();
+
+        // when
+        ShippingRate copy = original.toBuilder().build();
+
+        // then
+        assertEquals(original, copy);
+    }
+
+    @Test
+    void rateBuilder_whenDeliveryMethodIdMissing_throws() {
+        var builder = ShippingRate.builder()
+                .firstItemRate(Money.of("12.99", "PLN"))
+                .nextItemRate(Money.of("2.00", "PLN")).maxQuantityPerPackage(10);
+        assertMessage("ShippingRate.deliveryMethodId is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateBuilder_whenFirstItemRateMissing_throws() {
+        var builder = ShippingRate.builder().deliveryMethodId(METHOD_ID)
+                .nextItemRate(Money.of("2.00", "PLN")).maxQuantityPerPackage(10);
+        assertMessage("ShippingRate.firstItemRate is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateBuilder_whenNextItemRateMissing_throws() {
+        var builder = ShippingRate.builder().deliveryMethodId(METHOD_ID)
+                .firstItemRate(Money.of("12.99", "PLN")).maxQuantityPerPackage(10);
+        assertMessage("ShippingRate.nextItemRate is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateBuilder_whenMaxQuantityMissing_throws() {
+        var builder = ShippingRate.builder().deliveryMethodId(METHOD_ID)
+                .firstItemRate(Money.of("12.99", "PLN")).nextItemRate(Money.of("2.00", "PLN"));
+        assertMessage("ShippingRate.maxQuantityPerPackage is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    // ---- ShippingRateSetRequestBuilder ----
+
+    private static final String SET_NAME = "Domestic rates";
+
+    @Test
+    void rateSetBuilder_requiredFieldsOnly_buildsWithNullOptionals() {
+        // when
+        ShippingRateSetRequest request = ShippingRateSetRequest.builder()
+                .name(SET_NAME).rates(List.of(minimalRate().build())).build();
+
+        // then
+        assertEquals(SET_NAME, request.name());
+        assertEquals(1, request.rates().size());
+        assertNull(request.type());
+        assertNull(request.dispatchCountry());
+    }
+
+    @Test
+    void rateSetBuilder_allFieldsSet_builds() {
+        // when
+        ShippingRateSetRequest request = ShippingRateSetRequest.builder()
+                .name(SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(COUNTRY_CODE)
+                .rates(List.of(minimalRate().build())).build();
+
+        // then
+        assertEquals(RateSetType.PHYSICAL, request.type());
+        assertEquals(COUNTRY_CODE, request.dispatchCountry());
+    }
+
+    @Test
+    void rateSetBuilder_toBuilder_preservesFields() {
+        // given
+        ShippingRateSetRequest original = ShippingRateSetRequest.builder()
+                .name(SET_NAME).type(RateSetType.PHYSICAL)
+                .rates(List.of(minimalRate().build())).build();
+
+        // when
+        ShippingRateSetRequest copy = original.toBuilder().build();
+
+        // then
+        assertEquals(original, copy);
+    }
+
+    @Test
+    void rateSetBuilder_whenNameMissing_throws() {
+        var builder = ShippingRateSetRequest.builder().rates(List.of(minimalRate().build()));
+        assertMessage("ShippingRateSetRequest.name is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenRatesEmpty_throws() {
+        var builder = ShippingRateSetRequest.builder().name(SET_NAME);
+        assertMessage("ShippingRateSetRequest.rates is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
 
