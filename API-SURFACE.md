@@ -123,7 +123,7 @@ Classifieds classifieds = client.classifieds();
 classifieds.availablePackages(categoryId)         // GET /sale/classifieds-packages (category.id required)
 classifieds.getPackage(packageId)                 // GET /sale/classifieds-packages/{packageId}
 classifieds.packagesOfOffer(offerId)              // GET /sale/offer-classifieds-packages/{offerId}
-classifieds.assignPackages(offerId, packageIds...)// PUT /sale/offer-classifieds-packages/{offerId}
+classifieds.assignPackages(offerId, ClassifiedAssignment) // PUT /sale/offer-classifieds-packages/{offerId}
 classifieds.offerStats(ClassifiedsStatsFilter)    // GET /sale/classified-offers-stats
 classifieds.sellerStats(ClassifiedsStatsFilter)   // GET /sale/classified-seller-stats
 ```

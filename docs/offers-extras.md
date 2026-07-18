@@ -36,3 +36,30 @@ requires a **user (seller) access token** with the `sale:offers:read` scope
 (the spec declares it `bearer-token-for-user`), so authenticate with an
 authorization-code or device grant — an app-only client-credentials token is
 not sufficient.
+
+Read one package configuration directly by id with `getPackage(packageId)`.
+
+### Assigning packages to an offer
+
+An advertisement offer carries exactly one **base** package and any number of
+**extra** packages. Read the current assignment with `packagesOfOffer(offerId)`
+and replace it with `assignPackages(offerId, assignment)`:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
+
+ClassifiedAssignment assignment = ClassifiedAssignment.builder()
+        .basePackage(basePackageId)
+        .addExtraPackage(extraPackageId, true)   // true republishes the advert
+        .build();
+client.classifieds().assignPackages(offerId, assignment);
+
+OfferClassifieds assigned = client.classifieds().packagesOfOffer(offerId);
+System.out.println("base package: " + assigned.basePackageId());
+```
+
+The builder validates that a base package is set (fail-fast); extra packages are
+optional and each may set a `republish` flag. `assignPackages` writes with the
+`sale:offers:write` scope, so it needs a **user (seller) access token** just like
+the reads.
