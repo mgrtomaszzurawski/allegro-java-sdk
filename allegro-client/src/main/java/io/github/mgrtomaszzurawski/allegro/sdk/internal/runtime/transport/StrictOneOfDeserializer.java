@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -73,40 +74,50 @@ final class StrictOneOfDeserializer extends JsonDeserializer<Object>
 
     @Override
     public Object deserialize(JsonParser parser, DeserializationContext context) throws IOException {
-        ObjectMapper mapper = (ObjectMapper) parser.getCodec();
-        JsonNode tree = mapper.readTree(parser);
+        // Use the ObjectCodec, not a cast to ObjectMapper: when a candidate branch
+        // is itself trialled via an ObjectReader (a nested oneOf wrapper), the parser
+        // handed to this deserializer carries an ObjectReader codec, not the mapper.
+        ObjectCodec codec = parser.getCodec();
+        JsonNode tree = codec.readTree(parser);
 
-        Object strictMatch = singleMatch(mapper, tree, true);
+        Object strictMatch = singleMatch(codec, tree, true);
         if (strictMatch != NO_MATCH) {
             return wrap(strictMatch);
         }
-        Object lenientMatch = singleMatch(mapper, tree, false);
+        Object lenientMatch = singleMatch(codec, tree, false);
         if (lenientMatch != NO_MATCH) {
             return wrap(lenientMatch);
         }
         if (candidateSchemas.containsValue(Object.class)) {
-            return wrap(mapper.convertValue(tree, Object.class));
+            return wrap(readerFor(codec, Object.class).readValue(tree));
         }
         throw new IOException("Cannot resolve oneOf " + oneOfType.getSimpleName()
                 + ": no candidate schema matches the payload");
     }
 
     /** The sole matching typed candidate, or {@link #NO_MATCH} for zero or many. */
-    private Object singleMatch(ObjectMapper mapper, JsonNode tree, boolean strict) {
+    private Object singleMatch(ObjectCodec codec, JsonNode tree, boolean strict) {
         List<Object> matches = new ArrayList<>();
         for (Class<?> candidate : candidateSchemas.values()) {
             if (candidate == Object.class) {
                 continue;
             }
             ObjectReader reader = strict
-                    ? mapper.readerFor(candidate).with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                    : mapper.readerFor(candidate).without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+                    ? readerFor(codec, candidate).with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    : readerFor(codec, candidate).without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
             Object value = readOrNull(reader, tree);
             if (value != null) {
                 matches.add(value);
             }
         }
         return matches.size() == 1 ? matches.get(0) : NO_MATCH;
+    }
+
+    /** A reader for {@code type} from the codec, whether it is an ObjectMapper or ObjectReader. */
+    private static ObjectReader readerFor(ObjectCodec codec, Class<?> type) {
+        return codec instanceof ObjectMapper mapper
+                ? mapper.readerFor(type)
+                : ((ObjectReader) codec).forType(type);
     }
 
     /** Deserialize {@code tree} with {@code reader}, or {@code null} when it does not match. */

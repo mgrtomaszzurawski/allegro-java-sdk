@@ -16,6 +16,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConf
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListIdItemRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListManualRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoActualPriceReductionRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
 import java.io.IOException;
@@ -36,6 +37,8 @@ class StrictOneOfModuleTest {
     private static final String TEST_MANUAL_LIST_JSON =
             "{\"items\":[{\"type\":\"ID\",\"id\":\"123\"}]}";
     private static final String TEST_SCALAR_JSON = "123";
+    private static final String TEST_NESTED_MANUAL_JSON =
+            "{\"type\":\"MANUAL\",\"items\":[{\"type\":\"ID\",\"id\":\"123\"}]}";
     private static final String OVER_MATCH_MARKER = "classes match";
 
     /** The SDK mapper config WITHOUT the strict-oneOf module (forward-compat lenient). */
@@ -91,6 +94,21 @@ class StrictOneOfModuleTest {
         assertEquals(1, manual.getItems().size());
         assertInstanceOf(CompatibilityListIdItemRaw.class,
                 manual.getItems().get(0).getActualInstance());
+    }
+
+    @Test
+    void deserialize_whenCandidateContainsNestedOneOf_resolvesThroughReaderCodec() throws IOException {
+        // given — a oneOf whose Manual branch has items:List<CompatibilityListItemRaw>,
+        // itself a strict wrapper; that nested trial runs under an ObjectReader codec
+        ObjectMapper strict = strictMapper();
+
+        // when
+        CompatibilityListProductOfferResponseRaw result =
+                strict.readValue(TEST_NESTED_MANUAL_JSON, CompatibilityListProductOfferResponseRaw.class);
+
+        // then — the Manual branch resolves; the nested wrapper is not swallowed as a
+        // ClassCastException miss (the codec-cast bug)
+        assertInstanceOf(CompatibilityListManualRaw.class, result.getActualInstance());
     }
 
     @Test
