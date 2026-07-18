@@ -6,8 +6,10 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.DeliverySettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.PointsOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.ShippingRates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -53,6 +55,16 @@ public final class ShippingImpl implements Shipping {
     @Override
     public PointsOfService points() {
         return new PointsOfServiceImpl(runtime, sellerIdResolver::sellerId);
+    }
+
+    @Override
+    public DeliverySettings settings() {
+        return new DeliverySettingsImpl(runtime);
+    }
+
+    @Override
+    public ShippingRates rates() {
+        return new ShippingRatesImpl(runtime);
     }
 
     private static List<DeliveryMethod> mapMethods(

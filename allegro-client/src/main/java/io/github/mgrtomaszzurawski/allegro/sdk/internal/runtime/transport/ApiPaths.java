@@ -315,6 +315,10 @@ public final class ApiPaths {
     public static final String POINTS_OF_SERVICE = "/points-of-service";
     /** Delivery methods Allegro offers the seller. */
     public static final String DELIVERY_METHODS = "/sale/delivery-methods";
+    /** Seller's delivery settings (free-delivery thresholds, join policy). */
+    public static final String DELIVERY_SETTINGS = "/sale/delivery-settings";
+    /** Seller's shipping-rate sets. */
+    public static final String SHIPPING_RATES = "/sale/shipping-rates";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */

@@ -1,0 +1,7 @@
+{
+  "marketplace": { "id": "allegro-pl" },
+  "freeDelivery": { "amount": "200.00", "currency": "PLN" },
+  "abroadFreeDelivery": { "amount": "500.00", "currency": "PLN" },
+  "joinPolicy": { "strategy": "MAX" },
+  "updatedAt": "2026-07-18T12:00:00Z"
+}
