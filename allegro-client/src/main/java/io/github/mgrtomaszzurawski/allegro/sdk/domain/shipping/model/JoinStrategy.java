@@ -17,13 +17,21 @@ import org.jspecify.annotations.Nullable;
  */
 public enum JoinStrategy {
 
-    /** Charge the cheapest of the joined items' delivery rates. */
+    /**
+     * Charge the cheapest of the joined items' delivery rates. The name mirrors
+     * the Allegro spec value {@code MIN} exactly (a spec identifier, the
+     * documented exception to the short-name rule), so the PMD short-variable
+     * rule — which has no per-value carve-out — is suppressed on this constant.
+     */
+    @SuppressWarnings("PMD.ShortVariableWithDomainExceptions")
     MIN,
 
-    /** Charge the most expensive of the joined items' delivery rates. */
+    /** Charge the most expensive of the joined items' delivery rates (spec value {@code MAX}). */
+    @SuppressWarnings("PMD.ShortVariableWithDomainExceptions")
     MAX,
 
-    /** Charge the sum of the joined items' delivery rates. */
+    /** Charge the sum of the joined items' delivery rates (spec value {@code SUM}). */
+    @SuppressWarnings("PMD.ShortVariableWithDomainExceptions")
     SUM,
 
     /** A value returned by the server that this SDK release does not model. */
