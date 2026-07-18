@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogCategories;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogProducts;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 
 /**
@@ -17,13 +18,20 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRu
 public final class CatalogImpl implements Catalog {
 
     private final CatalogCategories categories;
+    private final CatalogProducts products;
 
     public CatalogImpl(HttpRuntime runtime) {
         this.categories = new CatalogCategoriesImpl(runtime);
+        this.products = new CatalogProductsImpl(runtime);
     }
 
     @Override
     public CatalogCategories categories() {
         return categories;
+    }
+
+    @Override
+    public CatalogProducts products() {
+        return products;
     }
 }

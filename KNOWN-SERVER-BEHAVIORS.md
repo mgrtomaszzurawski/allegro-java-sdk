@@ -188,6 +188,20 @@ to a `null` `Money` rather than throwing. `POST /payments/refunds` is a **destru
 movement** — verify it only against a disposable sandbox payment, and reuse the idempotency
 `commandId` on any retry.
 
+## Post-sale comms (bucket J)
+
+### Message attachments are not downloadable straight after upload (verified 2026-07-18, sandbox)
+
+The message-attachment flow is `declareAttachment` (POST) → `uploadAttachment` (PUT bytes) →
+reference the id in a message. Both the declare and the upload succeed and return the attachment
+id, but `GET /messaging/message-attachments/{id}` on that just-uploaded id returns
+**`404 NOT_FOUND`** (surfaced as `AllegroNotFoundException`) — the attachment only becomes
+retrievable once it has been referenced in a **delivered** message and scanned (its
+`MessageAttachment.status()` reaches `SAFE`). Consequence for consumers: do not upload-then-
+download the same id as a health check; download an attachment you obtained from a received
+message. The SDK surfaces the 404 correctly; the `messaging` demo verifies declare+upload
+seller-side and treats the immediate download 404 as expected.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer

@@ -1,0 +1,21 @@
+{
+  "offers": [
+    {
+      "id": "12345678",
+      "name": "Test offer",
+      "marketplace": { "id": "allegro-pl" },
+      "basePrice": { "amount": "100.00", "currency": "PLN" },
+      "discount": { "opportunity": true },
+      "recommendedPriceReduction": { "sellerMaxDeclaredPercentage": "10" },
+      "declaredPriceReduction": { "sellerMaxDeclaredPercentage": "8" },
+      "actualPriceReduction": {
+        "sellerMaxDeclaredPercentage": "8",
+        "finalPriceForTheBuyer": { "amount": "92.00", "currency": "PLN" }
+      },
+      "discountedAt": "2026-07-10T10:00:00Z",
+      "excludedAt": null
+    }
+  ],
+  "count": 1,
+  "totalCount": 1
+}
