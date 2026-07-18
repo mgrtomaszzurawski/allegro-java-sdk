@@ -63,3 +63,33 @@ The builder validates that a base package is set (fail-fast); extra packages are
 optional and each may set a `republish` flag. `assignPackages` writes with the
 `sale:offers:write` scope, so it needs a **user (seller) access token** just like
 the reads.
+
+### Advertisement statistics
+
+Read daily statistics for selected advertisements with `offerStats(offerIds,
+filter)` (up to 50 offer ids), or aggregated across all your advertisements with
+`sellerStats(filter)`:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder.ClassifiedStatsFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.SellerClassifiedStats;
+import java.time.OffsetDateTime;
+
+ClassifiedStatsFilter lastMonth = ClassifiedStatsFilter.builder()
+        .eventsFrom(OffsetDateTime.now().minusMonths(1))
+        .eventsTo(OffsetDateTime.now())
+        .build();
+
+SellerClassifiedStats stats = client.classifieds().sellerStats(lastMonth);
+stats.totals().forEach(stat ->
+        System.out.println(stat.eventType() + ": " + stat.count()));
+stats.perDay().forEach(day ->
+        System.out.println(day.date() + " -> " + day.events().size() + " event type(s)"));
+```
+
+Each `ClassifiedEventStat` pairs a `ClassifiedEventType` (for example
+`SHOWED_PHONE_NUMBER`, `ASKED_QUESTION`, `ADDED_TO_FAVOURITES`) with its `count`.
+The date range is optional — `ClassifiedStatsFilter.all()` leaves it to the
+server default — but Allegro requires the two bounds to be less than three months
+apart. Both reads use the `sale:offers:read` scope and therefore a **user
+(seller) access token**.

@@ -124,8 +124,8 @@ classifieds.availablePackages(categoryId)         // GET /sale/classifieds-packa
 classifieds.getPackage(packageId)                 // GET /sale/classifieds-packages/{packageId}
 classifieds.packagesOfOffer(offerId)              // GET /sale/offer-classifieds-packages/{offerId}
 classifieds.assignPackages(offerId, ClassifiedAssignment) // PUT /sale/offer-classifieds-packages/{offerId}
-classifieds.offerStats(ClassifiedsStatsFilter)    // GET /sale/classified-offers-stats
-classifieds.sellerStats(ClassifiedsStatsFilter)   // GET /sale/classified-seller-stats
+classifieds.offerStats(offerIds, ClassifiedStatsFilter)  // GET /sale/classified-offers-stats (offer.id array, ≤50)
+classifieds.sellerStats(ClassifiedStatsFilter)           // GET /sale/classified-seller-stats
 ```
 
 ## B — `client.orders()`, `client.payments()`, `client.billing()`
