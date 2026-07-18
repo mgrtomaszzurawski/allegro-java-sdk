@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
@@ -19,6 +20,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -54,12 +56,16 @@ public final class OffersImpl implements Offers {
 
     private final HttpSupport http;
 
+    // ---- bucket F sub-facades ----
+    private final OfferTags tags;
+
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
         // [append point: offers sub-facade wiring] Bucket A constructs its own
         // sub-facades here (batch/promoOptions/media); bucket F constructs its
         // sub-facades (tags/translations/bundles/flexibleBundles/rating) from
         // this same runtime. One block per bucket, append-only, BACKLOG order.
+        this.tags = new OfferTagsImpl(runtime);
     }
 
     @Override
@@ -115,6 +121,12 @@ public final class OffersImpl implements Offers {
     public SmartClassification smartClassification(String offerId) {
         return SmartClassification.from(http.getAuthenticated(
                 ApiPaths.offerSmart(offerId), SmartOfferClassificationReportRaw.class, OP_SMART));
+    }
+
+    // ---- bucket F sub-accessors ----
+    @Override
+    public OfferTags tags() {
+        return tags;
     }
 
     /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */

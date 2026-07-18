@@ -98,6 +98,19 @@ public final class ApiPaths {
     public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
     /** Daily advertisement statistics aggregated for the seller. */
     public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
+    /** Seller's private offer tags ({@code /sale/offer-tags}); append {@code /{tagId}}. */
+    public static final String OFFER_TAGS = "/sale/offer-tags";
+    private static final String TAGS_SEGMENT = "tags";
+
+    /** One offer tag ({@code /sale/offer-tags/{tagId}}). */
+    public static String offerTag(String tagId) {
+        return subPath(OFFER_TAGS, tagId);
+    }
+
+    /** Tags assigned to an offer ({@code /sale/offers/{offerId}/tags}). */
+    public static String offerAssignedTags(String offerId) {
+        return subPath(SALE_OFFERS, offerId, TAGS_SEGMENT);
+    }
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */

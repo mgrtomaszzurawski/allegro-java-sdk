@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -64,4 +65,12 @@ public interface Offers {
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
     // sub-accessors (tags(), translations(), bundles(), flexibleBundles(),
     // rating()). One block per bucket, append-only, in BACKLOG order.
+
+    // ---- bucket F sub-accessors ----
+    /**
+     * The seller's private offer tags and their assignment to offers.
+     *
+     * @return the offer-tags sub-facade
+     */
+    OfferTags tags();
 }

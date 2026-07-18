@@ -73,6 +73,7 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_ACCOUNT, AccountDemo::run);
         SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
+        SCENARIOS.put(OfferTagsDemo.SCENARIO, OfferTagsDemo::run);
         SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);
         SCENARIOS.put(SCENARIO_POS_ROUNDTRIP, PointsOfServiceDemo::run);
         SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);

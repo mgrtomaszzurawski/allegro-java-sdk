@@ -64,6 +64,9 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model;
 
     // Pricing: automatic pricing rules, promotions, deposits (bucket G).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing;
