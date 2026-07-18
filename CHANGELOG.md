@@ -135,5 +135,12 @@ sections. Empty subsections are dropped by the release engineer when folding
 - Contacts facade (`client.contacts()`) — starter slice: list, get, create and update
   seller contact cards (`/sale/offer-contacts`) with a fluent, fail-fast `ContactRequest`
   builder, immutable `Contact` records, and a `contacts` sandbox write→read demo scenario.
+- Messaging facade (`client.messaging()`) — the message center (`/messaging`, 11 ops):
+  lazy `streamThreads()`/`streamMessages()` pagination, `thread`/`message` reads, `markRead`,
+  `send`/`reply`, `deleteMessage`, and the binary attachment `declare`→`upload`→`download`
+  flow. Immutable records (`MessageThread`, `Message`, `MessageAttachment`, `AttachmentRef`)
+  with `UNKNOWN`-tolerant enums, fail-fast `NewMessageRequest`/`ReplyRequest`/
+  `AttachmentDeclaration`/`MessageFilter` builders, and a `messaging` demo scenario
+  (self-seeded attachment round-trip + threads read / `markRead` write→read).
 
 ### K — sale-settings
