@@ -107,6 +107,14 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `client.billing()` facade: `streamEntries(BillingFilter)` (lazy stream) and `types()`
   (billing-type dictionary; public, app-token friendly — **live-verified on the sandbox: 234
   types**). Models `BillingEntry`/`BillingType`; `docs/billing.md` and the `billing-types` probe.
+- Orders sub-facades: `orders().invoices()` (`ofOrder`, `declare`, binary `uploadFile`),
+  `orders().returns()` (BETA: `streamReturns`, `get`, `rejectRefund` with a typed
+  `ReturnRejectionCode`) and `orders().commissionRefunds()` (`streamClaims`, `get`, `claim`,
+  `cancel`). New models `OrderInvoice`/`CustomerReturn`/`RefundClaim`/`ReturnRejectionCode` and
+  fluent request/filter builders. **All 27 bucket-B operations are now on the SDK surface.**
+  Live write→read verification of the order-keyed endpoints remains tracked (needs a seeded
+  buyer order; `returns().rejectRefund` also needs the core beta JSON-body Content-Type fix —
+  see `KNOWN-SERVER-BEHAVIORS.md`), so their WireMock fixtures stay `spec-derived` meanwhile.
 
 ### C — shipping
 
@@ -143,6 +151,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /affiliate/conversions/cps`, beta, lazy stream).
 - New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
   `RatingFilter`, `CharitySearch`, `ConversionFilter`.
+- `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
+  bucket D's live verification, run with a stored buyer token
+  (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
+  (`myBid` on a non-existent auction → `AllegroNotFoundException`); `myBid`/
+  `placeBid`→`myBid` write→read on a real auction stay gated behind
+  `-Pdemo.offerId`/`-Pdemo.bidAmount`. Verified live 2026-07-18: a buyer token
+  (account distinct from the seller) reaches the bidding API and maps its 404s.
 
 ### E — catalog-products
 

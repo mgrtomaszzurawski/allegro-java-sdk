@@ -16,6 +16,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OrderEventStatsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrderEventsListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrdersShippingCarrierRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrdersShippingCarriersResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.CommissionRefunds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.CustomerReturns;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.OrderInvoices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.OrderEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.OrderFilter;
@@ -90,9 +93,30 @@ public final class OrdersImpl implements Orders {
             "revision must not be blank; use the two-argument overload for last-write-wins";
 
     private final HttpSupport http;
+    private final OrderInvoices invoices;
+    private final CustomerReturns returns;
+    private final CommissionRefunds commissionRefunds;
 
     public OrdersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
+        this.invoices = new OrderInvoicesImpl(runtime);
+        this.returns = new CustomerReturnsImpl(runtime);
+        this.commissionRefunds = new CommissionRefundsImpl(runtime);
+    }
+
+    @Override
+    public OrderInvoices invoices() {
+        return invoices;
+    }
+
+    @Override
+    public CustomerReturns returns() {
+        return returns;
+    }
+
+    @Override
+    public CommissionRefunds commissionRefunds() {
+        return commissionRefunds;
     }
 
     @Override

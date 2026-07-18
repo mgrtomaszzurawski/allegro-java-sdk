@@ -180,4 +180,28 @@ public interface Orders {
      * @since 0.4.0
      */
     List<PickupPoint> allegroPickupPoints(PointsFilter filter);
+
+    /**
+     * Customer invoices on orders (list, declare, upload the file).
+     *
+     * @return the invoices sub-facade
+     * @since 0.6.0
+     */
+    OrderInvoices invoices();
+
+    /**
+     * Customer returns (BETA): browse buyer returns and reject a refund.
+     *
+     * @return the customer-returns sub-facade
+     * @since 0.6.0
+     */
+    CustomerReturns returns();
+
+    /**
+     * Commission-refund claims: file, browse and cancel commission refunds.
+     *
+     * @return the commission-refunds sub-facade
+     * @since 0.6.0
+     */
+    CommissionRefunds commissionRefunds();
 }
