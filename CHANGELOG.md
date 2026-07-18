@@ -203,6 +203,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /affiliate/conversions/cps`, beta, lazy stream).
 - New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
   `RatingFilter`, `CharitySearch`, `ConversionFilter`.
+- `client.user().me()` now maps the `company` (business VAT registration —
+  `name`, `taxId`) and `baseMarketplaceId` fields of the `/me` response onto
+  `CurrentUser`; both were previously dropped. `CurrentUser.Company` is a new
+  nested record; both fields are `null` for a personal account that carries none.
+- `ConversionStatus` forward-compat (builds on core `enumUnknownDefaultCase`):
+  an affiliate conversion whose `status` this release does not model now degrades
+  to the read-only `UNKNOWN` sentinel instead of failing the whole stream, and the
+  `status` filter drops `UNKNOWN` rather than sending it verbatim (which the server
+  would reject).
 - `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
   bucket D's live verification, run with a stored buyer token
   (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
