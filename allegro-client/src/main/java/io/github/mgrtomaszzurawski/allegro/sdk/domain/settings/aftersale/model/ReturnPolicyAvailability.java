@@ -27,17 +27,23 @@ public record ReturnPolicyAvailability(
 
     private static final String ERR_RANGE = "range is required";
     private static final String ERR_CAUSE = "restrictionCause is required for a restricted/disabled range";
+    private static final String ERR_FULL_HAS_CAUSE = "restrictionCause must be absent for a FULL range";
 
     /**
-     * Canonical constructor — {@code range} is required, and a
+     * Canonical constructor — {@code range} is required, a
      * {@code restrictionCause} is required whenever the range is not
-     * {@code FULL}. Prefer the {@link #full()} / {@link #restricted} /
-     * {@link #disabled} factories over direct construction.
+     * {@code FULL} and must be absent when the range <em>is</em> {@code FULL}
+     * (mirroring the spec's "required if RESTRICTED or DISABLED"). Prefer the
+     * {@link #full()} / {@link #restricted} / {@link #disabled} factories over
+     * direct construction.
      */
     public ReturnPolicyAvailability {
         Objects.requireNonNull(range, ERR_RANGE);
         if (range != ReturnRange.FULL && restrictionCause == null) {
             throw new IllegalArgumentException(ERR_CAUSE);
+        }
+        if (range == ReturnRange.FULL && restrictionCause != null) {
+            throw new IllegalArgumentException(ERR_FULL_HAS_CAUSE);
         }
     }
 

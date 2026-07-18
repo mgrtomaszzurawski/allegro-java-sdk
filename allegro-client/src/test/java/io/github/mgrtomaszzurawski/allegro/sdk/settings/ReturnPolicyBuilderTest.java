@@ -259,12 +259,25 @@ class ReturnPolicyBuilderTest {
     // ---- availability value type ----
 
     @Test
-    void availability_factories_produceExpectedRangeAndCause() {
-        assertEquals(ReturnRange.FULL, ReturnPolicyAvailability.full().range());
-        assertNull(ReturnPolicyAvailability.full().restrictionCause());
-        assertEquals(ReturnRestrictionCause.PRESS,
-                ReturnPolicyAvailability.restricted(ReturnRestrictionCause.PRESS).restrictionCause());
-        assertEquals(ReturnRange.DISABLED,
-                ReturnPolicyAvailability.disabled(ReturnRestrictionCause.ALCOHOL).range());
+    void full_whenBuilt_producesFullRangeWithoutCause() {
+        ReturnPolicyAvailability availability = ReturnPolicyAvailability.full();
+        assertEquals(ReturnRange.FULL, availability.range());
+        assertNull(availability.restrictionCause());
+    }
+
+    @Test
+    void restricted_whenBuilt_producesRestrictedRangeWithCause() {
+        ReturnPolicyAvailability availability =
+                ReturnPolicyAvailability.restricted(ReturnRestrictionCause.PRESS);
+        assertEquals(ReturnRange.RESTRICTED, availability.range());
+        assertEquals(ReturnRestrictionCause.PRESS, availability.restrictionCause());
+    }
+
+    @Test
+    void disabled_whenBuilt_producesDisabledRangeWithCause() {
+        ReturnPolicyAvailability availability =
+                ReturnPolicyAvailability.disabled(ReturnRestrictionCause.ALCOHOL);
+        assertEquals(ReturnRange.DISABLED, availability.range());
+        assertEquals(ReturnRestrictionCause.ALCOHOL, availability.restrictionCause());
     }
 }

@@ -962,6 +962,7 @@ class AfterSaleConditionsClientTest {
             AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
                     () -> afterSale.returnPolicy(RETURN_POLICY_ID));
             assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
+            assertEquals(TRACE_ID, failure.traceId());
         }
     }
 
@@ -981,8 +982,34 @@ class AfterSaleConditionsClientTest {
             // then — typed field errors survive; POST is not retried
             AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                     () -> afterSale.createReturnPolicy(request));
+            assertEquals(BAD_REQUEST_CODE, failure.errors().get(0).code());
             assertEquals(BAD_REQUEST_PATH, failure.errors().get(0).path());
+            assertEquals(TRACE_ID, failure.traceId());
             verify(1, postRequestedFor(urlEqualTo(RETURN_POLICIES_PATH)));
+        }
+    }
+
+    @Test
+    void streamReturnPolicies_whenFullPage_stopsAtOffsetCeiling(WireMockRuntimeInfo wmInfo) {
+        // given — a full page of 60; the endpoint's offset max is 59, so there is
+        // no legal next page to request
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(RETURN_POLICIES_PATH))
+                .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(returnPoliciesPage(FULL_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            long total = allegro.settings().afterSale().streamReturnPolicies().count();
+
+            // then — the full page is returned but no out-of-range offset is sent
+            assertEquals(FULL_PAGE, total);
+            verify(1, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
+            verify(0, getRequestedFor(urlPathEqualTo(RETURN_POLICIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_OUT_OF_RANGE)));
         }
     }
 }

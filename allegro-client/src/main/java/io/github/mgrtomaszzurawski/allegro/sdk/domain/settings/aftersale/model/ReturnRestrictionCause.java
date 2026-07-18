@@ -12,12 +12,15 @@ import io.github.mgrtomaszzurawski.allegro.client.model.RestrictionCauseRaw;
  *
  * <p>Allegro documents {@code ALCOHOL}, {@code FULLY_IMPLEMENTED_SERVICE} and
  * {@code BOOKED_SERVICE} as deprecated. The wire value and the constant name
- * coincide, so mapping fails loudly via {@link #valueOf(String)} on an
- * unmapped value — though in practice a future server value fails one layer
- * earlier, at Layer-1 deserialization, because the generated enum rejects it.
- * Graceful degradation of an unrecognised enum to a sentinel is a cross-cutting
- * concern owned by the (frozen) runtime ObjectMapper, tracked as a core
- * follow-up (shared with bucket E's category-parameter {@code type}).
+ * coincide, so {@link #from} maps by {@link #valueOf(String)}. This enum is
+ * intentionally <strong>closed</strong>: a value Allegro adds later now
+ * deserializes cleanly at Layer 1 to the generated
+ * {@code UNKNOWN_DEFAULT_OPEN_API} sentinel (the core enum forward-compat, C3),
+ * and {@code from} then throws {@link IllegalArgumentException} <em>fail-loud</em>
+ * at the Layer-2 mapper rather than silently degrading. Graceful degradation
+ * would require an explicit {@code UNKNOWN} constant here — deferred until a real
+ * unmodelled value appears (a returns policy never streams unattended, so a loud
+ * failure is preferable to a silently-dropped restriction reason).
  *
  * @since 0.3.0
  */
