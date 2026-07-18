@@ -54,6 +54,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   `Offer` record with `OfferFormat`/`OfferStatus` enums and the shared `Money` Buy Now price)
   and `changeBuyNowPrice(offerId, Money)` (single-offer price-change command). `docs/offers.md`
   + compiled example + `offer` demo scenario (write→read on the sandbox).
+- Read/query slice: `streamOffers(OfferFilter)` — a lazy `Stream<OfferSummary>` over the
+  seller's offers (offset/limit paging, filter by name/status/format/price/sort) — and
+  `smartClassification(offerId)` (Allegro Smart! report → `SmartClassification` with its
+  per-condition breakdown). New `OfferFilter` builder; `offer` demo lists offers when no
+  `-Pdemo.offerId` is given (live-verified on the sandbox seller account).
 
 ### B — orders-payments
 
