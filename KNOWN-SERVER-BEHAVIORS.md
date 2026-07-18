@@ -135,6 +135,19 @@ distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. 
 with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
 the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
 
+### Smart! condition `value`/`threshold` is boolean OR number on the wire (verified 2026-07-18, sandbox)
+
+`GET /sale/smart` returns each entry in `conditions[]` with a `value` and `threshold` that are a
+JSON **number** for a metric condition (e.g. `1.5` days) but a JSON **boolean** for a pass/fail
+condition (e.g. `false`) — the spec types both as `number`, so the generated Layer-1 DTO
+(`SmartSellerClassificationReportConditionsInnerRaw`) fields are `BigDecimal` and Jackson aborts
+the WHOLE response with `MismatchedInputException` the moment a boolean value appears. Live-caught
+running the `account` seller demo (`me()` and `salesQuality()` succeed; `smartClassification()`
+threw). The SDK now reads the response from a `JsonNode` (`SmartClassificationMapper`), keeping a
+numeric value/threshold typed as `BigDecimal` and mapping a boolean one to `null` — the pass/fail
+outcome is carried by the condition's `fulfilled` flag. Not a `oneOf`/enum/subtype case, so the
+core C3–C5 forward-compat handlers do not apply.
+
 ## Sale settings (bucket K)
 
 ### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)

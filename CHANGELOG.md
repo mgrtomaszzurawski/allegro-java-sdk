@@ -236,6 +236,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   to the read-only `UNKNOWN` sentinel instead of failing the whole stream, and the
   `status` filter drops `UNKNOWN` rather than sending it verbatim (which the server
   would reject).
+- Fixed: `user().smartClassification()` no longer fails to deserialize when a
+  condition's `value`/`threshold` arrives as a boolean. `GET /sale/smart` sends a
+  number for a metric condition but a boolean for a pass/fail one, while the
+  generated DTO types both `BigDecimal` — so the whole response aborted with a
+  `MismatchedInputException` (live-caught on the sandbox seller). The response is
+  now read from a `JsonNode` (`SmartClassificationMapper`): a numeric
+  value/threshold stays typed as `BigDecimal`, a boolean one maps to `null` (the
+  pass/fail outcome is on the condition's `fulfilled` flag). No public API change.
 - `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
   bucket D's live verification, run with a stored buyer token
   (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
