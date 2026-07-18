@@ -15,16 +15,18 @@ import org.jspecify.annotations.Nullable;
  * A full product from the Allegro catalogue — reached via
  * {@code catalog().products().get(productId)}.
  *
- * <p>A product is the shared description an offer is built from: its identity,
+ * <p>A product is the shared definition an offer is built from: its identity,
  * classification, images, and the parameter values that describe it. This record
- * exposes that core; the deeper structured description, compatibility list, and
- * safety/trusted-content blocks are intentionally omitted for now and can be
- * added later without breaking consumers.
+ * exposes that core; the deeper blocks of the underlying DTO — the structured
+ * {@code description}, compatibility list, and safety/trusted-content — are
+ * intentionally omitted for now and can be added later without breaking read
+ * consumers.
  *
  * @param id the product id
- * @param name the product name, localized per the request
+ * @param name the product name, in the account's default language (a per-call
+ *     language option is not yet wired)
  * @param categoryId the id of the category the product is classified under, or
- *     {@code null} when the response omits it
+ *     {@code null} when the category carries no id
  * @param publicationStatus the catalogue publication status (e.g. {@code LISTED}
  *     / {@code PROPOSED}), or {@code null} when absent
  * @param hasProtectedBrand whether the product carries a brand-protection
@@ -61,7 +63,9 @@ public record Product(
         return new Product(
                 raw.getId(),
                 raw.getName(),
-                raw.getCategory() == null ? null : raw.getCategory().getId(),
+                // `category` is a spec-required field; trust the contract (its
+                // nested id is optional, so categoryId stays nullable).
+                raw.getCategory().getId(),
                 publicationStatusOf(raw),
                 Boolean.TRUE.equals(raw.getHasProtectedBrand()),
                 imageUrls,

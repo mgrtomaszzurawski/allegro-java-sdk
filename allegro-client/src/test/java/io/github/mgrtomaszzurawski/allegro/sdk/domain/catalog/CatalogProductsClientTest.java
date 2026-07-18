@@ -15,6 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -100,9 +101,13 @@ class CatalogProductsClientTest {
              "publication":{"status":"LISTED"},"hasProtectedBrand":true,
              "images":[{"url":"https://img.allegro/p.jpg"}],
              "parameters":[
-               {"id":"11323","name":"Marka","values":["Apple"]},
+               {"id":"11323","name":"Marka","values":["Apple"],"valuesIds":["11323_1"]},
                {"id":"pojemnosc","name":"Pojemność","values":["128 GB"],"unit":"GB"}]}
             """.formatted(PRODUCT_ID, CATEGORY_ID);
+    // A bare product: category present but with no id, and every optional block omitted.
+    private static final String MINIMAL_PRODUCT = """
+            {"id":"%s","name":"Bare product","category":{}}
+            """.formatted(PRODUCT_ID);
     private static final String NOT_FOUND = """
             {"errors":[{"code":"ProductNotFoundException","message":"Product not found",
               "userMessage":"Nie znaleziono produktu","path":null}]}
@@ -369,6 +374,7 @@ class CatalogProductsClientTest {
         stubFor(get(urlEqualTo(PRODUCT_BY_ID_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PRODUCT)));
 
         try (AllegroClient allegro = client(wmInfo)) {
@@ -385,9 +391,11 @@ class CatalogProductsClientTest {
             assertEquals(2, product.parameters().size());
             assertEquals("11323", product.parameters().get(0).id());
             assertEquals(List.of("Apple"), product.parameters().get(0).values());
+            assertEquals(List.of("11323_1"), product.parameters().get(0).valuesIds());
             assertNull(product.parameters().get(0).unit());
             assertEquals("GB", product.parameters().get(1).unit());
             assertEquals(List.of("128 GB"), product.parameters().get(1).values());
+            assertTrue(product.parameters().get(1).valuesIds().isEmpty());
             verify(1, getRequestedFor(urlEqualTo(PRODUCT_BY_ID_PATH)));
         }
     }
@@ -414,11 +422,33 @@ class CatalogProductsClientTest {
     }
 
     @Test
-    void get_whenIdNull_throwsNullPointerException(WireMockRuntimeInfo wmInfo) {
-        // then
+    void get_whenIdNull_throwsNullPointerExceptionFromTheGuard(WireMockRuntimeInfo wmInfo) {
+        // then — the fail-fast guard (not an incidental deref) rejects a null id
         try (AllegroClient allegro = client(wmInfo)) {
             var products = allegro.catalog().products();
-            assertThrows(NullPointerException.class, () -> products.get(null));
+            NullPointerException failure =
+                    assertThrows(NullPointerException.class, () -> products.get(null));
+            assertTrue(failure.getMessage().contains("productId"));
+        }
+    }
+
+    @Test
+    void get_whenOptionalFieldsOmitted_defaultsFalseAndNulls(WireMockRuntimeInfo wmInfo) {
+        // given — a bare product: category with no id, and no publication/brand/images/parameters
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_BY_ID_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(MINIMAL_PRODUCT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            Product product = allegro.catalog().products().get(PRODUCT_ID);
+
+            // then — absent boolean → false (not an unboxing NPE), absent refs → null, lists empty
+            assertNull(product.categoryId());
+            assertNull(product.publicationStatus());
+            assertFalse(product.hasProtectedBrand());
+            assertTrue(product.imageUrls().isEmpty());
+            assertTrue(product.parameters().isEmpty());
         }
     }
 }
