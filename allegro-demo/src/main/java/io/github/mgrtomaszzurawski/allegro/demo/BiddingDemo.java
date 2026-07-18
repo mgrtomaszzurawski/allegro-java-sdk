@@ -10,6 +10,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCred
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CurrentUser;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.MyBid;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import java.io.IOException;
 
@@ -92,7 +93,7 @@ public final class BiddingDemo {
         try {
             MyBid current = client.bidding().myBid(offerId);
             System.out.println("myBid(" + offerId + "): highBidder=" + current.highBidder()
-                    + ", currentPrice=" + money(current.currentPrice()));
+                    + ", currentPrice=" + formatMoney(current.currentPrice()));
         } catch (AllegroNotFoundException noBid) {
             // The API returns 404 for both "no auction" and "no bid yet" (see Bidding.myBid).
             System.out.println("myBid(" + offerId + "): 404 - no auction, or no bid placed yet");
@@ -104,14 +105,28 @@ public final class BiddingDemo {
                     + "proxy bid (write->read).");
             return;
         }
-        MyBid placed = client.bidding().placeBid(offerId, Money.of(bidAmount, CURRENCY_PLN));
-        MyBid readBack = client.bidding().myBid(offerId);
-        System.out.println("placeBid->myBid: maxAmount=" + money(placed.maxAmount())
-                + ", readBack highBidder=" + readBack.highBidder()
-                + ", roundTripMatch=" + placed.maxAmount().equals(readBack.maxAmount()));
+        try {
+            MyBid placed = client.bidding().placeBid(offerId, Money.of(bidAmount, CURRENCY_PLN));
+            MyBid readBack = client.bidding().myBid(offerId);
+            System.out.println("placeBid->myBid: maxAmount=" + formatMoney(placed.maxAmount())
+                    + ", readBack highBidder=" + readBack.highBidder()
+                    + ", roundTripMatch=" + sameMoney(placed.maxAmount(), readBack.maxAmount()));
+        } catch (AllegroException rejected) {
+            // A bid below the minimum, a closed auction, etc. — report the wire
+            // outcome as a status line rather than aborting with a stack trace.
+            System.out.println("placeBid rejected: " + rejected.getClass().getSimpleName()
+                    + " (" + rejected.statusCode() + ")");
+        }
     }
 
-    private static String money(Money value) {
+    /** Value equality on amount + currency, tolerant of trailing-zero normalisation
+     * ("10" vs "10.00") that the raw-string {@code Money.equals} would miss. */
+    private static boolean sameMoney(Money left, Money right) {
+        return left.currency().equals(right.currency())
+                && left.amountAsDecimal().compareTo(right.amountAsDecimal()) == 0;
+    }
+
+    private static String formatMoney(Money value) {
         return value.amount() + " " + value.currency();
     }
 }
