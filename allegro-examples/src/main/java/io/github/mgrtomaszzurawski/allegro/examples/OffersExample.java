@@ -84,4 +84,8 @@ public final class OffersExample {
                 .build());
         return updated.name();
     }
+
+    static int availablePromotionPackages(AllegroClient client) {
+        return client.offers().promoOptions().availablePackages().basePackages().size();
+    }
 }

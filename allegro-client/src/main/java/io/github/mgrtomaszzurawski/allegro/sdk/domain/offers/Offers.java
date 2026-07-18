@@ -107,6 +107,13 @@ public interface Offers {
      */
     OfferBatch batch();
 
+    /**
+     * Offer promotion packages (available packages and an offer's applied ones).
+     *
+     * @return the promo-options sub-facade
+     */
+    PromoOptions promoOptions();
+
     // [append point: offers sub-facades] Bucket A appends its own sub-facade
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
     // sub-accessors (tags(), translations(), bundles(), flexibleBundles(),

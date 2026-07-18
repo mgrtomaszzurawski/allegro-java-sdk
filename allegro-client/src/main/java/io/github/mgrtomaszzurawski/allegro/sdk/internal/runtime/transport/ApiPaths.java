@@ -58,6 +58,9 @@ public final class ApiPaths {
     public static final String SALE_OFFERS = "/sale/offers";
     /** Seller's offers with missing category parameters ({@code /sale/offers/unfilled-parameters}). */
     public static final String SALE_OFFERS_UNFILLED_PARAMETERS = "/sale/offers/unfilled-parameters";
+    /** Promotion packages available to the seller ({@code /sale/offer-promotion-packages}). */
+    public static final String OFFER_PROMOTION_PACKAGES = "/sale/offer-promotion-packages";
+    private static final String PROMO_OPTIONS_SEGMENT = "promo-options";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
@@ -77,6 +80,11 @@ public final class ApiPaths {
     /** Smart! classification report of one offer ({@code /sale/offers/{offerId}/smart}). */
     public static String offerSmart(String offerId) {
         return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
+    }
+
+    /** Promotion packages applied to one offer ({@code /sale/offers/{offerId}/promo-options}). */
+    public static String offerPromoOptions(String offerId) {
+        return subPath(SALE_OFFERS, offerId, PROMO_OPTIONS_SEGMENT);
     }
 
     /** Batch publish/unpublish command ({@code /sale/offer-publication-commands/{commandId}}). */

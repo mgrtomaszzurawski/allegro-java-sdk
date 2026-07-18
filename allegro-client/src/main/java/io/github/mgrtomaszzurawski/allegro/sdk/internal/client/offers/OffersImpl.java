@@ -26,6 +26,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslati
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.PromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
@@ -77,6 +78,7 @@ public final class OffersImpl implements Offers {
 
     private final HttpSupport http;
     private final OfferBatch batch;
+    private final PromoOptions promoOptions;
 
     // ---- bucket F sub-facades ----
     private final OfferTags tags;
@@ -85,6 +87,7 @@ public final class OffersImpl implements Offers {
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
         this.batch = new OfferBatchImpl(runtime);
+        this.promoOptions = new PromoOptionsImpl(runtime);
         // [append point: offers sub-facade wiring] Bucket A constructs its own
         // sub-facades here (batch/promoOptions/media); bucket F constructs its
         // sub-facades (tags/translations/bundles/flexibleBundles/rating) from
@@ -226,6 +229,11 @@ public final class OffersImpl implements Offers {
     @Override
     public OfferBatch batch() {
         return batch;
+    }
+
+    @Override
+    public PromoOptions promoOptions() {
+        return promoOptions;
     }
 
     // ---- bucket F sub-accessors ----
