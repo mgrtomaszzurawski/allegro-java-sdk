@@ -159,8 +159,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `cancel`). New models `OrderInvoice`/`CustomerReturn`/`RefundClaim`/`ReturnRejectionCode` and
   fluent request/filter builders. **All 27 bucket-B operations are now on the SDK surface.**
   Live write→read verification of the order-keyed endpoints remains tracked (needs a seeded
-  buyer order; `returns().rejectRefund` also needs the core beta JSON-body Content-Type fix —
-  see `KNOWN-SERVER-BEHAVIORS.md`), so their WireMock fixtures stay `spec-derived` meanwhile.
+  buyer order), so their WireMock fixtures stay `spec-derived` meanwhile.
+- Forward-compatibility hardening (consumes core C2/C3): `returns().rejectRefund` now sends its
+  beta POST body with the beta vendor `Content-Type` via `HttpCall.betaJsonBody` (was a v1/beta
+  header mismatch); order/fulfillment/event-type query filters drop the read-only `UNKNOWN`
+  sentinel instead of serializing it (which the server rejects with 400), and an unknown wire
+  enum value now degrades an `Order`/`OrderEvent` to the `UNKNOWN` sentinel rather than failing
+  the response. Added forward-compat and filter-guard WireMock tests.
 
 ### C — shipping
 
