@@ -91,13 +91,13 @@ tags.streamTags()                                 // GET    /sale/offer-tags    
 tags.create(TagRequest)                           // POST   /sale/offer-tags
 tags.rename(tagId, TagRequest)                    // PUT    /sale/offer-tags/{tagId}
 tags.delete(tagId)                                // DELETE /sale/offer-tags/{tagId}
-tags.assignToOffer(offerId, tagIds...)            // POST   /sale/offers/{offerId}/tags
+tags.assignToOffer(offerId, tagIds)               // POST   /sale/offers/{offerId}/tags
 tags.ofOffer(offerId)                             // GET    /sale/offers/{offerId}/tags
 
 // Translations
 OfferTranslations translations = offers.translations();
 translations.ofOffer(offerId)                     // GET    /sale/offers/{offerId}/translations
-translations.update(offerId, language, Translation) // PATCH /sale/offers/{offerId}/translations/{language}
+translations.update(offerId, language, TranslationRequest) // PATCH /sale/offers/{offerId}/translations/{language} (title only)
 translations.delete(offerId, language)            // DELETE /sale/offers/{offerId}/translations/{language}
 
 // Rating
@@ -105,18 +105,17 @@ offers.rating(offerId)                            // GET    /sale/offers/{offerI
 
 // Fixed bundles
 OfferBundles bundles = offers.bundles();
-bundles.streamBundles()                           // GET    /sale/bundles            Stream<Bundle>
+bundles.streamBundles()                           // GET    /sale/bundles            Stream<OfferBundle> (cursor)
 bundles.get(bundleId)                             // GET    /sale/bundles/{bundleId}
-bundles.updateDiscount(bundleId, DiscountRequest) // PUT    /sale/bundles/{bundleId}/discount
+bundles.updateDiscount(bundleId, List<BundleDiscount>) // PUT /sale/bundles/{bundleId}/discount
 bundles.delete(bundleId)                          // DELETE /sale/bundles/{bundleId}
 
 // Flexible bundles
 FlexibleBundles flexible = offers.flexibleBundles();
-flexible.streamBundles()                          // GET    /sale/flexible-bundles   Stream<FlexibleBundle>
-flexible.get(bundleId)                            // GET    /sale/flexible-bundles/{bundleId}
-flexible.create(FlexibleBundleRequest)            // POST   /sale/flexible-bundles
-flexible.update(bundleId, FlexibleBundleRequest)  // PUT    /sale/flexible-bundles/{bundleId}
+flexible.streamBundles()                          // GET    /sale/flexible-bundles   Stream<FlexibleBundleSummary> (cursor)
+flexible.get(bundleId)                            // GET    /sale/flexible-bundles/{bundleId}  -> FlexibleBundle
 flexible.delete(bundleId)                         // DELETE /sale/flexible-bundles/{bundleId}
+// create(POST) + update(PUT) planned — need the nested slot/offer/discount write builders
 
 // Classifieds (advertisements) — own top-level accessor
 Classifieds classifieds = client.classifieds();

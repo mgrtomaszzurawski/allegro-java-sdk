@@ -35,6 +35,7 @@ public enum AttachmentStatus {
             case SAFE -> SAFE;
             case UNSAFE -> UNSAFE;
             case EXPIRED -> EXPIRED;
+            default -> UNKNOWN;
         };
     }
 }

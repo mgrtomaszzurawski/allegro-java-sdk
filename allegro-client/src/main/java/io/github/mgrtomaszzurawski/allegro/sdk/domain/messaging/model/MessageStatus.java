@@ -38,6 +38,7 @@ public enum MessageStatus {
             case DELIVERED -> DELIVERED;
             case INTERACTING -> INTERACTING;
             case DISMISSED -> DISMISSED;
+            default -> UNKNOWN;
         };
     }
 }

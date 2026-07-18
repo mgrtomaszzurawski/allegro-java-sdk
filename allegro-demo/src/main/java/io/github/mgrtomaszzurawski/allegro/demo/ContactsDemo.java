@@ -48,20 +48,26 @@ public final class ContactsDemo {
                 clientId, clientSecret,
                 ignored -> System.out.println(MSG_EXPIRED), storedRefreshToken);
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-            Contact readBack = writeThenRead(client.contacts());
-            // Rotation: the refresh we just did invalidated the stored token.
-            String rotatedRefreshToken = client.refreshToken();
-            if (rotatedRefreshToken != null) {
-                tokenStore.store(account, rotatedRefreshToken);
+            try {
+                Contact readBack = writeThenRead(client.contacts());
+                boolean roundTripMatches = DEMO_CONTACT_NAME.equals(readBack.name())
+                        && readBack.emails().contains(DEMO_EMAIL)
+                        && readBack.phones().contains(DEMO_PHONE);
+                System.out.println("contacts write->read: id=" + readBack.id()
+                        + ", name=" + readBack.name()
+                        + ", emails=" + readBack.emails().size()
+                        + ", phones=" + readBack.phones().size()
+                        + ", roundTrip=" + roundTripMatches);
+            } finally {
+                // Allegro rotates the refresh token on the FIRST call, so the stored token is
+                // ALREADY dead by the time the probe runs. Persist the rotation in a finally —
+                // before a probe failure can propagate — or the shared store keeps a dead token
+                // and every seller-side demo breaks (pre-mortem B1). Mirrors authBootstrap.
+                String rotatedRefreshToken = client.refreshToken();
+                if (rotatedRefreshToken != null) {
+                    tokenStore.store(account, rotatedRefreshToken);
+                }
             }
-            boolean roundTripMatches = DEMO_CONTACT_NAME.equals(readBack.name())
-                    && readBack.emails().contains(DEMO_EMAIL)
-                    && readBack.phones().contains(DEMO_PHONE);
-            System.out.println("contacts write->read: id=" + readBack.id()
-                    + ", name=" + readBack.name()
-                    + ", emails=" + readBack.emails().size()
-                    + ", phones=" + readBack.phones().size()
-                    + ", roundTrip=" + roundTripMatches);
         }
     }
 

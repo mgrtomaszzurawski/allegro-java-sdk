@@ -6,6 +6,34 @@ packages and statistics, offer tags, translations, rating, and bundles.
 This bucket is landing incrementally. Sections appear as each area ships; the
 authoritative method layout is [`API-SURFACE.md`](../API-SURFACE.md) §F.
 
+## Offer tags
+
+Tags are a seller-only organisation aid (buyers never see them). Reach them via
+`client.offers().tags()`. Manage the tag catalogue and assign tags to offers:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TagRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.Tag;
+import java.util.List;
+
+OfferTags tags = client.offers().tags();
+
+String tagId = tags.create(TagRequest.builder().name("Priority").build());
+tags.streamTags().forEach(tag -> System.out.println(tag.name() + " hidden=" + tag.hidden()));
+
+tags.assignToOffer(offerId, List.of(tagId));
+List<Tag> assigned = tags.ofOffer(offerId);
+
+tags.rename(tagId, TagRequest.builder().name("Top priority").hidden(true).build());
+tags.delete(tagId);
+```
+
+`streamTags()` is lazy (paged on demand). `create` returns the new tag's id; the
+name is required (fail-fast) and `hidden` is optional. The tag catalogue
+operations use the `sale:settings:*` scopes and the per-offer assignment uses
+`sale:offers:*` — both need a **user (seller) access token**.
+
 ## Classifieds
 
 Classifieds are Allegro's advertisement listings (for example automotive or
@@ -93,3 +121,108 @@ The date range is optional — `ClassifiedStatsFilter.all()` leaves it to the
 server default — but Allegro requires the two bounds to be less than three months
 apart. Both reads use the `sale:offers:read` scope and therefore a **user
 (seller) access token**.
+
+## Offer translations
+
+Read and set an offer's translations into other languages via
+`client.offers().translations()`. The SDK currently covers the **title**
+translation (description and safety-information translations are not yet
+modelled):
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TranslationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferTranslation;
+
+OfferTranslations translations = client.offers().translations();
+
+for (OfferTranslation translation : translations.ofOffer(offerId)) {
+    System.out.println(translation.language() + ": " + translation.title()
+            + " (" + translation.titleType() + ")");
+}
+
+translations.update(offerId, "en-US", TranslationRequest.builder().title("Wireless keyboard").build());
+translations.delete(offerId, "en-US");
+```
+
+Each `OfferTranslation` carries the `language`, the translated `title`, and the
+`titleType` (`AUTO`/`MANUAL`/`BASE`). All operations use `sale:offers:*` and need
+a **user (seller) access token**.
+
+## Offer rating
+
+Read an offer's aggregated buyer rating with `client.offers().rating(offerId)`:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
+
+OfferRating rating = client.offers().rating(offerId);
+System.out.println("average " + rating.averageScore() + " over " + rating.totalResponses());
+rating.scoreDistribution().forEach(bucket ->
+        System.out.println("  score " + bucket.name() + ": " + bucket.count()));
+```
+
+`averageScore` is a decimal string (or `null` when the offer has no ratings yet).
+`scoreDistribution` and `sizeFeedback` break the responses down by score and by
+size feedback. Read-only, `sale:offers:read` (user token).
+
+## Fixed offer bundles
+
+A fixed bundle groups offers a buyer can buy together at a per-marketplace
+discount. Reach them via `client.offers().bundles()`:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferBundles;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.BundleDiscount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferBundle;
+import java.util.List;
+
+OfferBundles bundles = client.offers().bundles();
+
+bundles.streamBundles().forEach(bundle ->
+        System.out.println(bundle.id() + ": " + bundle.offers().size() + " offer(s)"));
+
+OfferBundle bundle = bundles.get(bundleId);
+OfferBundle updated = bundles.updateDiscount(bundleId,
+        List.of(new BundleDiscount("allegro-pl", Money.of("15.00", "PLN"))));
+bundles.delete(bundleId);
+```
+
+`streamBundles()` is a lazy **cursor** stream. Each `OfferBundle` carries its
+bundled `offers` (with `requiredQuantity`/`entryPoint`), the per-marketplace
+`discounts` (as `Money`) and `publications`, and who created it. All operations
+use `sale:offers:*` and need a **user (seller) access token**.
+
+## Flexible offer bundles
+
+A flexible bundle is made of slots, each offering the buyer a choice of offers,
+sold together at a whole-bundle or per-slot discount. Reach them via
+`client.offers().flexibleBundles()`. This SDK version covers reading and deleting
+them (creating/updating the nested slot/offer/discount definition is a planned
+follow-up):
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.FlexibleBundles;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
+
+FlexibleBundles flexible = client.offers().flexibleBundles();
+
+for (FlexibleBundleSummary summary : flexible.streamBundles().toList()) {
+    System.out.println(summary.id() + " slots=" + summary.slotRepresentatives().size());
+}
+
+FlexibleBundle bundle = flexible.get(bundleId);
+bundle.slots().forEach(slot ->
+        System.out.println("slot " + slot.order() + ": " + slot.offers().size() + " offer(s)"));
+flexible.delete(bundleId);
+```
+
+`streamBundles()` is a lazy **cursor** stream of summaries (identity + discount +
+one representative offer id per slot); `get(bundleId)` returns the full bundle
+with every slot's offers. The `FlexibleBundleDiscount` is discriminated by
+`type()` — `WHOLE_BUNDLE_DISCOUNT` (one discount, `wholeBundle()`) or
+`SLOT_DISCOUNT` (per-slot, `slotDiscounts()`), each with per-marketplace
+percentages. All operations use `sale:offers:*` and need a **user (seller) access
+token**.

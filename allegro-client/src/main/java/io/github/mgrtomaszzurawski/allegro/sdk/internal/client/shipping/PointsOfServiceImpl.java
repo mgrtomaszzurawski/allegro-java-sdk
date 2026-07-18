@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.PosRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SearchResultRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.PointsOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PointOfServiceRequest;
@@ -14,10 +15,14 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Endpoint wrapper behind the {@link PointsOfService} facade.
+ * Endpoint wrapper behind the {@link PointsOfService} facade. Allegro requires
+ * the seller id in the request body (create/update) and query (list); it is
+ * resolved from the token and supplied lazily, so the consumer never passes
+ * their own id.
  *
  * @since 0.2.0
  */
@@ -33,20 +38,22 @@ public final class PointsOfServiceImpl implements PointsOfService {
     private static final String PARAM_COUNTRY_CODE = "countryCode";
 
     private final HttpSupport http;
+    private final Supplier<String> sellerIdSupplier;
 
-    public PointsOfServiceImpl(HttpRuntime runtime) {
+    public PointsOfServiceImpl(HttpRuntime runtime, Supplier<String> sellerIdSupplier) {
         this.http = new HttpSupport(runtime);
+        this.sellerIdSupplier = sellerIdSupplier;
     }
 
     @Override
-    public List<PointOfService> list(String sellerId) {
-        return list(sellerId, null);
+    public List<PointOfService> list() {
+        return list(null);
     }
 
     @Override
-    public List<PointOfService> list(String sellerId, @Nullable String countryCode) {
+    public List<PointOfService> list(@Nullable String countryCode) {
         Query query = Query.create()
-                .add(PARAM_SELLER_ID, sellerId)
+                .add(PARAM_SELLER_ID, sellerIdSupplier.get())
                 .add(PARAM_COUNTRY_CODE, countryCode);
         SearchResultRaw result = http.request(OP_LIST)
                 .get(ApiPaths.POINTS_OF_SERVICE)
@@ -58,7 +65,7 @@ public final class PointsOfServiceImpl implements PointsOfService {
     @Override
     public PointOfService create(PointOfServiceRequest request) {
         PosRaw created = http.postJsonAuthenticated(
-                ApiPaths.POINTS_OF_SERVICE, request.toRaw(), PosRaw.class, OP_CREATE);
+                ApiPaths.POINTS_OF_SERVICE, withSeller(request.toRaw()), PosRaw.class, OP_CREATE);
         return PointOfService.from(created);
     }
 
@@ -71,9 +78,12 @@ public final class PointsOfServiceImpl implements PointsOfService {
 
     @Override
     public PointOfService update(String pointOfServiceId, PointOfServiceRequest request) {
+        PosRaw raw = withSeller(request.toRaw());
+        // Allegro requires the id in the PUT body, not only in the path.
+        raw.setId(pointOfServiceId);
         PosRaw updated = http.putJsonAuthenticated(
                 ApiPaths.subPath(ApiPaths.POINTS_OF_SERVICE, pointOfServiceId),
-                request.toRaw(), PosRaw.class, OP_UPDATE);
+                raw, PosRaw.class, OP_UPDATE);
         return PointOfService.from(updated);
     }
 
@@ -81,6 +91,13 @@ public final class PointsOfServiceImpl implements PointsOfService {
     public void delete(String pointOfServiceId) {
         http.deleteAuthenticated(
                 ApiPaths.subPath(ApiPaths.POINTS_OF_SERVICE, pointOfServiceId), OP_DELETE);
+    }
+
+    // Allegro requires seller.id in the create/update body even though the token
+    // identifies the seller; the resolver looks it up once and caches it.
+    private PosRaw withSeller(PosRaw raw) {
+        raw.setSeller(new SellerRaw().id(sellerIdSupplier.get()));
+        return raw;
     }
 
     private static List<PointOfService> mapPoints(@Nullable List<PosRaw> posList) {

@@ -21,10 +21,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Campaigns;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.Classifieds;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.Contacts;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.Disputes;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.Messaging;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.billing.Billing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.Payments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
@@ -37,10 +40,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns.Campaig
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog.CatalogImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.classifieds.ClassifiedsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.contacts.ContactsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.disputes.DisputesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.FulfillmentImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.messaging.MessagingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.billing.BillingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.payments.PaymentsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing.PricingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.SaleSettingsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
@@ -48,6 +54,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2Token
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.UnknownSubtypeToBaseHandler;
 import java.net.http.HttpClient;
 import java.util.Objects;
 import org.apiguardian.api.API;
@@ -96,6 +104,8 @@ public final class AllegroClient implements AutoCloseable {
     private final UserAccount userAccount;
     private final Offers offers;
     private final Orders orders;
+    private final Payments payments;
+    private final Billing billing;
     private final Marketplaces marketplaces;
     private final Bidding bidding;
     private final Charity charity;
@@ -108,6 +118,7 @@ public final class AllegroClient implements AutoCloseable {
     private final Fulfillment fulfillment;
     private final Contacts contacts;
     private final Messaging messaging;
+    private final Disputes disputes;
     private final SaleSettings saleSettings;
     private volatile boolean closed;
 
@@ -125,8 +136,14 @@ public final class AllegroClient implements AutoCloseable {
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .registerModule(new JsonNullableModule())
+                // Resolve generated oneOf wrappers by strict property matching so a
+                // structural oneOf does not over-match ("N classes match"); see module.
+                .registerModule(new StrictOneOfModule())
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+                // Unknown polymorphic subtype -> deserialize as the base so a domain
+                // mapper can degrade it (forward compatibility); see the handler.
+                .addHandler(new UnknownSubtypeToBaseHandler());
         this.tokenManager = new OAuth2TokenManager(credentials, config.oauthBaseUrl(),
                 httpClient, objectMapper, config.readTimeout());
         HttpRuntime runtime = new AllegroHttpRuntime(
@@ -139,6 +156,8 @@ public final class AllegroClient implements AutoCloseable {
         this.userAccount = new UserAccountImpl(runtime);
         this.offers = new OffersImpl(runtime);
         this.orders = new OrdersImpl(runtime);
+        this.payments = new PaymentsImpl(runtime);
+        this.billing = new BillingImpl(runtime);
         this.marketplaces = new MarketplacesImpl(runtime);
         this.bidding = new BiddingImpl(runtime);
         this.charity = new CharityImpl(runtime);
@@ -153,6 +172,7 @@ public final class AllegroClient implements AutoCloseable {
         this.shipping = new ShippingImpl(runtime);
         this.contacts = new ContactsImpl(runtime);
         this.messaging = new MessagingImpl(runtime);
+        this.disputes = new DisputesImpl(runtime);
         this.saleSettings = new SaleSettingsImpl(runtime);
     }
 
@@ -181,10 +201,22 @@ public final class AllegroClient implements AutoCloseable {
         return offers;
     }
 
-    /** Orders, payments and billing. */
+    /** Orders (order management; returns, refunds and invoices per the plan). */
     public Orders orders() {
         ensureOpen();
         return orders;
+    }
+
+    /** Payment operations, refunded payments, and refund initiation (bucket B). */
+    public Payments payments() {
+        ensureOpen();
+        return payments;
+    }
+
+    /** Billing entries and the billing-type dictionary (bucket B). */
+    public Billing billing() {
+        ensureOpen();
+        return billing;
     }
 
     /** Details of the platform's marketplaces (public; app-token friendly). */
@@ -261,6 +293,12 @@ public final class AllegroClient implements AutoCloseable {
     public Messaging messaging() {
         ensureOpen();
         return messaging;
+    }
+
+    /** Post-purchase issues: disputes and claims read side (bucket J). */
+    public Disputes disputes() {
+        ensureOpen();
+        return disputes;
     }
 
     /** Seller sale settings (after-sale conditions, and more per bucket K). */

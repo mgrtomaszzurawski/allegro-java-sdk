@@ -1,0 +1,18 @@
+{
+  "submittedOffers": [
+    {
+      "participationId": "part-1",
+      "offer": { "id": "12345678" },
+      "campaign": { "id": "winter-sale" },
+      "prices": {
+        "proposedPrice": { "amount": "85.00", "currency": "PLN" },
+        "minimalPriceReduction": { "amount": "5.00", "currency": "PLN" },
+        "maximumSellingPrice": { "amount": "95.00", "currency": "PLN" }
+      },
+      "process": { "status": "ACTIVE", "errors": [] },
+      "purchaseLimit": 3
+    }
+  ],
+  "count": 1,
+  "totalCount": 1
+}
