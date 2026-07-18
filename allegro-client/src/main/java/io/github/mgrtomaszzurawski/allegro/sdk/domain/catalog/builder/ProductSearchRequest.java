@@ -9,16 +9,17 @@ import org.jspecify.annotations.Nullable;
 /**
  * The criteria for a product search ({@code catalog().products().search(...)}).
  *
- * <p>Supply a {@link Builder#phrase(String) phrase}, a
- * {@link Builder#categoryId(String) categoryId}, or both — a search with neither
- * is rejected fail-fast, because the endpoint needs at least one criterion.
- * {@link Builder#language(String) language} localizes the matched product names.
- * Pagination is handled internally by the returned lazy stream (the opaque
- * {@code page.id} cursor is threaded automatically).
+ * <p>A {@link Builder#phrase(String) phrase} is required — a search without one
+ * is rejected fail-fast. {@link Builder#categoryId(String) categoryId} is an
+ * optional filter that Allegro only honours <em>together with</em> a phrase
+ * (per the spec, "the category identifier ... can only be used when searching by
+ * phrase"). {@link Builder#language(String) language} localizes the matched
+ * product names. Pagination is handled internally by the returned lazy stream
+ * (the opaque {@code page.id} cursor is threaded automatically).
  *
  * <pre>{@code
  * catalog.products()
- *         .search(ProductSearchRequest.builder().phrase("iphone 15").build())
+ *         .search(ProductSearchRequest.builder().phrase("iphone 15").categoryId("257").build())
  *         .limit(50)
  *         .forEach(summary -> System.out.println(summary.name()));
  * }</pre>
@@ -27,8 +28,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class ProductSearchRequest {
 
-    private static final String ERR_NO_CRITERIA =
-            "a product search needs at least a phrase or a categoryId";
+    private static final String ERR_NO_PHRASE =
+            "a product search requires a phrase (categoryId only filters a phrase search)";
 
     private final @Nullable String phrase;
     private final @Nullable String categoryId;
@@ -40,12 +41,12 @@ public final class ProductSearchRequest {
         this.language = builder.language;
     }
 
-    /** The free-text phrase to match, or {@code null} when searching by category alone. */
+    /** The free-text phrase to match; always set on a valid request. */
     public @Nullable String phrase() {
         return phrase;
     }
 
-    /** The category to restrict the search to, or {@code null}. */
+    /** The category the phrase search is restricted to, or {@code null} for all categories. */
     public @Nullable String categoryId() {
         return categoryId;
     }
@@ -58,11 +59,6 @@ public final class ProductSearchRequest {
     /** A search for a phrase across all categories. */
     public static ProductSearchRequest byPhrase(String phrase) {
         return builder().phrase(phrase).build();
-    }
-
-    /** A search restricted to one category. */
-    public static ProductSearchRequest inCategory(String categoryId) {
-        return builder().categoryId(categoryId).build();
     }
 
     /** A new builder. */
@@ -88,7 +84,7 @@ public final class ProductSearchRequest {
             return this;
         }
 
-        /** Restrict the search to this category. */
+        /** Restrict the phrase search to this category (only honoured with a phrase). */
         public Builder categoryId(@Nullable String categoryId) {
             this.categoryId = categoryId;
             return this;
@@ -103,11 +99,12 @@ public final class ProductSearchRequest {
         /**
          * Build the request.
          *
-         * @throws IllegalStateException if neither a phrase nor a categoryId is set
+         * @throws IllegalStateException if no phrase is set (a category alone is
+         *     not a valid search)
          */
         public ProductSearchRequest build() {
-            if (isBlank(phrase) && isBlank(categoryId)) {
-                throw new IllegalStateException(ERR_NO_CRITERIA);
+            if (isBlank(phrase)) {
+                throw new IllegalStateException(ERR_NO_PHRASE);
             }
             return new ProductSearchRequest(this);
         }

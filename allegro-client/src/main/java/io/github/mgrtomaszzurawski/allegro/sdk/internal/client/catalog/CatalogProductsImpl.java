@@ -57,8 +57,9 @@ public final class CatalogProductsImpl implements CatalogProducts {
                 .get(ApiPaths.PRODUCTS)
                 .query(query)
                 .fetch(GetSaleProductsResponseRaw.class);
-        List<ProductSummary> items = response.getProducts() == null ? List.of()
-                : response.getProducts().stream().map(ProductSummary::from).toList();
+        // `products` is a spec-required field (never null); trust the contract.
+        List<ProductSummary> items = response.getProducts().stream()
+                .map(ProductSummary::from).toList();
         GetSaleProductsResponseNextPageRaw nextPage = response.getNextPage();
         String nextCursor = nextPage == null ? null : nextPage.getId();
         return new CursorPage<>(items, nextCursor);

@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.BaseSaleProductResponseDtoPublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BaseSaleProductResponseDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImageUrlRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductCategoryWithPathRaw;
@@ -15,13 +16,17 @@ import org.jspecify.annotations.Nullable;
  * A product as it appears in a search result — reached via
  * {@code catalog().products().search(...)}.
  *
- * <p>The summary carries what a result list needs to display; fetch the full
- * product (parameters, description, compatibility, …) with {@code products().get(id)}.
+ * <p>The summary carries what a result list needs to display and pick from,
+ * including the publication status so a consumer can tell a listable product
+ * from a merely proposed one. The full product read (all parameters,
+ * description, compatibility) lands next in this bucket.
  *
- * @param id the product id — pass it to {@code products().get(id)} for full data
+ * @param id the product id
  * @param name the product name, localized per the request's language
  * @param categoryId the id of the category the product is classified under, or
  *     {@code null} when the response omits it
+ * @param publicationStatus the product's catalogue publication status (e.g.
+ *     {@code LISTED} / {@code PROPOSED}), or {@code null} when absent
  * @param imageUrls the product image URLs, in the order Allegro returns them;
  *     never {@code null}, possibly empty
  *
@@ -31,6 +36,7 @@ public record ProductSummary(
         String id,
         String name,
         @Nullable String categoryId,
+        @Nullable String publicationStatus,
         List<String> imageUrls) {
 
     public ProductSummary {
@@ -49,6 +55,15 @@ public record ProductSummary(
                 raw.getId(),
                 raw.getName(),
                 category == null ? null : category.getId(),
+                publicationStatusOf(raw.getPublication()),
                 imageUrls);
+    }
+
+    private static @Nullable String publicationStatusOf(
+            @Nullable BaseSaleProductResponseDtoPublicationRaw publication) {
+        if (publication == null || publication.getStatus() == null) {
+            return null;
+        }
+        return publication.getStatus().getValue();
     }
 }

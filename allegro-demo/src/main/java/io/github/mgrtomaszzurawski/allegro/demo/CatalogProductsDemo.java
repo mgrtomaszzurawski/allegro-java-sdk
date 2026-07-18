@@ -59,6 +59,7 @@ final class CatalogProductsDemo {
             for (ProductSummary summary : sample) {
                 System.out.println("  " + summary.id() + " '" + summary.name()
                         + "', category=" + summary.categoryId()
+                        + ", status=" + summary.publicationStatus()
                         + ", images=" + summary.imageUrls().size());
             }
             rotateToken(tokenStore, account, client);

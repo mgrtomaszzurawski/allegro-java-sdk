@@ -57,6 +57,7 @@ class CatalogProductsClientTest {
     private static final String PHRASE_PARAM = "phrase";
     private static final String CATEGORY_PARAM = "category.id";
     private static final String PAGE_ID_PARAM = "page.id";
+    private static final String NO_PHRASE_HINT = "requires a phrase";
 
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
@@ -73,6 +74,7 @@ class CatalogProductsClientTest {
     private static final String PAGE_ONE = """
             {"products":[
               {"id":"P-1","name":"iPhone 15","category":{"id":"%s"},
+               "publication":{"status":"LISTED"},
                "images":[{"url":"https://img.allegro/1.jpg"},{"url":"https://img.allegro/2.jpg"}]},
               {"id":"P-2","name":"iPhone 15 Pro","category":{"id":"%s"},"images":[]}],
              "nextPage":{"id":"%s"}}
@@ -122,6 +124,7 @@ class CatalogProductsClientTest {
         stubFor(get(urlPathEqualTo(PRODUCTS_PATH)).withQueryParam(PHRASE_PARAM, equalTo(PHRASE))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PAGE_ONE)));
 
         try (AllegroClient allegro = client(wmInfo)) {
@@ -137,10 +140,12 @@ class CatalogProductsClientTest {
             assertEquals("P-1", first.id());
             assertEquals("iPhone 15", first.name());
             assertEquals(CATEGORY_ID, first.categoryId());
+            assertEquals("LISTED", first.publicationStatus());
             assertEquals(2, first.imageUrls().size());
             assertEquals("https://img.allegro/1.jpg", first.imageUrls().get(0));
-            // an empty images array maps to an empty list, never null
+            // an empty images array maps to an empty list, never null; absent publication → null
             assertTrue(summaries.get(1).imageUrls().isEmpty());
+            assertNull(summaries.get(1).publicationStatus());
         }
     }
 
@@ -184,13 +189,13 @@ class CatalogProductsClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             // when — drain the whole stream
-            List<ProductSummary> all = allegro.catalog().products()
+            List<ProductSummary> allSummaries = allegro.catalog().products()
                     .search(ProductSearchRequest.builder().phrase(PHRASE).categoryId(CATEGORY_ID).build())
                     .toList();
 
             // then — both pages, in order, then the stream ended (page 2 had no next cursor)
-            assertEquals(3, all.size());
-            assertEquals("P-3", all.get(2).id());
+            assertEquals(3, allSummaries.size());
+            assertEquals("P-3", allSummaries.get(2).id());
             verify(1, getRequestedFor(urlPathEqualTo(PRODUCTS_PATH))
                     .withQueryParam(PAGE_ID_PARAM, equalTo(CURSOR_2))
                     .withQueryParam(CATEGORY_PARAM, equalTo(CATEGORY_ID)));
@@ -321,20 +326,20 @@ class CatalogProductsClientTest {
     }
 
     @Test
-    void builder_inCategory_setsOnlyCategory() {
-        // when
-        ProductSearchRequest request = ProductSearchRequest.inCategory(CATEGORY_ID);
-
-        // then
-        assertEquals(CATEGORY_ID, request.categoryId());
-        assertNull(request.phrase());
+    void builder_whenNoPhrase_throwsIllegalStateWithMessage() {
+        // then — a phrase is required, so an empty request is rejected with a helpful message
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> ProductSearchRequest.builder().build());
+        assertTrue(failure.getMessage().contains(NO_PHRASE_HINT));
+        // a blank phrase counts as absent
+        assertThrows(IllegalStateException.class,
+                () -> ProductSearchRequest.builder().phrase("  ").build());
     }
 
     @Test
-    void builder_whenNoPhraseNorCategory_throwsIllegalState() {
-        // then — a criterion-less search is rejected before any call
-        assertThrows(IllegalStateException.class, () -> ProductSearchRequest.builder().build());
+    void builder_whenCategoryButNoPhrase_throwsIllegalState() {
+        // then — the spec forbids category-only search (category filters a phrase search)
         assertThrows(IllegalStateException.class,
-                () -> ProductSearchRequest.builder().phrase("  ").build());
+                () -> ProductSearchRequest.builder().categoryId(CATEGORY_ID).build());
     }
 }

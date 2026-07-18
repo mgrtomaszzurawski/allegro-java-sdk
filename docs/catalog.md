@@ -112,9 +112,10 @@ products.search(ProductSearchRequest.builder().phrase("iphone 15").categoryId("2
         .forEach(summary -> System.out.println(summary.id() + "  " + summary.name()));
 ```
 
-A search needs at least a phrase or a category — `build()` fails fast otherwise. Each
-`ProductSummary` carries the product id, name, category id and image URLs; fetch the full product
-(parameters, description, compatibility) with `products().get(id)`, which lands next in this bucket.
+A search needs a phrase — `build()` fails fast otherwise; a category is an optional filter that
+Allegro only honours alongside a phrase. Each `ProductSummary` carries the product id, name,
+category id, publication status (`LISTED` / `PROPOSED`) and image URLs; the full product read
+(all parameters, description, compatibility) lands next in this bucket.
 
 ## Verifying against the sandbox
 
