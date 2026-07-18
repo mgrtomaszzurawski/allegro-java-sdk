@@ -114,8 +114,16 @@ products.search(ProductSearchRequest.builder().phrase("iphone 15").categoryId("2
 
 A search needs a phrase — `build()` fails fast otherwise; a category is an optional filter that
 Allegro only honours alongside a phrase. Each `ProductSummary` carries the product id, name,
-category id, publication status (`LISTED` / `PROPOSED`) and image URLs; the full product read
-(all parameters, description, compatibility) lands next in this bucket.
+category id, publication status (`LISTED` / `PROPOSED`) and image URLs.
+
+Read the full product — its parameter values and flags — with `get`:
+
+```java
+Product product = products.get(summary.id());
+for (ProductParameterValue parameter : product.parameters()) {
+    System.out.println(parameter.name() + " = " + String.join(", ", parameter.values()));
+}
+```
 
 ## Verifying against the sandbox
 
