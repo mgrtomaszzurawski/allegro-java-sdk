@@ -44,6 +44,8 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
   - [`docs/pricing.md`](docs/pricing.md) — automatic pricing rules (promotions, deposits to follow)
   - [`docs/fulfillment.md`](docs/fulfillment.md) — One Fulfillment by Allegro (removal preferences, …)
 - [`docs/campaigns.md`](docs/campaigns.md) — badge campaigns, Allegro Prices, AlleDiscount
+- [`docs/settings.md`](docs/settings.md) — seller sale settings (`client.settings()`): after-sale
+  warranties (more of bucket K to follow)
 
 ## Quick start
 

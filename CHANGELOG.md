@@ -168,3 +168,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   builder, immutable `Contact` records, and a `contacts` sandbox write→read demo scenario.
 
 ### K — sale-settings
+
+- `settings().afterSale()` starter slice: seller **warranty** definitions —
+  `streamWarranties()` (lazy offset/limit `Stream`), `warranty(id)`,
+  `createWarranty(...)`, `updateWarranty(...)`. Immutable `Warranty` /
+  `WarrantySummary` records, `WarrantyType` / `WarrantyPeriod` value types, and a
+  fail-fast `WarrantyRequest` builder — both buyer-class periods (`individual` /
+  `corporate`) are required, an undocumented server rule (spec marks neither) verified
+  live and recorded in `KNOWN-SERVER-BEHAVIORS.md`. Documented in `docs/settings.md`; the
+  `settings-warranty` write→read demo is green on the sandbox (create→get round-trip).

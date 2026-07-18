@@ -115,6 +115,11 @@ public final class ApiPaths {
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
     public static final String OFFER_CONTACTS = "/sale/offer-contacts";
 
+    // ---- sale-settings (bucket K) ----
+    /** Seller after-sale warranty definitions. */
+    public static final String AFTER_SALES_WARRANTIES =
+            "/after-sales-service-conditions/warranties";
+
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
     // per bucket, in BACKLOG order.
