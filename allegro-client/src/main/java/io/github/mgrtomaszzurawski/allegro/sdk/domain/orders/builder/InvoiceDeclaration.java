@@ -9,33 +9,29 @@ import org.jspecify.annotations.Nullable;
 /**
  * Metadata for a new order invoice declared via
  * {@code orders().invoices().declare(...)}, before the file bytes are uploaded.
- * The invoice number and the file name are both required (the file name labels
- * the file uploaded in the second step).
+ * The file name (which labels the file uploaded in the second step) is required;
+ * the invoice number is optional — matching the Allegro spec, which marks the
+ * file required and the number optional.
  *
  * @since 0.6.0
  */
 public final class InvoiceDeclaration {
 
-    private static final String ERR_INVOICE_NUMBER = "invoiceNumber is required";
     private static final String ERR_FILE_NAME = "fileName is required";
 
-    private final String invoiceNumber;
+    private final @Nullable String invoiceNumber;
     private final String fileName;
 
     private InvoiceDeclaration(Builder builder) {
-        this.invoiceNumber = require(builder.invoiceNumber, ERR_INVOICE_NUMBER);
-        this.fileName = require(builder.fileName, ERR_FILE_NAME);
-    }
-
-    private static String require(@Nullable String value, String message) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException(message);
+        if (builder.fileName == null || builder.fileName.isBlank()) {
+            throw new IllegalStateException(ERR_FILE_NAME);
         }
-        return value;
+        this.fileName = builder.fileName;
+        this.invoiceNumber = builder.invoiceNumber;
     }
 
-    /** The seller's invoice number. */
-    public String invoiceNumber() {
+    /** The seller's invoice number, or {@code null} when not provided. */
+    public @Nullable String invoiceNumber() {
         return invoiceNumber;
     }
 
@@ -60,13 +56,13 @@ public final class InvoiceDeclaration {
         private @Nullable String invoiceNumber;
         private @Nullable String fileName;
 
-        /** Set the invoice number (required). */
+        /** Set the invoice number (optional). */
         public Builder invoiceNumber(@Nullable String value) {
             this.invoiceNumber = value;
             return this;
         }
 
-        /** Set the file name (optional). */
+        /** Set the file name (required). */
         public Builder fileName(@Nullable String value) {
             this.fileName = value;
             return this;
@@ -75,7 +71,7 @@ public final class InvoiceDeclaration {
         /**
          * Build the declaration.
          *
-         * @throws IllegalStateException if the invoice number is missing
+         * @throws IllegalStateException if the file name is missing
          */
         public InvoiceDeclaration build() {
             return new InvoiceDeclaration(this);

@@ -23,6 +23,8 @@ import org.jspecify.annotations.Nullable;
  *
  * @param id claim identifier, or {@code null} when absent
  * @param status claim status (raw Allegro value), or {@code null}
+ * @param type claim type (raw Allegro value, e.g. {@code MANUAL}/{@code AUTOMATIC}),
+ *     distinguishing seller-filed from system-generated claims, or {@code null}
  * @param quantity the claimed quantity, or {@code null}
  * @param commission the commission amount being reclaimed, or {@code null}
  * @param buyerId the buyer the line item was sold to, or {@code null}
@@ -35,6 +37,7 @@ import org.jspecify.annotations.Nullable;
 public record RefundClaim(
         @Nullable String id,
         @Nullable String status,
+        @Nullable String type,
         @Nullable Integer quantity,
         @Nullable Money commission,
         @Nullable String buyerId,
@@ -45,6 +48,7 @@ public record RefundClaim(
     /** Map the generated Layer-1 DTO to the public record. */
     public static RefundClaim from(RefundClaimRaw raw) {
         var status = raw.getStatus();
+        var type = raw.getType();
         RefundClaimCommissionRaw commission = raw.getCommission();
         RefundClaimBuyerRaw buyer = raw.getBuyer();
         RefundClaimLineItemRaw lineItem = raw.getLineItem();
@@ -52,6 +56,7 @@ public record RefundClaim(
         return new RefundClaim(
                 raw.getId() == null ? null : raw.getId().toString(),
                 status == null ? null : status.getValue(),
+                type == null ? null : type.getValue(),
                 raw.getQuantity(),
                 commissionMoney(commission),
                 buyer == null ? null : buyer.getId(),

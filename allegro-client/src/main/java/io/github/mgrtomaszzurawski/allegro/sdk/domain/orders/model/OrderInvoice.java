@@ -13,7 +13,8 @@ import org.jspecify.annotations.Nullable;
  * An invoice registered against an order (from
  * {@code orders().invoices().ofOrder(orderId)}).
  *
- * @param id invoice identifier (pass to {@code uploadFile} to attach the file)
+ * @param id invoice identifier (pass to {@code uploadFile} to attach the file),
+ *     or {@code null} when absent
  * @param invoiceNumber the seller's invoice number, or {@code null} when absent
  * @param createdAt when the invoice was registered, or {@code null}
  * @param fileName the attached file name, or {@code null} when no file is attached
@@ -21,7 +22,7 @@ import org.jspecify.annotations.Nullable;
  * @since 0.6.0
  */
 public record OrderInvoice(
-        String id,
+        @Nullable String id,
         @Nullable String invoiceNumber,
         @Nullable OffsetDateTime createdAt,
         @Nullable String fileName) {

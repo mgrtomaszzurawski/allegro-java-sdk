@@ -153,17 +153,17 @@ class OrderInvoicesClientTest {
         stubToken(TEST_TOKEN);
         stubFor(put(urlEqualTo(FILE_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
-        byte[] pdf = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
+        byte[] pdfBytes = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
 
         try (AllegroClient allegro = client(wmInfo)) {
 
             // when
-            allegro.orders().invoices().uploadFile(ORDER_ID, INVOICE_ID, pdf);
+            allegro.orders().invoices().uploadFile(ORDER_ID, INVOICE_ID, pdfBytes);
 
             // then — the raw bytes reached the wire with the file content type
             verify(1, putRequestedFor(urlEqualTo(FILE_PATH))
                     .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(PDF_CONTENT_TYPE))
-                    .withRequestBody(binaryEqualTo(pdf)));
+                    .withRequestBody(binaryEqualTo(pdfBytes)));
         }
     }
 

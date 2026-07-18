@@ -99,6 +99,10 @@ public final class CustomerReturnsImpl implements CustomerReturns {
                 .rejection(new CustomerReturnRefundRejectionRequestRejectionRaw()
                         .code(request.code().toRaw())
                         .reason(request.reason()));
+        // KNOWN LIMITATION: this beta POST body still goes out with the v1 vendor
+        // Content-Type — acceptBeta() only sets Accept, and HttpCall.jsonBody hard-pins
+        // Content-Type=v1 (frozen runtime). The beta endpoint may reject that; a
+        // beta JSON-body variant is a filed core need (see KNOWN-SERVER-BEHAVIORS.md).
         return CustomerReturn.from(http.request(OP_REJECT)
                 .post(ApiPaths.subPath(ApiPaths.CUSTOMER_RETURNS, customerReturnId,
                         ApiPaths.REJECTION_SEGMENT))

@@ -40,7 +40,7 @@ public interface OrderInvoices {
      *
      * @param orderId the order identifier
      * @param invoiceId the invoice id returned by {@link #declare}
-     * @param file the invoice file bytes (typically a PDF)
+     * @param file the invoice file bytes; sent as {@code application/pdf}
      */
     void uploadFile(String orderId, String invoiceId, byte[] file);
 }

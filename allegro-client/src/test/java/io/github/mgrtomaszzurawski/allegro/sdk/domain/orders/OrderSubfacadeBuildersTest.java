@@ -54,16 +54,18 @@ class OrderSubfacadeBuildersTest {
     }
 
     @Test
-    void invoiceDeclaration_whenInvoiceNumberMissing_throwsIllegalState() {
+    void invoiceDeclaration_whenFileNameOnly_buildsWithNullInvoiceNumber() {
+        // when — the invoice number is optional (spec marks it so)
+        InvoiceDeclaration declaration = InvoiceDeclaration.builder().fileName(FILE_NAME).build();
+
         // then
-        IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> InvoiceDeclaration.builder().fileName(FILE_NAME).build());
-        assertTrue(failure.getMessage().contains("invoiceNumber"), failure.getMessage());
+        assertEquals(FILE_NAME, declaration.fileName());
+        assertNull(declaration.invoiceNumber());
     }
 
     @Test
     void invoiceDeclaration_whenFileNameMissing_throwsIllegalState() {
-        // then
+        // then — the file name is the required field
         IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> InvoiceDeclaration.builder().invoiceNumber(INVOICE_NUMBER).build());
         assertTrue(failure.getMessage().contains("fileName"), failure.getMessage());
@@ -81,6 +83,17 @@ class OrderSubfacadeBuildersTest {
         RejectionRequest copy = request.toBuilder().build();
         assertEquals(ReturnRejectionCode.ITEM_FIXED, copy.code());
         assertEquals(REASON, copy.reason());
+    }
+
+    @Test
+    void rejectionRequest_whenCodeOnly_buildsWithNullReason() {
+        // when — reason is optional
+        RejectionRequest request = RejectionRequest.builder()
+                .code(ReturnRejectionCode.NO_RETURN_RIGHT).build();
+
+        // then
+        assertEquals(ReturnRejectionCode.NO_RETURN_RIGHT, request.code());
+        assertNull(request.reason());
     }
 
     @Test

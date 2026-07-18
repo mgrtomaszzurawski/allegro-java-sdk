@@ -17,7 +17,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -31,6 +30,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CustomerRetur
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.ReturnRejectionCode;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -131,6 +131,34 @@ class CustomerReturnsClientTest {
     }
 
     @Test
+    void streamReturns_whenFilterGiven_carriesFilterAcrossPageBoundary(WireMockRuntimeInfo wmInfo) {
+        // given — both pages require the orderId filter; a page-2 request dropping
+        // it would miss the stub and the walk would fail
+        stubToken();
+        stubFor(get(urlPathEqualTo(RETURNS_PATH)).withQueryParam(PARAM_OFFSET, equalTo("0"))
+                .withQueryParam("orderId", equalTo(ORDER_ID))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(returnsPage(PAGE_SIZE))));
+        stubFor(get(urlPathEqualTo(RETURNS_PATH)).withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
+                .withQueryParam("orderId", equalTo(ORDER_ID))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(returnsPage(TOTAL_RETURNS - PAGE_SIZE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            long total = allegro.orders().returns()
+                    .streamReturns(ReturnFilter.builder().orderId(ORDER_ID).build()).count();
+
+            // then — page two carried the filter (else the stub would not match)
+            assertEquals(TOTAL_RETURNS, total);
+            verify(1, getRequestedFor(urlPathEqualTo(RETURNS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
+                    .withQueryParam("orderId", equalTo(ORDER_ID)));
+        }
+    }
+
+    @Test
     void get_whenCalled_mapsReturnWithBetaAccept(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken();
@@ -188,10 +216,30 @@ class CustomerReturnsClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
             var returns = allegro.orders().returns();
 
-            // then
+            // then — the errors[] payload survives as typed field errors
             AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                     () -> returns.streamReturns(ReturnFilter.all()).toList());
-            assertTrue(failure.responseBody().contains("InvalidInput"));
+            assertEquals(TEST_TRACE_ID, failure.traceId());
+            assertEquals("rejection.code", failure.errors().get(0).path());
+        }
+    }
+
+    @Test
+    void rejectRefund_when5xx_doesNotRetryPost(WireMockRuntimeInfo wmInfo) {
+        // given — a POST is not retried by default, even on a transient 500
+        stubToken();
+        stubFor(post(urlEqualTo(REJECTION_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+        RejectionRequest request = RejectionRequest.builder()
+                .code(ReturnRejectionCode.ITEM_FIXED).reason(REASON).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var returns = allegro.orders().returns();
+
+            // then — one attempt only
+            assertThrows(AllegroServerException.class,
+                    () -> returns.rejectRefund(RETURN_ID, request));
+            verify(1, postRequestedFor(urlEqualTo(REJECTION_PATH)));
         }
     }
 

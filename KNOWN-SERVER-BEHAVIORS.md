@@ -168,6 +168,19 @@ spec; the exclusivity and the terminal empty-page behaviour are **to be confirme
 once a seeded order produces events (the RAG digest generically labels this endpoint
 "offset/limit", which is inaccurate for `/order/events`).
 
+### Customer-returns are BETA; the reject-refund POST needs a beta request Content-Type (core follow-up)
+
+The customer-returns endpoints (`GET /order/customer-returns`, `GET …/{id}`,
+`POST …/{id}/rejection`) speak the **beta** vendor media type. The SDK sends
+`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` — correct for the two
+GETs. But `POST …/rejection` declares its **request body** only as the beta media type, while
+`HttpCall.jsonBody(...)` hard-pins `Content-Type: application/vnd.allegro.public.v1+json` (frozen
+runtime), so `returns().rejectRefund(...)` currently sends a mismatched Content-Type that the beta
+endpoint may reject (415/406). **Core follow-up (agent-1):** add a media-type overload to the JSON
+body helper (e.g. `jsonBody(body, mediaType)`) so beta writes can set the beta Content-Type; it is
+the first beta POST-with-body in the SDK. `rejectRefund` ships wired but must not be relied on live
+until that lands (WireMock covers the request body shape; the mismatch is header-only).
+
 ## Payments & billing (bucket B)
 
 ### `GET /billing/billing-types` works with an app-only token and returns a bare array (verified 2026-07-18, sandbox)

@@ -16,7 +16,8 @@ import org.jspecify.annotations.Nullable;
  * core of the return: who returned what, on which order, and whether the seller
  * has already rejected the refund.
  *
- * @param id customer-return identifier
+ * @param id customer-return identifier, or {@code null} when absent
+ * @param status the return's lifecycle status (raw Allegro value), or {@code null}
  * @param orderId the order the return is against, or {@code null}
  * @param referenceNumber the return's reference number, or {@code null}
  * @param buyerLogin the returning buyer's login, or {@code null}
@@ -28,7 +29,8 @@ import org.jspecify.annotations.Nullable;
  * @since 0.6.0
  */
 public record CustomerReturn(
-        String id,
+        @Nullable String id,
+        @Nullable String status,
         @Nullable String orderId,
         @Nullable String referenceNumber,
         @Nullable String buyerLogin,
@@ -43,6 +45,7 @@ public record CustomerReturn(
         List<CustomerReturnItemRaw> items = raw.getItems();
         return new CustomerReturn(
                 raw.getId(),
+                raw.getStatus(),
                 raw.getOrderId(),
                 raw.getReferenceNumber(),
                 buyer == null ? null : buyer.getLogin(),
@@ -50,5 +53,16 @@ public record CustomerReturn(
                 raw.getRejection() != null,
                 raw.getMarketplaceId(),
                 raw.getCreatedAt());
+    }
+
+    /**
+     * Redacts the buyer login (personal data) so an accidental log or trace of a
+     * {@code CustomerReturn} never leaks it; read {@link #buyerLogin()} deliberately.
+     */
+    @Override
+    public String toString() {
+        return "CustomerReturn[id=" + id + ", status=" + status + ", orderId=" + orderId
+                + ", itemCount=" + itemCount + ", refundRejected=" + refundRejected
+                + ", buyer login redacted]";
     }
 }
