@@ -2,9 +2,9 @@
 
 The offer lifecycle, reached from `client.offers()`.
 
-> Available now: reading a single offer, listing your offers, the Smart! classification, and a
-> single-offer price change. Creating and editing offers, bulk `batch()` commands, promotion
-> options and media land in later releases.
+> Available now: reading/listing offers, the Smart! classification, offers missing parameters,
+> create/edit/delete, single- and bulk price/stock changes, bulk publish/unpublish, and reading
+> promotion packages. The remaining promo write operations and media land in later releases.
 
 ## Read an offer
 
@@ -134,7 +134,8 @@ Here only the name and stock are sent; the price, images and all other fields ar
 
 ```java
 AvailablePromotionPackages available = client.offers().promoOptions().availablePackages();
-available.basePackages().forEach(pkg -> System.out.println(pkg.id() + " — " + pkg.name()));
+available.basePackages().forEach(promotionPackage ->
+        System.out.println(promotionPackage.id() + " — " + promotionPackage.name()));
 
 OfferPromoOptions applied = client.offers().promoOptions().forOffer("13579");
 if (applied.basePackage() != null) {

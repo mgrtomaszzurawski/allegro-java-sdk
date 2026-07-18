@@ -12,6 +12,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +24,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.PromoOptionsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
@@ -117,6 +119,8 @@ class OfferPromoOptionsClientTest {
     void forOffer_whenOptionsApplied_mapsBaseAndExtraWithValidity(WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(get(urlEqualTo(FOR_OFFER_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(FOR_OFFER_BODY)));
 
         // when
@@ -139,5 +143,29 @@ class OfferPromoOptionsClientTest {
 
         // then
         assertThrows(AllegroNotFoundException.class, () -> promoOptions(wmInfo).forOffer(OFFER_ID));
+    }
+
+    @Test
+    void availablePackages_whenNoPackages_returnsEmptyLists(WireMockRuntimeInfo wmInfo) {
+        // given — a response with no package lists at all (null-tolerant mapping)
+        stubFor(get(urlEqualTo(AVAILABLE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{}")));
+
+        // when
+        AvailablePromotionPackages available = promoOptions(wmInfo).availablePackages();
+
+        // then — absent lists map to empty, never null
+        assertTrue(available.basePackages().isEmpty());
+        assertTrue(available.extraPackages().isEmpty());
+    }
+
+    @Test
+    void availablePackages_whenServerError_throwsServerException(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(get(urlEqualTo(AVAILABLE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+
+        // then
+        assertThrows(AllegroServerException.class, () -> promoOptions(wmInfo).availablePackages());
     }
 }
