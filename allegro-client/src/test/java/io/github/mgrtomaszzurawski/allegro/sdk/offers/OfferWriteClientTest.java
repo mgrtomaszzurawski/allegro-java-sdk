@@ -35,6 +35,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 @WireMockTest
@@ -58,6 +59,8 @@ class OfferWriteClientTest {
     private static final String FORMAT_JSON_PATH = "$.sellingMode.format";
     private static final String PRICE_JSON_PATH = "$.sellingMode.price.amount";
     private static final String STOCK_JSON_PATH = "$.stock.available";
+    private static final String IMAGES_JSON_PATH = "$.images[0]";
+    private static final String IMAGE_URL = "https://img.example/keyboard.jpg";
 
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"bad name\",\"path\":\"name\"}]}";
@@ -134,6 +137,24 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(STOCK_JSON_PATH, equalTo(String.valueOf(STOCK)))));
         // and the response is mapped to the created offer
         assertEquals(CREATED_OFFER_ID, created.id());
+    }
+
+    @Test
+    void create_whenImagesProvided_serializesThemInBody(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK).imageUrls(List.of(IMAGE_URL)).build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the image URL reaches the request body
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(IMAGES_JSON_PATH, equalTo(IMAGE_URL))));
     }
 
     @Test
