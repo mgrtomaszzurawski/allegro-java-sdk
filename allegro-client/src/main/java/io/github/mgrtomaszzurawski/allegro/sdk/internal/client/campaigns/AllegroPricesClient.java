@@ -4,8 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.campaigns;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.client.model.AllegroPricesAccountParticipationResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusItemDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusQueryResponseDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubsidyExcludeOfferItemRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubsidyExcludeOffersCommandPreviewRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubsidyManageOffersCommandResultRaw;
@@ -34,11 +35,11 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Endpoint wrapper behind the {@link AllegroPrices} facade (bucket H, Allegro
- * Prices). Participation reads/writes and the subsidy commands map through the
- * generated DTOs; the offer-status query maps from a {@link JsonNode} to dodge the
- * generated {@code oneOf} deserializer (see {@link AllegroPricesMapper}). The
- * submit and exclusion commands are polled to a terminal per-offer state via
- * {@link CommandPoller}.
+ * Prices). Participation reads/writes, the offer-status query and the subsidy
+ * commands all map through the generated DTOs; the offer-status response's
+ * {@code oneOf} price-reduction fields are resolved by the SDK's strict
+ * {@code oneOf} mapper (see {@link AllegroPricesMapper}). The submit and exclusion
+ * commands are polled to a terminal per-offer state via {@link CommandPoller}.
  *
  * @since 0.2.0
  */
@@ -94,11 +95,11 @@ public final class AllegroPricesClient implements AllegroPrices {
 
     private PagedSpliterator.Page<AllegroPricesOfferStatus> fetchOffersPage(
             AllegroPricesOfferQuery query, int pageIndex) {
-        JsonNode response = http.request(OP_STREAM_OFFERS)
+        OfferStatusQueryResponseDtoRaw response = http.request(OP_STREAM_OFFERS)
                 .post(ApiPaths.ALLEGRO_PRICES_OFFERS_QUERIES)
                 .jsonBody(AllegroPricesMapper.toRaw(query, pageIndex * PAGE_SIZE, PAGE_SIZE))
-                .fetch(JsonNode.class);
-        JsonNode offers = AllegroPricesMapper.offersArray(response);
+                .fetch(OfferStatusQueryResponseDtoRaw.class);
+        List<OfferStatusItemDtoRaw> offers = response.getOffers();
         List<AllegroPricesOfferStatus> items = new ArrayList<>();
         if (offers != null) {
             offers.forEach(item -> items.add(AllegroPricesMapper.offerStatusFrom(item)));

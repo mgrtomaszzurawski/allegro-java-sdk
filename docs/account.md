@@ -13,15 +13,28 @@ client-credentials token) and `bidding()` (needs a **buyer** token).
 
 ```java
 CurrentUser me = client.user().me();               // GET /me
+me.login();                                         // public login name
+me.baseMarketplaceId();                             // e.g. "allegro-pl", or null
+CurrentUser.Company company = me.company();         // VAT data, or null (personal account)
+if (company != null) {
+    company.name();                                 // registered company name
+    company.taxId();                                // tax id (NIP)
+}
 
 SalesQuality quality = client.user().salesQuality();          // GET /sale/quality
 SmartClassification smart = client.user().smartClassification();          // GET /sale/smart
 SmartClassification smartPl = client.user().smartClassification("allegro-pl");
 ```
 
-`SalesQuality` exposes one `Day` per reported day (overall score, grade and the
-component `Metric`s). `SmartClassification` tells you whether the account
+`CurrentUser` carries the account's identity plus, for a business account, its
+`company` (VAT registration — name and tax id) and the `baseMarketplaceId` it is
+primarily registered on; both are `null` for a personal account that declares
+none. `SalesQuality` exposes one `Day` per reported day (overall score, grade and
+the component `Metric`s). `SmartClassification` tells you whether the account
 qualifies for Smart!, when that last changed, and the per-`Condition` breakdown.
+A `Condition` is either metric-based (numeric `value`/`threshold`) or pass/fail;
+for a pass/fail condition `value`/`threshold` are `null` and the outcome is on
+`fulfilled()`.
 
 ## Ratings
 
@@ -103,4 +116,6 @@ client.affiliate().streamCpsConversions(                                  // GET
 `charity().searchCampaigns` requires a search `phrase` and a bounded `limit`
 (1–100, default 100). `affiliate().streamCpsConversions` is a lazy stream over
 CPS conversions filtered by order/modification dates and status; it needs the
-`affiliate:read` scope.
+`affiliate:read` scope. A conversion whose `status` a future Allegro release
+introduces is read back as `ConversionStatus.UNKNOWN` rather than failing the
+stream; passing `UNKNOWN` as a `status` filter simply omits the parameter.

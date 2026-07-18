@@ -142,6 +142,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.OfferSco
 
 client.campaigns().allegroPrices()
         .streamOffersStatus(AllegroPricesOfferQuery.builder("allegro-pl")
+                .addOfferId("12345678")
                 .scope(OfferScope.DISCOUNTED)
                 .build())
         .forEach(status -> System.out.println(status.offerId() + " → " + status.finalBuyerPrice()));
@@ -150,7 +151,9 @@ client.campaigns().allegroPrices()
 A lazy `Stream<AllegroPricesOfferStatus>`: each item exposes the base price, whether Allegro sees a
 discount opportunity, the recommended / declared / actual subsidy reduction percentages, and the
 resulting buyer price. `marketplaceId` is required; the query is a POST whose pagination is handled
-internally.
+internally. Allegro also requires at least one offer id — add one or more with `addOfferId(...)`; a
+marketplace-only query is rejected with `VALIDATION_ERROR` (`offer.ids size must be between 1 and
+1,000`), see `KNOWN-SERVER-BEHAVIORS.md`.
 
 ### Submitting and excluding offers
 

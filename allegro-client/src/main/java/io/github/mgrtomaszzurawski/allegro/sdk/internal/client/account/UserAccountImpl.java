@@ -4,9 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.account;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.client.model.MeResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SalesQualityHistoryResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SmartSellerClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.AdditionalEmails;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserAccount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.UserRatings;
@@ -62,11 +62,14 @@ public final class UserAccountImpl implements UserAccount {
     }
 
     private SmartClassification smart(@Nullable String marketplaceId) {
-        SmartSellerClassificationReportRaw raw = http.request(OP_SMART)
+        // Read the tree, not the generated DTO: a condition's value/threshold is
+        // boolean OR number on the wire but the *Raw types it BigDecimal, which
+        // aborts the whole response on a boolean (see SmartClassificationMapper).
+        JsonNode response = http.request(OP_SMART)
                 .get(ApiPaths.SMART_CLASSIFICATION)
                 .query(Query.create().add(QUERY_MARKETPLACE_ID, marketplaceId))
-                .fetch(SmartSellerClassificationReportRaw.class);
-        return SmartClassification.from(raw);
+                .fetch(JsonNode.class);
+        return SmartClassificationMapper.toSmartClassification(response);
     }
 
     @Override

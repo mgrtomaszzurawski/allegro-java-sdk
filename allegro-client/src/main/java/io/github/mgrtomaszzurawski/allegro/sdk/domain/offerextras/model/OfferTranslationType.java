@@ -4,8 +4,12 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferTranslationTypeRaw;
+import org.jspecify.annotations.Nullable;
+
 /**
- * How an offer's title translation was produced.
+ * How an offer translation was produced — applies to the title, description, and
+ * per-product safety-information translations.
  *
  * @since 0.2.0
  */
@@ -21,5 +25,20 @@ public enum OfferTranslationType {
     BASE,
 
     /** A value Allegro introduced that this SDK version does not model yet. */
-    UNKNOWN
+    UNKNOWN;
+
+    /**
+     * Map the generated Layer-1 translation type, degrading a value Allegro added
+     * after this SDK version to {@link #UNKNOWN} rather than failing the read.
+     */
+    static @Nullable OfferTranslationType fromRaw(@Nullable OfferTranslationTypeRaw raw) {
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return valueOf(raw.name());
+        } catch (IllegalArgumentException unknownType) {
+            return UNKNOWN;
+        }
+    }
 }

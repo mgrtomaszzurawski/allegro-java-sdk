@@ -12,10 +12,11 @@ import java.util.List;
  * An offer's translations into other languages — reached via
  * {@code AllegroClient.offers().translations()}.
  *
- * <p>The SDK currently covers the <strong>title</strong> translation; the richly
- * structured description and safety-information translations are not yet
- * modelled. All operations use the {@code sale:offers:*} scopes and need a user
- * (seller) token.
+ * <p>Covers the <strong>title</strong>, the standardized <strong>description</strong>,
+ * and the per-product <strong>safety-information</strong> translations. An update
+ * is a partial (PATCH): only the parts the request sets are sent, so the others
+ * are left untouched. All operations use the {@code sale:offers:*} scopes and need
+ * a user (seller) token.
  *
  * @since 0.2.0
  */

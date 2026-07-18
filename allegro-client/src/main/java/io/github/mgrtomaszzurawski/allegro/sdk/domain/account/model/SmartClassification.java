@@ -4,10 +4,6 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.SmartDeliveryMethodRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SmartSellerClassificationReportClassificationRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SmartSellerClassificationReportConditionsInnerRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SmartSellerClassificationReportRaw;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -37,33 +33,22 @@ public record SmartClassification(
         excludedDeliveryMethodIds = List.copyOf(excludedDeliveryMethodIds);
     }
 
-    /** Map the generated Layer-1 DTO to the public immutable record. */
-    public static SmartClassification from(SmartSellerClassificationReportRaw raw) {
-        SmartSellerClassificationReportClassificationRaw classification = raw.getClassification();
-        boolean fulfilled = classification != null && Boolean.TRUE.equals(classification.getFulfilled());
-        OffsetDateTime lastChanged = classification == null ? null : classification.getLastChanged();
-
-        List<SmartSellerClassificationReportConditionsInnerRaw> rawConditions = raw.getConditions();
-        List<Condition> conditions = rawConditions == null
-                ? List.of()
-                : rawConditions.stream().map(Condition::from).toList();
-
-        List<SmartDeliveryMethodRaw> excluded = raw.getExcludedDeliveryMethods();
-        List<String> excludedIds = excluded == null
-                ? List.of()
-                : excluded.stream().map(SmartDeliveryMethodRaw::getId).toList();
-
-        return new SmartClassification(fulfilled, lastChanged, conditions, excludedIds);
-    }
-
     /**
      * One Smart! qualification condition and whether the account meets it.
+     *
+     * <p>A condition is either metric-based (a numeric {@code value} measured
+     * against a numeric {@code threshold}) or pass/fail. For a pass/fail
+     * condition Allegro sends a boolean on the wire where a metric condition
+     * sends a number, so {@code value}/{@code threshold} are {@code null} there —
+     * the outcome is carried by {@link #fulfilled()}.
      *
      * @param code stable condition code
      * @param name human-readable condition name
      * @param description longer description, or {@code null}
-     * @param value the account's current value for the condition, or {@code null}
-     * @param threshold the value required to fulfil it, or {@code null}
+     * @param value the account's current numeric value for the condition, or
+     *     {@code null} when the condition is pass/fail rather than metric
+     * @param threshold the numeric value required to fulfil it, or {@code null}
+     *     when the condition is pass/fail rather than metric
      * @param fulfilled whether the account meets this condition
      * @param required whether this condition is required for qualification
      */
@@ -75,16 +60,5 @@ public record SmartClassification(
             @Nullable BigDecimal threshold,
             boolean fulfilled,
             boolean required) {
-
-        static Condition from(SmartSellerClassificationReportConditionsInnerRaw raw) {
-            return new Condition(
-                    raw.getCode(),
-                    raw.getName(),
-                    raw.getDescription(),
-                    raw.getValue(),
-                    raw.getThreshold(),
-                    Boolean.TRUE.equals(raw.getFulfilled()),
-                    Boolean.TRUE.equals(raw.getRequired()));
-        }
     }
 }

@@ -74,20 +74,19 @@ delivery methods; the first mapped cleanly (`paymentPolicy=IN_ADVANCE`,
 record's field shape against the wire. `dispatchCountry` arrived `null` on that
 method, confirming it is genuinely nullable.
 
-### `deliveryMethods().paymentPolicy` is a closed typed enum (verified 2026-07-18, sandbox)
+### `deliveryMethods().paymentPolicy` — read-only, fail-soft (verified 2026-07-18, sandbox)
 
-Each method's `paymentPolicy` is one of a fixed set (`IN_ADVANCE`,
-`CASH_ON_DELIVERY`). In the generated Layer-1 model this field is a typed
-enumeration whose Jackson creator **rejects** any other value, so — unlike the
-free-form string enums on a point of service, which fall back to an `UNKNOWN`
-sentinel — a `paymentPolicy` value Allegro might add in future would fail
-deserialization of the whole response (surfaced as `AllegroServerException`)
-rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
-match, and the raw→domain map is a by-name lookup guarded by a name-parity test
-(`ShippingEnumsTest`) that iterates both enums. If Allegro extends the set, a
-Layer-1 regeneration adds the constant and that test then fails in the build —
-forcing the domain enum to gain the value in the same change, rather than leaking
-a runtime error.
+Each method's `paymentPolicy` is one of a known set (`IN_ADVANCE`,
+`CASH_ON_DELIVERY`). The generated Layer-1 model is a typed enumeration; since the
+core `enumUnknownDefaultCase` change (C3) an unrecognised wire value deserialises
+to the generator's `UNKNOWN_DEFAULT_OPEN_API` sentinel instead of throwing. The
+SDK's domain `PaymentPolicy` mirrors the bucket's other read enums: `fromWire`
+maps that sentinel (and any value this release does not model) to
+`PaymentPolicy.UNKNOWN`, so a payment policy Allegro adds in future degrades one
+field rather than failing the whole `deliveryMethods()` read. `null` stays `null`
+(the server omitted the field). A `ShippingEnumsTest` parity test still iterates
+both enums and fails the build if a spec regeneration renames a real value on one
+side only (which would silently degrade a known policy to `UNKNOWN`).
 
 ### Creating a point of service requires `seller.id` and `coordinates` (verified 2026-07-18, sandbox)
 
@@ -107,6 +106,31 @@ client sets the body `id` from the path id. Confirmed live end-to-end:
 create → get → update → delete round-trips green. Opening-hours `from`/`to` use
 the ISO `HH:mm:ss.SSS` time format (spec example `10:30:00.000`);
 `confirmationType` `AWAIT_CONTACT` is accepted.
+
+### Delivery settings read + write verified; free-delivery thresholds may be null (verified 2026-07-18, sandbox)
+
+`GET /sale/delivery-settings` maps cleanly (`marketplace.id`, `joinPolicy.strategy`,
+`updatedAt`) and an **idempotent** `PUT` (re-sending the read state) round-trips
+green — unlike the point-of-service write path, delivery settings need no
+`seller.id` or other undocumented field. On the sandbox seller the
+`freeDelivery` / `abroadFreeDelivery` objects are **absent** (the seller offers no
+free-delivery threshold), so the SDK maps them to a `null` `Money`; `joinPolicy`
+came back `MAX`. The PUT `Content-Type` is the vendor `v1` media type (not beta).
+
+### Shipping-rate sets: read verified deep; every sandbox set is Allegro-managed (verified 2026-07-18, sandbox)
+
+`GET /sale/shipping-rates` returned **7** sets and `GET /sale/shipping-rates/{id}`
+mapped a 47-row set in full (each row's `deliveryMethod.id`, `firstItemRate` /
+`nextItemRate` as `Money` — a `0.00` next-item rate is normal, `maxQuantityPerPackage`,
+and the optional `maxPackageWeight` / `shippingTime` arriving `null`). **All 7 sets
+report `features.managedByAllegro = true`** (One Fulfillment sets), so the write
+path could not be exercised idempotently on this account, and the delivery API
+subset has **no delete** operation — a probe-created set would linger permanently.
+The rates **write** path (create/PUT) is therefore pinned by the WireMock contract
+tests (body serialization incl. nested rows, path, headers, and the id echoed in
+the PUT body) rather than live-verified; it shares the exact transport plumbing
+that the delivery-settings PUT proved live. Re-verify a live write if a
+seller-editable (non-managed) set is created on the sandbox account.
 
 ## Account & meta (bucket D)
 
@@ -135,6 +159,19 @@ distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. 
 with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
 the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
 
+### Smart! condition `value`/`threshold` is boolean OR number on the wire (verified 2026-07-18, sandbox)
+
+`GET /sale/smart` returns each entry in `conditions[]` with a `value` and `threshold` that are a
+JSON **number** for a metric condition (e.g. `1.5` days) but a JSON **boolean** for a pass/fail
+condition (e.g. `false`) — the spec types both as `number`, so the generated Layer-1 DTO
+(`SmartSellerClassificationReportConditionsInnerRaw`) fields are `BigDecimal` and Jackson aborts
+the WHOLE response with `MismatchedInputException` the moment a boolean value appears. Live-caught
+running the `account` seller demo (`me()` and `salesQuality()` succeed; `smartClassification()`
+threw). The SDK now reads the response from a `JsonNode` (`SmartClassificationMapper`), keeping a
+numeric value/threshold typed as `BigDecimal` and mapping a boolean one to `null` — the pass/fail
+outcome is carried by the condition's `fulfilled` flag. Not a `oneOf`/enum/subtype case, so the
+core C3–C5 forward-compat handlers do not apply.
+
 ## Sale settings (bucket K)
 
 ### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
@@ -147,6 +184,31 @@ sandbox account TestBoxSDK, id 111332841). The spec marks **neither** `required`
 that carries both periods succeeds and reads back cleanly (create→get round-trip green). The
 SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
 a client-side `IllegalStateException` naming the field — no wasted round-trip.
+
+### Implied-warranty periods are whole years, at least two (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/implied-warranties` (and the `PUT`) accept a period only as
+a **whole-year** ISO-8601 duration of **at least two years** (`P2Y`). Verified live on seller
+TestBoxSDK: `P2Y` on both `individual` and `corporate` succeeds and reads back cleanly
+(create→get round-trip green); `P1Y` is rejected with `422 UNPROCESSABLE_ENTITY path=corporate.period`
+(minimum is two years, the statutory rękojmia term); the month-denominated forms `P12M` and `P24M`
+are rejected on both `individual.period` and `corporate.period`. This differs from the seller
+`warranties` endpoint, whose periods are month-denominated (`P12M`) and may be lifetime. The SDK
+leaves the exact value to the server (it can change per legal category) and documents the rule on
+`ImpliedWarrantyPeriod`; only the structural `name`/`individual` requirements are builder-enforced.
+
+### A return policy with returns enabled requires `options` (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/return-policies` (and the `PUT`) reject a body whose
+`availability.range` is not `DISABLED` but which omits the `options` object, with
+`422 UNPROCESSABLE_ENTITY code=AVAILABILITY_ENABLED_RETURN_OPTIONS_INVALID` (`path=null`, a
+body-level error). The spec marks `ReturnPolicyOptions` `nullable: true` with "Can be null if
+availability range is 'DISABLED'", and all five booleans are `required` within it. Verified live
+on seller TestBoxSDK: a `FULL`/`RESTRICTED` policy with `options` (all five flags) creates, reads
+back, updates and deletes cleanly (full round-trip green); the same request without `options` is
+rejected. The SDK's `ReturnPolicyRequest`/`ReturnPolicyUpdateRequest` builders therefore require
+`options` fail-fast whenever the range is not `DISABLED`, turning the opaque 422 into a
+client-side `IllegalStateException`.
 
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
@@ -195,18 +257,18 @@ spec; the exclusivity and the terminal empty-page behaviour are **to be confirme
 once a seeded order produces events (the RAG digest generically labels this endpoint
 "offset/limit", which is inaccurate for `/order/events`).
 
-### Customer-returns are BETA; the reject-refund POST needs a beta request Content-Type (core follow-up)
+### Customer-returns are BETA on both sides; the reject-refund POST body uses the beta Content-Type (RESOLVED)
 
 The customer-returns endpoints (`GET /order/customer-returns`, `GET …/{id}`,
 `POST …/{id}/rejection`) speak the **beta** vendor media type. The SDK sends
-`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` — correct for the two
-GETs. But `POST …/rejection` declares its **request body** only as the beta media type, while
-`HttpCall.jsonBody(...)` hard-pins `Content-Type: application/vnd.allegro.public.v1+json` (frozen
-runtime), so `returns().rejectRefund(...)` currently sends a mismatched Content-Type that the beta
-endpoint may reject (415/406). **Core follow-up (agent-1):** add a media-type overload to the JSON
-body helper (e.g. `jsonBody(body, mediaType)`) so beta writes can set the beta Content-Type; it is
-the first beta POST-with-body in the SDK. `rejectRefund` ships wired but must not be relied on live
-until that lands (WireMock covers the request body shape; the mismatch is header-only).
+`Accept: application/vnd.allegro.beta.v1+json` via `HttpCall.acceptBeta()` on all three, and
+`POST …/rejection` declares its **request body** only as the beta media type. Earlier this was a
+header mismatch (the frozen `HttpCall.jsonBody(...)` hard-pinned `Content-Type:
+application/vnd.allegro.public.v1+json`). **Resolved 2026-07-18:** the core added
+`HttpCall.betaJsonBody(...)` (PR #63, `2958e1f`), and `returns().rejectRefund(...)` now sends the
+request body with `Content-Type: application/vnd.allegro.beta.v1+json` (asserted on the wire in
+`CustomerReturnsClientTest`). No remaining Content-Type mismatch; live write→read still pending a
+seeded buyer return.
 
 ## Payments & billing (bucket B)
 
@@ -244,17 +306,19 @@ seller-side and treats the immediate download 404 as expected.
 
 ## Offers extras (bucket F)
 
-### Translation PATCH sends `description`/`safetyInformation` as explicit `null` (spec-derived, pending live verification)
+### Translation PATCH must omit unset parts, not send them as `null` — FIXED (partial body; spec-derived)
 
-`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`)
-serializes the `ManualTranslationUpdateRequest` through the shared SDK ObjectMapper, which uses
-Jackson's default `ALWAYS` inclusion. So a title-only update sends
-`{"description":null,"title":{…},"safetyInformation":null}`. It must be verified on the sandbox
-whether the server treats those `null` siblings as **"no change"** (safe) or **"clear the
-translation"** (a data-loss surprise for a consumer who only meant to set the title). If the
-latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `JsonNullable`
-handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
-`update` is safe for offers whose description/safety translations are not manually set.
+`PATCH /sale/offers/{offerId}/translations/{language}` (`offers().translations().update`) is a
+partial update: the caller may set any subset of title / description / safety-information, and the
+unset parts must be **left untouched**. The earlier implementation serialized through the shared
+SDK ObjectMapper's default `ALWAYS` inclusion, so a title-only update sent
+`{"description":null,"title":{…},"safetyInformation":null}` — risking that the server reads a
+`null` sibling as **"clear the translation"** (latent data loss) rather than "no change". Fixed by
+serializing the body with `HttpCall.jsonBodyPartial` (NON_EMPTY — omits nulls and empties, the
+same approach bucket A adopted for `POST /sale/product-offers`, §below) and building the raw with
+only the parts the request set. A title-only update now sends `{"title":{…}}`; the ambiguity is
+gone regardless of server semantics. **Still to confirm on the sandbox** (needs a live offer): that
+the server does treat an omitted part as "no change" (expected) and accepts a subset PATCH.
 
 ## Offers — create (bucket A)
 
@@ -317,6 +381,34 @@ id, polls to a terminal `SubmitStatus`, and returns it (a `FAILED` command is te
 an exception). The notice's `shipping` is polymorphic (`COURIER_BY_SELLER` / `OWN_TRANSPORT` /
 `THIRD_PARTY_DELIVERY`, each with its own required sub-fields) and is a deferred follow-up. None
 of this is live-verifiable on the shared sandbox seller (403, not enrolled in One Fulfillment).
+
+## Campaigns (bucket H)
+
+### Allegro Prices offer-status query requires `offer.ids` 1..1000 (verified 2026-07-18, sandbox)
+
+`POST /sale/allegro-prices/offers-queries` (`allegroPrices().streamOffersStatus(...)`) rejects a
+marketplace-only query with `400 VALIDATION_ERROR`, `message: "Validation error: offer.ids size
+must be between 1 and 1,000"` (example `trace-id` `2b6432bc191218e0`) — even though the vendored
+spec types `offer` and `offer.ids` as OPTIONAL. In practice at least one offer id is mandatory.
+The SDK stays spec-faithful (the builder does not force `offerId`, so it can serialise a
+marketplace-only query) and surfaces the rejection as `AllegroBadRequestException` with the parsed
+`errors[]`; consumers must supply `AllegroPricesOfferQuery.builder(marketplace).addOfferId(...)`.
+The `campaigns` demo now sources a few of the seller's own offer ids before querying, and skips the
+probe when the account has no offers.
+
+### Allegro Prices participation spans four marketplaces (verified 2026-07-18, sandbox)
+
+`GET /sale/allegro-prices/accounts/participations` (`allegroPrices().participation()`) returned four
+marketplaces for the sandbox seller — `allegro-pl`, `allegro-cz`, `allegro-sk`, `allegro-hu`, all
+`ALLOWED` — confirming the `MarketplaceParticipation` mapping across markets on a live response.
+
+### AlleDiscount exposes SOURCING and DISCOUNT campaign types (verified 2026-07-18, sandbox)
+
+`GET /sale/alle-discount/campaigns` (`alleDiscount().campaigns()`) returned 12 campaigns for the
+sandbox seller, spanning both `SOURCING` (co-finance) and `DISCOUNT` (AlleObniżka) campaign types,
+confirming the `AlleDiscountCampaign` / `AlleDiscountCampaignType` mapping. Every listed campaign
+showed the seller as not enrolled, so `streamEligibleOffers`/`streamSubmittedOffers` returned empty
+without error — the write→read command cycles still need an enrolled campaign (risk R5).
 
 ## From external sources (to verify on first contact)
 

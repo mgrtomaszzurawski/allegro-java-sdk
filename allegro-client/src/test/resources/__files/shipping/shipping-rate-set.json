@@ -1,0 +1,18 @@
+{
+  "id": "rate-set-1",
+  "name": "Domestic rates",
+  "type": "PHYSICAL",
+  "dispatchCountry": "PL",
+  "lastModified": "2026-07-18T12:00:00Z",
+  "rates": [
+    {
+      "deliveryMethod": { "id": "method-courier" },
+      "maxQuantityPerPackage": 10,
+      "maxPackageWeight": { "value": "30.0", "unit": "KILOGRAMS" },
+      "firstItemRate": { "amount": "12.99", "currency": "PLN" },
+      "nextItemRate": { "amount": "2.00", "currency": "PLN" },
+      "shippingTime": { "from": "24", "to": "48" }
+    }
+  ],
+  "features": { "managedByAllegro": false, "isFulfillment": false }
+}

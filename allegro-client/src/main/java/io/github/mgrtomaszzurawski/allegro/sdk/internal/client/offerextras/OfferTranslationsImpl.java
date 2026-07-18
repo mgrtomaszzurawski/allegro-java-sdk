@@ -51,7 +51,7 @@ public final class OfferTranslationsImpl implements OfferTranslations {
         Objects.requireNonNull(request, ERR_REQUEST_NULL);
         http.request(OP_UPDATE)
                 .patch(ApiPaths.offerTranslation(offerId, language))
-                .jsonBody(OfferExtrasMapper.toRaw(request))
+                .jsonBodyPartial(OfferExtrasMapper.toRaw(request))
                 .send();
     }
 

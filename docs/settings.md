@@ -70,6 +70,61 @@ Warranty updated = afterSale.updateWarranty(warrantyId,
         request.toBuilder().description("Updated terms").build());
 ```
 
+## Implied warranties (rękojmia)
+
+Implied warranties are the statutory warranty of conformity. The API mirrors the seller-warranty
+shape — `streamImpliedWarranties()` (lazy, single page ≤ 60), `impliedWarranty(id)`,
+`createImpliedWarranty(...)`, `updateImpliedWarranty(...)` — but the period accepts **whole years,
+at least two** (`P2Y`); month-form (`P24M`) and sub-two-year (`P1Y`) values are rejected with
+`422`, and there is no attachment. `name` and the `individual` period are required; validated
+fail-fast at `build()`.
+
+```java
+ImpliedWarrantyRequest request = ImpliedWarrantyRequest.builder()
+        .name("2 year implied warranty")             // required, max 200 chars
+        .individual(ImpliedWarrantyPeriod.of("P2Y"))  // required — whole years, min two
+        .corporate(ImpliedWarrantyPeriod.of("P2Y"))   // optional — whole years, min two
+        .address(new AfterSalesAddress(               // optional; all fields required if set
+                "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+        .description("Statutory warranty of conformity")
+        .build();
+
+ImpliedWarranty created = afterSale.createImpliedWarranty(request);
+afterSale.streamImpliedWarranties().forEach(summary -> System.out.println(summary.name()));
+```
+
+## Return policies
+
+Return policies model how a seller accepts returns. `name`, the `fulfillment` flag (fixed at
+creation) and `availability` are required on create; `updateReturnPolicy(...)` takes a separate
+`ReturnPolicyUpdateRequest` that omits `fulfillment` (the server rejects changing it). `options`
+(the boolean return-handling flags) is **required whenever the availability range is not
+`DISABLED`** — the builder rejects an enabled policy without them fail-fast, mirroring the server.
+Return policies also support **delete**. `streamReturnPolicies()` returns **full** `ReturnPolicy`
+records (not summaries), lazily, single page ≤ 60.
+
+```java
+ReturnPolicyRequest request = ReturnPolicyRequest.builder()
+        .name("Standard 14-day returns")
+        .fulfillment(false)                                   // required, fixed at creation
+        .availability(ReturnPolicyAvailability.full())        // or .restricted(cause) / .disabled(cause)
+        .withdrawalPeriod("P14D")                             // ISO-8601, whole days
+        .returnCost(ReturnCostCoveredBy.SELLER)
+        .address(new AfterSalesAddress(
+                "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+        .options(new ReturnPolicyOptions(true, false, false, false, false)) // required unless DISABLED
+        .build();
+
+ReturnPolicy created = afterSale.createReturnPolicy(request);
+afterSale.updateReturnPolicy(created.id(), ReturnPolicyUpdateRequest.builder()
+        .name(created.name())
+        .availability(ReturnPolicyAvailability.full())
+        .withdrawalPeriod("P30D")
+        .options(new ReturnPolicyOptions(true, false, false, false, false))
+        .build());
+afterSale.deleteReturnPolicy(created.id());
+```
+
 ## Errors
 
 All calls surface the SDK's remediation-grouped exceptions: `AllegroBadRequestException`

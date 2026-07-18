@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import java.io.IOException;
 import java.util.List;
@@ -70,8 +71,24 @@ final class CatalogProductsDemo {
                         + "', status=" + product.publicationStatus()
                         + ", params=" + product.parameters().size()
                         + ", protectedBrand=" + product.hasProtectedBrand());
+                // The product's category drives its product-parameter schema.
+                probeProductParameters(client, product.categoryId());
             }
             rotateToken(tokenStore, account, client);
+        }
+    }
+
+    private static void probeProductParameters(AllegroClient client, String categoryId) {
+        if (categoryId == null) {
+            System.out.println("(product had no category — skipping parametersIn probe)");
+            return;
+        }
+        List<ProductParameter> parameters = client.catalog().products().parametersIn(categoryId);
+        System.out.println("parametersIn(" + categoryId + "): " + parameters.size()
+                + " product parameters");
+        for (ProductParameter parameter : parameters.stream().limit(SAMPLE_LIMIT).toList()) {
+            System.out.println("  " + parameter.id() + " '" + parameter.name()
+                    + "', type=" + parameter.type() + ", required=" + parameter.required());
         }
     }
 

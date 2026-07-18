@@ -166,6 +166,8 @@ public final class ApiPaths {
     public static final String CATEGORIES = "/sale/categories";
     /** Parameters sub-resource of a category (under {@link #CATEGORIES}/{id}). */
     public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
+    /** Product-parameters sub-resource of a category (under {@link #CATEGORIES}/{id}). */
+    public static final String PRODUCT_PARAMETERS_SEGMENT = "product-parameters";
     /** Category suggestions matched by name ({@code /sale/matching-categories}). */
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
     /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
@@ -313,6 +315,10 @@ public final class ApiPaths {
     public static final String POINTS_OF_SERVICE = "/points-of-service";
     /** Delivery methods Allegro offers the seller. */
     public static final String DELIVERY_METHODS = "/sale/delivery-methods";
+    /** Seller's delivery settings (free-delivery thresholds, join policy). */
+    public static final String DELIVERY_SETTINGS = "/sale/delivery-settings";
+    /** Seller's shipping-rate sets. */
+    public static final String SHIPPING_RATES = "/sale/shipping-rates";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
@@ -392,11 +398,23 @@ public final class ApiPaths {
     public static final String ISSUES = "/sale/issues";
     /** Sub-resource: the chat within an issue. */
     public static final String CHAT_SEGMENT = "chat";
+    /** Sub-resource: a message added to an issue. */
+    public static final String MESSAGE_SEGMENT = "message";
+    /** Sub-resource: a claim's formal status. */
+    public static final String STATUS_SEGMENT = "status";
+    /** Issue attachment declarations ({@code /sale/issues/attachments}); append {@code /{attachmentId}}. */
+    public static final String ISSUES_ATTACHMENTS = "/sale/issues/attachments";
 
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */
     public static final String AFTER_SALES_WARRANTIES =
             "/after-sales-service-conditions/warranties";
+    /** Seller after-sale implied-warranty (rękojmia) definitions. */
+    public static final String AFTER_SALES_IMPLIED_WARRANTIES =
+            "/after-sales-service-conditions/implied-warranties";
+    /** Seller after-sale return-policy definitions. */
+    public static final String AFTER_SALES_RETURN_POLICIES =
+            "/after-sales-service-conditions/return-policies";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
