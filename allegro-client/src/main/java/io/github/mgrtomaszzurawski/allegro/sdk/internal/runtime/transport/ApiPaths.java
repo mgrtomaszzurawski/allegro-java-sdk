@@ -48,6 +48,10 @@ public final class ApiPaths {
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
+    private static final String SALE_OFFER_PUBLICATION_COMMANDS = "/sale/offer-publication-commands";
+    private static final String SALE_OFFER_PRICE_CHANGE_COMMANDS = "/sale/offer-price-change-commands";
+    private static final String SALE_OFFER_QUANTITY_CHANGE_COMMANDS = "/sale/offer-quantity-change-commands";
+    private static final String TASKS_SEGMENT = "tasks";
 
     /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
     public static final String SALE_OFFERS = "/sale/offers";
@@ -67,9 +71,61 @@ public final class ApiPaths {
         return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
     }
 
+    /** Batch publish/unpublish command ({@code /sale/offer-publication-commands/{commandId}}). */
+    public static String offerPublicationCommand(String commandId) {
+        return subPath(SALE_OFFER_PUBLICATION_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a publish/unpublish command ({@code …/{commandId}/tasks}). */
+    public static String offerPublicationCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_PUBLICATION_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Batch price-change command ({@code /sale/offer-price-change-commands/{commandId}}). */
+    public static String offerPriceChangeCommand(String commandId) {
+        return subPath(SALE_OFFER_PRICE_CHANGE_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a price-change command ({@code …/{commandId}/tasks}). */
+    public static String offerPriceChangeCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_PRICE_CHANGE_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Batch quantity-change command ({@code /sale/offer-quantity-change-commands/{commandId}}). */
+    public static String offerQuantityChangeCommand(String commandId) {
+        return subPath(SALE_OFFER_QUANTITY_CHANGE_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a quantity-change command ({@code …/{commandId}/tasks}). */
+    public static String offerQuantityChangeCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_QUANTITY_CHANGE_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
     // ---- orders (bucket B) ----
+    /** Order resources root ({@code /order}); build sub-resources with {@link #subPath}. */
+    public static final String ORDER_ROOT = "/order";
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
+    /** Seller's order event log ({@code /order/events}); cursor-paged by {@code from}. */
+    public static final String ORDER_EVENTS = "/order/events";
+    /** Latest-order-event marker ({@code /order/event-stats}). */
+    public static final String ORDER_EVENT_STATS = "/order/event-stats";
+    /** Available shipping carriers dictionary ({@code /order/carriers}). */
+    public static final String ORDER_CARRIERS = "/order/carriers";
+    /** Allegro pickup/drop-off points ({@code /order/carriers/ALLEGRO/points}). */
+    public static final String ALLEGRO_PICKUP_POINTS = "/order/carriers/ALLEGRO/points";
+    /** {@code fulfillment} sub-resource segment (under an order). */
+    public static final String FULFILLMENT_SEGMENT = "fulfillment";
+    /** {@code serial-numbers} sub-resource segment (under an order). */
+    public static final String SERIAL_NUMBERS_SEGMENT = "serial-numbers";
+    /** {@code shipments} sub-resource segment (under an order). */
+    public static final String SHIPMENTS_SEGMENT = "shipments";
+    /** {@code tracking} sub-resource segment (under a carrier). */
+    public static final String TRACKING_SEGMENT = "tracking";
+    /** {@code billing-documents} sub-resource segment (under an order). */
+    public static final String BILLING_DOCUMENTS_SEGMENT = "billing-documents";
+    /** {@code links} sub-resource segment (under an order's billing documents). */
+    public static final String LINKS_SEGMENT = "links";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
@@ -93,6 +149,11 @@ public final class ApiPaths {
     public static String offerClassifiedsPackages(String offerId) {
         return subPath(OFFER_CLASSIFIEDS_PACKAGES, offerId);
     }
+
+    /** Daily advertisement statistics for selected offers ({@code offer.id} query). */
+    public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
+    /** Daily advertisement statistics aggregated for the seller. */
+    public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
@@ -131,10 +192,37 @@ public final class ApiPaths {
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
+    /** Available stock report for One Fulfillment goods. */
+    public static final String FULFILLMENT_STOCK = "/fulfillment/stock";
+    /** Products the seller may ship into One Fulfillment. */
+    public static final String FULFILLMENT_AVAILABLE_PRODUCTS = "/fulfillment/available-products";
+    /** Refund-dispositions report for returned/bounced One Fulfillment goods. */
+    public static final String FULFILLMENT_REFUND_DISPOSITIONS = "/fulfillment/returns/refund-dispositions";
+    /** Seller's tax identification number for One Fulfillment. */
+    public static final String FULFILLMENT_TAX_ID = "/fulfillment/tax-id";
+    private static final String FULFILLMENT_ORDERS = "/fulfillment/orders";
+    private static final String PARCELS_SEGMENT = "parcels";
+
+    /** Parcels shipped for one fulfillment order ({@code /fulfillment/orders/{orderId}/parcels}). */
+    public static String fulfillmentOrderParcels(String orderId) {
+        return subPath(FULFILLMENT_ORDERS, orderId, PARCELS_SEGMENT);
+    }
 
     // ---- contacts (bucket J) ----
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
     public static final String OFFER_CONTACTS = "/sale/offer-contacts";
+
+    // ---- messaging (bucket J) ----
+    /** Message-center threads ({@code /messaging/threads}); append {@code /{threadId}} via subPath. */
+    public static final String MESSAGING_THREADS = "/messaging/threads";
+    /** Single messages ({@code /messaging/messages}); append {@code /{messageId}} via subPath. */
+    public static final String MESSAGING_MESSAGES = "/messaging/messages";
+    /** Message attachments ({@code /messaging/message-attachments}); append {@code /{attachmentId}} via subPath. */
+    public static final String MESSAGING_MESSAGE_ATTACHMENTS = "/messaging/message-attachments";
+    /** Sub-resource: the messages collection within a thread. */
+    public static final String MESSAGES_SEGMENT = "messages";
+    /** Sub-resource: the read-flag toggle of a thread. */
+    public static final String READ_SEGMENT = "read";
 
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */
