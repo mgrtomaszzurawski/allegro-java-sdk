@@ -327,21 +327,24 @@ class HttpCallTest {
     }
 
     @Test
-    void betaJsonBody_whenSet_sendsBetaVendorContentType(WireMockRuntimeInfo wmInfo) {
+    void betaJsonBody_whenSet_sendsBetaVendorContentTypeWithFullBody(WireMockRuntimeInfo wmInfo) {
         // given — a beta write surface that rejects the public.v1 content type
         stubFor(post(urlEqualTo(PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
 
-        // when
+        // when — a payload with a null field and an empty collection
         support(wmInfo).request(OPERATION).post(PATH)
-                .betaJsonBody(Map.of("k", "v")).send();
+                .betaJsonBody(new Payload(PRESENT_VALUE, null, List.of())).send();
 
-        // then — the request body carries the beta media type, not public.v1
+        // then — beta media type AND the FULL serializer keeps null/empty fields
+        // (a strict match proves betaJsonBody did not delegate to the partial path)
         verify(1, postRequestedFor(urlEqualTo(PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
-                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1)));
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                .withRequestBody(equalToJson(
+                        "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null,\"items\":[]}", true, false)));
     }
 
     @Test
