@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.havingExactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
@@ -28,10 +29,14 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder.ClassifiedStatsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedEventType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackageType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifiedStats;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.SellerClassifiedStats;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -39,6 +44,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitExcepti
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +73,19 @@ class ClassifiedsClientTest {
     private static final String TEST_OFFER_ID = "8235476198";
     private static final String PACKAGE_PATH = PACKAGES_PATH + "/" + TEST_PACKAGE_ID;
     private static final String OFFER_PACKAGES_PATH = "/sale/offer-classifieds-packages/" + TEST_OFFER_ID;
+    private static final String OFFER_STATS_PATH = "/sale/classified-offers-stats";
+    private static final String SELLER_STATS_PATH = "/sale/classified-seller-stats";
+    private static final String OFFER_ID_PARAM = "offer.id";
+    private static final String DATE_GTE_PARAM = "date.gte";
+    private static final String DATE_LTE_PARAM = "date.lte";
+    private static final String TEST_OFFER_ID_2 = "8235476199";
+    private static final OffsetDateTime TEST_FROM = OffsetDateTime.parse("2026-07-01T10:15:30Z");
+    private static final OffsetDateTime TEST_TO = OffsetDateTime.parse("2026-07-08T10:15:30Z");
+    private static final int SHOWED_PHONE_TOTAL = 5;
+    private static final int ASKED_QUESTION_DAY = 2;
+    private static final int FAVOURITES_TOTAL = 9;
+    private static final String TEST_STAT_DAY = "2026-07-01";
+    private static final int OVER_MAX_OFFER_IDS = 51;
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
@@ -129,6 +150,28 @@ class ClassifiedsClientTest {
             {"basePackage":{"id":"%s"},
              "extraPackages":[{"id":"%s","republish":true}]}
             """.formatted(TEST_PACKAGE_ID, TEST_EXTRA_PACKAGE_ID);
+    // spec-derived: not yet wire-verified. OfferStatsResponseDto — one requested
+    // offer with a per-event total and a single day's breakdown.
+    private static final String OFFER_STATS_RESPONSE = """
+            {"offerStats":[
+              {"offer":{"id":"%s"},
+               "eventStatsTotal":[{"eventType":"SHOWED_PHONE_NUMBER","count":%d}],
+               "eventsPerDay":[{"date":"%s",
+                 "eventStats":[{"eventType":"ASKED_QUESTION","count":%d}]}]}
+            ]}
+            """.formatted(TEST_OFFER_ID, SHOWED_PHONE_TOTAL, TEST_STAT_DAY, ASKED_QUESTION_DAY);
+    // spec-derived: not yet wire-verified. SellerOfferStatsResponseDto — bare
+    // totals + per-day breakdown, no offer wrapper.
+    private static final String SELLER_STATS_RESPONSE = """
+            {"eventStatsTotal":[{"eventType":"ADDED_TO_FAVOURITES","count":%d}],
+             "eventsPerDay":[{"date":"%s",
+               "eventStats":[{"eventType":"SHOWED_PHONE_NUMBER","count":%d}]}]}
+            """.formatted(FAVOURITES_TOTAL, TEST_STAT_DAY, SHOWED_PHONE_TOTAL);
+    // spec-derived: a malformed daily date must surface as a typed SDK exception.
+    private static final String MALFORMED_DATE_STATS_RESPONSE = """
+            {"eventStatsTotal":[],
+             "eventsPerDay":[{"date":"not-a-date","eventStats":[]}]}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -471,6 +514,133 @@ class ClassifiedsClientTest {
             assertThrows(NullPointerException.class,
                     () -> classifieds.assignPackages(TEST_OFFER_ID, null));
             verify(0, putRequestedFor(urlPathEqualTo(OFFER_PACKAGES_PATH)));
+        }
+    }
+
+    @Test
+    void offerStats_whenOffersAndRangeGiven_sendsIdArrayAndRangeAndMaps(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(OFFER_STATS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(OFFER_STATS_RESPONSE)));
+        ClassifiedStatsFilter filter = ClassifiedStatsFilter.builder()
+                .eventsFrom(TEST_FROM).eventsTo(TEST_TO).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — two offer ids requested as a repeated query parameter
+            List<OfferClassifiedStats> stats = allegro.classifieds()
+                    .offerStats(List.of(TEST_OFFER_ID, TEST_OFFER_ID_2), filter);
+
+            // then — the per-offer totals and per-day breakdown are mapped
+            assertEquals(1, stats.size());
+            OfferClassifiedStats offerStats = stats.get(0);
+            assertEquals(TEST_OFFER_ID, offerStats.offerId());
+            assertEquals(ClassifiedEventType.SHOWED_PHONE_NUMBER, offerStats.totals().get(0).eventType());
+            assertEquals(SHOWED_PHONE_TOTAL, offerStats.totals().get(0).count());
+            assertEquals(LocalDate.parse(TEST_STAT_DAY), offerStats.perDay().get(0).date());
+            assertEquals(ASKED_QUESTION_DAY, offerStats.perDay().get(0).events().get(0).count());
+            // both ids and both date bounds went out on the wire
+            verify(1, getRequestedFor(urlPathEqualTo(OFFER_STATS_PATH))
+                    .withQueryParam(OFFER_ID_PARAM, havingExactly(TEST_OFFER_ID, TEST_OFFER_ID_2))
+                    .withQueryParam(DATE_GTE_PARAM, equalTo(TEST_FROM.toString()))
+                    .withQueryParam(DATE_LTE_PARAM, equalTo(TEST_TO.toString())));
+        }
+    }
+
+    @Test
+    void offerStats_whenOfferIdsNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then
+            assertThrows(NullPointerException.class,
+                    () -> classifieds.offerStats(null, ClassifiedStatsFilter.all()));
+            verify(0, getRequestedFor(urlPathEqualTo(OFFER_STATS_PATH)));
+        }
+    }
+
+    @Test
+    void offerStats_whenOfferIdsEmpty_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — offer.id is required and must carry at least one id
+            assertThrows(IllegalArgumentException.class,
+                    () -> classifieds.offerStats(List.of(), ClassifiedStatsFilter.all()));
+            verify(0, getRequestedFor(urlPathEqualTo(OFFER_STATS_PATH)));
+        }
+    }
+
+    @Test
+    void offerStats_whenOfferIdsExceedMax_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        List<String> tooMany = Collections.nCopies(OVER_MAX_OFFER_IDS, TEST_OFFER_ID);
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — the server caps offer.id at 50, so the SDK rejects 51 fail-fast
+            assertThrows(IllegalArgumentException.class,
+                    () -> classifieds.offerStats(tooMany, ClassifiedStatsFilter.all()));
+            verify(0, getRequestedFor(urlPathEqualTo(OFFER_STATS_PATH)));
+        }
+    }
+
+    @Test
+    void sellerStats_whenRangeGiven_sendsRangeAndMaps(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SELLER_STATS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(SELLER_STATS_RESPONSE)));
+        ClassifiedStatsFilter filter = ClassifiedStatsFilter.builder()
+                .eventsFrom(TEST_FROM).eventsTo(TEST_TO).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            SellerClassifiedStats stats = allegro.classifieds().sellerStats(filter);
+
+            // then — totals + per-day are mapped, and the date range went out
+            assertEquals(ClassifiedEventType.ADDED_TO_FAVOURITES, stats.totals().get(0).eventType());
+            assertEquals(FAVOURITES_TOTAL, stats.totals().get(0).count());
+            assertEquals(SHOWED_PHONE_TOTAL, stats.perDay().get(0).events().get(0).count());
+            verify(1, getRequestedFor(urlPathEqualTo(SELLER_STATS_PATH))
+                    .withQueryParam(DATE_GTE_PARAM, equalTo(TEST_FROM.toString()))
+                    .withQueryParam(DATE_LTE_PARAM, equalTo(TEST_TO.toString())));
+        }
+    }
+
+    @Test
+    void sellerStats_whenFilterNull_throwsBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then
+            assertThrows(NullPointerException.class, () -> classifieds.sellerStats(null));
+            verify(0, getRequestedFor(urlPathEqualTo(SELLER_STATS_PATH)));
+        }
+    }
+
+    @Test
+    void sellerStats_whenDailyDateMalformed_throwsServerException(WireMockRuntimeInfo wmInfo) {
+        // given — a daily bucket carrying an unparseable date
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SELLER_STATS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(MALFORMED_DATE_STATS_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var classifieds = allegro.classifieds();
+
+            // then — a raw DateTimeParseException never escapes the SDK surface
+            assertThrows(AllegroServerException.class,
+                    () -> classifieds.sellerStats(ClassifiedStatsFilter.all()));
         }
     }
 }
