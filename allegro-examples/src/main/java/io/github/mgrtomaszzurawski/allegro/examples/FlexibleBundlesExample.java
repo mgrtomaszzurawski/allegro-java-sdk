@@ -25,6 +25,7 @@ public final class FlexibleBundlesExample {
 
     private static final int MINIMUM_BOUGHT_OFFERS = 2;
     private static final int WHOLE_BUNDLE_PERCENTAGE = 10;
+    private static final String MARKETPLACE_ID = "allegro-pl";
 
     private FlexibleBundlesExample() {
     }
@@ -58,7 +59,7 @@ public final class FlexibleBundlesExample {
                             .build())
                     .discount(FlexibleBundleDiscount.wholeBundle(new WholeBundleDiscount(
                             MINIMUM_BOUGHT_OFFERS,
-                            List.of(new MarketplaceDiscount("allegro-pl", WHOLE_BUNDLE_PERCENTAGE)))))
+                            List.of(new MarketplaceDiscount(MARKETPLACE_ID, WHOLE_BUNDLE_PERCENTAGE)))))
                     .build());
             return created.id();
         }

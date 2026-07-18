@@ -134,6 +134,12 @@ class FlexibleBundleSlotRequestBuilderTest {
     }
 
     @Test
+    void offerRefOf_whenOfferIdNull_throwsNpe() {
+        // then — the required offer id is fail-fast at construction
+        assertThrows(NullPointerException.class, () -> FlexibleBundleOfferRef.of(null, false));
+    }
+
+    @Test
     void build_whenOffersListSet_replacesAccumulatedOffers() {
         // when — offers(List) sets the whole list
         FlexibleBundleSlotRequest slot = FlexibleBundleSlotRequest.builder()

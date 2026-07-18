@@ -11,6 +11,9 @@ import java.util.Objects;
  * whether that offer is excluded from the bundle's discount. Build one with
  * {@link #of(String, boolean)}.
  *
+ * <p>The entry-point flag is a slot property, not an offer property: set it on the
+ * slot via {@code FlexibleBundleSlotRequest.builder().entryPoint(...)}, not here.
+ *
  * @param offerId the offer identifier
  * @param excludedFromDiscount whether this offer is excluded from the bundle
  *     discount when a buyer picks it for the slot

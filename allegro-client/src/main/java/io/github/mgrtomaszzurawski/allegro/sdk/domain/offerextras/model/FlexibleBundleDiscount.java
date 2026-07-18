@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.FlexibleBundleDiscountDTORaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.FlexibleBundleSlotsDiscountDTORaw;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,6 +29,9 @@ public record FlexibleBundleDiscount(
         @Nullable WholeBundleDiscount wholeBundle,
         List<SlotDiscount> slotDiscounts) {
 
+    private static final String ERR_WHOLE_BUNDLE_NULL = "wholeBundle must not be null";
+    private static final String ERR_SLOT_DISCOUNTS_NULL = "slotDiscounts must not be null";
+
     public FlexibleBundleDiscount {
         slotDiscounts = List.copyOf(slotDiscounts);
     }
@@ -40,6 +44,7 @@ public record FlexibleBundleDiscount(
      * @return a {@link FlexibleBundleDiscountType#WHOLE_BUNDLE_DISCOUNT} discount
      */
     public static FlexibleBundleDiscount wholeBundle(WholeBundleDiscount wholeBundle) {
+        Objects.requireNonNull(wholeBundle, ERR_WHOLE_BUNDLE_NULL);
         return new FlexibleBundleDiscount(FlexibleBundleDiscountType.WHOLE_BUNDLE_DISCOUNT, wholeBundle, List.of());
     }
 
@@ -51,6 +56,7 @@ public record FlexibleBundleDiscount(
      * @return a {@link FlexibleBundleDiscountType#SLOT_DISCOUNT} discount
      */
     public static FlexibleBundleDiscount perSlot(List<SlotDiscount> slotDiscounts) {
+        Objects.requireNonNull(slotDiscounts, ERR_SLOT_DISCOUNTS_NULL);
         return new FlexibleBundleDiscount(FlexibleBundleDiscountType.SLOT_DISCOUNT, null, slotDiscounts);
     }
 
