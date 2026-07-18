@@ -138,6 +138,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `/sale/offer-classifieds-packages/{offerId}`). `ClassifiedAssignment` is built
   by a fail-fast builder; the write→read demo assigns then reads the packages
   back. All calls require the seller user token.
+- `classifieds.offerStats(offerIds, ClassifiedStatsFilter)` and
+  `classifieds.sellerStats(ClassifiedStatsFilter)` — daily advertisement
+  statistics for up to 50 selected offers, or aggregated across the seller
+  (`/sale/classified-offers-stats`, `/sale/classified-seller-stats`). Returns
+  per-event totals (`ClassifiedEventType`) and a day-by-day breakdown
+  (`ClassifiedDailyStat`); `ClassifiedStatsFilter` carries the optional
+  `date.gte`/`date.lte` bounds. Completes the standalone `classifieds()` surface.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
@@ -167,6 +174,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
   `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
   enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+- Add the fulfillment read reports and tax-id resource: lazy `stock()` / `stock(StockFilter)`,
+  `availableProducts()` and `refundDispositions()` / `refundDispositions(RefundDispositionFilter)`
+  streams, `parcelsOf(orderId)`, and `taxId()` / `addTaxId(...)` / `updateTaxId(...)`. New immutable
+  records (`StockItem` tree, `AvailableProduct`, `FulfillmentOrder`, `RefundDisposition` tree,
+  `TaxId`), the `StockFilter` / `RefundDispositionFilter` builders, and forward-compatible
+  open-set enums (`ReserveStatus`, `StorageFeeStatus`, `RefundDispositionType`,
+  `RefundStockStatus`, `AccountableParty`, `RefundActionState`) that resolve unknown wire
+  values to `UNKNOWN`.
 
 ### J — post-sale-comms
 
