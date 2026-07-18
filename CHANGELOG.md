@@ -53,6 +53,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   server-side). NON_EMPTY is required because the generated request DTOs
   pre-initialize collection fields to empty. Reusable by every bucket's
   partial-update endpoints.
+- Fixed: the shared refresh-token store (`allegro-demo` `SharedTokenStore`) now
+  writes crash-atomically (serialize to a sibling temp file, then `ATOMIC_MOVE`)
+  under a stable lock file, instead of truncating the data file in place. A demo
+  killed mid-write (e.g. at its timeout while refreshing) previously left a
+  truncated file that dropped the other account's token; the write is now
+  all-or-nothing. First regression tests for this agent infrastructure.
 
 ### A — offers-core
 
