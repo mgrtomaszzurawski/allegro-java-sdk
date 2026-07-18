@@ -55,6 +55,7 @@ module io.github.mgrtomaszzurawski.allegro {
 
     // Classifieds (advertisement) packages and statistics (bucket F).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
 
     // Pricing: automatic pricing rules, promotions, deposits (bucket G).
