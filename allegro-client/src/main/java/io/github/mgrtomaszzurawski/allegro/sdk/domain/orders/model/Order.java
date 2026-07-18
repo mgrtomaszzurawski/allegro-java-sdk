@@ -55,7 +55,7 @@ public record Order(
 
     public Order {
         lineItems = List.copyOf(lineItems);
-        surcharges = surcharges == null ? List.of() : List.copyOf(surcharges);
+        surcharges = List.copyOf(surcharges);
     }
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
@@ -74,7 +74,7 @@ public record Order(
                 raw.getLineItems().stream().map(LineItem::from).toList(),
                 Money.of(totalToPay.getAmount(), totalToPay.getCurrency()),
                 payment == null ? null : OrderPayment.from(payment),
-                surcharges == null ? List.of() : surcharges.stream().map(OrderPayment::from).toList(),
+                surcharges.stream().map(OrderPayment::from).toList(),
                 raw.getMessageToSeller(),
                 note == null ? null : note.getText(),
                 marketplace == null ? null : marketplace.getId(),

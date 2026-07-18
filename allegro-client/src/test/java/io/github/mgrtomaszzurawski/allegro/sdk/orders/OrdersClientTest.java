@@ -20,7 +20,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -99,10 +98,12 @@ class OrdersClientTest {
     private static final String EXPECTED_REVISION = "abc123";
     private static final String EXPECTED_MESSAGE = "Please ship fast";
     private static final String EXPECTED_PAID_AMOUNT = "44.98";
+    private static final String EXPECTED_PAYMENT_FINISHED_AT = "2026-07-15T10:32:00Z";
     private static final String EXPECTED_SURCHARGE_AMOUNT = "5.00";
     private static final String EXPECTED_SELLER_NOTE = "Fragile - handle with care";
     private static final String FUTURE_PAYMENT_TYPE = "SOME_FUTURE_PAYMENT_TYPE";
     private static final String FUTURE_PAYMENT_PROVIDER = "SOME_FUTURE_PROVIDER";
+    private static final String PAYMENT_ID = "9a8b7c6d-1111-2222-3333-444455556666";
 
     private static final long RETRY_AFTER_SECONDS = 120L;
     private static final int FAST_MAX_ATTEMPTS = 2;
@@ -309,7 +310,8 @@ class OrdersClientTest {
             assertEquals(PaymentType.ONLINE, order.payment().type());
             assertEquals(PaymentProvider.PAYU, order.payment().provider());
             assertEquals(EXPECTED_PAID_AMOUNT, order.payment().paidAmount().amount());
-            assertNotNull(order.payment().finishedAt());
+            assertEquals(OffsetDateTime.parse(EXPECTED_PAYMENT_FINISHED_AT),
+                    order.payment().finishedAt());
             assertEquals(1, order.surcharges().size());
             assertEquals(EXPECTED_SURCHARGE_AMOUNT, order.surcharges().get(0).paidAmount().amount());
             assertEquals(EXPECTED_SELLER_NOTE, order.sellerNote());
@@ -933,8 +935,8 @@ class OrdersClientTest {
         String body = "{\"id\":\"" + ORDER_ID + "\",\"status\":\"BOUGHT\","
                 + "\"buyer\":{\"id\":\"1\",\"login\":\"b\",\"email\":\"b@example.com\"},"
                 + "\"lineItems\":[],"
-                + "\"payment\":{\"type\":\"" + FUTURE_PAYMENT_TYPE + "\",\"provider\":\""
-                + FUTURE_PAYMENT_PROVIDER + "\"},"
+                + "\"payment\":{\"id\":\"" + PAYMENT_ID + "\",\"type\":\"" + FUTURE_PAYMENT_TYPE
+                + "\",\"provider\":\"" + FUTURE_PAYMENT_PROVIDER + "\"},"
                 + "\"summary\":{\"totalToPay\":{\"amount\":\"0.00\",\"currency\":\"PLN\"}}}";
         stubFor(get(urlEqualTo(ORDER_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(body)));
@@ -944,7 +946,8 @@ class OrdersClientTest {
             // when
             Order order = allegro.orders().get(ORDER_ID);
 
-            // then — the unknown payment enums degrade to UNKNOWN, the order still maps
+            // then — the unknown payment enums degrade to UNKNOWN, the payment still maps
+            assertEquals(PAYMENT_ID, order.payment().id());
             assertEquals(PaymentType.UNKNOWN, order.payment().type());
             assertEquals(PaymentProvider.UNKNOWN, order.payment().provider());
         }
