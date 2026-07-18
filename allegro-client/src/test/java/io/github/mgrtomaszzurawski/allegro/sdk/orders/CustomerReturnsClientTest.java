@@ -195,9 +195,15 @@ class CustomerReturnsClientTest {
             // when
             CustomerReturn rejected = allegro.orders().returns().rejectRefund(RETURN_ID, request);
 
-            // then — the rejection code + reason reached the wire
+            // then — the rejection code + reason reached the wire, and the beta
+            // surface got BOTH the beta Accept and the beta request Content-Type
+            // (the v1 content type is rejected on this beta write endpoint)
             assertEquals(RETURN_ID, rejected.id());
             verify(1, postRequestedFor(urlEqualTo(REJECTION_PATH))
+                    .withHeader(TestHttpConstants.ACCEPT_HEADER,
+                            equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                    .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                            equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                     .withRequestBody(matchingJsonPath("$.rejection.code",
                             equalTo(ReturnRejectionCode.ITEM_FIXED.name())))
                     .withRequestBody(matchingJsonPath("$.rejection.reason", equalTo(REASON))));

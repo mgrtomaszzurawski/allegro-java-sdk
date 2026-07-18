@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -64,6 +65,12 @@ class AffiliateClientTest {
             {"conversions":[{"id":"conv-2","status":"CREATED",
               "offer":{"id":"o2","unitPrice":{"currency":"PLN"}},
               "commission":{"publisher":{}}}]}
+            """;
+    // A status value this SDK release does not model — Layer-1 degrades it to
+    // the generated sentinel (C3), the domain enum lands on UNKNOWN, and the
+    // whole response must still deserialize.
+    private static final String UNKNOWN_STATUS_RESPONSE = """
+            {"conversions":[{"id":"conv-3","status":"SETTLED_LATER","quantity":1}]}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -131,6 +138,47 @@ class AffiliateClientTest {
             assertEquals(1, conversions.size());
             assertNull(conversions.get(0).offer().unitPrice());
             assertNull(conversions.get(0).commission().publisher());
+        }
+    }
+
+    @Test
+    void streamCpsConversions_whenStatusFilterUnknown_omitsStatusQueryParameter(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the forward-compat UNKNOWN sentinel is not a valid request value
+        stubFor(get(urlPathEqualTo(CONVERSIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(CONVERSIONS_RESPONSE)));
+        ConversionFilter filter = ConversionFilter.builder()
+                .status(ConversionStatus.UNKNOWN)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.affiliate().streamCpsConversions(filter).toList();
+
+            // then — status is dropped, not sent verbatim (which the server would reject)
+            verify(getRequestedFor(urlPathEqualTo(CONVERSIONS_PATH))
+                    .withQueryParam("status", absent()));
+        }
+    }
+
+    @Test
+    void streamCpsConversions_whenUnknownWireStatus_mapsToUnknownWithoutFailing(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a status value newer than this SDK release models
+        stubFor(get(urlPathEqualTo(CONVERSIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_STATUS_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<CpsConversion> conversions =
+                    allegro.affiliate().streamCpsConversions(ConversionFilter.all()).toList();
+
+            // then — degraded to UNKNOWN end-to-end, the response still deserialized
+            assertEquals(1, conversions.size());
+            assertEquals(ConversionStatus.UNKNOWN, conversions.get(0).status());
         }
     }
 }

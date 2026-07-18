@@ -159,8 +159,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `cancel`). New models `OrderInvoice`/`CustomerReturn`/`RefundClaim`/`ReturnRejectionCode` and
   fluent request/filter builders. **All 27 bucket-B operations are now on the SDK surface.**
   Live write→read verification of the order-keyed endpoints remains tracked (needs a seeded
-  buyer order; `returns().rejectRefund` also needs the core beta JSON-body Content-Type fix —
-  see `KNOWN-SERVER-BEHAVIORS.md`), so their WireMock fixtures stay `spec-derived` meanwhile.
+  buyer order), so their WireMock fixtures stay `spec-derived` meanwhile.
+- Forward-compatibility hardening (consumes core C2/C3): `returns().rejectRefund` now sends its
+  beta POST body with the beta vendor `Content-Type` via `HttpCall.betaJsonBody` (was a v1/beta
+  header mismatch); order/fulfillment/event-type query filters drop the read-only `UNKNOWN`
+  sentinel instead of serializing it (which the server rejects with 400), and an unknown wire
+  enum value now degrades an `Order`/`OrderEvent` to the `UNKNOWN` sentinel rather than failing
+  the response. Added forward-compat and filter-guard WireMock tests.
 
 ### C — shipping
 
@@ -203,6 +208,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /affiliate/conversions/cps`, beta, lazy stream).
 - New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
   `RatingFilter`, `CharitySearch`, `ConversionFilter`.
+- `client.user().me()` now maps the `company` (business VAT registration —
+  `name`, `taxId`) and `baseMarketplaceId` fields of the `/me` response onto
+  `CurrentUser`; both were previously dropped. `CurrentUser.Company` is a new
+  nested record; both fields are `null` for a personal account that carries none.
+- `ConversionStatus` forward-compat (builds on core `enumUnknownDefaultCase`):
+  an affiliate conversion whose `status` this release does not model now degrades
+  to the read-only `UNKNOWN` sentinel instead of failing the whole stream, and the
+  `status` filter drops `UNKNOWN` rather than sending it verbatim (which the server
+  would reject).
 - `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
   bucket D's live verification, run with a stored buyer token
   (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
@@ -224,9 +238,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `CategoryParameterType` (dictionary/float/integer/string), a flattened
   `ParameterRestrictions` (numeric bounds/precision, text lengths,
   `multipleChoices`), the dictionary `DictionaryValue`s and
-  `CategoryParameterOptions`. An unmodelled parameter type maps to the mapper's
-  `CategoryParameterType.OTHER` default (today an unknown `type` still fails
-  deserialization on the wire — end-to-end degradation is a tracked core follow-up).
+  `CategoryParameterOptions`. An unmodelled parameter type degrades to the
+  mapper's `CategoryParameterType.OTHER` default rather than failing the read —
+  the core `UnknownSubtypeToBaseHandler` resolves an unknown `type` discriminator
+  to the polymorphic base (the Layer-1 Raw declares no `defaultImpl`).
 - `categories().suggest(productName)` — categories whose names best match a
   product or offer name (`GET /sale/matching-categories`) as `CategorySuggestion`
   records, each reachable up its parent breadcrumb.
@@ -243,6 +258,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   describing it. A focused projection — the structured `description` and
   compatibility blocks follow in a later slice. The `catalog-products` demo reads
   a searched product back (search → get round-trip).
+- `catalog().products().parametersIn(categoryId)` — the parameters a *product* in
+  a category expects (`GET /sale/categories/{id}/product-parameters`), as
+  immutable `ProductParameter` records. The product-side counterpart of
+  `categories().parameters(...)`: it reuses the shared `CategoryParameterType`,
+  `ParameterRestrictions` and `DictionaryValue` value types but drops the two
+  offer-only components a product parameter never carries (`requiredForProduct`,
+  display `CategoryParameterOptions`). An unmodelled parameter type degrades to
+  `CategoryParameterType.OTHER` (core `UnknownSubtypeToBaseHandler`). The
+  `catalog-products` demo lists a searched product's category schema.
 
 ### F — offers-extras
 
@@ -332,8 +356,8 @@ sections. Empty subsections are dropped by the release engineer when folding
   `BadgeFilter` builders and the `BadgePatch` change type.
 - Add the Allegro Prices sub-facade `client.campaigns().allegroPrices()`: `participation` /
   `updateParticipation(ParticipationUpdate)` (GET/PATCH `/sale/allegro-prices/accounts/participations`),
-  `streamOffersStatus(AllegroPricesOfferQuery)` (POST `/sale/allegro-prices/offers-queries`, lazy
-  stream mapped from raw JSON to side-step the generated `oneOf` price-reduction deserializer), and
+  `streamOffersStatus(AllegroPricesOfferQuery)` (POST `/sale/allegro-prices/offers-queries`, a lazy
+  stream whose `oneOf` price-reduction fields are resolved by the strict `oneOf` mapper), and
   the subsidy commands `submitOffers`/`excludeOffers(...[, Duration])` (POST, polled to a terminal
   per-offer report). Adds `AllegroPricesParticipation`/`MarketplaceParticipation`/`ParticipationStatus`,
   `AllegroPricesOfferStatus`, `SubsidyCommandReport`/`SubsidyOfferResult`/`SubsidyOfferStatus` models
