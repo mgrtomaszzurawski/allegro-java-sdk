@@ -1,0 +1,16 @@
+{
+  "eligibleOffers": [
+    {
+      "id": "12345678",
+      "product": { "id": "prod-1" },
+      "basePrice": { "amount": "100.00", "currency": "PLN" },
+      "alleDiscount": {
+        "campaignConditions": { "meetsConditions": true, "violations": [] },
+        "requiredMerchantPrice": { "amount": "90.00", "currency": "PLN" },
+        "minimumGuaranteedDiscount": { "percentage": "10" }
+      }
+    }
+  ],
+  "count": 1,
+  "totalCount": 1
+}

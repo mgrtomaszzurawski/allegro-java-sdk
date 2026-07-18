@@ -7,11 +7,15 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AlleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AllegroPrices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Badges;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.AllegroPricesOfferQuery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeApplicationFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.EligibleOffersFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountCampaign;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AlleDiscountEligibleOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesOfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesParticipation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.Badge;
@@ -66,6 +70,32 @@ final class CampaignsDemo {
             }
             readShapeApplicationsAndBadges(client.campaigns().badges());
             readShapeAllegroPrices(client.campaigns().allegroPrices());
+            readShapeAlleDiscount(client.campaigns().alleDiscount());
+        }
+    }
+
+    /**
+     * Read-shape check of AlleDiscount through the SDK — the campaign list and, for
+     * the first campaign, a sample of its eligible offers.
+     */
+    private static void readShapeAlleDiscount(AlleDiscount alleDiscount) {
+        List<AlleDiscountCampaign> campaigns = alleDiscount.campaigns();
+        System.out.println("alleDiscount().campaigns(): " + campaigns.size() + " campaign(s)");
+        for (AlleDiscountCampaign campaign : campaigns) {
+            System.out.println("  - " + campaign.id() + " [" + campaign.type() + "] " + campaign.name());
+        }
+        if (!campaigns.isEmpty()) {
+            String campaignId = campaigns.get(0).id();
+            List<AlleDiscountEligibleOffer> eligible = alleDiscount
+                    .streamEligibleOffers(EligibleOffersFilter.builder(campaignId).build())
+                    .limit(READ_SHAPE_SAMPLE)
+                    .toList();
+            System.out.println("alleDiscount().streamEligibleOffers(" + campaignId + "): "
+                    + eligible.size() + " sampled");
+            for (AlleDiscountEligibleOffer offer : eligible) {
+                System.out.println("  - " + offer.offerId() + " requiredMerchantPrice="
+                        + offer.requiredMerchantPrice() + " meetsConditions=" + offer.meetsConditions());
+            }
         }
     }
 
