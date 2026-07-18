@@ -66,6 +66,8 @@ public final class DisputesImpl implements Disputes {
     private static final String ACCEPT_ANY = "*/*";
     private static final String ERR_NO_UPLOAD_LOCATION =
             "attachment declaration returned no upload location";
+    private static final String ERR_SIZE_MISMATCH =
+            "content length does not match the declared attachment size";
 
     private final HttpSupport http;
 
@@ -170,10 +172,17 @@ public final class DisputesImpl implements Disputes {
     @Override
     public IssueAttachmentRef uploadAttachment(IssueAttachmentDeclaration declaration,
             byte[] content, String contentType) {
+        if (content.length != declaration.size()) {
+            throw new IllegalArgumentException(ERR_SIZE_MISMATCH);
+        }
         AttachmentDeclarationRaw declarationBody = new AttachmentDeclarationRaw()
                 .fileName(declaration.filename())
                 .size(declaration.size());
-        // Declare the attachment; Allegro returns a one-time upload URL in Location.
+        // The disputes spec requires uploading to the URL Allegro returns in the
+        // declaration's Location header ("do not compose the address on your own"), so
+        // declare (beta JSON POST) then PUT the bytes to that absolute URL. putAbsolute
+        // sends the bytes to whatever host the Location names (the transport forces https
+        // and refuses any non-Allegro host).
         Located<PostPurchaseIssueAttachmentIdRaw> declared = http.request(OP_DECLARE_ATTACHMENT)
                 .post(ApiPaths.ISSUES_ATTACHMENTS)
                 .acceptBeta()
@@ -183,13 +192,14 @@ public final class DisputesImpl implements Disputes {
         if (uploadUrl == null) {
             throw new IllegalStateException(ERR_NO_UPLOAD_LOCATION);
         }
-        // PUT the bytes to that absolute (possibly cross-host) upload URL.
-        PostPurchaseIssueAttachmentIdRaw uploaded = http.request(OP_UPLOAD_ATTACHMENT)
+        http.request(OP_UPLOAD_ATTACHMENT)
                 .putAbsolute(uploadUrl)
                 .acceptBeta()
                 .binaryBody(content, contentType)
-                .fetch(PostPurchaseIssueAttachmentIdRaw.class);
-        return IssueAttachmentRef.from(uploaded);
+                .send();
+        // The attachment id is taken from the declaration response (on the API host), not
+        // from the upload host echoing a body back.
+        return IssueAttachmentRef.from(declared.value());
     }
 
     @Override

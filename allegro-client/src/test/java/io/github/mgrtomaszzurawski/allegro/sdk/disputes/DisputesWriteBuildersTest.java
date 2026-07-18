@@ -17,12 +17,15 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.ClaimStatus
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueMessageType;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 /**
  * Round-trip and fail-fast coverage of the disputes write builders:
  * {@link IssueMessageRequest}, {@link ClaimStatusChange} and
- * {@link IssueAttachmentDeclaration}. One failure test per required-field rule,
- * plus {@code toBuilder} preservation.
+ * {@link IssueAttachmentDeclaration}. Each failure test asserts the specific message
+ * (the builders have several overlapping {@link IllegalStateException} paths, so a
+ * type-only assertion could pass for the wrong validation firing), plus
+ * {@code toBuilder} preservation.
  */
 class DisputesWriteBuildersTest {
 
@@ -36,6 +39,22 @@ class DisputesWriteBuildersTest {
     private static final int FILE_SIZE = 2048;
     private static final int ZERO_SIZE = 0;
     private static final int OVER_LIMIT_LENGTH = IssueMessageRequest.TEXT_MAX_LENGTH + 1;
+    private static final int OVER_LIMIT_SIZE = IssueAttachmentDeclaration.MAX_SIZE_BYTES + 1;
+
+    // Distinctive fragments of each fail-fast message, so the right rule is proven.
+    private static final String ERR_MSG_EMPTY = "at least one attachment";
+    private static final String ERR_MSG_TEXT_TOO_LONG = "text must be at most";
+    private static final String ERR_MSG_MESSAGE_REQUIRED = "message is required";
+    private static final String ERR_MSG_FILENAME = "filename is required";
+    private static final String ERR_MSG_SIZE_REQUIRED = "size is required";
+    private static final String ERR_MSG_SIZE_SMALL = "size must be at least";
+    private static final String ERR_MSG_SIZE_LARGE = "size must be at most";
+
+    private static void assertMessageContains(Executable action, String fragment) {
+        IllegalStateException failure = assertThrows(IllegalStateException.class, action);
+        assertTrue(failure.getMessage().contains(fragment),
+                () -> "expected message to contain '" + fragment + "' but was: " + failure.getMessage());
+    }
 
     // ---- IssueMessageRequest ----
 
@@ -76,26 +95,25 @@ class DisputesWriteBuildersTest {
     }
 
     @Test
-    void issueMessageRequest_whenNeitherTextNorAttachment_throws() {
+    void issueMessageRequest_whenNeitherTextNorAttachment_throwsEmpty() {
         // then
-        assertThrows(IllegalStateException.class, () -> IssueMessageRequest.builder().build());
+        assertMessageContains(() -> IssueMessageRequest.builder().build(), ERR_MSG_EMPTY);
     }
 
     @Test
-    void issueMessageRequest_whenBlankTextAndNoAttachment_throws() {
+    void issueMessageRequest_whenBlankTextAndNoAttachment_throwsEmpty() {
         // then — blank text does not count as present
-        assertThrows(IllegalStateException.class,
-                () -> IssueMessageRequest.builder().text("   ").build());
+        assertMessageContains(() -> IssueMessageRequest.builder().text("   ").build(), ERR_MSG_EMPTY);
     }
 
     @Test
-    void issueMessageRequest_whenTextTooLong_throws() {
+    void issueMessageRequest_whenTextTooLong_throwsTooLong() {
         // given
         String tooLong = "x".repeat(OVER_LIMIT_LENGTH);
 
-        // then
-        assertThrows(IllegalStateException.class,
-                () -> IssueMessageRequest.builder().text(tooLong).build());
+        // then — the length rule (not the empty rule) fires
+        assertMessageContains(() -> IssueMessageRequest.builder().text(tooLong).build(),
+                ERR_MSG_TEXT_TOO_LONG);
     }
 
     @Test
@@ -168,10 +186,11 @@ class DisputesWriteBuildersTest {
     }
 
     @Test
-    void claimStatusChange_whenBlankMessage_throws() {
+    void claimStatusChange_whenBlankMessage_throwsMessageRequired() {
         // then
-        assertThrows(IllegalStateException.class,
-                () -> ClaimStatusChange.builder().status(ClaimStatus.REJECTED_OTHER).message(" ").build());
+        assertMessageContains(
+                () -> ClaimStatusChange.builder().status(ClaimStatus.REJECTED_OTHER).message(" ").build(),
+                ERR_MSG_MESSAGE_REQUIRED);
     }
 
     @Test
@@ -208,24 +227,33 @@ class DisputesWriteBuildersTest {
     }
 
     @Test
-    void issueAttachmentDeclaration_whenNoFilename_throws() {
+    void issueAttachmentDeclaration_whenNoFilename_throwsFilenameRequired() {
         // then
-        assertThrows(IllegalStateException.class,
-                () -> IssueAttachmentDeclaration.builder().size(FILE_SIZE).build());
+        assertMessageContains(() -> IssueAttachmentDeclaration.builder().size(FILE_SIZE).build(),
+                ERR_MSG_FILENAME);
     }
 
     @Test
-    void issueAttachmentDeclaration_whenNoSize_throws() {
+    void issueAttachmentDeclaration_whenNoSize_throwsSizeRequired() {
         // then
-        assertThrows(IllegalStateException.class,
-                () -> IssueAttachmentDeclaration.builder().filename(FILE_NAME).build());
+        assertMessageContains(() -> IssueAttachmentDeclaration.builder().filename(FILE_NAME).build(),
+                ERR_MSG_SIZE_REQUIRED);
     }
 
     @Test
-    void issueAttachmentDeclaration_whenSizeBelowMinimum_throws() {
-        // then — size must be at least one byte
-        assertThrows(IllegalStateException.class,
-                () -> IssueAttachmentDeclaration.builder().filename(FILE_NAME).size(ZERO_SIZE).build());
+    void issueAttachmentDeclaration_whenSizeBelowMinimum_throwsTooSmall() {
+        // then — size must be at least one byte (not the required rule)
+        assertMessageContains(
+                () -> IssueAttachmentDeclaration.builder().filename(FILE_NAME).size(ZERO_SIZE).build(),
+                ERR_MSG_SIZE_SMALL);
+    }
+
+    @Test
+    void issueAttachmentDeclaration_whenSizeAboveMaximum_throwsTooLarge() {
+        // then — size must not exceed the documented cap
+        assertMessageContains(
+                () -> IssueAttachmentDeclaration.builder().filename(FILE_NAME).size(OVER_LIMIT_SIZE).build(),
+                ERR_MSG_SIZE_LARGE);
     }
 
     @Test

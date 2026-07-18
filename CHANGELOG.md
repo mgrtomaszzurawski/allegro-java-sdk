@@ -402,8 +402,9 @@ sections. Empty subsections are dropped by the release engineer when folding
 - Disputes facade (`client.disputes()`) — post-purchase issues (`/sale/issues`, **beta** media
   type). Reads: lazy `streamIssues(IssueFilter)` (status + checkout-form filter), `get(issueId)`,
   lazy `streamChat(issueId)`. Seller writes (beta request-body content type): `addMessage`,
-  `changeStatus`, and the attachment `uploadAttachment` (declare + PUT to the one-time
-  `Location` URL, cross-host) / `downloadAttachment`. Immutable `Issue`/`IssueChatEntry`/
+  `changeStatus`, and the attachment `uploadAttachment` (declare + PUT the bytes to the
+  one-time URL from the declaration's `Location` header, as the spec requires) /
+  `downloadAttachment`. Immutable `Issue`/`IssueChatEntry`/
   `IssueAttachmentRef` records with `UNKNOWN`-tolerant response enums (`IssueType`,
   `IssueRight`, `IssueStatus`, `ChatAuthorRole`), request enums (`IssueMessageType`,
   `ClaimStatus`), fail-fast `IssueFilter`/`IssueMessageRequest`/`ClaimStatusChange`/

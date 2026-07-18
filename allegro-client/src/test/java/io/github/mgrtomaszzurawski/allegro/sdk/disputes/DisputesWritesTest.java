@@ -71,6 +71,7 @@ class DisputesWritesTest {
     private static final String ATTACHMENT_DOWNLOAD_PATH = ATTACHMENTS_PATH + "/" + ATTACHMENT_ID;
     private static final String UPLOAD_SUBPATH = "/dispute-uploads/" + ATTACHMENT_ID;
 
+    private static final String CREATED_MESSAGE_ID = "msg-1";
     private static final String MESSAGE_TEXT = "Thank you, a replacement ships today.";
     private static final String CHANGE_MESSAGE = "We accept a partial refund.";
     private static final String REFUND_AMOUNT = "12.50";
@@ -79,6 +80,13 @@ class DisputesWritesTest {
     private static final String MIME_JPEG = "image/jpeg";
     private static final byte[] ATTACHMENT_BYTES = "binary-content".getBytes(StandardCharsets.UTF_8);
     private static final byte[] DOWNLOAD_BYTES = "downloaded-file".getBytes(StandardCharsets.UTF_8);
+
+    // Wire enum values (must equal the SDK enum constant names verbatim).
+    private static final String TYPE_REGULAR = "REGULAR";
+    private static final String TYPE_RETURN_NOT_REQUIRED = "RETURN_NOT_REQUIRED";
+    private static final String STATUS_PARTIAL_REFUND = "ACCEPTED_PARTIAL_REFUND";
+    private static final String STATUS_MINOR_DEFECT = "REJECTED_MINOR_DEFECT";
+    private static final String ERROR_PATH_TEXT = "text";
 
     private static final String JSON_PATH_TEXT = "$.text";
     private static final String JSON_PATH_TYPE = "$.type";
@@ -100,14 +108,14 @@ class DisputesWritesTest {
             {"access_token":"%s","expires_in":%d}
             """;
     private static final String MESSAGE_RESPONSE = """
-            {"id":"msg-1","text":"%s","createdAt":"2026-07-16T09:00:00Z",
+            {"id":"%s","text":"%s","createdAt":"2026-07-16T09:00:00Z",
              "author":{"login":"seller-login","role":"SELLER"},"attachments":[]}
-            """.formatted(MESSAGE_TEXT);
+            """.formatted(CREATED_MESSAGE_ID, MESSAGE_TEXT);
     private static final String ATTACHMENT_ID_RESPONSE = "{\"id\":\"%s\"}".formatted(ATTACHMENT_ID);
     private static final String BAD_REQUEST_RESPONSE = """
             {"errors":[{"code":"ValidationError","message":"Message not allowed",
-              "userMessage":"Nie mozna dodac wiadomosci","path":"text","details":null}]}
-            """;
+              "userMessage":"Nie mozna dodac wiadomosci","path":"%s","details":null}]}
+            """.formatted(ERROR_PATH_TEXT);
     private static final String SERVER_ERROR_RESPONSE = "{\"errors\":[]}";
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -142,7 +150,7 @@ class DisputesWritesTest {
                 .withHeader(TestHttpConstants.ACCEPT_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                 .withRequestBody(matchingJsonPath(JSON_PATH_TEXT, equalTo(MESSAGE_TEXT)))
-                .withRequestBody(matchingJsonPath(JSON_PATH_TYPE, equalTo("REGULAR")))
+                .withRequestBody(matchingJsonPath(JSON_PATH_TYPE, equalTo(TYPE_REGULAR)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(MESSAGE_RESPONSE)));
         IssueMessageRequest request = IssueMessageRequest.builder().text(MESSAGE_TEXT).build();
@@ -152,7 +160,7 @@ class DisputesWritesTest {
             IssueChatEntry created = allegro.disputes().addMessage(ISSUE_ID, request);
 
             // then
-            assertEquals("msg-1", created.id());
+            assertEquals(CREATED_MESSAGE_ID, created.id());
             assertEquals(MESSAGE_TEXT, created.text());
             assertEquals(ChatAuthorRole.SELLER, created.author().role());
             verify(1, postRequestedFor(urlEqualTo(MESSAGE_PATH)));
@@ -164,8 +172,12 @@ class DisputesWritesTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(post(urlEqualTo(MESSAGE_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                 .withRequestBody(matchingJsonPath(JSON_PATH_ATTACHMENT_ID, equalTo(ATTACHMENT_ID)))
-                .withRequestBody(matchingJsonPath(JSON_PATH_TYPE, equalTo("RETURN_NOT_REQUIRED")))
+                .withRequestBody(matchingJsonPath(JSON_PATH_TYPE, equalTo(TYPE_RETURN_NOT_REQUIRED)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(MESSAGE_RESPONSE)));
         IssueMessageRequest request = IssueMessageRequest.builder()
@@ -193,7 +205,7 @@ class DisputesWritesTest {
         stubFor(post(urlEqualTo(STATUS_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
-                .withRequestBody(matchingJsonPath(JSON_PATH_STATUS, equalTo("ACCEPTED_PARTIAL_REFUND")))
+                .withRequestBody(matchingJsonPath(JSON_PATH_STATUS, equalTo(STATUS_PARTIAL_REFUND)))
                 .withRequestBody(matchingJsonPath(JSON_PATH_MESSAGE, equalTo(CHANGE_MESSAGE)))
                 .withRequestBody(matchingJsonPath(JSON_PATH_REFUND_AMOUNT, equalTo(REFUND_AMOUNT)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
@@ -229,7 +241,7 @@ class DisputesWritesTest {
 
             // then — body is exactly {status, message}; partialRefund absent
             verify(1, postRequestedFor(urlEqualTo(STATUS_PATH)).withRequestBody(equalToJson(
-                    "{\"status\":\"REJECTED_MINOR_DEFECT\",\"message\":\"" + CHANGE_MESSAGE + "\"}",
+                    "{\"status\":\"" + STATUS_MINOR_DEFECT + "\",\"message\":\"" + CHANGE_MESSAGE + "\"}",
                     true, false)));
         }
     }
@@ -296,6 +308,25 @@ class DisputesWritesTest {
         }
     }
 
+    @Test
+    void uploadAttachment_whenContentSizeMismatch_throwsBeforeDeclaring(WireMockRuntimeInfo wmInfo) {
+        // given — the byte count must equal the declared size; a mismatch is a client error
+        stubToken(TEST_TOKEN);
+        IssueAttachmentDeclaration declaration = IssueAttachmentDeclaration.builder()
+                .filename(FILE_NAME)
+                .size(ATTACHMENT_BYTES.length + 1)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            Disputes disputes = allegro.disputes();
+
+            // then — fails fast, no declare request is sent
+            assertThrows(IllegalArgumentException.class,
+                    () -> disputes.uploadAttachment(declaration, ATTACHMENT_BYTES, MIME_JPEG));
+            verify(0, postRequestedFor(urlEqualTo(ATTACHMENTS_PATH)));
+        }
+    }
+
     // ---- downloadAttachment ----
 
     @Test
@@ -334,7 +365,7 @@ class DisputesWritesTest {
             AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                     () -> disputes.addMessage(ISSUE_ID, request));
             assertEquals(1, failure.errors().size());
-            assertEquals("text", failure.errors().get(0).path());
+            assertEquals(ERROR_PATH_TEXT, failure.errors().get(0).path());
         }
     }
 
@@ -388,7 +419,7 @@ class DisputesWritesTest {
             IssueChatEntry created = allegro.disputes().addMessage(ISSUE_ID, request);
 
             // then — replayed once with the fresh token
-            assertEquals("msg-1", created.id());
+            assertEquals(CREATED_MESSAGE_ID, created.id());
             verify(RETRY_TWICE, postRequestedFor(urlEqualTo(MESSAGE_PATH)));
             verify(1, postRequestedFor(urlEqualTo(MESSAGE_PATH))
                     .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,

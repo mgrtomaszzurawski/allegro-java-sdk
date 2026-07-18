@@ -24,10 +24,15 @@ public final class IssueAttachmentDeclaration {
     /** Smallest byte size Allegro accepts for a declaration. */
     public static final int MIN_SIZE_BYTES = 1;
 
+    /** Largest byte size Allegro accepts for an issue attachment (2 MiB). */
+    public static final int MAX_SIZE_BYTES = 2_097_152;
+
     private static final String ERR_FILENAME_REQUIRED = "filename is required";
     private static final String ERR_SIZE_REQUIRED = "size is required";
     private static final String ERR_SIZE_TOO_SMALL =
             "size must be at least " + MIN_SIZE_BYTES + " byte";
+    private static final String ERR_SIZE_TOO_LARGE =
+            "size must be at most " + MAX_SIZE_BYTES + " bytes";
 
     private final String filename;
     private final int size;
@@ -73,7 +78,7 @@ public final class IssueAttachmentDeclaration {
             return this;
         }
 
-        /** The exact byte size (required, at least {@value #MIN_SIZE_BYTES}). */
+        /** The exact byte size (required, {@value #MIN_SIZE_BYTES}..{@value #MAX_SIZE_BYTES}). */
         public Builder size(int sizeInBytes) {
             this.size = sizeInBytes;
             this.sizeSet = true;
@@ -90,6 +95,9 @@ public final class IssueAttachmentDeclaration {
             }
             if (size < MIN_SIZE_BYTES) {
                 throw new IllegalStateException(ERR_SIZE_TOO_SMALL);
+            }
+            if (size > MAX_SIZE_BYTES) {
+                throw new IllegalStateException(ERR_SIZE_TOO_LARGE);
             }
             return new IssueAttachmentDeclaration(this);
         }
