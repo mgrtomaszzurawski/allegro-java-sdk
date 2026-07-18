@@ -20,6 +20,8 @@ final class SubsidyOfferBounds {
     }
 
     /**
+     * Validate the offer count against the 1..1000 command bound.
+     *
      * @throws IllegalStateException if {@code count} is outside {@code [1, 1000]}
      */
     static void check(int count) {

@@ -42,6 +42,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.SubsidyCom
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.SubsidyOfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAsyncTimeoutException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
@@ -92,6 +93,8 @@ class AllegroPricesClientTest {
     private static final String TEST_COMPLETED_AT = "2026-07-16T10:00:05Z";
     private static final String TEST_FAIL_MESSAGE = "Offer not eligible for Allegro Prices.";
     private static final String TEST_TRACE_ID = "4631702648f0524e";
+    private static final String TEST_BAD_REQUEST_CODE = "VALIDATION_ERROR";
+    private static final String TEST_BAD_REQUEST_PATH = "marketplaces";
 
     private static final String JSON_OFFSET = "$.offset";
     private static final String JSON_MARKETPLACE_ID = "$.marketplace.id";
@@ -120,9 +123,9 @@ class AllegroPricesClientTest {
             {"access_token":"%s","expires_in":%d}
             """;
     private static final String BAD_REQUEST_RESPONSE = """
-            {"errors":[{"code":"VALIDATION_ERROR","message":"Invalid","userMessage":"Nieprawidłowe",
-              "path":"marketplaces","details":null}]}
-            """;
+            {"errors":[{"code":"%s","message":"Invalid","userMessage":"Nieprawidłowe",
+              "path":"%s","details":null}]}
+            """.formatted(TEST_BAD_REQUEST_CODE, TEST_BAD_REQUEST_PATH);
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFound","message":"Not found","userMessage":"Nie znaleziono","path":null}]}
             """;
@@ -206,6 +209,8 @@ class AllegroPricesClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(patch(urlEqualTo(PARTICIPATIONS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -244,6 +249,8 @@ class AllegroPricesClientTest {
         // given — the fixture carries populated oneOf price-reduction objects
         stubToken(TEST_TOKEN);
         stubFor(post(urlEqualTo(OFFERS_QUERIES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBodyFile(OFFERS_FIXTURE)));
         AllegroPricesOfferQuery query = AllegroPricesOfferQuery.builder(MARKETPLACE_PL).build();
 
@@ -333,6 +340,10 @@ class AllegroPricesClientTest {
         // given — POST accepted (IN_PROGRESS), the command is SUCCESS on first poll
         stubToken(TEST_TOKEN);
         stubFor(post(urlEqualTo(SUBMIT_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(ACCEPTED_RESPONSE)));
         stubFor(get(urlEqualTo(SUBMIT_POLL_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -469,6 +480,8 @@ class AllegroPricesClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(post(urlEqualTo(EXCLUSION_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(ACCEPTED_RESPONSE)));
         stubFor(get(urlEqualTo(EXCLUSION_POLL_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -486,6 +499,36 @@ class AllegroPricesClientTest {
             assertEquals(SubsidyOfferStatus.SUCCESS, report.offers().get(0).status());
             verify(1, postRequestedFor(urlEqualTo(EXCLUSION_PATH)));
             verify(1, getRequestedFor(urlEqualTo(EXCLUSION_POLL_PATH)));
+        }
+    }
+
+    @Test
+    void excludeOffers_whenInProgressThenSuccess_pollsUntilTerminal(WireMockRuntimeInfo wmInfo) {
+        // given — first poll IN_PROGRESS, second poll SUCCESS
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(EXCLUSION_PATH))
+                .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(ACCEPTED_RESPONSE)));
+        stubFor(get(urlEqualTo(EXCLUSION_POLL_PATH))
+                .inScenario(SCENARIO_POLL).whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(preview(STATUS_IN_PROGRESS, ERRORS_EMPTY)))
+                .willSetStateTo(STATE_TERMINAL));
+        stubFor(get(urlEqualTo(EXCLUSION_POLL_PATH))
+                .inScenario(SCENARIO_POLL).whenScenarioStateIs(STATE_TERMINAL)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(preview(STATUS_SUCCESS, ERRORS_EMPTY))));
+        ExcludeOffersRequest request = ExcludeOffersRequest.builder()
+                .addOffer(TEST_OFFER_ID, MARKETPLACE_PL)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            SubsidyCommandReport report = allegro.campaigns().allegroPrices().excludeOffers(request);
+
+            // then — polled twice, until every offer left IN_PROGRESS
+            assertEquals(SubsidyOfferStatus.SUCCESS, report.offers().get(0).status());
+            verify(2, getRequestedFor(urlEqualTo(EXCLUSION_POLL_PATH)));
         }
     }
 
@@ -517,6 +560,9 @@ class AllegroPricesClientTest {
             AllegroBadRequestException failure =
                     assertThrows(AllegroBadRequestException.class, allegroPrices::participation);
             assertEquals(1, failure.errors().size());
+            AllegroFieldError fieldError = failure.errors().get(0);
+            assertEquals(TEST_BAD_REQUEST_CODE, fieldError.code());
+            assertEquals(TEST_BAD_REQUEST_PATH, fieldError.path());
         }
     }
 
