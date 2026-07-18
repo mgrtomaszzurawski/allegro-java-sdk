@@ -47,6 +47,10 @@ public final class ApiPaths {
     private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
+    private static final String SMART_SEGMENT = "smart";
+
+    /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
+    public static final String SALE_OFFERS = "/sale/offers";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
     public static String productOffer(String offerId) {
@@ -58,6 +62,11 @@ public final class ApiPaths {
         return subPath(OFFERS, offerId, CHANGE_PRICE_COMMANDS, commandId);
     }
 
+    /** Smart! classification report of one offer ({@code /sale/offers/{offerId}/smart}). */
+    public static String offerSmart(String offerId) {
+        return subPath(SALE_OFFERS, offerId, SMART_SEGMENT);
+    }
+
     // ---- orders (bucket B) ----
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
@@ -65,6 +74,10 @@ public final class ApiPaths {
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
     public static final String CATEGORIES = "/sale/categories";
+    /** Parameters sub-resource of a category (under {@link #CATEGORIES}/{id}). */
+    public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
+    /** Category suggestions matched by name ({@code /sale/matching-categories}). */
+    public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
@@ -101,6 +114,8 @@ public final class ApiPaths {
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
     public static final String POINTS_OF_SERVICE = "/points-of-service";
+    /** Delivery methods Allegro offers the seller. */
+    public static final String DELIVERY_METHODS = "/sale/delivery-methods";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */

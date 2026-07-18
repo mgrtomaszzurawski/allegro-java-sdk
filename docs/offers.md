@@ -2,8 +2,9 @@
 
 The offer lifecycle, reached from `client.offers()`.
 
-> Starter slice — a single-offer read and a single-offer price change. Creating and editing
-> offers, bulk `batch()` commands, promotion options and media land in later releases.
+> Available now: reading a single offer, listing your offers, the Smart! classification, and a
+> single-offer price change. Creating and editing offers, bulk `batch()` commands, promotion
+> options and media land in later releases.
 
 ## Read an offer
 
@@ -23,6 +24,41 @@ try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment
 (`OfferFormat.BUY_NOW` / `ADVERTISEMENT`); an auction leaves it `null`. `availableStock` is
 `null` when the offer has no tracked quantity. Amounts use the shared `Money` type
 (`sdk.core.Money`) — the exact server decimal string plus its ISO-4217 currency.
+
+## List your offers
+
+`streamOffers` returns a **lazy** `Stream<OfferSummary>`: pages are fetched from Allegro only
+as you consume them, so a `limit(...)` or `findFirst()` stops the paging early.
+
+```java
+OfferFilter filter = OfferFilter.builder()
+        .status(OfferStatus.ACTIVE)
+        .format(OfferFormat.BUY_NOW)
+        .name("keyboard")
+        .build();
+
+client.offers().streamOffers(filter)
+        .limit(50)
+        .forEach(offer -> System.out.println(offer.id() + " — " + offer.name()));
+```
+
+Use `OfferFilter.all()` to list every offer. `OfferSummary` is a lighter projection than
+`Offer` — id, name, category, format, status, Buy Now price, available/sold stock and the
+primary image URL — with the same null rules (no `buyNowPrice` for an auction, etc.).
+
+## Smart! classification
+
+```java
+SmartClassification smart = client.offers().smartClassification("13579");
+if (!smart.fulfilled()) {
+    smart.conditions().stream()
+            .filter(condition -> !condition.fulfilled())
+            .forEach(condition -> System.out.println("Not met: " + condition.name()));
+}
+```
+
+`fulfilled()` says whether the offer currently qualifies for Allegro Smart!; `conditions()`
+breaks down each requirement and whether the offer meets it.
 
 ## Change the Buy Now price
 
