@@ -361,6 +361,9 @@ public final class ApiPaths {
     /** Seller after-sale warranty definitions. */
     public static final String AFTER_SALES_WARRANTIES =
             "/after-sales-service-conditions/warranties";
+    /** Seller after-sale implied-warranty (rękojmia) definitions. */
+    public static final String AFTER_SALES_IMPLIED_WARRANTIES =
+            "/after-sales-service-conditions/implied-warranties";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

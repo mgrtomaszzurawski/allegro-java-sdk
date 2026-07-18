@@ -404,7 +404,7 @@ afterSale.deleteReturnPolicy(id)                  // DELETE /after-sales-service
 afterSale.streamWarranties() / .warranty(id)      // GET  …/warranties[/{warrantyId}] (lazy Stream, matches stream* convention)
 afterSale.createWarranty(WarrantyRequest)         // POST …/warranties
 afterSale.updateWarranty(id, WarrantyRequest)     // PUT  …/warranties/{warrantyId}
-afterSale.impliedWarranties() / .impliedWarranty(id) // GET …/implied-warranties[/{id}]
+afterSale.streamImpliedWarranties() / .impliedWarranty(id) // GET …/implied-warranties[/{id}] (lazy Stream, matches stream* convention)
 afterSale.createImpliedWarranty(Request)          // POST …/implied-warranties
 afterSale.updateImpliedWarranty(id, Request)      // PUT  …/implied-warranties/{impliedWarrantyId}
 afterSale.declareAttachment(AttachmentMetadata)   // POST …/attachments
