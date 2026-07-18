@@ -45,19 +45,26 @@ is present on children / absent on roots. The SDK's `Category` record therefore 
 
 ## Shipping & delivery (bucket C)
 
-### `deliveryMethods().paymentPolicy` is a closed typed enum (spec-derived)
+### `GET /sale/delivery-methods` works with an app-only token (verified 2026-07-18, sandbox)
 
-`GET /sale/delivery-methods` returns each method's `paymentPolicy` as one of a
-fixed set (`IN_ADVANCE`, `CASH_ON_DELIVERY`). In the generated Layer-1 model this
-field is a typed enumeration whose Jackson creator **rejects** any other value,
-so — unlike the free-form string enums on a point of service, which fall back to
-an `UNKNOWN` sentinel — a `paymentPolicy` value Allegro might add in future would
-fail deserialization of the whole response (surfaced as `AllegroServerException`)
+`shipping().deliveryMethods()` succeeds with a client-credentials (application)
+token — the endpoint declares no OAuth scope. The live sandbox returned **571**
+delivery methods; the first mapped cleanly (`paymentPolicy=IN_ADVANCE`,
+`destinationCountry=PL`, `marketplaces=[1]`), confirming the `DeliveryMethod`
+record's field shape against the wire. `dispatchCountry` arrived `null` on that
+method, confirming it is genuinely nullable.
+
+### `deliveryMethods().paymentPolicy` is a closed typed enum (verified 2026-07-18, sandbox)
+
+Each method's `paymentPolicy` is one of a fixed set (`IN_ADVANCE`,
+`CASH_ON_DELIVERY`). In the generated Layer-1 model this field is a typed
+enumeration whose Jackson creator **rejects** any other value, so — unlike the
+free-form string enums on a point of service, which fall back to an `UNKNOWN`
+sentinel — a `paymentPolicy` value Allegro might add in future would fail
+deserialization of the whole response (surfaced as `AllegroServerException`)
 rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
 match. If Allegro extends the set, the fix is a Layer-1 regeneration (open-enum),
-not a domain change. To be confirmed live once the sandbox seller token is
-restored; `deliveryMethods()` is expected to work with an application (no-scope)
-token.
+not a domain change.
 
 ## Account & meta (bucket D)
 

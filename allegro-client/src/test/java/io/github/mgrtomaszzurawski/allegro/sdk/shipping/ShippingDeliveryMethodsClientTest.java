@@ -40,8 +40,9 @@ import org.junit.jupiter.api.Test;
  * this class pins the delivery-method mapping plus a representative retryable
  * server error on the root-facade path.
  *
- * <p>Response fixtures are {@code spec-derived}: not yet wire-verified (the
- * sandbox seller token is being re-bootstrapped).
+ * <p>The response field shape is wire-verified: the {@code delivery-methods}
+ * demo probe read 571 live methods from the sandbox (2026-07-18, app token) and
+ * confirmed the mapped fields — see {@code KNOWN-SERVER-BEHAVIORS.md}.
  */
 @WireMockTest
 class ShippingDeliveryMethodsClientTest {
