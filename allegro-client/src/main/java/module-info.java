@@ -32,6 +32,7 @@ module io.github.mgrtomaszzurawski.allegro {
 
     // Orders, payments and billing (bucket B).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
 
     // Shipping facade (bucket C): shipments, delivery, points of service.

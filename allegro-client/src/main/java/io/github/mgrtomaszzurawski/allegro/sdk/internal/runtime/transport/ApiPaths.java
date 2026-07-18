@@ -59,8 +59,30 @@ public final class ApiPaths {
     }
 
     // ---- orders (bucket B) ----
+    /** Order resources root ({@code /order}); build sub-resources with {@link #subPath}. */
+    public static final String ORDER_ROOT = "/order";
     /** Seller's orders collection; append the order id for a single order. */
     public static final String ORDER_CHECKOUT_FORMS = "/order/checkout-forms";
+    /** Seller's order event log ({@code /order/events}); cursor-paged by {@code from}. */
+    public static final String ORDER_EVENTS = "/order/events";
+    /** Latest-order-event marker ({@code /order/event-stats}). */
+    public static final String ORDER_EVENT_STATS = "/order/event-stats";
+    /** Available shipping carriers dictionary ({@code /order/carriers}). */
+    public static final String ORDER_CARRIERS = "/order/carriers";
+    /** Allegro pickup/drop-off points ({@code /order/carriers/ALLEGRO/points}). */
+    public static final String ALLEGRO_PICKUP_POINTS = "/order/carriers/ALLEGRO/points";
+    /** {@code fulfillment} sub-resource segment (under an order). */
+    public static final String FULFILLMENT_SEGMENT = "fulfillment";
+    /** {@code serial-numbers} sub-resource segment (under an order). */
+    public static final String SERIAL_NUMBERS_SEGMENT = "serial-numbers";
+    /** {@code shipments} sub-resource segment (under an order). */
+    public static final String SHIPMENTS_SEGMENT = "shipments";
+    /** {@code tracking} sub-resource segment (under a carrier). */
+    public static final String TRACKING_SEGMENT = "tracking";
+    /** {@code billing-documents} sub-resource segment (under an order). */
+    public static final String BILLING_DOCUMENTS_SEGMENT = "billing-documents";
+    /** {@code links} sub-resource segment (under an order's billing documents). */
+    public static final String LINKS_SEGMENT = "links";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
