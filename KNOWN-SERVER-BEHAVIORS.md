@@ -161,6 +161,18 @@ that carries both periods succeeds and reads back cleanly (create→get round-tr
 SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
 a client-side `IllegalStateException` naming the field — no wasted round-trip.
 
+### Implied-warranty periods are whole years, at least two (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/implied-warranties` (and the `PUT`) accept a period only as
+a **whole-year** ISO-8601 duration of **at least two years** (`P2Y`). Verified live on seller
+TestBoxSDK: `P2Y` on both `individual` and `corporate` succeeds and reads back cleanly
+(create→get round-trip green); `P1Y` is rejected with `422 UNPROCESSABLE_ENTITY path=corporate.period`
+(minimum is two years, the statutory rękojmia term); the month-denominated forms `P12M` and `P24M`
+are rejected on both `individual.period` and `corporate.period`. This differs from the seller
+`warranties` endpoint, whose periods are month-denominated (`P12M`) and may be lifetime. The SDK
+leaves the exact value to the server (it can change per legal category) and documents the rule on
+`ImpliedWarrantyPeriod`; only the structural `name`/`individual` requirements are builder-enforced.
+
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
 ### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
