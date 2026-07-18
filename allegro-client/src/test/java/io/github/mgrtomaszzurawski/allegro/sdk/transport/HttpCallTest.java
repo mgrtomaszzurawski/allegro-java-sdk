@@ -326,6 +326,44 @@ class HttpCallTest {
                         "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null,\"items\":[]}", true, false)));
     }
 
+    @Test
+    void betaJsonBody_whenSet_sendsBetaVendorContentTypeWithFullBody(WireMockRuntimeInfo wmInfo) {
+        // given — a beta write surface that rejects the public.v1 content type
+        stubFor(post(urlEqualTo(PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when — a payload with a null field and an empty collection
+        support(wmInfo).request(OPERATION).post(PATH)
+                .betaJsonBody(new Payload(PRESENT_VALUE, null, List.of())).send();
+
+        // then — beta media type AND the FULL serializer keeps null/empty fields
+        // (a strict match proves betaJsonBody did not delegate to the partial path)
+        verify(1, postRequestedFor(urlEqualTo(PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                .withRequestBody(equalToJson(
+                        "{\"present\":\"" + PRESENT_VALUE + "\",\"absent\":null,\"items\":[]}", true, false)));
+    }
+
+    @Test
+    void betaJsonBodyPartial_whenFieldNullOrEmpty_omitsThemWithBetaContentType(WireMockRuntimeInfo wmInfo) {
+        // given — a partial beta payload with a null field and an empty collection
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        support(wmInfo).request(OPERATION).post(PATH)
+                .betaJsonBodyPartial(new Payload(PRESENT_VALUE, null, List.of())).send();
+
+        // then — beta content type AND only the set field survives (partial semantics)
+        verify(1, postRequestedFor(urlEqualTo(PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                .withRequestBody(equalToJson("{\"present\":\"" + PRESENT_VALUE + "\"}", true, false)));
+    }
+
     /** A partial payload with a nullable field and a collection (a PATCH-style body). */
     private record Payload(String present, String absent, List<String> items) {
     }

@@ -123,9 +123,7 @@ public final class HttpCall {
 
     /** Serialize {@code body} as the vendor JSON request body. */
     public HttpCall jsonBody(Object body) {
-        this.contentType = HttpSupport.VND_ALLEGRO_V1;
-        this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serialize(body));
-        return this;
+        return fullJsonBody(body, HttpSupport.VND_ALLEGRO_V1);
     }
 
     /**
@@ -135,7 +133,38 @@ public final class HttpCall {
      * as {@code null}/{@code []} (which would reset them server-side).
      */
     public HttpCall jsonBodyPartial(Object body) {
-        this.contentType = HttpSupport.VND_ALLEGRO_V1;
+        return partialJsonBody(body, HttpSupport.VND_ALLEGRO_V1);
+    }
+
+    /**
+     * Serialize {@code body} as the BETA vendor JSON request body
+     * ({@code application/vnd.allegro.beta.v1+json}). Beta write surfaces (e.g.
+     * post-purchase issues, customer-return rejection) reject the {@code public.v1}
+     * content type, so a beta write must set it on the request body — {@link
+     * #acceptBeta()} only flips the {@code Accept} header.
+     */
+    public HttpCall betaJsonBody(Object body) {
+        return fullJsonBody(body, HttpSupport.VND_ALLEGRO_BETA_V1);
+    }
+
+    /**
+     * Beta counterpart of {@link #jsonBodyPartial(Object)}: a partial body (null
+     * and empty fields omitted) with the beta vendor content type — beta write
+     * DTOs are generated too, so they carry the same pre-initialized empty
+     * collections that a full serialization would reset server-side.
+     */
+    public HttpCall betaJsonBodyPartial(Object body) {
+        return partialJsonBody(body, HttpSupport.VND_ALLEGRO_BETA_V1);
+    }
+
+    private HttpCall fullJsonBody(Object body, String mediaType) {
+        this.contentType = mediaType;
+        this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serialize(body));
+        return this;
+    }
+
+    private HttpCall partialJsonBody(Object body, String mediaType) {
+        this.contentType = mediaType;
         this.bodyPublisher = HttpRequest.BodyPublishers.ofString(support.serializePartial(body));
         return this;
     }

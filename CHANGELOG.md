@@ -59,6 +59,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   killed mid-write (e.g. at its timeout while refreshing) previously left a
   truncated file that dropped the other account's token; the write is now
   all-or-nothing. First regression tests for this agent infrastructure.
+- `HttpCall.betaJsonBody(body)` / `betaJsonBodyPartial(body)` — send a request
+  body with the beta vendor content type (`application/vnd.allegro.beta.v1+json`)
+  instead of `public.v1`. Beta write surfaces reject the v1 content type, and
+  `acceptBeta()` only flips the `Accept` header. Unblocks bucket J's dispute
+  writes (post-purchase issues) and bucket B's `returns().rejectRefund`.
 
 ### A — offers-core
 
