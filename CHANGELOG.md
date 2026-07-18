@@ -195,6 +195,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   per-offer assignment (`ofOffer`, `assignToOffer`). Immutable `Tag` records +
   fail-fast `TagRequest` builder; `offer-tags` write→read demo. New `offerextras`
   package wired onto the bucket-A `Offers` root.
+- `offers().translations()` — an offer's translations into other languages:
+  `ofOffer` (read), `update` (set the title translation), `delete`. Immutable
+  `OfferTranslation` records (`title` + `titleType`) + `TranslationRequest`
+  builder. Title translation only for now; description/safety-information
+  translations (rich structured content) are a documented follow-up.
+- `offers().rating(offerId)` — an offer's aggregated buyer rating (`OfferRating`:
+  average, total, score distribution, size feedback). Read-only.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with

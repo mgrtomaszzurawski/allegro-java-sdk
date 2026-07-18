@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
@@ -21,6 +22,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersRespon
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
@@ -32,6 +35,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTranslationsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -56,6 +60,7 @@ public final class OffersImpl implements Offers {
     private static final String OP_STREAM = "stream offers";
     private static final String OP_SMART = "get offer Smart classification";
     private static final String OP_UNFILLED = "stream offers with unfilled parameters";
+    private static final String OP_RATING = "get offer rating";
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
@@ -73,6 +78,7 @@ public final class OffersImpl implements Offers {
 
     // ---- bucket F sub-facades ----
     private final OfferTags tags;
+    private final OfferTranslations translations;
 
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
@@ -82,6 +88,7 @@ public final class OffersImpl implements Offers {
         // sub-facades (tags/translations/bundles/flexibleBundles/rating) from
         // this same runtime. One block per bucket, append-only, BACKLOG order.
         this.tags = new OfferTagsImpl(runtime);
+        this.translations = new OfferTranslationsImpl(runtime);
     }
 
     @Override
@@ -195,6 +202,17 @@ public final class OffersImpl implements Offers {
     @Override
     public OfferTags tags() {
         return tags;
+    }
+
+    @Override
+    public OfferTranslations translations() {
+        return translations;
+    }
+
+    @Override
+    public OfferRating rating(String offerId) {
+        return OfferRating.from(http.getAuthenticated(
+                ApiPaths.offerRating(offerId), OfferRatingRaw.class, OP_RATING));
     }
 
     /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */
