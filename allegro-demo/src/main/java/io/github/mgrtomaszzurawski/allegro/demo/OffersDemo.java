@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
@@ -35,6 +36,10 @@ final class OffersDemo {
     private static final String OFFER_ID_PROPERTY = "demo.offerId";
     private static final String NEW_PRICE_PROPERTY = "demo.newPrice";
     private static final String PUBLISH_IDS_PROPERTY = "demo.publishIds";
+    private static final String CREATE_NAME_PROPERTY = "demo.createName";
+    private static final String CREATE_CATEGORY_PROPERTY = "demo.createCategory";
+    private static final String CREATE_PRICE_PROPERTY = "demo.createPrice";
+    private static final String CREATE_STOCK_PROPERTY = "demo.createStock";
     private static final String CURRENCY_PLN = "PLN";
     private static final String OFFER_ID_SEPARATOR = ",";
     private static final int STREAM_LIMIT = 10;
@@ -58,7 +63,10 @@ final class OffersDemo {
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             String offerId = System.getProperty(OFFER_ID_PROPERTY);
             String publishIds = System.getProperty(PUBLISH_IDS_PROPERTY);
-            if (publishIds != null) {
+            String createName = System.getProperty(CREATE_NAME_PROPERTY);
+            if (createName != null) {
+                createOffer(client, createName);
+            } else if (publishIds != null) {
                 publishBatch(client, publishIds);
             } else if (offerId == null) {
                 streamOffers(client);
@@ -87,6 +95,18 @@ final class OffersDemo {
                     + ", format=" + summary.format() + ", stock=" + summary.availableStock()
                     + ", buyNow=" + price);
         }
+    }
+
+    private static void createOffer(AllegroClient client, String name) {
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(name)
+                .categoryId(System.getProperty(CREATE_CATEGORY_PROPERTY))
+                .buyNowPrice(Money.of(System.getProperty(CREATE_PRICE_PROPERTY), CURRENCY_PLN))
+                .availableStock(Integer.parseInt(System.getProperty(CREATE_STOCK_PROPERTY)))
+                .build();
+        Offer created = client.offers().create(request);
+        System.out.println("create: id=" + created.id() + ", status=" + created.status()
+                + ", name=" + created.name());
     }
 
     private static void publishBatch(AllegroClient client, String csvOfferIds) {
