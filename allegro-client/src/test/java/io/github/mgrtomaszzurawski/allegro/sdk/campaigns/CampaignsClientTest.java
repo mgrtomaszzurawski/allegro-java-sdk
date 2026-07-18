@@ -54,6 +54,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestExcept
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -79,6 +80,7 @@ class CampaignsClientTest {
     private static final String MARKETPLACE_PARAM = "marketplace.id";
     private static final String MARKETPLACE_PL = "allegro-pl";
     private static final String BLANK_MARKETPLACE = "   ";
+    private static final String BLANK_ID = "   ";
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String CAMPAIGNS_FIXTURE = "campaigns/badge-campaigns.json";
 
@@ -486,6 +488,10 @@ class CampaignsClientTest {
         // given
         stubToken(TEST_TOKEN);
         stubFor(post(urlEqualTo(BADGES_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBodyFile(APPLICATION_FIXTURE)));
         BadgeApplicationRequest request = BadgeApplicationRequest.builder()
                 .campaignId(TEST_CAMPAIGN_ID)
@@ -506,6 +512,39 @@ class CampaignsClientTest {
                     .withRequestBody(matchingJsonPath(JSON_BARGAIN_AMOUNT, equalTo(TEST_BARGAIN_AMOUNT))));
             // D1: an e-mail-verified application is returned as-is, never polled to terminal
             verify(0, getRequestedFor(urlPathEqualTo(BADGE_OPERATIONS_PATH)));
+        }
+    }
+
+    @Test
+    void apply_when5xx_throwsServerErrorAndDoesNotRetryPost(WireMockRuntimeInfo wmInfo) {
+        // given — persistent 500 on the POST; writes are not retried by default
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(BADGES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)));
+        BadgeApplicationRequest request = BadgeApplicationRequest.builder()
+                .campaignId(TEST_CAMPAIGN_ID)
+                .offerId(TEST_OFFER_ID)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            Badges badges = allegro.campaigns().badges();
+
+            // then — the typed server failure surfaces and the POST is issued exactly once
+            assertThrows(AllegroServerException.class, () -> badges.apply(request));
+            verify(1, postRequestedFor(urlEqualTo(BADGES_PATH)));
+        }
+    }
+
+    @Test
+    void apply_whenRequestNull_throwsIllegalArgumentBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        // given — no stub: the guard must reject before any call
+        try (AllegroClient allegro = client(wmInfo)) {
+            Badges badges = allegro.campaigns().badges();
+
+            // then
+            assertThrows(IllegalArgumentException.class, () -> badges.apply(null));
+            verify(0, postRequestedFor(urlEqualTo(BADGES_PATH)));
         }
     }
 
@@ -586,7 +625,7 @@ class CampaignsClientTest {
             Badges badges = allegro.campaigns().badges();
 
             // then
-            assertThrows(IllegalArgumentException.class, () -> badges.application(BLANK_MARKETPLACE));
+            assertThrows(IllegalArgumentException.class, () -> badges.application(BLANK_ID));
             verify(0, getRequestedFor(urlPathEqualTo(BADGE_APPLICATIONS_PATH)));
         }
     }
@@ -619,6 +658,10 @@ class CampaignsClientTest {
         // given — PATCH accepted (202 {id}), the operation is PROCESSED on first poll
         stubToken(TEST_TOKEN);
         stubFor(patch(urlEqualTo(BADGE_UPDATE_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(PATCH_ACCEPTED_RESPONSE)));
         stubFor(get(urlEqualTo(BADGE_OPERATIONS_PATH + "/" + TEST_OPERATION_ID))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -742,9 +785,9 @@ class CampaignsClientTest {
 
             // then — blank offer, blank campaign, and null patch all fail fast
             assertThrows(IllegalArgumentException.class,
-                    () -> badges.update(BLANK_MARKETPLACE, TEST_CAMPAIGN_ID, finish));
+                    () -> badges.update(BLANK_ID, TEST_CAMPAIGN_ID, finish));
             assertThrows(IllegalArgumentException.class,
-                    () -> badges.update(TEST_OFFER_ID, BLANK_MARKETPLACE, finish));
+                    () -> badges.update(TEST_OFFER_ID, BLANK_ID, finish));
             assertThrows(IllegalArgumentException.class,
                     () -> badges.update(TEST_OFFER_ID, TEST_CAMPAIGN_ID, null));
             verify(0, patchRequestedFor(urlEqualTo(BADGE_UPDATE_PATH)));

@@ -57,12 +57,13 @@ public interface Badges {
      *
      * @param request the application to submit; see {@link BadgeApplicationRequest}
      * @return the created application
+     * @throws IllegalArgumentException if {@code request} is null
      */
     BadgeApplication apply(BadgeApplicationRequest request);
 
     /**
-     * Stream the seller's badge applications, most recent first, fetching pages
-     * lazily as the stream is consumed.
+     * Stream the seller's badge applications, fetching pages lazily as the stream
+     * is consumed.
      *
      * @param filter narrows the applications by campaign and/or offer; use
      *     {@link BadgeApplicationFilter#all()} for every application

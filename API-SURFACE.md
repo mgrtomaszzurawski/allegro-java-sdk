@@ -308,7 +308,7 @@ Campaigns campaigns = client.campaigns();
 
 Badges badges = campaigns.badges();
 badges.availableCampaigns()                       // GET   /sale/badge-campaigns
-badges.apply(BadgeApplicationRequest)             // POST  /sale/badges                       (sync: polls badge-operations)
+badges.apply(BadgeApplicationRequest)             // POST  /sale/badges                       (async: returns created REQUESTED application; verification is e-mail-notified, not polled)
 badges.streamApplications(ApplicationFilter)      // GET   /sale/badge-applications  Stream<BadgeApplication>
 badges.application(applicationId)                 // GET   /sale/badge-applications/{applicationId}
 badges.streamBadges(BadgeFilter)                  // GET   /sale/badges              Stream<Badge>

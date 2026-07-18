@@ -34,11 +34,13 @@ class CampaignsBuildersTest {
 
     @Test
     void applicationRequest_whenRequiredFieldsOnly_leavesOptionalsNull() {
+        // when
         BadgeApplicationRequest request = BadgeApplicationRequest.builder()
                 .campaignId(CAMPAIGN_ID)
                 .offerId(OFFER_ID)
                 .build();
 
+        // then
         assertEquals(CAMPAIGN_ID, request.campaignId());
         assertEquals(OFFER_ID, request.offerId());
         assertNull(request.bargainPrice());
@@ -48,6 +50,7 @@ class CampaignsBuildersTest {
 
     @Test
     void applicationRequest_whenAllFieldsSet_retainsEveryValue() {
+        // when
         BadgeApplicationRequest request = BadgeApplicationRequest.builder()
                 .campaignId(CAMPAIGN_ID)
                 .offerId(OFFER_ID)
@@ -56,6 +59,7 @@ class CampaignsBuildersTest {
                 .declaredStockQuantity(DECLARED_STOCK)
                 .build();
 
+        // then
         assertEquals(BARGAIN, request.bargainPrice());
         assertEquals(LIMIT_PER_USER, request.purchaseLimitPerUser());
         assertEquals(DECLARED_STOCK, request.declaredStockQuantity());
@@ -63,6 +67,7 @@ class CampaignsBuildersTest {
 
     @Test
     void applicationRequest_toBuilder_preservesAllFields() {
+        // given
         BadgeApplicationRequest original = BadgeApplicationRequest.builder()
                 .campaignId(CAMPAIGN_ID)
                 .offerId(OFFER_ID)
@@ -71,8 +76,10 @@ class CampaignsBuildersTest {
                 .declaredStockQuantity(DECLARED_STOCK)
                 .build();
 
+        // when
         BadgeApplicationRequest copy = original.toBuilder().build();
 
+        // then
         assertEquals(original.campaignId(), copy.campaignId());
         assertEquals(original.offerId(), copy.offerId());
         assertEquals(original.bargainPrice(), copy.bargainPrice());
@@ -82,82 +89,120 @@ class CampaignsBuildersTest {
 
     @Test
     void applicationRequest_whenCampaignIdMissing_throwsIllegalState() {
+        // given
         BadgeApplicationRequest.Builder builder = BadgeApplicationRequest.builder().offerId(OFFER_ID);
+
+        // then
         assertThrows(IllegalStateException.class, builder::build);
     }
 
     @Test
     void applicationRequest_whenOfferIdMissing_throwsIllegalState() {
+        // given
         BadgeApplicationRequest.Builder builder = BadgeApplicationRequest.builder().campaignId(CAMPAIGN_ID);
+
+        // then
         assertThrows(IllegalStateException.class, builder::build);
     }
 
     @Test
     void applicationFilter_all_hasNoConstraints() {
+        // when
         BadgeApplicationFilter filter = BadgeApplicationFilter.all();
+
+        // then
         assertNull(filter.campaignId());
         assertNull(filter.offerId());
     }
 
     @Test
     void applicationFilter_toBuilder_preservesFields() {
+        // given
         BadgeApplicationFilter original = BadgeApplicationFilter.builder()
                 .campaignId(CAMPAIGN_ID)
                 .offerId(OFFER_ID)
                 .build();
 
+        // when
         BadgeApplicationFilter copy = original.toBuilder().build();
 
+        // then
         assertEquals(CAMPAIGN_ID, copy.campaignId());
         assertEquals(OFFER_ID, copy.offerId());
     }
 
     @Test
-    void badgeFilter_whenMarketplaceSet_buildsAndPreservesOnToBuilder() {
+    void badgeFilter_whenMarketplaceAndOfferSet_retainsBoth() {
+        // when
+        BadgeFilter filter = BadgeFilter.builder()
+                .marketplaceId(MARKETPLACE)
+                .offerId(OFFER_ID)
+                .build();
+
+        // then
+        assertEquals(MARKETPLACE, filter.marketplaceId());
+        assertEquals(OFFER_ID, filter.offerId());
+    }
+
+    @Test
+    void badgeFilter_toBuilder_preservesFields() {
+        // given
         BadgeFilter original = BadgeFilter.builder()
                 .marketplaceId(MARKETPLACE)
                 .offerId(OFFER_ID)
                 .build();
 
-        assertEquals(MARKETPLACE, original.marketplaceId());
-        assertEquals(OFFER_ID, original.offerId());
-
+        // when
         BadgeFilter copy = original.toBuilder().build();
+
+        // then
         assertEquals(MARKETPLACE, copy.marketplaceId());
         assertEquals(OFFER_ID, copy.offerId());
     }
 
     @Test
     void badgeFilter_whenMarketplaceMissing_throwsIllegalState() {
+        // given
         BadgeFilter.Builder builder = BadgeFilter.builder().offerId(OFFER_ID);
+
+        // then
         assertThrows(IllegalStateException.class, builder::build);
     }
 
     @Test
     void badgePatch_finish_hasFinishKindAndNoPrice() {
+        // when
         BadgePatch patch = BadgePatch.finish();
+
+        // then
         assertEquals(BadgePatch.Kind.FINISH, patch.kind());
         assertNull(patch.bargainPrice());
     }
 
     @Test
     void badgePatch_changeBargainPrice_carriesPrice() {
+        // when
         BadgePatch patch = BadgePatch.changeBargainPrice(BARGAIN);
+
+        // then
         assertEquals(BadgePatch.Kind.CHANGE_BARGAIN_PRICE, patch.kind());
         assertEquals(BARGAIN, patch.bargainPrice());
     }
 
     @Test
     void badgePatch_changeBargainPrice_whenNull_throwsIllegalArgument() {
+        // then
         assertThrows(IllegalArgumentException.class, () -> BadgePatch.changeBargainPrice(null));
     }
 
     @Test
     void badgePatch_equalsHashCodeToString_behaveByValue() {
+        // given
         BadgePatch first = BadgePatch.changeBargainPrice(BARGAIN);
         BadgePatch second = BadgePatch.changeBargainPrice(BARGAIN);
         BadgePatch finish = BadgePatch.finish();
 
+        // then
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());
         assertNotEquals(first, finish);

@@ -83,6 +83,7 @@ public final class BadgesClient implements Badges {
     private static final String ERR_BLANK_APPLICATION_ID = "applicationId must not be null or blank";
     private static final String ERR_BLANK_OFFER_ID = "offerId must not be null or blank";
     private static final String ERR_BLANK_CAMPAIGN_ID = "campaignId must not be null or blank";
+    private static final String ERR_NULL_REQUEST = "request must not be null";
     private static final String ERR_NULL_PATCH = "patch must not be null";
 
     private final HttpSupport http;
@@ -116,6 +117,9 @@ public final class BadgesClient implements Badges {
 
     @Override
     public BadgeApplication apply(BadgeApplicationRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException(ERR_NULL_REQUEST);
+        }
         BadgeApplicationRaw raw = http.request(OP_APPLY)
                 .post(ApiPaths.BADGES)
                 .jsonBody(toRaw(request))
@@ -194,7 +198,7 @@ public final class BadgesClient implements Badges {
                 ApiPaths.BADGE_CAMPAIGNS_SEGMENT, campaignId);
         PatchBadge202ResponseRaw accepted = http.request(OP_UPDATE)
                 .patch(path)
-                .jsonBody(toRaw(patch))
+                .jsonBody(badgeUpdateBody(patch))
                 .fetch(PatchBadge202ResponseRaw.class);
         String operationId = accepted.getId();
         BadgeOperationRaw terminal = timeout == null
@@ -254,7 +258,7 @@ public final class BadgesClient implements Badges {
      * wrapper (a write picks its own branch, so the wrapper's discriminating
      * deserialiser is not needed).
      */
-    private static Object toRaw(BadgePatch patch) {
+    private static Object badgeUpdateBody(BadgePatch patch) {
         if (patch.kind() == BadgePatch.Kind.FINISH) {
             return new BadgePatchProcessRaw().process(
                     new BadgePatchProcessProcessRaw().status(BadgePatchProcessProcessRaw.StatusEnum.FINISHED));
