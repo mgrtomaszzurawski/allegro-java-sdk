@@ -103,12 +103,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /affiliate/conversions/cps`, beta, lazy stream).
 - New `sdk.domain.account.builder` package: `RatingAnswer`, `RatingRemoval`,
   `RatingFilter`, `CharitySearch`, `ConversionFilter`.
-- Buyer-side E2E (`allegro-e2e`, not published): `BiddingE2ETest` mints a buyer
-  user token by automating the OAuth2 device-flow consent in the buyer browser
-  session and verifies `bidding()` against the live sandbox. Verified 2026-07-18:
-  the minted buyer token authenticates as an account distinct from the seller and
-  `myBid` on a non-existent auction maps 404 → `AllegroNotFoundException`; the
-  `placeBid`→`myBid` write→read stays gated behind `ALLEGRO_SANDBOX_AUCTION_OFFER_ID`.
+- `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
+  bucket D's live verification, run with a stored buyer token
+  (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
+  (`myBid` on a non-existent auction → `AllegroNotFoundException`); `myBid`/
+  `placeBid`→`myBid` write→read on a real auction stay gated behind
+  `-Pdemo.offerId`/`-Pdemo.bidAmount`. Verified live 2026-07-18: a buyer token
+  (account distinct from the seller) reaches the bidding API and maps its 404s.
 
 ### E — catalog-products
 
