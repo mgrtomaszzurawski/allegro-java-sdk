@@ -59,6 +59,7 @@ class OfferBundlesClientTest {
     private static final String TEST_TOKEN = "token-one";
     private static final String BUNDLES_PATH = "/sale/bundles";
     private static final String TEST_BUNDLE_ID = "bundle-01";
+    private static final String SECOND_BUNDLE_ID = "bundle-02";
     private static final String BUNDLE_PATH = BUNDLES_PATH + "/" + TEST_BUNDLE_ID;
     private static final String BUNDLE_DISCOUNT_PATH = BUNDLE_PATH + "/discount";
     private static final String PAGE_ID_PARAM = "page.id";
@@ -102,7 +103,7 @@ class OfferBundlesClientTest {
             """.formatted(BUNDLE, NEXT_CURSOR);
     private static final String BUNDLE_PAGE_2 = """
             {"bundles":[%s],"nextPage":null}
-            """.formatted(BUNDLE.replace(TEST_BUNDLE_ID, "bundle-02"));
+            """.formatted(BUNDLE.replace(TEST_BUNDLE_ID, SECOND_BUNDLE_ID));
     private static final String UPDATED_BUNDLE = BUNDLE.replace(DISCOUNT_AMOUNT, NEW_DISCOUNT_AMOUNT);
     private static final String DISCOUNT_REQUEST_BODY = """
             {"discounts":[{"marketplace":{"id":"%s"},"amount":"%s","currency":"%s"}]}
