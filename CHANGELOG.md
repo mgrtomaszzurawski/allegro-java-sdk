@@ -55,10 +55,20 @@ sections. Empty subsections are dropped by the release engineer when folding
   and `changeBuyNowPrice(offerId, Money)` (single-offer price-change command). `docs/offers.md`
   + compiled example + `offer` demo scenario (write→read on the sandbox).
 - Read/query slice: `streamOffers(OfferFilter)` — a lazy `Stream<OfferSummary>` over the
-  seller's offers (offset/limit paging, filter by name/status/format/price/sort) — and
+  seller's offers (offset/limit paging, filter by name/status/format/price) — and
   `smartClassification(offerId)` (Allegro Smart! report → `SmartClassification` with its
   per-condition breakdown). New `OfferFilter` builder; `offer` demo lists offers when no
   `-Pdemo.offerId` is given (live-verified on the sandbox seller account).
+- Batch slice: `offers().batch()` sub-facade with `publish(offerIds)` / `unpublish(offerIds)` —
+  bulk publish/unpublish wrapped sync-default over `CommandPoller` (submit → poll to terminal →
+  gather every task page), returning a `BatchReport` of per-offer `TaskResult`s. No
+  `CompletableFuture` in the surface.
+- Batch price/quantity: `batch().changePrices(offerIds, Money)` sets a fixed Buy Now price and
+  `batch().changeQuantities(offerIds, quantity)` sets available stock across many offers — same
+  submit→poll→gather `BatchReport` flow, on the price-change and quantity-change command endpoints.
+- `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
+  are still missing category parameters (offset/limit paging), each carrying the offer id, its
+  category, and the missing parameter ids.
 
 ### B — orders-payments
 

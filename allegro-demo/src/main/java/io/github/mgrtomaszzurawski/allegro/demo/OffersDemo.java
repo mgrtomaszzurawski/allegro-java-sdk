@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
@@ -26,13 +27,16 @@ import java.util.List;
  *   ./gradlew :allegro-demo:run -Pdemo.scenario=offer                        # list my offers
  *   ./gradlew :allegro-demo:run -Pdemo.scenario=offer -Pdemo.offerId=13579
  *   ./gradlew :allegro-demo:run -Pdemo.scenario=offer -Pdemo.offerId=13579 -Pdemo.newPrice=149.50
+ *   ./gradlew :allegro-demo:run -Pdemo.scenario=offer -Pdemo.publishIds=13579,24680  # bulk publish
  * </pre>
  */
 final class OffersDemo {
 
     private static final String OFFER_ID_PROPERTY = "demo.offerId";
     private static final String NEW_PRICE_PROPERTY = "demo.newPrice";
+    private static final String PUBLISH_IDS_PROPERTY = "demo.publishIds";
     private static final String CURRENCY_PLN = "PLN";
+    private static final String OFFER_ID_SEPARATOR = ",";
     private static final int STREAM_LIMIT = 10;
     private static final String ERR_NO_STORED_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
@@ -53,7 +57,10 @@ final class OffersDemo {
                 storedRefreshToken);
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             String offerId = System.getProperty(OFFER_ID_PROPERTY);
-            if (offerId == null) {
+            String publishIds = System.getProperty(PUBLISH_IDS_PROPERTY);
+            if (publishIds != null) {
+                publishBatch(client, publishIds);
+            } else if (offerId == null) {
                 streamOffers(client);
             } else {
                 printOffer("read", client.offers().get(offerId));
@@ -80,6 +87,13 @@ final class OffersDemo {
                     + ", format=" + summary.format() + ", stock=" + summary.availableStock()
                     + ", buyNow=" + price);
         }
+    }
+
+    private static void publishBatch(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        BatchReport report = client.offers().batch().publish(offerIds);
+        System.out.println("batch publish: " + report.success() + "/" + report.total()
+                + " ok, " + report.failed() + " failed");
     }
 
     private static void printSmart(AllegroClient client, String offerId) {
