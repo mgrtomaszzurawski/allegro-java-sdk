@@ -15,6 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,8 +29,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
@@ -90,6 +93,25 @@ class CatalogProductsClientTest {
               "path":"phrase"}]}
             """;
     private static final String BUSY = "{\"errors\":[]}";
+
+    private static final String PRODUCT_ID = "5272069b-0759-4283-8ba7-7f0512345678";
+    private static final String PRODUCT_BY_ID_PATH = PRODUCTS_PATH + "/" + PRODUCT_ID;
+    private static final String PRODUCT = """
+            {"id":"%s","name":"iPhone 15 128GB","category":{"id":"%s"},
+             "publication":{"status":"LISTED"},"hasProtectedBrand":true,
+             "images":[{"url":"https://img.allegro/p.jpg"}],
+             "parameters":[
+               {"id":"11323","name":"Marka","values":["Apple"],"valuesIds":["11323_1"]},
+               {"id":"pojemnosc","name":"Pojemność","values":["128 GB"],"unit":"GB"}]}
+            """.formatted(PRODUCT_ID, CATEGORY_ID);
+    // A bare product: category present but with no id, and every optional block omitted.
+    private static final String MINIMAL_PRODUCT = """
+            {"id":"%s","name":"Bare product","category":{}}
+            """.formatted(PRODUCT_ID);
+    private static final String NOT_FOUND = """
+            {"errors":[{"code":"ProductNotFoundException","message":"Product not found",
+              "userMessage":"Nie znaleziono produktu","path":null}]}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -341,5 +363,92 @@ class CatalogProductsClientTest {
         // then — the spec forbids category-only search (category filters a phrase search)
         assertThrows(IllegalStateException.class,
                 () -> ProductSearchRequest.builder().categoryId(CATEGORY_ID).build());
+    }
+
+    // ---- get(productId) ----
+
+    @Test
+    void get_whenProductExists_mapsRecordAndParameterValues(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_BY_ID_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PRODUCT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            Product product = allegro.catalog().products().get(PRODUCT_ID);
+
+            // then — identity, classification, flags, images and parameter values map
+            assertEquals(PRODUCT_ID, product.id());
+            assertEquals("iPhone 15 128GB", product.name());
+            assertEquals(CATEGORY_ID, product.categoryId());
+            assertEquals("LISTED", product.publicationStatus());
+            assertTrue(product.hasProtectedBrand());
+            assertEquals(1, product.imageUrls().size());
+            assertEquals(2, product.parameters().size());
+            assertEquals("11323", product.parameters().get(0).id());
+            assertEquals(List.of("Apple"), product.parameters().get(0).values());
+            assertEquals(List.of("11323_1"), product.parameters().get(0).valuesIds());
+            assertNull(product.parameters().get(0).unit());
+            assertEquals("GB", product.parameters().get(1).unit());
+            assertEquals(List.of("128 GB"), product.parameters().get(1).values());
+            assertTrue(product.parameters().get(1).valuesIds().isEmpty());
+            verify(1, getRequestedFor(urlEqualTo(PRODUCT_BY_ID_PATH)));
+        }
+    }
+
+    @Test
+    void get_when404_throwsNotFoundWithTraceId(WireMockRuntimeInfo wmInfo) {
+        // given — completes the facade's error-path table (search cannot 404; get can)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_BY_ID_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(NOT_FOUND)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var products = allegro.catalog().products();
+
+            // then
+            AllegroNotFoundException failure =
+                    assertThrows(AllegroNotFoundException.class, () -> products.get(PRODUCT_ID));
+            assertEquals(TestHttpConstants.HTTP_NOT_FOUND, failure.statusCode());
+            assertEquals(TEST_TRACE_ID, failure.traceId());
+            verify(1, getRequestedFor(urlEqualTo(PRODUCT_BY_ID_PATH)));
+        }
+    }
+
+    @Test
+    void get_whenIdNull_throwsNullPointerExceptionFromTheGuard(WireMockRuntimeInfo wmInfo) {
+        // then — the fail-fast guard (not an incidental deref) rejects a null id
+        try (AllegroClient allegro = client(wmInfo)) {
+            var products = allegro.catalog().products();
+            NullPointerException failure =
+                    assertThrows(NullPointerException.class, () -> products.get(null));
+            assertTrue(failure.getMessage().contains("productId"));
+        }
+    }
+
+    @Test
+    void get_whenOptionalFieldsOmitted_defaultsFalseAndNulls(WireMockRuntimeInfo wmInfo) {
+        // given — a bare product: category with no id, and no publication/brand/images/parameters
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(PRODUCT_BY_ID_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(MINIMAL_PRODUCT)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            Product product = allegro.catalog().products().get(PRODUCT_ID);
+
+            // then — absent boolean → false (not an unboxing NPE), absent refs → null, lists empty
+            assertNull(product.categoryId());
+            assertNull(product.publicationStatus());
+            assertFalse(product.hasProtectedBrand());
+            assertTrue(product.imageUrls().isEmpty());
+            assertTrue(product.parameters().isEmpty());
+        }
     }
 }

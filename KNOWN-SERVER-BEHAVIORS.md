@@ -168,6 +168,26 @@ spec; the exclusivity and the terminal empty-page behaviour are **to be confirme
 once a seeded order produces events (the RAG digest generically labels this endpoint
 "offset/limit", which is inaccurate for `/order/events`).
 
+## Payments & billing (bucket B)
+
+### `GET /billing/billing-types` works with an app-only token and returns a bare array (verified 2026-07-18, sandbox)
+
+`billing().types()` succeeds with a client-credentials (application) token — the endpoint
+declares no OAuth scope. The live sandbox returned **234** billing types as a top-level JSON
+array (no wrapper object), each `{id, description}`; the SDK deserializes to `BillingType[]` and
+maps cleanly. Confirmed via the `billing-types` demo.
+
+### Billing-entries, payment-operations and refunds shapes are spec-derived (pending live verification)
+
+`GET /billing/billing-entries`, `GET /payments/payment-operations`, `GET /payments/refunds` and
+`POST /payments/refunds` are wrapped from the spec; their fixtures are `spec-derived` pending the
+§2 sandbox pass (blocked on the shared seller token). Notes for that pass: `BillingEntriesRaw`
+carries **no** `count`/`totalCount` (the SDK paginates by short-page termination); a billing
+entry's `value`/`balance` may be partially populated, so the SDK maps an absent amount/currency
+to a `null` `Money` rather than throwing. `POST /payments/refunds` is a **destructive money
+movement** — verify it only against a disposable sandbox payment, and reuse the idempotency
+`commandId` on any retry.
+
 ## Post-sale comms (bucket J)
 
 ### Message attachments are not downloadable straight after upload (verified 2026-07-18, sandbox)

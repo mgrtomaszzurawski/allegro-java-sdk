@@ -69,6 +69,10 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.
+- Write slice: `create(CreateOfferRequest)` — create a Buy Now offer (name, category, price, stock,
+  optional images) via a fail-fast builder, returning the created `Offer` (starts as a draft;
+  publish with `batch().publish(...)`) — and `deleteDraft(offerId)`. (`edit` follows once the
+  transport gains non-null partial-body serialization for a safe PATCH.)
 
 ### B — orders-payments
 
@@ -84,6 +88,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `carriers()`/`carrierTracking()`/`allegroPickupPoints()` dictionaries. New models
   (`OrderEvent`, `OrderEventStats`, `Waybill`, `Carrier`, `CarrierTracking`,
   `PickupPoint`) and fluent filter/request builders. `orders-list` sandbox probe.
+- `client.payments()` facade: `streamOperations(PaymentOperationFilter)` and
+  `streamRefunds(RefundFilter)` (lazy offset streams) and `refund(RefundRequest)`
+  — initiate a full refund with an idempotency `commandId` and typed `RefundReason`
+  (UUID-validated fail-fast). Models `PaymentOperation`/`PaymentRefund`; `docs/payments.md`.
+- `client.billing()` facade: `streamEntries(BillingFilter)` (lazy stream) and `types()`
+  (billing-type dictionary; public, app-token friendly — **live-verified on the sandbox: 234
+  types**). Models `BillingEntry`/`BillingType`; `docs/billing.md` and the `billing-types` probe.
 
 ### C — shipping
 
@@ -146,6 +157,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `page.id` cursor automatically. The fail-fast `ProductSearchRequest` builder
   requires a phrase (category is an optional phrase-scoped filter). Live
   `catalog-products` demo scenario.
+- `catalog().products().get(productId)` — read a product
+  (`GET /sale/products/{id}`) as an immutable `Product`: id, name, category,
+  publication status, protected-brand flag, image URLs, and the
+  `ProductParameterValue` list (localized `values` + stable `valuesIds`)
+  describing it. A focused projection — the structured `description` and
+  compatibility blocks follow in a later slice. The `catalog-products` demo reads
+  a searched product back (search → get round-trip).
 
 ### F — offers-extras
 
@@ -168,6 +186,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   per-event totals (`ClassifiedEventType`) and a day-by-day breakdown
   (`ClassifiedDailyStat`); `ClassifiedStatsFilter` carries the optional
   `date.gte`/`date.lte` bounds. Completes the standalone `classifieds()` surface.
+- `offers().tags()` — the first offers-attached sub-facade: the seller's private
+  offer tags (`streamTags()` lazy, `create`/`rename`/`delete`) and their
+  per-offer assignment (`ofOffer`, `assignToOffer`). Immutable `Tag` records +
+  fail-fast `TagRequest` builder; `offer-tags` write→read demo. New `offerextras`
+  package wired onto the bucket-A `Offers` root.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
@@ -251,6 +274,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   with `UNKNOWN`-tolerant enums, fail-fast `NewMessageRequest`/`ReplyRequest`/
   `AttachmentDeclaration`/`MessageFilter` builders, and a `messaging` demo scenario
   (self-seeded attachment round-trip + threads read / `markRead` write→read).
+- Disputes facade (`client.disputes()`) — read side of post-purchase issues (`/sale/issues`,
+  **beta** media type): lazy `streamIssues(IssueFilter)` (status + checkout-form filter),
+  `get(issueId)`, and lazy `streamChat(issueId)`. Immutable `Issue`/`IssueChatEntry` records
+  with `UNKNOWN`-tolerant enums (`IssueType`, `IssueRight`, `IssueStatus`, `ChatAuthorRole`),
+  a fluent `IssueFilter`, and a `disputes` read-shape demo. The seller-side write operations
+  (add message, change status, attach) follow once the shared transport exposes a beta
+  request-body media type (backlog item).
 
 ### K — sale-settings
 

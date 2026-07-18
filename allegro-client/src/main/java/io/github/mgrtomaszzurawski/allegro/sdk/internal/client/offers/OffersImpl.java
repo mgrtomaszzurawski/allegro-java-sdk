@@ -4,18 +4,26 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -23,6 +31,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -41,6 +50,8 @@ import org.jspecify.annotations.Nullable;
 public final class OffersImpl implements Offers {
 
     private static final String OP_GET = "get offer";
+    private static final String OP_CREATE = "create offer";
+    private static final String OP_DELETE_DRAFT = "delete draft offer";
     private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
     private static final String OP_STREAM = "stream offers";
     private static final String OP_SMART = "get offer Smart classification";
@@ -60,6 +71,9 @@ public final class OffersImpl implements Offers {
     private final HttpSupport http;
     private final OfferBatch batch;
 
+    // ---- bucket F sub-facades ----
+    private final OfferTags tags;
+
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
         this.batch = new OfferBatchImpl(runtime);
@@ -67,12 +81,39 @@ public final class OffersImpl implements Offers {
         // sub-facades here (batch/promoOptions/media); bucket F constructs its
         // sub-facades (tags/translations/bundles/flexibleBundles/rating) from
         // this same runtime. One block per bucket, append-only, BACKLOG order.
+        this.tags = new OfferTagsImpl(runtime);
     }
 
     @Override
     public Offer get(String offerId) {
         return Offer.from(http.getAuthenticated(
                 ApiPaths.productOffer(offerId), SaleProductOfferResponseV1Raw.class, OP_GET));
+    }
+
+    @Override
+    public Offer create(CreateOfferRequest request) {
+        SellingModeRaw sellingMode = new SellingModeRaw()
+                .format(SellingModeFormatRaw.BUY_NOW)
+                .price(new BuyNowPriceRaw()
+                        .amount(request.buyNowPrice().amount())
+                        .currency(request.buyNowPrice().currency()));
+        SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
+                .name(request.name())
+                .category(new OfferCategoryRequestRaw().id(request.categoryId()))
+                .sellingMode(sellingMode)
+                .stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
+        if (!request.imageUrls().isEmpty()) {
+            body.images(request.imageUrls());
+        }
+        return Offer.from(http.request(OP_CREATE)
+                .post(ApiPaths.SALE_PRODUCT_OFFERS)
+                .jsonBody(body)
+                .fetch(SaleProductOfferResponseV1Raw.class));
+    }
+
+    @Override
+    public void deleteDraft(String offerId) {
+        http.request(OP_DELETE_DRAFT).delete(ApiPaths.offerDraft(offerId)).send();
     }
 
     @Override
@@ -148,6 +189,12 @@ public final class OffersImpl implements Offers {
     @Override
     public OfferBatch batch() {
         return batch;
+    }
+
+    // ---- bucket F sub-accessors ----
+    @Override
+    public OfferTags tags() {
+        return tags;
     }
 
     /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */

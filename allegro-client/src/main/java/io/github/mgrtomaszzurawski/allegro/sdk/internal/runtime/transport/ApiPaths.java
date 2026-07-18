@@ -44,7 +44,8 @@ public final class ApiPaths {
     public static final String REMOVAL_SEGMENT = "removal";
 
     // ---- offers (bucket A) ----
-    private static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
+    /** Product-offers collection ({@code /sale/product-offers}); POST to create. */
+    public static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
@@ -58,9 +59,14 @@ public final class ApiPaths {
     /** Seller's offers with missing category parameters ({@code /sale/offers/unfilled-parameters}). */
     public static final String SALE_OFFERS_UNFILLED_PARAMETERS = "/sale/offers/unfilled-parameters";
 
-    /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}). */
+    /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
         return subPath(SALE_PRODUCT_OFFERS, offerId);
+    }
+
+    /** A single offer as a draft resource ({@code /sale/offers/{offerId}}); DELETE to remove a draft. */
+    public static String offerDraft(String offerId) {
+        return subPath(SALE_OFFERS, offerId);
     }
 
     /** Single-offer Buy Now price change command ({@code /offers/{offerId}/change-price-commands/{commandId}}). */
@@ -128,6 +134,14 @@ public final class ApiPaths {
     public static final String BILLING_DOCUMENTS_SEGMENT = "billing-documents";
     /** {@code links} sub-resource segment (under an order's billing documents). */
     public static final String LINKS_SEGMENT = "links";
+    /** Seller payment operations history ({@code /payments/payment-operations}). */
+    public static final String PAYMENT_OPERATIONS = "/payments/payment-operations";
+    /** Refunded payments / refund initiation ({@code /payments/refunds}). */
+    public static final String PAYMENT_REFUNDS = "/payments/refunds";
+    /** Seller billing entries ({@code /billing/billing-entries}). */
+    public static final String BILLING_ENTRIES = "/billing/billing-entries";
+    /** Billing type dictionary ({@code /billing/billing-types}). */
+    public static final String BILLING_TYPES = "/billing/billing-types";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
@@ -158,6 +172,19 @@ public final class ApiPaths {
     public static final String CLASSIFIED_OFFERS_STATS = "/sale/classified-offers-stats";
     /** Daily advertisement statistics aggregated for the seller. */
     public static final String CLASSIFIED_SELLER_STATS = "/sale/classified-seller-stats";
+    /** Seller's private offer tags ({@code /sale/offer-tags}); append {@code /{tagId}}. */
+    public static final String OFFER_TAGS = "/sale/offer-tags";
+    private static final String TAGS_SEGMENT = "tags";
+
+    /** One offer tag ({@code /sale/offer-tags/{tagId}}). */
+    public static String offerTag(String tagId) {
+        return subPath(OFFER_TAGS, tagId);
+    }
+
+    /** Tags assigned to an offer ({@code /sale/offers/{offerId}/tags}). */
+    public static String offerAssignedTags(String offerId) {
+        return subPath(SALE_OFFERS, offerId, TAGS_SEGMENT);
+    }
 
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
@@ -263,6 +290,12 @@ public final class ApiPaths {
     public static final String MESSAGES_SEGMENT = "messages";
     /** Sub-resource: the read-flag toggle of a thread. */
     public static final String READ_SEGMENT = "read";
+
+    // ---- disputes / post-purchase issues (bucket J) ----
+    /** Post-purchase issues ({@code /sale/issues}); append {@code /{issueId}} via subPath. */
+    public static final String ISSUES = "/sale/issues";
+    /** Sub-resource: the chat within an issue. */
+    public static final String CHAT_SEGMENT = "chat";
 
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */

@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -44,6 +46,22 @@ public interface Offers {
     void changeBuyNowPrice(String offerId, Money buyNowPrice);
 
     /**
+     * Create a new Buy Now offer. The offer is created as a draft; publish it
+     * with {@code batch().publish(...)} once ready.
+     *
+     * @param request the offer to create
+     * @return the created offer
+     */
+    Offer create(CreateOfferRequest request);
+
+    /**
+     * Delete a draft (unpublished) offer.
+     *
+     * @param offerId the draft offer to delete
+     */
+    void deleteDraft(String offerId);
+
+    /**
      * Stream the seller's offers matching a filter, fetched page by page and
      * lazily — later pages are requested only as the stream is consumed.
      *
@@ -80,4 +98,12 @@ public interface Offers {
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
     // sub-accessors (tags(), translations(), bundles(), flexibleBundles(),
     // rating()). One block per bucket, append-only, in BACKLOG order.
+
+    // ---- bucket F sub-accessors ----
+    /**
+     * The seller's private offer tags and their assignment to offers.
+     *
+     * @return the offer-tags sub-facade
+     */
+    OfferTags tags();
 }
