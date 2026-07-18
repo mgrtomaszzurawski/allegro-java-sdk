@@ -56,4 +56,9 @@ public final class OffersExample {
         BatchReport report = client.offers().batch().publish(offerIds);
         return report.success();
     }
+
+    static int repriceOffers(AllegroClient client, List<String> offerIds) {
+        BatchReport report = client.offers().batch().changePrices(offerIds, Money.of("129.00", "PLN"));
+        return report.success();
+    }
 }
