@@ -4,17 +4,22 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.shipping;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw.PaymentPolicyEnum;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ConfirmationType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PaymentPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PosType;
 import org.junit.jupiter.api.Test;
 
 /**
- * The shipping enums are fail-soft on read (unmodelled server values map to
- * {@code UNKNOWN}) and strict on write ({@code UNKNOWN} cannot be serialized).
+ * The point-of-service enums are fail-soft on read (unmodelled server values map
+ * to {@code UNKNOWN}) and strict on write ({@code UNKNOWN} cannot be serialized).
+ * {@link PaymentPolicy} is a closed enum mapped by name from the typed Layer-1
+ * enum, so a dedicated parity test locks that the two never diverge.
  */
 class ShippingEnumsTest {
 
@@ -53,5 +58,20 @@ class ShippingEnumsTest {
         assertThrows(IllegalStateException.class, PosType.UNKNOWN::wireValue);
         assertThrows(IllegalStateException.class, PosStatus.UNKNOWN::wireValue);
         assertThrows(IllegalStateException.class, ConfirmationType.UNKNOWN::wireValue);
+    }
+
+    @Test
+    void paymentPolicy_domainAndRawEnumsShareEveryName() {
+        // DeliveryMethod maps PaymentPolicyEnum -> PaymentPolicy by name; this
+        // fails the build if a future spec regeneration ever adds a value on one
+        // side only (the closed enum has no UNKNOWN fallback to absorb it).
+        for (PaymentPolicyEnum raw : PaymentPolicyEnum.values()) {
+            assertDoesNotThrow(() -> PaymentPolicy.valueOf(raw.name()),
+                    "no PaymentPolicy models the raw value " + raw.name());
+        }
+        for (PaymentPolicy domain : PaymentPolicy.values()) {
+            assertDoesNotThrow(() -> PaymentPolicyEnum.fromValue(domain.name()),
+                    "no raw PaymentPolicyEnum for the domain value " + domain.name());
+        }
     }
 }
