@@ -356,12 +356,19 @@ sections. Empty subsections are dropped by the release engineer when folding
 - `offers().flexibleBundles()` — the seller's flexible bundles: `streamBundles()`
   (lazy cursor stream of `FlexibleBundleSummary`), `get` (full `FlexibleBundle`
   with slots/offers and the discriminated whole-bundle or per-slot discount),
-  `delete`. Records `FlexibleBundle`/`FlexibleBundleSummary`/`FlexibleBundleSlot`/
-  `FlexibleBundleSlotOffer`/`FlexibleBundleDiscount`/`WholeBundleDiscount`/
-  `SlotDiscount`/`MarketplaceDiscount`. Create/update (the nested slot/offer/
-  discount write builders) are a planned follow-up. **Completes the bucket-F
-  offers-extras surface (classifieds + tags + translations + rating + bundles +
-  flexible bundles); flexible-bundle writes are the one deferred item.**
+  `create`/`update` (POST/PUT the nested slot/offer/discount definition, returning
+  the full bundle), `delete`. Read records `FlexibleBundle`/`FlexibleBundleSummary`/
+  `FlexibleBundleSlot`/`FlexibleBundleSlotOffer`/`FlexibleBundleDiscount`/
+  `WholeBundleDiscount`/`SlotDiscount`/`MarketplaceDiscount`; write builders
+  `FlexibleBundleRequest`/`FlexibleBundleSlotRequest`/`FlexibleBundleOfferRef`
+  (the discount reuses the read records via
+  `FlexibleBundleDiscount.wholeBundle(...)`/`perSlot(...)`). **Completes the
+  bucket-F offers-extras surface (classifieds + tags + translations + rating +
+  bundles + flexible bundles), read and write.**
+- Forward-compat (C3): `BundleCreatedBy` now degrades a `createdBy` value Allegro
+  introduces later to `UNKNOWN` end-to-end (the generated Layer-1 enum yields its
+  `enumUnknownDefaultCase` sentinel instead of failing deserialization); covered by
+  a forward-compat test on both fixed and flexible bundles.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with

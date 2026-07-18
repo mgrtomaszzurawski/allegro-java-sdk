@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
 import java.util.stream.Stream;
@@ -13,11 +14,12 @@ import java.util.stream.Stream;
  * {@code AllegroClient.offers().flexibleBundles()}.
  *
  * <p>A flexible bundle is made of slots, each offering the buyer a choice of
- * offers, sold together at a whole-bundle or per-slot discount. This SDK version
- * covers reading the bundles ({@link #streamBundles()}, {@link #get(String)}) and
- * deleting them ({@link #delete(String)}); creating and updating flexible bundles
- * (the nested slot/offer/discount definition) is a planned follow-up. All
- * operations use the {@code sale:offers:*} scopes and need a user (seller) token.
+ * offers, sold together at a whole-bundle or per-slot discount. This facade covers
+ * reading ({@link #streamBundles()}, {@link #get(String)}), creating
+ * ({@link #create(FlexibleBundleRequest)}), updating
+ * ({@link #update(String, FlexibleBundleRequest)}), and deleting
+ * ({@link #delete(String)}) flexible bundles. All operations use the
+ * {@code sale:offers:*} scopes and need a user (seller) token.
  *
  * @since 0.2.0
  */
@@ -38,6 +40,24 @@ public interface FlexibleBundles {
      * @return the bundle
      */
     FlexibleBundle get(String bundleId);
+
+    /**
+     * Create a flexible bundle.
+     *
+     * @param request the bundle's slots and optional discount
+     * @return the created bundle, with its assigned ids and per-marketplace
+     *     availability
+     */
+    FlexibleBundle create(FlexibleBundleRequest request);
+
+    /**
+     * Update (replace) a flexible bundle.
+     *
+     * @param bundleId the bundle identifier
+     * @param request the bundle's new slots and optional discount
+     * @return the updated bundle
+     */
+    FlexibleBundle update(String bundleId, FlexibleBundleRequest request);
 
     /**
      * Delete a flexible bundle.

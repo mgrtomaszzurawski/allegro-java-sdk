@@ -11,9 +11,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
@@ -29,10 +33,17 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleOfferRef;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleSlotRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.BundleCreatedBy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleDiscountType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.MarketplaceDiscount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.SlotDiscount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.WholeBundleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
@@ -116,6 +127,52 @@ class FlexibleBundlesClientTest {
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFoundException","message":"bundle not found","path":null}]}
             """;
+    private static final int SLOT_ORDER = 0;
+    private static final int REQUIRED_QTY = 1;
+    private static final String UNKNOWN_CREATOR = "SYSTEM";
+    // A create/update body: one entry-point slot with one offer and a whole-bundle
+    // discount. jsonBodyPartial omits the unset slot id.
+    private static final String WRITE_REQUEST_BODY = """
+            {"slots":[{"order":%d,"entryPoint":true,"requiredQuantity":%d,
+              "offers":[{"id":"%s","excludedFromDiscount":false}]}],
+             "discount":{"type":"WHOLE_BUNDLE_DISCOUNT",
+               "bundle":{"minimumBoughtOffers":%d,
+                 "discounts":[{"marketplaceId":"%s","percentage":%d}]}}}
+            """.formatted(SLOT_ORDER, REQUIRED_QTY, OFFER_A, MIN_BOUGHT, MARKETPLACE_PL, WHOLE_PERCENTAGE);
+
+    // A per-slot-discount create body (the SLOT_DISCOUNT branch of the discount).
+    private static final String SLOT_DISCOUNT_WRITE_BODY = """
+            {"slots":[{"order":%d,"entryPoint":true,"requiredQuantity":%d,
+              "offers":[{"id":"%s","excludedFromDiscount":false}]}],
+             "discount":{"type":"SLOT_DISCOUNT",
+               "slot":{"slots":[{"order":%d,
+                 "discounts":[{"marketplaceId":"%s","percentage":%d}]}]}}}
+            """.formatted(SLOT_ORDER, REQUIRED_QTY, OFFER_A, SLOT_ORDER, MARKETPLACE_PL, SLOT_PERCENTAGE);
+
+    private static FlexibleBundleSlotRequest oneSlot() {
+        return FlexibleBundleSlotRequest.builder()
+                .order(SLOT_ORDER)
+                .entryPoint(true)
+                .requiredQuantity(REQUIRED_QTY)
+                .offer(FlexibleBundleOfferRef.of(OFFER_A, false))
+                .build();
+    }
+
+    private static FlexibleBundleRequest writeRequest() {
+        return FlexibleBundleRequest.builder()
+                .slot(oneSlot())
+                .discount(FlexibleBundleDiscount.wholeBundle(new WholeBundleDiscount(
+                        MIN_BOUGHT, List.of(new MarketplaceDiscount(MARKETPLACE_PL, WHOLE_PERCENTAGE)))))
+                .build();
+    }
+
+    private static FlexibleBundleRequest perSlotDiscountRequest() {
+        return FlexibleBundleRequest.builder()
+                .slot(oneSlot())
+                .discount(FlexibleBundleDiscount.perSlot(List.of(new SlotDiscount(
+                        SLOT_ORDER, List.of(new MarketplaceDiscount(MARKETPLACE_PL, SLOT_PERCENTAGE))))))
+                .build();
+    }
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -238,13 +295,123 @@ class FlexibleBundlesClientTest {
     }
 
     @Test
-    void flexibleBundleOps_whenBundleIdNull_throwBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+    void create_whenRequestGiven_postsBundleBodyAndMapsResponse(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(post(urlPathEqualTo(FLEX_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(equalToJson(WRITE_REQUEST_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(FULL_BUNDLE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FlexibleBundle created = allegro.offers().flexibleBundles().create(writeRequest());
+
+            // then — the slot/offer/discount body is on the wire and the response maps
+            assertEquals(TEST_FLEX_ID, created.id());
+            assertEquals(1, created.slots().size());
+            assertEquals(OFFER_A, created.slots().get(0).offers().get(0).offerId());
+            verify(1, postRequestedFor(urlPathEqualTo(FLEX_PATH)).withRequestBody(equalToJson(WRITE_REQUEST_BODY)));
+        }
+    }
+
+    @Test
+    void create_whenPerSlotDiscount_postsSlotDiscountBody(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(post(urlPathEqualTo(FLEX_PATH))
+                .withRequestBody(equalToJson(SLOT_DISCOUNT_WRITE_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(FULL_BUNDLE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.offers().flexibleBundles().create(perSlotDiscountRequest());
+
+            // then — the per-slot discount body is on the wire
+            verify(1, postRequestedFor(urlPathEqualTo(FLEX_PATH)).withRequestBody(equalToJson(SLOT_DISCOUNT_WRITE_BODY)));
+        }
+    }
+
+    @Test
+    void update_whenRequestGiven_putsBundleBodyToBundlePathAndMapsResponse(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(put(urlPathEqualTo(FLEX_BUNDLE_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(equalToJson(WRITE_REQUEST_BODY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(FULL_BUNDLE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FlexibleBundle updated = allegro.offers().flexibleBundles().update(TEST_FLEX_ID, writeRequest());
+
+            // then
+            assertEquals(TEST_FLEX_ID, updated.id());
+            verify(1, putRequestedFor(urlPathEqualTo(FLEX_BUNDLE_PATH)).withRequestBody(equalToJson(WRITE_REQUEST_BODY)));
+        }
+    }
+
+    @Test
+    void create_when400WithErrors_throwsBadRequestWithParsedFieldErrors(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(post(urlPathEqualTo(FLEX_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(BAD_REQUEST_RESPONSE)));
+
         try (AllegroClient allegro = client(wmInfo)) {
             var bundles = allegro.offers().flexibleBundles();
+            FlexibleBundleRequest request = writeRequest();
 
-            // then — the required bundle id is fail-fast before the wire
+            // then — a 400 on a POST is terminal (retryPost defaults off)
+            AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
+                    () -> bundles.create(request));
+            assertEquals(EXPECTED_ERROR_CODE, failure.errors().get(0).code());
+            verify(1, postRequestedFor(urlPathEqualTo(FLEX_PATH)));
+        }
+    }
+
+    @Test
+    void get_whenCreatedByUnknownWireValue_degradesToUnknown(WireMockRuntimeInfo wmInfo) {
+        // given — a createdBy value this SDK version does not model (C3 forward-compat):
+        // the Layer-1 enum degrades it to its sentinel, and the domain maps it to UNKNOWN
+        // rather than failing the whole read (before C3 this fixture failed deserialization)
+        stubToken();
+        String unknownCreatorBundle = FULL_BUNDLE.replace("\"createdBy\":\"USER\"",
+                "\"createdBy\":\"" + UNKNOWN_CREATOR + "\"");
+        stubFor(get(urlPathEqualTo(FLEX_BUNDLE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(unknownCreatorBundle)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FlexibleBundle bundle = allegro.offers().flexibleBundles().get(TEST_FLEX_ID);
+
+            // then
+            assertEquals(BundleCreatedBy.UNKNOWN, bundle.createdBy());
+        }
+    }
+
+    @Test
+    void flexibleBundleOps_whenBundleIdOrRequestNull_throwBeforeAnyRequest(WireMockRuntimeInfo wmInfo) {
+        try (AllegroClient allegro = client(wmInfo)) {
+            var bundles = allegro.offers().flexibleBundles();
+            FlexibleBundleRequest request = writeRequest();
+
+            // then — every required argument is fail-fast before the wire
             assertThrows(NullPointerException.class, () -> bundles.get(null));
             assertThrows(NullPointerException.class, () -> bundles.delete(null));
+            assertThrows(NullPointerException.class, () -> bundles.create(null));
+            assertThrows(NullPointerException.class, () -> bundles.update(null, request));
+            assertThrows(NullPointerException.class, () -> bundles.update(TEST_FLEX_ID, null));
             verify(0, anyRequestedFor(anyUrl()));
         }
     }
