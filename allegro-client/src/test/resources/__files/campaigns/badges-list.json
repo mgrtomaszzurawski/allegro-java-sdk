@@ -1,0 +1,23 @@
+{
+  "badges": [
+    {
+      "offer": { "id": "12345678" },
+      "campaign": { "id": "BARGAIN", "name": "Strefa Okazji" },
+      "publication": {
+        "type": "WITHIN",
+        "from": "2026-07-01T10:00:00Z",
+        "to": "2026-08-01T10:00:00Z"
+      },
+      "prices": {
+        "market": { "amount": "39.99", "currency": "PLN" },
+        "bargain": { "amount": "29.99", "currency": "PLN" },
+        "subsidy": {
+          "targetPrice": { "amount": "27.99", "currency": "PLN" },
+          "sellerPrice": { "amount": "28.99", "currency": "PLN" }
+        }
+      },
+      "process": { "status": "ACTIVE", "rejectionReasons": [] },
+      "campaignStock": { "quantity": 5 }
+    }
+  ]
+}

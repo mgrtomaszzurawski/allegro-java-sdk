@@ -63,6 +63,7 @@ module io.github.mgrtomaszzurawski.allegro {
     // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder;
 
     // One Fulfillment by Allegro (bucket I).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;
