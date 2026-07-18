@@ -79,6 +79,7 @@ class AfterSaleConditionsClientTest {
     private static final String NAME = "2 year seller warranty";
     private static final String DESCRIPTION = "Covers manufacturing defects";
     private static final String INDIVIDUAL_PERIOD = "P24M";
+    private static final String CORPORATE_PERIOD = "P12M";
     private static final String TRACE_ID = "4631702648f0524e";
     private static final long RETRY_AFTER_SECONDS = 1L;
 
@@ -149,6 +150,7 @@ class AfterSaleConditionsClientTest {
                 .name(NAME)
                 .type(WarrantyType.SELLER)
                 .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD))
                 .description(DESCRIPTION)
                 .build();
     }
@@ -206,7 +208,8 @@ class AfterSaleConditionsClientTest {
             verify(1, postRequestedFor(urlEqualTo(WARRANTIES_PATH))
                     .withRequestBody(matchingJsonPath("$.name", equalTo(NAME)))
                     .withRequestBody(matchingJsonPath("$.type", equalTo("SELLER")))
-                    .withRequestBody(matchingJsonPath("$.individual.period", equalTo(INDIVIDUAL_PERIOD))));
+                    .withRequestBody(matchingJsonPath("$.individual.period", equalTo(INDIVIDUAL_PERIOD)))
+                    .withRequestBody(matchingJsonPath("$.corporate.period", equalTo(CORPORATE_PERIOD))));
         }
     }
 

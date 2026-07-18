@@ -11,8 +11,12 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Fluent builder for {@link WarrantyRequest}. Replicates the server constraints
- * the SDK can check cheaply (required {@code name}/{@code type}, name and
- * description length caps) and fails fast at {@link #build()}.
+ * the SDK can check cheaply (required {@code name}/{@code type}/{@code individual}/
+ * {@code corporate}, name and description length caps) and fails fast at
+ * {@link #build()}. Both buyer-class warranty periods are mandatory: the endpoint
+ * rejects a missing {@code individual} or {@code corporate} with a
+ * {@code 422 UNPROCESSABLE_ENTITY} even though the spec marks neither
+ * {@code required} (verified on the sandbox — see {@code KNOWN-SERVER-BEHAVIORS.md}).
  *
  * @since 0.2.0
  */
@@ -27,6 +31,12 @@ public final class WarrantyRequestBuilder {
     private static final String ERR_NAME_TOO_LONG =
             "Warranty name exceeds the " + MAX_NAME_LENGTH + "-character limit";
     private static final String ERR_TYPE_REQUIRED = "Warranty type is required";
+    private static final String ERR_INDIVIDUAL_REQUIRED =
+            "Warranty individual period is required "
+                    + "(the endpoint rejects its absence with 422 path=individual)";
+    private static final String ERR_CORPORATE_REQUIRED =
+            "Warranty corporate period is required "
+                    + "(the endpoint rejects its absence with 422 path=corporate)";
     private static final String ERR_DESCRIPTION_TOO_LONG =
             "Warranty description exceeds the " + MAX_DESCRIPTION_LENGTH + "-character limit";
     private static final String ERR_ATTACHMENT_ID_INVALID =
@@ -55,13 +65,13 @@ public final class WarrantyRequestBuilder {
         return this;
     }
 
-    /** Set the warranty duration for individual buyers. */
+    /** Set the warranty duration for individual buyers (required). */
     public WarrantyRequestBuilder individual(@Nullable WarrantyPeriod period) {
         this.individual = period;
         return this;
     }
 
-    /** Set the warranty duration for corporate buyers. */
+    /** Set the warranty duration for corporate buyers (required). */
     public WarrantyRequestBuilder corporate(@Nullable WarrantyPeriod period) {
         this.corporate = period;
         return this;
@@ -101,6 +111,12 @@ public final class WarrantyRequestBuilder {
         }
         if (type == null) {
             throw new IllegalStateException(ERR_TYPE_REQUIRED);
+        }
+        if (individual == null) {
+            throw new IllegalStateException(ERR_INDIVIDUAL_REQUIRED);
+        }
+        if (corporate == null) {
+            throw new IllegalStateException(ERR_CORPORATE_REQUIRED);
         }
         if (description != null && description.length() > MAX_DESCRIPTION_LENGTH) {
             throw new IllegalStateException(ERR_DESCRIPTION_TOO_LONG);

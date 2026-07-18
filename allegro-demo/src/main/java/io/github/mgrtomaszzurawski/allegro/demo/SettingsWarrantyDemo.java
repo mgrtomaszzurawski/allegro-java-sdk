@@ -33,6 +33,10 @@ final class SettingsWarrantyDemo {
     private static final String DEMO_WARRANTY_NAME = DEMO_PREFIX + "seller warranty";
     private static final String DEMO_DESCRIPTION = DEMO_PREFIX + "created by the settings-warranty probe";
     private static final String INDIVIDUAL_PERIOD = "P24M";
+    // Sandbox rejects a warranty create with `path=corporate, UNPROCESSABLE_ENTITY`
+    // when corporate is omitted — the endpoint requires both buyer periods
+    // (undocumented; verified 2026-07-18, see KNOWN-SERVER-BEHAVIORS.md).
+    private static final String CORPORATE_PERIOD = "P12M";
     private static final String MSG_NO_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String MSG_TOKEN_EXPIRED = "(stored token expired - rerun auth-bootstrap)";
@@ -82,6 +86,7 @@ final class SettingsWarrantyDemo {
                 .name(DEMO_WARRANTY_NAME)
                 .type(WarrantyType.SELLER)
                 .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD))
                 .description(DEMO_DESCRIPTION)
                 .build();
         // Warranties have no DELETE in this API; reuse a single demo definition

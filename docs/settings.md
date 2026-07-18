@@ -25,15 +25,18 @@ AfterSaleConditions afterSale = client.settings().afterSale();
 
 ### Create a warranty
 
-Required fields (`name`, `type`) are validated when you call `build()`; a missing or
-over-long value throws `IllegalStateException` before any request is sent.
+Required fields (`name`, `type`, and **both** buyer-class periods `individual` and
+`corporate`) are validated when you call `build()`; a missing or over-long value throws
+`IllegalStateException` before any request is sent. Both periods are mandatory even though
+the API spec marks neither `required` — the endpoint rejects a missing one with
+`422 UNPROCESSABLE_ENTITY` (verified on the sandbox), so the builder fails fast instead.
 
 ```java
 WarrantyRequest request = WarrantyRequest.builder()
         .name("2 year seller warranty")          // required, max 200 chars
         .type(WarrantyType.SELLER)                // required: SELLER or MANUFACTURER
-        .individual(WarrantyPeriod.of("P24M"))    // ISO-8601 duration for individual buyers
-        .corporate(WarrantyPeriod.lifetimeWarranty())
+        .individual(WarrantyPeriod.of("P24M"))    // required — ISO-8601 duration, individual buyers
+        .corporate(WarrantyPeriod.lifetimeWarranty()) // required — corporate (business) buyers
         .description("Covers manufacturing defects")
         .build();
 

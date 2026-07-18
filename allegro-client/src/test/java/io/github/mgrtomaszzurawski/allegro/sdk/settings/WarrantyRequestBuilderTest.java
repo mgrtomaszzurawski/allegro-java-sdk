@@ -25,12 +25,15 @@ class WarrantyRequestBuilderTest {
     private static final String NAME = "2 year seller warranty";
     private static final String DESCRIPTION = "Covers manufacturing defects";
     private static final String INDIVIDUAL_PERIOD = "P24M";
+    private static final String CORPORATE_PERIOD = "P12M";
     private static final String ATTACHMENT_ID = "54702c96-4ccd-4c0e-b4c7-382a71e810b5";
     private static final String ATTACHMENT_NAME = "warranty.pdf";
     private static final int OVER_NAME_LIMIT = 201;
     private static final int OVER_DESCRIPTION_LIMIT = 10_241;
     private static final String FIELD_NAME = "name";
     private static final String FIELD_TYPE = "type";
+    private static final String FIELD_INDIVIDUAL = "individual";
+    private static final String FIELD_CORPORATE = "corporate";
     private static final String FIELD_DESCRIPTION = "description";
     private static final String LENGTH_WORD = "exceeds";
     private static final String UUID_WORD = "UUID";
@@ -42,13 +45,15 @@ class WarrantyRequestBuilderTest {
         WarrantyRequest request = WarrantyRequest.builder()
                 .name(NAME)
                 .type(WarrantyType.MANUFACTURER)
+                .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD))
                 .build();
 
         // then
         assertEquals(NAME, request.name());
         assertEquals(WarrantyType.MANUFACTURER, request.type());
-        assertNull(request.individual());
-        assertNull(request.corporate());
+        assertEquals(INDIVIDUAL_PERIOD, request.individual().period());
+        assertEquals(CORPORATE_PERIOD, request.corporate().period());
         assertNull(request.attachmentId());
         assertNull(request.description());
     }
@@ -82,6 +87,7 @@ class WarrantyRequestBuilderTest {
                 .name(NAME)
                 .type(WarrantyType.SELLER)
                 .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD))
                 .attachment(ATTACHMENT_ID, ATTACHMENT_NAME)
                 .description(DESCRIPTION)
                 .build();
@@ -119,6 +125,30 @@ class WarrantyRequestBuilderTest {
     }
 
     @Test
+    void build_whenIndividualMissing_throws() {
+        // The endpoint requires both buyer-class periods (422 path=individual); the
+        // builder mirrors that fail-fast. See KNOWN-SERVER-BEHAVIORS.md.
+        var builder = WarrantyRequest.builder()
+                .name(NAME)
+                .type(WarrantyType.SELLER)
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD));
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(FIELD_INDIVIDUAL));
+    }
+
+    @Test
+    void build_whenCorporateMissing_throws() {
+        // The endpoint requires both buyer-class periods (422 path=corporate); the
+        // builder mirrors that fail-fast. See KNOWN-SERVER-BEHAVIORS.md.
+        var builder = WarrantyRequest.builder()
+                .name(NAME)
+                .type(WarrantyType.SELLER)
+                .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD));
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(FIELD_CORPORATE));
+    }
+
+    @Test
     void build_whenNameTooLong_throws() {
         var builder = WarrantyRequest.builder()
                 .name("a".repeat(OVER_NAME_LIMIT))
@@ -134,6 +164,8 @@ class WarrantyRequestBuilderTest {
         var builder = WarrantyRequest.builder()
                 .name(NAME)
                 .type(WarrantyType.SELLER)
+                .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD))
                 .attachment(MALFORMED_ATTACHMENT_ID, ATTACHMENT_NAME);
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertTrue(failure.getMessage().contains(UUID_WORD));
@@ -144,6 +176,8 @@ class WarrantyRequestBuilderTest {
         var builder = WarrantyRequest.builder()
                 .name(NAME)
                 .type(WarrantyType.SELLER)
+                .individual(WarrantyPeriod.of(INDIVIDUAL_PERIOD))
+                .corporate(WarrantyPeriod.of(CORPORATE_PERIOD))
                 .description("a".repeat(OVER_DESCRIPTION_LIMIT));
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertTrue(failure.getMessage().contains(FIELD_DESCRIPTION));
