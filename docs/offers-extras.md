@@ -193,3 +193,36 @@ bundles.delete(bundleId);
 bundled `offers` (with `requiredQuantity`/`entryPoint`), the per-marketplace
 `discounts` (as `Money`) and `publications`, and who created it. All operations
 use `sale:offers:*` and need a **user (seller) access token**.
+
+## Flexible offer bundles
+
+A flexible bundle is made of slots, each offering the buyer a choice of offers,
+sold together at a whole-bundle or per-slot discount. Reach them via
+`client.offers().flexibleBundles()`. This SDK version covers reading and deleting
+them (creating/updating the nested slot/offer/discount definition is a planned
+follow-up):
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.FlexibleBundles;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
+
+FlexibleBundles flexible = client.offers().flexibleBundles();
+
+for (FlexibleBundleSummary summary : flexible.streamBundles().toList()) {
+    System.out.println(summary.id() + " slots=" + summary.slotRepresentatives().size());
+}
+
+FlexibleBundle bundle = flexible.get(bundleId);
+bundle.slots().forEach(slot ->
+        System.out.println("slot " + slot.order() + ": " + slot.offers().size() + " offer(s)"));
+flexible.delete(bundleId);
+```
+
+`streamBundles()` is a lazy **cursor** stream of summaries (identity + discount +
+one representative offer id per slot); `get(bundleId)` returns the full bundle
+with every slot's offers. The `FlexibleBundleDiscount` is discriminated by
+`type()` — `WHOLE_BUNDLE_DISCOUNT` (one discount, `wholeBundle()`) or
+`SLOT_DISCOUNT` (per-slot, `slotDiscounts()`), each with per-marketplace
+percentages. All operations use `sale:offers:*` and need a **user (seller) access
+token**.

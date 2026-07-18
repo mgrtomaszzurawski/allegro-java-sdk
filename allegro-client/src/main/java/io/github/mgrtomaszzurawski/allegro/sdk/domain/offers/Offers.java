@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.FlexibleBundles;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferBundles;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
@@ -149,4 +150,11 @@ public interface Offers {
      * @return the offer-bundles sub-facade
      */
     OfferBundles bundles();
+
+    /**
+     * The seller's flexible offer bundles.
+     *
+     * @return the flexible-bundles sub-facade
+     */
+    FlexibleBundles flexibleBundles();
 }

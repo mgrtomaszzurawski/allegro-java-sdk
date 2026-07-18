@@ -235,6 +235,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   Immutable `OfferBundle` (bundled `offers`, per-marketplace `discounts` as
   `Money`, `publications`, `createdBy`) with `BundledOffer`/`BundleDiscount`/
   `BundlePublication` records.
+- `offers().flexibleBundles()` — the seller's flexible bundles: `streamBundles()`
+  (lazy cursor stream of `FlexibleBundleSummary`), `get` (full `FlexibleBundle`
+  with slots/offers and the discriminated whole-bundle or per-slot discount),
+  `delete`. Records `FlexibleBundle`/`FlexibleBundleSummary`/`FlexibleBundleSlot`/
+  `FlexibleBundleSlotOffer`/`FlexibleBundleDiscount`/`WholeBundleDiscount`/
+  `SlotDiscount`/`MarketplaceDiscount`. Create/update (the nested slot/offer/
+  discount write builders) are a planned follow-up. **Completes the bucket-F
+  offers-extras surface (classifieds + tags + translations + rating + bundles +
+  flexible bundles); flexible-bundle writes are the one deferred item.**
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with

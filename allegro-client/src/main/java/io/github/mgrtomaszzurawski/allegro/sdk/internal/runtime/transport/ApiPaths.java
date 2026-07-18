@@ -236,6 +236,14 @@ public final class ApiPaths {
         return subPath(BUNDLES, bundleId, DISCOUNT_SEGMENT);
     }
 
+    /** Seller's flexible offer bundles ({@code /sale/flexible-bundles}); cursor-paged. */
+    public static final String FLEXIBLE_BUNDLES = "/sale/flexible-bundles";
+
+    /** One flexible bundle ({@code /sale/flexible-bundles/{bundleId}}). */
+    public static String flexibleBundle(String bundleId) {
+        return subPath(FLEXIBLE_BUNDLES, bundleId);
+    }
+
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
