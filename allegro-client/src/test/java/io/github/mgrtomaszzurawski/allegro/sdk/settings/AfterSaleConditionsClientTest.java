@@ -118,16 +118,19 @@ class AfterSaleConditionsClientTest {
     private static final String IMPLIED_WARRANTY_ID = "b953a7de-3817-4c89-896d-9ae71e56c0ff";
     private static final String IMPLIED_WARRANTY_PATH = IMPLIED_WARRANTIES_PATH + "/" + IMPLIED_WARRANTY_ID;
     private static final String IMPLIED_PERIOD = "P2Y";
+    // Distinct from the individual period so the mapping test proves no field-swap.
+    private static final String IMPLIED_CORPORATE_PERIOD = "P3Y";
     private static final String ADDRESS_CITY = "Poznań";
-    // spec-derived: not yet wire-verified — confirmed by the settings-implied-warranty
-    // demo write->read before the bucket's final PR.
+    // Live-verified 2026-07-18 (sandbox, seller TestBoxSDK) via the
+    // settings-implied-warranty demo write->read (create->get round-trip green).
     private static final String IMPLIED_WARRANTY_RESPONSE = """
             {"id":"%s","seller":{"id":"%s"},"name":"%s",
-             "individual":{"period":"%s"},"corporate":{"period":"P1Y"},
+             "individual":{"period":"%s"},"corporate":{"period":"%s"},
              "address":{"name":"Allegro sp. z o.o.","street":"Grunwaldzka 182",
                "postCode":"60-166","city":"%s","countryCode":"PL"},
              "description":"%s"}
-            """.formatted(IMPLIED_WARRANTY_ID, SELLER_ID, NAME, IMPLIED_PERIOD, ADDRESS_CITY, DESCRIPTION);
+            """.formatted(IMPLIED_WARRANTY_ID, SELLER_ID, NAME, IMPLIED_PERIOD,
+                    IMPLIED_CORPORATE_PERIOD, ADDRESS_CITY, DESCRIPTION);
     // Only the always-present fields — pins the nullable-mapping branches
     // (absent seller / corporate / address) in ImpliedWarranty.from.
     private static final String IMPLIED_WARRANTY_MINIMAL_RESPONSE = """
@@ -518,6 +521,8 @@ class AfterSaleConditionsClientTest {
             assertEquals(NAME, implied.name());
             assertNotNull(implied.individual());
             assertEquals(IMPLIED_PERIOD, implied.individual().period());
+            assertNotNull(implied.corporate());
+            assertEquals(IMPLIED_CORPORATE_PERIOD, implied.corporate().period());
             assertNotNull(implied.address());
             assertEquals(ADDRESS_CITY, implied.address().city());
             assertEquals(DESCRIPTION, implied.description());

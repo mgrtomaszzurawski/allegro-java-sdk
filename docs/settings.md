@@ -74,15 +74,16 @@ Warranty updated = afterSale.updateWarranty(warrantyId,
 
 Implied warranties are the statutory warranty of conformity. The API mirrors the seller-warranty
 shape — `streamImpliedWarranties()` (lazy, single page ≤ 60), `impliedWarranty(id)`,
-`createImpliedWarranty(...)`, `updateImpliedWarranty(...)` — but the period accepts **whole years
-only** (`P2Y`, not `P24M`) and there is no attachment. `name` and the `individual` period are
-required; validated fail-fast at `build()`.
+`createImpliedWarranty(...)`, `updateImpliedWarranty(...)` — but the period accepts **whole years,
+at least two** (`P2Y`); month-form (`P24M`) and sub-two-year (`P1Y`) values are rejected with
+`422`, and there is no attachment. `name` and the `individual` period are required; validated
+fail-fast at `build()`.
 
 ```java
 ImpliedWarrantyRequest request = ImpliedWarrantyRequest.builder()
         .name("2 year implied warranty")             // required, max 200 chars
-        .individual(ImpliedWarrantyPeriod.of("P2Y"))  // required — whole years only
-        .corporate(ImpliedWarrantyPeriod.of("P1Y"))   // optional
+        .individual(ImpliedWarrantyPeriod.of("P2Y"))  // required — whole years, min two
+        .corporate(ImpliedWarrantyPeriod.of("P2Y"))   // optional — whole years, min two
         .address(new AfterSalesAddress(               // optional; all fields required if set
                 "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
         .description("Statutory warranty of conformity")

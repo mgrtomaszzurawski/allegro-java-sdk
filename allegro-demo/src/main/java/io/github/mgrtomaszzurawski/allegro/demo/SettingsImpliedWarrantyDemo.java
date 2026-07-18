@@ -35,9 +35,11 @@ final class SettingsImpliedWarrantyDemo {
     private static final String DEMO_NAME = DEMO_PREFIX + "implied warranty";
     private static final String DEMO_DESCRIPTION =
             DEMO_PREFIX + "created by the settings-implied-warranty probe";
-    // The implied-warranty period accepts whole years only (spec: 'P2Y').
+    // Live-verified: implied-warranty periods are whole-year ISO-8601 durations
+    // of at least two years (the statutory rękojmia period). P1Y and month-form
+    // values (P12M/P24M) are rejected with 422 on the *.period path.
     private static final String INDIVIDUAL_PERIOD = "P2Y";
-    private static final String CORPORATE_PERIOD = "P1Y";
+    private static final String CORPORATE_PERIOD = "P2Y";
     private static final String MSG_NO_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String MSG_TOKEN_EXPIRED = "(stored token expired - rerun auth-bootstrap)";

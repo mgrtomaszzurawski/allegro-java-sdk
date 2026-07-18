@@ -24,7 +24,7 @@ class ImpliedWarrantyRequestBuilderTest {
     private static final String NAME = "2 year implied warranty";
     private static final String DESCRIPTION = "Statutory warranty of conformity";
     private static final String INDIVIDUAL_PERIOD = "P2Y";
-    private static final String CORPORATE_PERIOD = "P1Y";
+    private static final String CORPORATE_PERIOD = "P3Y";
     private static final int NAME_AT_LIMIT = 200;
     private static final int OVER_NAME_LIMIT = 201;
     private static final int OVER_DESCRIPTION_LIMIT = 10_241;
