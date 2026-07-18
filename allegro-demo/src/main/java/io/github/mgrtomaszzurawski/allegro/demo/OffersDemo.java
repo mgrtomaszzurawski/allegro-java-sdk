@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
@@ -104,9 +105,15 @@ final class OffersDemo {
                 .buyNowPrice(Money.of(System.getProperty(CREATE_PRICE_PROPERTY), CURRENCY_PLN))
                 .availableStock(Integer.parseInt(System.getProperty(CREATE_STOCK_PROPERTY)))
                 .build();
-        Offer created = client.offers().create(request);
-        System.out.println("create: id=" + created.id() + ", status=" + created.status()
-                + ", name=" + created.name());
+        try {
+            Offer created = client.offers().create(request);
+            System.out.println("create: id=" + created.id() + ", status=" + created.status()
+                    + ", name=" + created.name());
+        } catch (AllegroBadRequestException e) {
+            System.out.println("create rejected — " + e.errors().size() + " field error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
     }
 
     private static void publishBatch(AllegroClient client, String csvOfferIds) {

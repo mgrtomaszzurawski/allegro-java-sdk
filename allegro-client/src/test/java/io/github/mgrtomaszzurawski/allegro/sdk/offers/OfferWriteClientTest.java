@@ -62,11 +62,7 @@ class OfferWriteClientTest {
     private static final String CURRENCY_PLN = "PLN";
     private static final int STOCK = 10;
 
-    private static final String NAME_JSON_PATH = "$.name";
-    private static final String CATEGORY_JSON_PATH = "$.category.id";
-    private static final String FORMAT_JSON_PATH = "$.sellingMode.format";
     private static final String PRICE_JSON_PATH = "$.sellingMode.price.amount";
-    private static final String STOCK_JSON_PATH = "$.stock.available";
     private static final String IMAGES_JSON_PATH = "$.images[0]";
     private static final String IMAGE_URL = "https://img.example/keyboard.jpg";
 
@@ -135,14 +131,15 @@ class OfferWriteClientTest {
         // when
         Offer created = offers(wmInfo).create(validRequest());
 
-        // then — the request body pins the essential offer fields
+        // then — the request body carries EXACTLY the set fields (strict, no extras):
+        // this proves create uses jsonBodyPartial, so the request type's null `language`
+        // and pre-initialized empty collections are omitted (the server 400s on `language:null`).
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
-                .withRequestBody(matchingJsonPath(NAME_JSON_PATH, equalTo(NAME)))
-                .withRequestBody(matchingJsonPath(CATEGORY_JSON_PATH, equalTo(CATEGORY_ID)))
-                .withRequestBody(matchingJsonPath(FORMAT_JSON_PATH, equalTo("BUY_NOW")))
-                .withRequestBody(matchingJsonPath(PRICE_JSON_PATH, equalTo(AMOUNT)))
-                .withRequestBody(matchingJsonPath(STOCK_JSON_PATH, equalTo(String.valueOf(STOCK)))));
+                .withRequestBody(equalToJson(("{\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
+                        + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+                        + "\"stock\":{\"available\":%d}}").formatted(NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, STOCK),
+                        true, false)));
         // and the response is mapped to the created offer
         assertEquals(CREATED_OFFER_ID, created.id());
     }
