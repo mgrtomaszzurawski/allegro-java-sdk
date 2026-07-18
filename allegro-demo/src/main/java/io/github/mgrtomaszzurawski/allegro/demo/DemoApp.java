@@ -76,6 +76,7 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_POS_ROUNDTRIP, PointsOfServiceDemo::run);
         SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);
         SCENARIOS.put(SCENARIO_CONTACTS, ContactsDemo::run);
+        SCENARIOS.put(DeliveryMethodsDemo.SCENARIO, DeliveryMethodsDemo::run);
     }
 
     private DemoApp() {
