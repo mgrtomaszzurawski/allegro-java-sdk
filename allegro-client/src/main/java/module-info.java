@@ -32,12 +32,20 @@ module io.github.mgrtomaszzurawski.allegro {
 
     // Orders, payments and billing (bucket B).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
 
     // Shipping facade (bucket C): shipments, delivery, points of service.
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder;
+
+    // Sale settings — seller-side configuration (bucket K). Starter slice:
+    // after-sale service conditions (warranties).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder;
 
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;
@@ -47,6 +55,7 @@ module io.github.mgrtomaszzurawski.allegro {
     // Offer lifecycle (bucket A).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
     // Product catalogue: categories, products, compatibility (bucket E).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
@@ -65,6 +74,7 @@ module io.github.mgrtomaszzurawski.allegro {
     // Marketing campaigns: badges, Allegro Prices, AlleDiscount (bucket H).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder;
 
     // One Fulfillment by Allegro (bucket I).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment;
@@ -75,6 +85,11 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.contacts.model;
+
+    // Message center (bucket J — post-sale-comms).
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.model;
 
     // Generated *Raw DTOs (Layer 1) — internal use only, not re-exported.
     requires io.github.mgrtomaszzurawski.allegro.rest;

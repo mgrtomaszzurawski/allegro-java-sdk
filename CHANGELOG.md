@@ -54,6 +54,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   `Offer` record with `OfferFormat`/`OfferStatus` enums and the shared `Money` Buy Now price)
   and `changeBuyNowPrice(offerId, Money)` (single-offer price-change command). `docs/offers.md`
   + compiled example + `offer` demo scenario (write→read on the sandbox).
+- Read/query slice: `streamOffers(OfferFilter)` — a lazy `Stream<OfferSummary>` over the
+  seller's offers (offset/limit paging, filter by name/status/format/price/sort) — and
+  `smartClassification(offerId)` (Allegro Smart! report → `SmartClassification` with its
+  per-condition breakdown). New `OfferFilter` builder; `offer` demo lists offers when no
+  `-Pdemo.offerId` is given (live-verified on the sandbox seller account).
 
 ### B — orders-payments
 
@@ -62,6 +67,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `OrderStatus`, seller-side `SellerStatus`, buyer, line items, and `Money` totals.
   WireMock contract tests (happy path + 400/401-replay/404/429/5xx), `docs/orders.md`,
   a compiled example, and the `orders-get` sandbox probe.
+- Order-management surface: `streamOrders(OrderFilter)` (lazy offset `Stream<Order>`),
+  `streamEvents(OrderEventFilter)` (lazy cursor stream) + `eventStats()`,
+  `markStatus`/`setSerialNumbers` with optional `revision` optimistic concurrency,
+  `attachBillingDocumentLink`, `trackingNumbers`/`addTrackingNumber`, and the
+  `carriers()`/`carrierTracking()`/`allegroPickupPoints()` dictionaries. New models
+  (`OrderEvent`, `OrderEventStats`, `Waybill`, `Carrier`, `CarrierTracking`,
+  `PickupPoint`) and fluent filter/request builders. `orders-list` sandbox probe.
 
 ### C — shipping
 
@@ -138,6 +150,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `/sale/offer-classifieds-packages/{offerId}`). `ClassifiedAssignment` is built
   by a fail-fast builder; the write→read demo assigns then reads the packages
   back. All calls require the seller user token.
+- `classifieds.offerStats(offerIds, ClassifiedStatsFilter)` and
+  `classifieds.sellerStats(ClassifiedStatsFilter)` — daily advertisement
+  statistics for up to 50 selected offers, or aggregated across the seller
+  (`/sale/classified-offers-stats`, `/sale/classified-seller-stats`). Returns
+  per-event totals (`ClassifiedEventType`) and a day-by-day breakdown
+  (`ClassifiedDailyStat`); `ClassifiedStatsFilter` carries the optional
+  `date.gte`/`date.lte` bounds. Completes the standalone `classifieds()` surface.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
@@ -153,6 +172,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   authenticated seller (GET `/sale/badge-campaigns`), with an optional per-marketplace overload.
   Immutable `BadgeCampaign` model with eligibility, refusal reasons and the application/visibility/
   publication schedules. Starter slice of bucket H.
+- Complete the badges sub-facade: `apply(BadgeApplicationRequest)` (POST `/sale/badges`, returned
+  without blocking — badge verification is e-mail-notified and asynchronous), `streamApplications`
+  (GET `/sale/badge-applications`) and `application(id)`, `streamBadges` (GET `/sale/badges`), and
+  `update(offerId, campaignId, BadgePatch[, Duration])` (PATCH, polled to a terminal badge operation
+  via the shared command poller). Adds `BadgeApplication`, `Badge`, `BadgePrices`, `BadgeOperation`
+  models and their status/type enums, the `BadgeApplicationRequest`/`BadgeApplicationFilter`/
+  `BadgeFilter` builders and the `BadgePatch` change type.
 
 ### I — fulfillment
 
@@ -160,11 +186,35 @@ sections. Empty subsections are dropped by the release engineer when folding
   slice: `removalPreference()` (read) and `setRemovalPreference(...)` (write), the
   `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
   enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
+- Add the fulfillment read reports and tax-id resource: lazy `stock()` / `stock(StockFilter)`,
+  `availableProducts()` and `refundDispositions()` / `refundDispositions(RefundDispositionFilter)`
+  streams, `parcelsOf(orderId)`, and `taxId()` / `addTaxId(...)` / `updateTaxId(...)`. New immutable
+  records (`StockItem` tree, `AvailableProduct`, `FulfillmentOrder`, `RefundDisposition` tree,
+  `TaxId`), the `StockFilter` / `RefundDispositionFilter` builders, and forward-compatible
+  open-set enums (`ReserveStatus`, `StorageFeeStatus`, `RefundDispositionType`,
+  `RefundStockStatus`, `AccountableParty`, `RefundActionState`) that resolve unknown wire
+  values to `UNKNOWN`.
 
 ### J — post-sale-comms
 
 - Contacts facade (`client.contacts()`) — starter slice: list, get, create and update
   seller contact cards (`/sale/offer-contacts`) with a fluent, fail-fast `ContactRequest`
   builder, immutable `Contact` records, and a `contacts` sandbox write→read demo scenario.
+- Messaging facade (`client.messaging()`) — the message center (`/messaging`, 11 ops):
+  lazy `streamThreads()`/`streamMessages()` pagination, `thread`/`message` reads, `markRead`,
+  `send`/`reply`, `deleteMessage`, and the binary attachment `declare`→`upload`→`download`
+  flow. Immutable records (`MessageThread`, `Message`, `MessageAttachment`, `AttachmentRef`)
+  with `UNKNOWN`-tolerant enums, fail-fast `NewMessageRequest`/`ReplyRequest`/
+  `AttachmentDeclaration`/`MessageFilter` builders, and a `messaging` demo scenario
+  (self-seeded attachment round-trip + threads read / `markRead` write→read).
 
 ### K — sale-settings
+
+- `settings().afterSale()` starter slice: seller **warranty** definitions —
+  `streamWarranties()` (lazy offset/limit `Stream`), `warranty(id)`,
+  `createWarranty(...)`, `updateWarranty(...)`. Immutable `Warranty` /
+  `WarrantySummary` records, `WarrantyType` / `WarrantyPeriod` value types, and a
+  fail-fast `WarrantyRequest` builder — both buyer-class periods (`individual` /
+  `corporate`) are required, an undocumented server rule (spec marks neither) verified
+  live and recorded in `KNOWN-SERVER-BEHAVIORS.md`. Documented in `docs/settings.md`; the
+  `settings-warranty` write→read demo is green on the sandbox (create→get round-trip).

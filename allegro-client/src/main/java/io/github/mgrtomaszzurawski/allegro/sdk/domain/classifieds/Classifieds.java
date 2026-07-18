@@ -4,9 +4,12 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder.ClassifiedStatsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedAssignment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.ClassifiedPackage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifiedStats;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.OfferClassifieds;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model.SellerClassifiedStats;
 import java.util.List;
 
 /**
@@ -18,9 +21,9 @@ import java.util.List;
  * attach to a classified offer, the packages assigned to an offer, and the
  * advertisement statistics.
  *
- * <p>Bucket F (offers-extras): the classifieds package and assignment surface
- * ships here; the advertisement statistics and the {@code offers()}-attached
- * extras (tags, translations, rating, bundles) land per the task-division plan.
+ * <p>Bucket F (offers-extras): the classifieds package, assignment, and
+ * statistics surface ships here; the {@code offers()}-attached extras (tags,
+ * translations, rating, bundles) land per the task-division plan.
  *
  * @since 0.2.0
  */
@@ -60,4 +63,23 @@ public interface Classifieds {
      * @param assignment the base and extra packages to assign
      */
     void assignPackages(String offerId, ClassifiedAssignment assignment);
+
+    /**
+     * Daily advertisement statistics for one or more of the seller's offers.
+     *
+     * @param offerIds the offers to read statistics for (1 to 50 ids)
+     * @param filter the optional date-time range
+     * @return one statistics entry per offer that has data; never {@code null},
+     *     possibly empty
+     */
+    List<OfferClassifiedStats> offerStats(List<String> offerIds, ClassifiedStatsFilter filter);
+
+    /**
+     * Daily advertisement statistics aggregated across all of the seller's
+     * advertisements.
+     *
+     * @param filter the optional date-time range
+     * @return the aggregated statistics
+     */
+    SellerClassifiedStats sellerStats(ClassifiedStatsFilter filter);
 }

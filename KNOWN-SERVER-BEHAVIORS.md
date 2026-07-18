@@ -108,6 +108,19 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+## Sale settings (bucket K)
+
+### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/warranties` and `PUT …/warranties/{id}` reject a request
+that omits either buyer-class period with `HTTP 422 UNPROCESSABLE_ENTITY` and a single field
+error whose `path` names the missing one — `path=corporate` when only `individual` is set,
+`path=individual` when only `corporate` is set (both directions verified live on the seller
+sandbox account TestBoxSDK, id 111332841). The spec marks **neither** `required`. A request
+that carries both periods succeeds and reads back cleanly (create→get round-trip green). The
+SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
+a client-side `IllegalStateException` naming the field — no wasted round-trip.
+
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
 ### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
@@ -139,6 +152,21 @@ device-consent, and the web-only buyer actions). Implications, baked into the co
 - DataDome hard-blocks the IP after a burst of rapid logins ("Zostałeś zablokowany… w tej
   samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
   discipline (`TESTING.md` §3).
+
+## Orders (bucket B)
+
+### `/order/events` pages by an exclusive `from` cursor, not offset/limit (spec-derived, pending live verification)
+
+The order event log (`GET /order/events`) is paginated by a **cursor**, not offset/limit: the
+`from` query parameter takes the last event id seen and the response returns the events *after*
+it (exclusive), newest walk terminating on an empty page. The SDK's `streamEvents(...)` therefore
+uses `PagedSpliterator.cursorStream`, advancing `from` to the last event id of each page and
+stopping on the first empty page. Correct termination **depends on `from` being exclusive** — if
+the server were inclusive, a non-empty page repeating the last event would not terminate (the
+empty-page guard does not catch this). The `from`/`type`/`limit` params are confirmed against the
+spec; the exclusivity and the terminal empty-page behaviour are **to be confirmed on the sandbox**
+once a seeded order produces events (the RAG digest generically labels this endpoint
+"offset/limit", which is inaccurate for `/order/events`).
 
 ## From external sources (to verify on first contact)
 
