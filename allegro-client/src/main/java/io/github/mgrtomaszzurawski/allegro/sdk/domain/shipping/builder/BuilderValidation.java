@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder;
 
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -22,6 +23,14 @@ final class BuilderValidation {
     /** Require a non-blank string, else fail with {@code <field> is required}. */
     static String requireText(@Nullable String value, String fieldName) {
         if (value == null || value.isBlank()) {
+            throw new IllegalStateException(fieldName + IS_REQUIRED);
+        }
+        return value;
+    }
+
+    /** Require a non-empty list, else fail with {@code <field> is required}. */
+    static <T> List<T> requireNonEmpty(@Nullable List<T> value, String fieldName) {
+        if (value == null || value.isEmpty()) {
             throw new IllegalStateException(fieldName + IS_REQUIRED);
         }
         return value;

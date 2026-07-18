@@ -1,8 +1,8 @@
 # Pricing
 
 Seller pricing tools, reached via `client.pricing()`. This guide covers automatic
-pricing rules, fee preview, fee quotes, turnover discounts and deposit types.
-Rebate promotions follow in a later release.
+pricing rules, fee preview, fee quotes, turnover discounts, deposit types and
+rebate promotions.
 
 ## Automatic pricing rules
 
@@ -174,3 +174,92 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
 
 List<DepositType> depositTypes = client.pricing().depositTypes();
 ```
+
+## Rebate promotions
+
+Rebate promotions reward buyers with a discount — a large-order discount, a
+quantity-tiered wholesale price list, or a "buy several, get some cheaper"
+multipack. Reach them through `client.pricing().promotions()`. Creating a
+promotion requires the seller's base marketplace to be `allegro-pl`.
+
+### List promotions
+
+The list is filtered by promotion type (required) and paginated; the SDK exposes
+it as a lazy `Stream` that fetches one page at a time as you consume it — only
+what you materialise is held in memory.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.Promotion;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PromotionType;
+
+client.pricing().promotions()
+        .streamPromotions(PromotionType.LARGE_ORDER_DISCOUNT)
+        .limit(50)
+        .forEach(promotion -> System.out.println(promotion.id() + " " + promotion.status()));
+```
+
+Pass an offer id to list only the promotions that apply to one offer:
+
+```java
+client.pricing().promotions()
+        .streamPromotions(PromotionType.WHOLESALE_PRICE_LIST, "12345")
+        .forEach(promotion -> System.out.println(promotion.id()));
+```
+
+### Read one promotion
+
+A promotion's `benefits()` are a sealed hierarchy — match on the concrete type:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.Benefit;
+
+Promotion promotion = client.pricing().promotions().get(promotionId);
+
+for (Benefit benefit : promotion.benefits()) {
+    if (benefit instanceof Benefit.LargeOrderDiscount large) {
+        large.thresholds().forEach(tier ->
+                System.out.println("from " + tier.orderValueFrom() + " → " + tier.discountPercentage() + "%"));
+    } else if (benefit instanceof Benefit.MultiPackDiscount multi) {
+        System.out.println("buy " + multi.buyQuantity() + ", " + multi.discountedQuantity()
+                + " at " + multi.discountPercentage() + "% off");
+    } else if (benefit instanceof Benefit.WholesalePriceList wholesale) {
+        System.out.println(wholesale.name());
+    }
+}
+```
+
+A benefit family introduced by Allegro after this SDK release is surfaced as
+`Benefit.UnknownBenefit` (carrying the wire type) rather than failing the read.
+
+### Create, modify and deactivate
+
+Build the benefits and pick which offers they apply to. A criterion is either an
+explicit set of offers, every offer (`allOffers()`), or offers assigned
+externally (`assignedExternally()`).
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferCriterion;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PromotionRequest;
+import java.util.List;
+
+Promotion created = client.pricing().promotions().create(
+        PromotionRequest.builder()
+                .addBenefit(new Benefit.LargeOrderDiscount(List.of(
+                        new Benefit.OrderValueThreshold(Money.of("100.00", "PLN"), "10"))))
+                .addOfferCriterion(OfferCriterion.containing(List.of("12345")))
+                .build());
+
+client.pricing().promotions().modify(created.id(),
+        PromotionRequest.builder()
+                .addBenefit(new Benefit.LargeOrderDiscount(List.of(
+                        new Benefit.OrderValueThreshold(Money.of("150.00", "PLN"), "12"))))
+                .addOfferCriterion(OfferCriterion.allOffers())
+                .build());
+
+client.pricing().promotions().deactivate(created.id());
+```
+
+A promotion needs at least one benefit and at least one offer criterion; the
+builder fails fast otherwise. Reading promotions requires `sale:offers:read`;
+creating, modifying and deactivating them require `sale:offers:write`.

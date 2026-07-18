@@ -15,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeWithNetPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.PricingAutomation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Promotions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.TurnoverDiscounts;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreview;
@@ -43,17 +44,24 @@ public final class PricingImpl implements Pricing {
 
     private final HttpSupport http;
     private final PricingAutomation automation;
+    private final Promotions promotions;
     private final TurnoverDiscounts turnoverDiscounts;
 
     public PricingImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
         this.automation = new PricingAutomationImpl(runtime);
+        this.promotions = new PromotionsImpl(runtime);
         this.turnoverDiscounts = new TurnoverDiscountsImpl(runtime);
     }
 
     @Override
     public PricingAutomation automation() {
         return automation;
+    }
+
+    @Override
+    public Promotions promotions() {
+        return promotions;
     }
 
     @Override

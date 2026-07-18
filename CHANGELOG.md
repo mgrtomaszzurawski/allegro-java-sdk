@@ -206,6 +206,21 @@ sections. Empty subsections are dropped by the release engineer when folding
   `seller.id` in the body (resolved from the token) and `coordinates` on the
   address (now a required builder field), and the update `PUT` requires the `id`
   in the body. create → get → update → delete verified green on the sandbox.
+- `settings().get()` / `settings().update(DeliverySettingsRequest)` — read and
+  replace the seller's delivery settings (`DeliverySettingsView` with the
+  free-delivery thresholds as `Money` and a `JoinStrategy` join policy). The
+  request builder requires the join policy; thresholds and marketplace are
+  optional.
+- `rates().list()` / `get(id)` / `create(ShippingRateSetRequest)` /
+  `update(id, request)` — manage the seller's shipping-rate sets:
+  `ShippingRateSet` with per-delivery-method `ShippingRate` rows (first/next-item
+  rates as `Money`, package weight, dispatch time), a `ShippingRateSetSummary`
+  list row, `RateSetType`, and fluent builders (a set needs a name and at least
+  one rate; a rate needs its method, both rates and a max quantity).
+- `deliveryMethods().paymentPolicy` is now fail-soft on read: an unmodelled
+  server value maps to `PaymentPolicy.UNKNOWN` instead of failing the whole read
+  (forward-compat, matching the bucket's other read enums after the core
+  `enumUnknownDefaultCase` change).
 
 ### D — account-meta
 
@@ -378,6 +393,16 @@ sections. Empty subsections are dropped by the release engineer when folding
   `TurnoverThreshold` ladders) and its fail-fast request builder.
 - `pricing().depositTypes()` — the deposit types available for offers, mapped to
   `DepositType`.
+- `pricing().promotions()` — rebate promotions: `streamPromotions(PromotionType)`
+  / `streamPromotions(PromotionType, offerId)` (lazy offset/limit `Stream`),
+  `get` / `create` / `modify` / `deactivate`. The polymorphic `benefits[]` map to
+  a sealed `Benefit` hierarchy (`LargeOrderDiscount` / `MultiPackDiscount` /
+  `WholesalePriceList`), with `OfferCriterion` targeting and the fail-fast
+  `PromotionRequest` builder. Benefit families deserialize natively; an unknown
+  family degrades to `Benefit.UnknownBenefit` (unknown-subtype forward-compat
+  core) and an unmodelled promotion status or offer-criterion type degrades to
+  its `UNKNOWN` enum constant instead of failing the read, completing bucket G at
+  17/17 ops.
 
 ### H — campaigns
 
@@ -424,6 +449,19 @@ sections. Empty subsections are dropped by the release engineer when folding
   open-set enums (`ReserveStatus`, `StorageFeeStatus`, `RefundDispositionType`,
   `RefundStockStatus`, `AccountableParty`, `RefundActionState`) that resolve unknown wire
   values to `UNKNOWN`.
+- Add the Advance Ship Notices lifecycle sub-facade `fulfillment().advanceShipNotices()` (11 ops):
+  `streamNotices()` / `streamNotices(AsnFilter)` lazy stream, `get(id)` (captures the `ETag` as
+  `version()`), `create(AsnRequest)`, `update(id, request, version)` and
+  `updateSubmitted(id, update, version)` (optimistic-concurrency `If-Match`), `submit(id)` /
+  `submit(id, Duration)` (async submit command polled to a terminal `SubmitStatus`),
+  `cancel(id)`, `delete(id)`, `labels(id)` (PDF `byte[]`), and `receivingState(id)`. New immutable
+  records (`AdvanceShipNotice`, `AsnItem`, `HandlingUnit`, `ReceivingState` tree), the `AsnRequest`
+  / `SubmittedAsnUpdate` / `AsnFilter` builders, and open-set enums (`AsnStatus`, `ReceivingStage`,
+  `ReceivedType`, `ReasonCode`, `SubmitStatus`) that degrade unknown wire values to `UNKNOWN`. The
+  polymorphic `shipping` declaration is a deferred follow-up.
+- The forward-compatibility of the fulfillment open-set enums is now proven end-to-end: with the
+  Layer-1 `enumUnknownDefaultCase` fallback in place, an unrecognized wire enum value degrades to
+  the domain `UNKNOWN` instead of failing the response.
 
 ### J — post-sale-comms
 
