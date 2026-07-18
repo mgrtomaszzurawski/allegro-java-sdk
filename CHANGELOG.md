@@ -77,6 +77,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   polymorphic base instead of throwing `InvalidTypeIdException`, so a domain mapper
   can degrade it (e.g. `CategoryParameterType.OTHER`) rather than failing the whole
   response. Applies to every discriminated `*Raw` base with a concrete base type.
+- Strict `oneOf` resolution (`StrictOneOfModule`): the generated `oneOf` wrappers
+  trial each branch with the lenient mapper (`FAIL_ON_UNKNOWN_PROPERTIES=false`), so
+  a payload for one branch also "matches" a sibling by ignoring foreign properties —
+  a structural `oneOf` then fails with "N classes match, expected 1". The module
+  re-points each wrapper (via a mix-in overriding the generator's `@JsonDeserialize`)
+  at a resolver that trials branches with unknown-property strictness, so only the
+  branch the payload actually fits wins; it falls back to the lenient single match
+  and then an `Object` branch, never worse than before. Buckets that hand-read such
+  `oneOf`s from `JsonNode` (pricing, campaigns) can now deserialize them directly.
 
 ### A — offers-core
 
