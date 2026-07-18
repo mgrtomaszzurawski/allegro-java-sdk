@@ -617,6 +617,7 @@ class AfterSaleConditionsClientTest {
             // then
             assertEquals(PARTIAL_PAGE, implied.size());
             assertEquals(WARRANTY_ID_PREFIX + "0", implied.get(0).id());
+            assertEquals(WARRANTY_NAME_PREFIX + "0", implied.get(0).name());
             verify(1, getRequestedFor(urlPathEqualTo(IMPLIED_WARRANTIES_PATH))
                     .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
             verify(0, getRequestedFor(urlPathEqualTo(IMPLIED_WARRANTIES_PATH))

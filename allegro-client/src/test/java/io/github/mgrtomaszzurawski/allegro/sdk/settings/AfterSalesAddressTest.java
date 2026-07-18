@@ -31,10 +31,30 @@ class AfterSalesAddressTest {
         assertEquals(COUNTRY, address.countryCode());
     }
 
+    private static final String BLANK = "  ";
+
+    @Test
+    void constructor_whenNameBlank_throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new AfterSalesAddress(BLANK, STREET, POST_CODE, CITY, COUNTRY));
+    }
+
+    @Test
+    void constructor_whenStreetBlank_throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new AfterSalesAddress(NAME, BLANK, POST_CODE, CITY, COUNTRY));
+    }
+
+    @Test
+    void constructor_whenPostCodeBlank_throws() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new AfterSalesAddress(NAME, STREET, BLANK, CITY, COUNTRY));
+    }
+
     @Test
     void constructor_whenCityBlank_throws() {
         assertThrows(IllegalArgumentException.class,
-                () -> new AfterSalesAddress(NAME, STREET, POST_CODE, "  ", COUNTRY));
+                () -> new AfterSalesAddress(NAME, STREET, POST_CODE, BLANK, COUNTRY));
     }
 
     @Test
