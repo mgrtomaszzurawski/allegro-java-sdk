@@ -50,7 +50,10 @@ If no order with that id exists for the seller, `get` throws `AllegroNotFoundExc
 | `buyer` | `Buyer` | id, login, email, name, company, guest flag, phone |
 | `lineItems` | `List<LineItem>` | id, offer id/name, quantity, unit `price`, `boughtAt` |
 | `totalToPay` | `Money` | amount + ISO-4217 currency the buyer pays |
-| `messageToSeller` | `String` (nullable) | buyer's note |
+| `payment` | `OrderPayment` (nullable) | main payment: id, `type`, `provider`, `finishedAt`, `paidAmount`, feature flags — `null` while unpaid |
+| `surcharges` | `List<OrderPayment>` | additional charges beyond the main payment; never `null`, possibly empty |
+| `messageToSeller` | `String` (nullable) | buyer's message to the seller |
+| `sellerNote` | `String` (nullable) | the seller's own private note on the order |
 | `marketplaceId` | `String` (nullable) | marketplace the order was placed on |
 | `updatedAt` | `OffsetDateTime` (nullable) | last modification time |
 | `revision` | `String` (nullable) | optimistic-concurrency token for later status writes |
@@ -59,6 +62,20 @@ If no order with that id exists for the seller, `get` throws `AllegroNotFoundExc
 prepares and ships the order). Monetary amounts use the SDK-wide
 [`Money`](../allegro-client/src/main/java/io/github/mgrtomaszzurawski/allegro/sdk/core/Money.java)
 type — an exact decimal string plus currency, never a lossy `double`.
+
+### Payment
+
+`order.payment()` is the main payment on the order (`null` until the buyer pays); `order.surcharges()`
+lists any additional charges. Both are `OrderPayment` records — `type` (`PaymentType`: cash on
+delivery, wire transfer, online, split payment, extended term), `provider` (`PaymentProvider`: PayU,
+P24, Allegro Finance, offline, EPT), `finishedAt`, and the `paidAmount` as `Money`. Every field is
+nullable because an unpaid order may carry a payment reference with nothing filled in yet.
+
+```java
+if (order.payment() != null && order.payment().type() == PaymentType.CASH_ON_DELIVERY) {
+    // collect on delivery
+}
+```
 
 ## List and stream orders
 

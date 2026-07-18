@@ -16,9 +16,9 @@ import org.jspecify.annotations.Nullable;
  * statuses.
  *
  * <p>This record exposes the fields a seller needs to identify and process an
- * order. Deeper detail (delivery and payment breakdowns, invoice metadata,
- * surcharges, per-item taxes and discounts) is added by later orders methods;
- * see {@code docs/orders.md}.
+ * order, including the payment breakdown (main payment plus any surcharges) and
+ * the seller's private note. The delivery and invoice breakdowns are added by a
+ * later slice; see {@code docs/orders.md}.
  *
  * @param id order (checkout form) identifier
  * @param status buyer-side lifecycle status
@@ -26,7 +26,11 @@ import org.jspecify.annotations.Nullable;
  * @param buyer the buyer
  * @param lineItems purchased positions; never {@code null}, possibly empty
  * @param totalToPay total amount the buyer pays for this order
+ * @param payment the main payment on the order, or {@code null} when unpaid
+ * @param surcharges additional charges beyond the main payment; never
+ *     {@code null}, possibly empty
  * @param messageToSeller buyer's message to the seller, or {@code null}
+ * @param sellerNote the seller's private note on the order, or {@code null}
  * @param marketplaceId marketplace the order was placed on, or {@code null}
  * @param updatedAt last modification time, or {@code null} when absent
  * @param revision optimistic-concurrency token to pass back on status writes,
@@ -41,13 +45,17 @@ public record Order(
         Buyer buyer,
         List<LineItem> lineItems,
         Money totalToPay,
+        @Nullable OrderPayment payment,
+        List<OrderPayment> surcharges,
         @Nullable String messageToSeller,
+        @Nullable String sellerNote,
         @Nullable String marketplaceId,
         @Nullable OffsetDateTime updatedAt,
         @Nullable String revision) {
 
     public Order {
         lineItems = List.copyOf(lineItems);
+        surcharges = surcharges == null ? List.of() : List.copyOf(surcharges);
     }
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
@@ -55,6 +63,9 @@ public record Order(
         var totalToPay = raw.getSummary().getTotalToPay();
         var fulfillment = raw.getFulfillment();
         var marketplace = raw.getMarketplace();
+        var payment = raw.getPayment();
+        var note = raw.getNote();
+        var surcharges = raw.getSurcharges();
         return new Order(
                 raw.getId().toString(),
                 OrderStatus.from(raw.getStatus()),
@@ -62,7 +73,10 @@ public record Order(
                 Buyer.from(raw.getBuyer()),
                 raw.getLineItems().stream().map(LineItem::from).toList(),
                 Money.of(totalToPay.getAmount(), totalToPay.getCurrency()),
+                payment == null ? null : OrderPayment.from(payment),
+                surcharges == null ? List.of() : surcharges.stream().map(OrderPayment::from).toList(),
                 raw.getMessageToSeller(),
+                note == null ? null : note.getText(),
                 marketplace == null ? null : marketplace.getId(),
                 parseTimestamp(raw.getUpdatedAt()),
                 raw.getRevision());

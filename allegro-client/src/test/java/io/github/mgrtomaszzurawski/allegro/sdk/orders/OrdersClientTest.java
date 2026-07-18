@@ -20,6 +20,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +45,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventStats;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentProvider;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PickupPoint;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Waybill;
@@ -95,6 +98,11 @@ class OrdersClientTest {
     private static final String EXPECTED_MARKETPLACE_ID = "allegro-pl";
     private static final String EXPECTED_REVISION = "abc123";
     private static final String EXPECTED_MESSAGE = "Please ship fast";
+    private static final String EXPECTED_PAID_AMOUNT = "44.98";
+    private static final String EXPECTED_SURCHARGE_AMOUNT = "5.00";
+    private static final String EXPECTED_SELLER_NOTE = "Fragile - handle with care";
+    private static final String FUTURE_PAYMENT_TYPE = "SOME_FUTURE_PAYMENT_TYPE";
+    private static final String FUTURE_PAYMENT_PROVIDER = "SOME_FUTURE_PROVIDER";
 
     private static final long RETRY_AFTER_SECONDS = 120L;
     private static final int FAST_MAX_ATTEMPTS = 2;
@@ -296,6 +304,15 @@ class OrdersClientTest {
 
             assertEquals(EXPECTED_TOTAL_AMOUNT, order.totalToPay().amount());
             assertEquals(EXPECTED_CURRENCY, order.totalToPay().currency());
+
+            // payment breakdown, surcharges, and the seller's private note
+            assertEquals(PaymentType.ONLINE, order.payment().type());
+            assertEquals(PaymentProvider.PAYU, order.payment().provider());
+            assertEquals(EXPECTED_PAID_AMOUNT, order.payment().paidAmount().amount());
+            assertNotNull(order.payment().finishedAt());
+            assertEquals(1, order.surcharges().size());
+            assertEquals(EXPECTED_SURCHARGE_AMOUNT, order.surcharges().get(0).paidAmount().amount());
+            assertEquals(EXPECTED_SELLER_NOTE, order.sellerNote());
             verify(1, getRequestedFor(urlEqualTo(ORDER_PATH)));
         }
     }
@@ -458,7 +475,10 @@ class OrdersClientTest {
             assertNull(order.sellerStatus());
             assertNull(order.marketplaceId());
             assertNull(order.messageToSeller());
+            assertNull(order.payment());
+            assertNull(order.sellerNote());
             assertTrue(order.lineItems().isEmpty());
+            assertTrue(order.surcharges().isEmpty());
             // and optional buyer fields map to null, guest defaults to false
             assertNull(order.buyer().firstName());
             assertNull(order.buyer().lastName());
@@ -903,6 +923,30 @@ class OrdersClientTest {
             // then — both enums degrade to the forward-compat UNKNOWN sentinel
             assertEquals(OrderStatus.UNKNOWN, order.status());
             assertEquals(SellerStatus.UNKNOWN, order.sellerStatus());
+        }
+    }
+
+    @Test
+    void get_whenPaymentEnumsAreUnknownFutureValues_mapToUnknownSentinel(WireMockRuntimeInfo wmInfo) {
+        // given — the payment carries a type and provider this SDK release does not model
+        stubToken(TEST_TOKEN);
+        String body = "{\"id\":\"" + ORDER_ID + "\",\"status\":\"BOUGHT\","
+                + "\"buyer\":{\"id\":\"1\",\"login\":\"b\",\"email\":\"b@example.com\"},"
+                + "\"lineItems\":[],"
+                + "\"payment\":{\"type\":\"" + FUTURE_PAYMENT_TYPE + "\",\"provider\":\""
+                + FUTURE_PAYMENT_PROVIDER + "\"},"
+                + "\"summary\":{\"totalToPay\":{\"amount\":\"0.00\",\"currency\":\"PLN\"}}}";
+        stubFor(get(urlEqualTo(ORDER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(body)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Order order = allegro.orders().get(ORDER_ID);
+
+            // then — the unknown payment enums degrade to UNKNOWN, the order still maps
+            assertEquals(PaymentType.UNKNOWN, order.payment().type());
+            assertEquals(PaymentProvider.UNKNOWN, order.payment().provider());
         }
     }
 

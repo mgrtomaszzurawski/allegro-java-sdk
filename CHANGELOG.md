@@ -166,6 +166,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   sentinel instead of serializing it (which the server rejects with 400), and an unknown wire
   enum value now degrades an `Order`/`OrderEvent` to the `UNKNOWN` sentinel rather than failing
   the response. Added forward-compat and filter-guard WireMock tests.
+- `Order` depth — payment: `Order.from` now maps the main `payment()` and any `surcharges()` as
+  `OrderPayment` records (`type` `PaymentType`, `provider` `PaymentProvider`, `finishedAt`,
+  `paidAmount` `Money`, payment feature flags), plus the seller's private `sellerNote()`. Both new
+  enums are forward-compatible (unknown wire value → `UNKNOWN`). The reconciliation figure (internal
+  Allegro accounting) is intentionally not modelled.
 
 ### C — shipping
 
