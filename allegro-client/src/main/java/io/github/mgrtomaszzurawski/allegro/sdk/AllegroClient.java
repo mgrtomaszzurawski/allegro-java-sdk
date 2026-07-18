@@ -25,7 +25,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.Disputes;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.Fulfillment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.messaging.Messaging;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.billing.Billing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.Orders;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.Payments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
@@ -42,7 +44,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.disputes.Disputes
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.fulfillment.FulfillmentImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.messaging.MessagingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.billing.BillingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.orders.OrdersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.payments.PaymentsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing.PricingImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.SaleSettingsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping.ShippingImpl;
@@ -98,6 +102,8 @@ public final class AllegroClient implements AutoCloseable {
     private final UserAccount userAccount;
     private final Offers offers;
     private final Orders orders;
+    private final Payments payments;
+    private final Billing billing;
     private final Marketplaces marketplaces;
     private final Bidding bidding;
     private final Charity charity;
@@ -142,6 +148,8 @@ public final class AllegroClient implements AutoCloseable {
         this.userAccount = new UserAccountImpl(runtime);
         this.offers = new OffersImpl(runtime);
         this.orders = new OrdersImpl(runtime);
+        this.payments = new PaymentsImpl(runtime);
+        this.billing = new BillingImpl(runtime);
         this.marketplaces = new MarketplacesImpl(runtime);
         this.bidding = new BiddingImpl(runtime);
         this.charity = new CharityImpl(runtime);
@@ -185,10 +193,22 @@ public final class AllegroClient implements AutoCloseable {
         return offers;
     }
 
-    /** Orders, payments and billing. */
+    /** Orders (order management; returns, refunds and invoices per the plan). */
     public Orders orders() {
         ensureOpen();
         return orders;
+    }
+
+    /** Payment operations, refunded payments, and refund initiation (bucket B). */
+    public Payments payments() {
+        ensureOpen();
+        return payments;
+    }
+
+    /** Billing entries and the billing-type dictionary (bucket B). */
+    public Billing billing() {
+        ensureOpen();
+        return billing;
     }
 
     /** Details of the platform's marketplaces (public; app-token friendly). */

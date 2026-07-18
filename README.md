@@ -32,7 +32,9 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — design, layers, auth lifecycle
 - [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
 - [`docs/offers.md`](docs/offers.md) — offers: read an offer, change the Buy Now price
-- [`docs/orders.md`](docs/orders.md) — orders, payments and billing
+- [`docs/orders.md`](docs/orders.md) — orders: listing, events, seller status, tracking, dictionaries
+- [`docs/payments.md`](docs/payments.md) — payment operations, refunded payments, refund initiation
+- [`docs/billing.md`](docs/billing.md) — billing entries and the billing-type dictionary
 - [`docs/shipping.md`](docs/shipping.md) — shipping domain (points of service; more to come)
 - [`docs/contacts.md`](docs/contacts.md) — seller contact cards
 - [`docs/messaging.md`](docs/messaging.md) — message center: threads, messages, attachments

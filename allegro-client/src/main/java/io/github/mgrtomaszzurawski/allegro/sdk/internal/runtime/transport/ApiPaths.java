@@ -128,6 +128,14 @@ public final class ApiPaths {
     public static final String BILLING_DOCUMENTS_SEGMENT = "billing-documents";
     /** {@code links} sub-resource segment (under an order's billing documents). */
     public static final String LINKS_SEGMENT = "links";
+    /** Seller payment operations history ({@code /payments/payment-operations}). */
+    public static final String PAYMENT_OPERATIONS = "/payments/payment-operations";
+    /** Refunded payments / refund initiation ({@code /payments/refunds}). */
+    public static final String PAYMENT_REFUNDS = "/payments/refunds";
+    /** Seller billing entries ({@code /billing/billing-entries}). */
+    public static final String BILLING_ENTRIES = "/billing/billing-entries";
+    /** Billing type dictionary ({@code /billing/billing-types}). */
+    public static final String BILLING_TYPES = "/billing/billing-types";
 
     // ---- catalog (bucket E) ----
     /** Category tree; {@code parent.id} filters to one node's direct children. */
