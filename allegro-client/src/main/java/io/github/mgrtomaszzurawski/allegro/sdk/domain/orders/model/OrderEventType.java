@@ -37,7 +37,11 @@ public enum OrderEventType {
     /** The platform auto-cancelled the order (e.g. payment never arrived). */
     AUTO_CANCELLED,
 
-    /** An event type this SDK release does not model yet (read-only sentinel; never sent as a filter). */
+    /**
+     * An event type this SDK release does not model yet (read-only forward-compat
+     * sentinel). Do NOT pass it as a {@code streamEvents} type filter — it is not a
+     * real wire value; the filter path should drop it (guard pending, BACKLOG C3).
+     */
     UNKNOWN;
 
     /** Map the generated Layer-1 enum to the public event type. */
