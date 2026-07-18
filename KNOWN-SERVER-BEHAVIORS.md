@@ -89,6 +89,25 @@ Layer-1 regeneration adds the constant and that test then fails in the build —
 forcing the domain enum to gain the value in the same change, rather than leaking
 a runtime error.
 
+### Creating a point of service requires `seller.id` and `coordinates` (verified 2026-07-18, sandbox)
+
+`POST /points-of-service` (and `PUT /points-of-service/{id}`) reject a
+spec-conformant body with `HttpMessageNotReadableException` / "Invalid data
+format" (a body-level parse error, `path=null`) unless it also carries
+`seller.id`, even though the vendored spec does **not** mark `seller` required.
+Once `seller.id` is present the parse succeeds and a second, stricter constraint
+surfaces: `address.coordinates` is required too (spec marks it optional) —
+`ConstraintViolationException` on `path=address.coordinates`. The `PUT` body
+additionally requires the `id` (the spec notes this: "required when updating").
+
+The SDK handles all three: it resolves the seller id from the token (`GET /me`,
+cached) and injects `seller.id` into the create/update body and the list query;
+`AddressBuilder` makes `coordinates` a required (fail-fast) field; and the update
+client sets the body `id` from the path id. Confirmed live end-to-end:
+create → get → update → delete round-trips green. Opening-hours `from`/`to` use
+the ISO `HH:mm:ss.SSS` time format (spec example `10:30:00.000`);
+`confirmationType` `AWAIT_CONTACT` is accepted.
+
 ## Account & meta (bucket D)
 
 ### Rating and CPS-conversion lists carry no `totalCount` (spec-derived, pending live verification)
