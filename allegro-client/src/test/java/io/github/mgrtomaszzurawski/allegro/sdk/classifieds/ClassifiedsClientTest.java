@@ -172,6 +172,16 @@ class ClassifiedsClientTest {
             {"eventStatsTotal":[],
              "eventsPerDay":[{"date":"not-a-date","eventStats":[]}]}
             """;
+    // The spec marks offer and eventType optional: an entry without an offer, and
+    // a count without an event type, must be skipped rather than NPE.
+    private static final String PARTIAL_OFFER_STATS_RESPONSE = """
+            {"offerStats":[
+              {"offer":null,"eventStatsTotal":[],"eventsPerDay":[]},
+              {"offer":{"id":"%s"},
+               "eventStatsTotal":[{"count":7},{"eventType":"SHOWED_PHONE_NUMBER","count":%d}],
+               "eventsPerDay":[]}
+            ]}
+            """.formatted(TEST_OFFER_ID, SHOWED_PHONE_TOTAL);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -548,6 +558,28 @@ class ClassifiedsClientTest {
                     .withQueryParam(OFFER_ID_PARAM, havingExactly(TEST_OFFER_ID, TEST_OFFER_ID_2))
                     .withQueryParam(DATE_GTE_PARAM, equalTo(TEST_FROM.toString()))
                     .withQueryParam(DATE_LTE_PARAM, equalTo(TEST_TO.toString())));
+        }
+    }
+
+    @Test
+    void offerStats_whenEntryHasNoOfferOrEventTypeIsMissing_skipsThem(WireMockRuntimeInfo wmInfo) {
+        // given — a null-offer entry and a type-less count, both spec-optional
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(OFFER_STATS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(PARTIAL_OFFER_STATS_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<OfferClassifiedStats> stats = allegro.classifieds()
+                    .offerStats(List.of(TEST_OFFER_ID), ClassifiedStatsFilter.all());
+
+            // then — the null-offer entry is dropped; the type-less count is dropped
+            assertEquals(1, stats.size());
+            assertEquals(TEST_OFFER_ID, stats.get(0).offerId());
+            assertEquals(1, stats.get(0).totals().size());
+            assertEquals(ClassifiedEventType.SHOWED_PHONE_NUMBER, stats.get(0).totals().get(0).eventType());
         }
     }
 

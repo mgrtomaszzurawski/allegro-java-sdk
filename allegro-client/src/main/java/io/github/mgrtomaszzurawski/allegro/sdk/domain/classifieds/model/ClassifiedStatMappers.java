@@ -19,9 +19,18 @@ final class ClassifiedStatMappers {
     private ClassifiedStatMappers() {
     }
 
-    /** Map a list of raw event counts, treating an absent list as empty. */
+    /**
+     * Map a list of raw event counts, treating an absent list as empty and
+     * skipping any entry without an event type (the field is spec-optional, so a
+     * type-less count cannot be attributed to a {@code ClassifiedEventType}).
+     */
     static List<ClassifiedEventStat> events(@Nullable List<ClassifiedEventStatRaw> raw) {
-        return raw == null ? List.of() : raw.stream().map(ClassifiedEventStat::from).toList();
+        return raw == null
+                ? List.of()
+                : raw.stream()
+                        .filter(stat -> stat.getEventType() != null)
+                        .map(ClassifiedEventStat::from)
+                        .toList();
     }
 
     /** Map a list of raw daily statistics, treating an absent list as empty. */

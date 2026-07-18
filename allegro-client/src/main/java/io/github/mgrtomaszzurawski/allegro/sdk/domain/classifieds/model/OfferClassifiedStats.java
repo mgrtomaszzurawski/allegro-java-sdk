@@ -38,10 +38,17 @@ public record OfferClassifiedStats(
                 ClassifiedStatMappers.daily(raw.getEventsPerDay()));
     }
 
-    /** Map the generated Layer-1 list response to public records. */
+    /**
+     * Map the generated Layer-1 list response to public records, skipping any
+     * entry without an offer (the field is spec-optional, so a stats block that
+     * cannot be attributed to an offer id is dropped rather than surfaced).
+     */
     public static List<OfferClassifiedStats> listFrom(OfferStatsResponseDtoRaw raw) {
         return raw.getOfferStats() == null
                 ? List.of()
-                : raw.getOfferStats().stream().map(OfferClassifiedStats::from).toList();
+                : raw.getOfferStats().stream()
+                        .filter(offerStat -> offerStat.getOffer() != null)
+                        .map(OfferClassifiedStats::from)
+                        .toList();
     }
 }
