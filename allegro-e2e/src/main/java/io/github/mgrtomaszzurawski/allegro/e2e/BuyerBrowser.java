@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.e2e;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Frame;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
@@ -17,7 +18,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -40,8 +43,14 @@ import java.util.Set;
  * which needs a display: {@code Xvfb :99 …; DISPLAY=:99}.
  *
  * <p>The login recipe is wire-verified (challenge-settle reload → RODO consent →
- * {@code #login}/{@code #password}). The buy-now / dispute actions are stubs
- * pending a live UI capture (blocked while the probe IP is cooling down).
+ * {@code #login}/{@code #password}) and only ever handles the <em>self-clearing</em>
+ * DataDome JS interstitial. When DataDome escalates to its <strong>interactive
+ * slider/audio CAPTCHA</strong> (verified 2026-07-18 on the device-flow consent URL
+ * from a datacenter IP), this class does <em>not</em> attempt to solve it —
+ * automating an anti-bot puzzle would be detection evasion. It fails loudly
+ * ({@link #dataDomeChallengePresent()} → {@code ERR_INTERACTIVE_CAPTCHA}) and the
+ * token/session is minted once by a human in a normal browser instead
+ * (see {@code KNOWN-SERVER-BEHAVIORS.md} and {@code TESTING.md} §3).
  */
 public final class BuyerBrowser implements AutoCloseable {
 
@@ -59,6 +68,14 @@ public final class BuyerBrowser implements AutoCloseable {
     private static final String PASSWORD_FIELD = "#password";
     private static final String SUBMIT_SELECTOR = "button[type=\"submit\"]";
     private static final String BLOCKED_MARKER = "zostałeś zablokowany";
+    /** DataDome renders its challenges inside an iframe from this host. */
+    private static final String CAPTCHA_FRAME_MARKER = "captcha-delivery.com";
+    /** Text present on every DataDome challenge page (interstitial and puzzle). */
+    private static final String CHALLENGE_TEXT_MARKER = "jesteś człowiekiem";
+    private static final String ERR_INTERACTIVE_CAPTCHA =
+            "DataDome served an interactive CAPTCHA (slider/audio puzzle) — automated login neither "
+                    + "can nor will solve an anti-bot puzzle. Mint the token by opening the device-flow "
+                    + "consent URL once in a normal browser (auth-bootstrap); see TESTING.md §3.";
 
     private static final int NAV_TIMEOUT_MILLIS = 45_000;
     private static final int ACTION_TIMEOUT_MILLIS = 8_000;
@@ -123,7 +140,46 @@ public final class BuyerBrowser implements AutoCloseable {
     public boolean hasValidSession() {
         page.navigate(ACCOUNT_URL, new Page.NavigateOptions().setTimeout(NAV_TIMEOUT_MILLIS));
         page.waitForTimeout(SHORT_SETTLE_MILLIS);
+        // DataDome serves its challenge AT the destination URL, so a bare
+        // "not on /logowanie" check false-positives on a challenge page (it
+        // reports a stale/blocked session as valid). Only a challenge-free page
+        // that was not redirected to login counts as an authenticated session.
+        if (dataDomeChallengePresent()) {
+            return false;
+        }
         return !page.url().contains(LOGIN_PATH_SEGMENT);
+    }
+
+    /**
+     * {@code true} while any DataDome challenge is on screen — the JS
+     * interstitial (self-clears on reload) or the interactive slider/audio
+     * CAPTCHA (does not). The challenge widget lives in a
+     * {@value #CAPTCHA_FRAME_MARKER} iframe; the host page carries the marker text.
+     */
+    private boolean dataDomeChallengePresent() {
+        List<String> frameUrls = new ArrayList<>();
+        for (Frame frame : page.frames()) {
+            frameUrls.add(frame.url());
+        }
+        return isDataDomeChallenge(page.content(), frameUrls);
+    }
+
+    /**
+     * Pure predicate behind {@link #dataDomeChallengePresent()}, split out so the
+     * detection can be unit-tested without a live browser or the sandbox: a
+     * DataDome challenge is present when any frame comes from the captcha host or
+     * the host page carries the challenge marker text.
+     *
+     * @param pageContent host-page HTML (any case)
+     * @param frameUrls URLs of every frame on the page
+     */
+    static boolean isDataDomeChallenge(String pageContent, List<String> frameUrls) {
+        for (String frameUrl : frameUrls) {
+            if (frameUrl.contains(CAPTCHA_FRAME_MARKER)) {
+                return true;
+            }
+        }
+        return pageContent.toLowerCase(Locale.ROOT).contains(CHALLENGE_TEXT_MARKER);
     }
 
     /**
@@ -135,15 +191,23 @@ public final class BuyerBrowser implements AutoCloseable {
                 new Page.NavigateOptions().setTimeout(NAV_TIMEOUT_MILLIS));
         int status = response == null ? 0 : response.status();
         page.waitForTimeout(SHORT_SETTLE_MILLIS);
-        if (status == HTTP_FORBIDDEN || status == HTTP_TOO_MANY_REQUESTS) {
-            // DataDome JS interstitial: sets a cookie and expects a reload.
+        if (status == HTTP_FORBIDDEN || status == HTTP_TOO_MANY_REQUESTS
+                || dataDomeChallengePresent()) {
+            // DataDome JS interstitial: sets a cookie and expects a reload to
+            // self-clear. (A status check alone misses challenges served on 200.)
             page.waitForTimeout(CHALLENGE_SETTLE_MILLIS);
             page.reload(new Page.ReloadOptions().setTimeout(NAV_TIMEOUT_MILLIS));
             page.waitForTimeout(SHORT_SETTLE_MILLIS);
         }
-        if (page.content().toLowerCase().contains(BLOCKED_MARKER)) {
+        String content = page.content().toLowerCase(Locale.ROOT);
+        if (content.contains(BLOCKED_MARKER)) {
             throw new PlaywrightException("DataDome hard-blocked this IP — wait for the block to "
                     + "clear, throttle attempts, and reuse storageState instead of re-logging in");
+        }
+        if (dataDomeChallengePresent()) {
+            // The interstitial did not self-clear: this is the interactive puzzle
+            // tier, which we do not solve (anti-bot evasion). Fail loudly.
+            throw new PlaywrightException(ERR_INTERACTIVE_CAPTCHA);
         }
         dismissConsent();
         Locator loginField = page.locator(LOGIN_FIELD);
