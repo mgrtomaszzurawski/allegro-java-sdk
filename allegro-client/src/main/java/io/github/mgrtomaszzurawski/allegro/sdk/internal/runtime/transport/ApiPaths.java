@@ -145,6 +145,18 @@ public final class ApiPaths {
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
     public static final String OFFER_CONTACTS = "/sale/offer-contacts";
 
+    // ---- messaging (bucket J) ----
+    /** Message-center threads ({@code /messaging/threads}); append {@code /{threadId}} via subPath. */
+    public static final String MESSAGING_THREADS = "/messaging/threads";
+    /** Single messages ({@code /messaging/messages}); append {@code /{messageId}} via subPath. */
+    public static final String MESSAGING_MESSAGES = "/messaging/messages";
+    /** Message attachments ({@code /messaging/message-attachments}); append {@code /{attachmentId}} via subPath. */
+    public static final String MESSAGING_MESSAGE_ATTACHMENTS = "/messaging/message-attachments";
+    /** Sub-resource: the messages collection within a thread. */
+    public static final String MESSAGES_SEGMENT = "messages";
+    /** Sub-resource: the read-flag toggle of a thread. */
+    public static final String READ_SEGMENT = "read";
+
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */
     public static final String AFTER_SALES_WARRANTIES =
