@@ -136,6 +136,8 @@ public final class ApiPaths {
     public static final String CATEGORY_PARAMETERS_SEGMENT = "parameters";
     /** Category suggestions matched by name ({@code /sale/matching-categories}). */
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
+    /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
+    public static final String PRODUCTS = "/sale/products";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
