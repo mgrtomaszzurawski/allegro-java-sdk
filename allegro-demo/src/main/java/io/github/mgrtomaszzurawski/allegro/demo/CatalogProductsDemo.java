@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import java.io.IOException;
 import java.util.List;
@@ -61,6 +62,14 @@ final class CatalogProductsDemo {
                         + "', category=" + summary.categoryId()
                         + ", status=" + summary.publicationStatus()
                         + ", images=" + summary.imageUrls().size());
+            }
+            // Read one full product back (search -> get round-trip through the SDK).
+            if (!sample.isEmpty()) {
+                Product product = client.catalog().products().get(sample.get(0).id());
+                System.out.println("get(" + product.id() + "): '" + product.name()
+                        + "', status=" + product.publicationStatus()
+                        + ", params=" + product.parameters().size()
+                        + ", protectedBrand=" + product.hasProtectedBrand());
             }
             rotateToken(tokenStore, account, client);
         }
