@@ -6,6 +6,8 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
@@ -117,4 +119,19 @@ public interface Offers {
      * @return the offer-tags sub-facade
      */
     OfferTags tags();
+
+    /**
+     * An offer's translations into other languages.
+     *
+     * @return the offer-translations sub-facade
+     */
+    OfferTranslations translations();
+
+    /**
+     * The aggregated buyer rating of an offer.
+     *
+     * @param offerId the offer identifier
+     * @return the offer's rating
+     */
+    OfferRating rating(String offerId);
 }

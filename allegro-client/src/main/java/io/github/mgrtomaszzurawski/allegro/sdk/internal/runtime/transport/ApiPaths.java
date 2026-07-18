@@ -186,6 +186,24 @@ public final class ApiPaths {
         return subPath(SALE_OFFERS, offerId, TAGS_SEGMENT);
     }
 
+    private static final String TRANSLATIONS_SEGMENT = "translations";
+    private static final String RATING_SEGMENT = "rating";
+
+    /** An offer's translations ({@code /sale/offers/{offerId}/translations}). */
+    public static String offerTranslations(String offerId) {
+        return subPath(SALE_OFFERS, offerId, TRANSLATIONS_SEGMENT);
+    }
+
+    /** One offer translation ({@code /sale/offers/{offerId}/translations/{language}}). */
+    public static String offerTranslation(String offerId, String language) {
+        return subPath(SALE_OFFERS, offerId, TRANSLATIONS_SEGMENT, language);
+    }
+
+    /** An offer's buyer rating ({@code /sale/offers/{offerId}/rating}). */
+    public static String offerRating(String offerId) {
+        return subPath(SALE_OFFERS, offerId, RATING_SEGMENT);
+    }
+
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";
