@@ -4,10 +4,13 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.ManualTitleTranslationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ManualTranslationUpdateRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TagIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TagIdsRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TagRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TagRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TranslationRequest;
 import java.util.List;
 
 /**
@@ -32,5 +35,11 @@ final class OfferExtrasMapper {
             raw.addTagsItem(new TagIdRaw().id(tagId));
         }
         return raw;
+    }
+
+    /** Build the offer-translation update body (title only, for now). */
+    static ManualTranslationUpdateRequestRaw toRaw(TranslationRequest request) {
+        return new ManualTranslationUpdateRequestRaw()
+                .title(new ManualTitleTranslationRaw().translation(request.title()));
     }
 }

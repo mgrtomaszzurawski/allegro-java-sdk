@@ -121,3 +121,47 @@ The date range is optional — `ClassifiedStatsFilter.all()` leaves it to the
 server default — but Allegro requires the two bounds to be less than three months
 apart. Both reads use the `sale:offers:read` scope and therefore a **user
 (seller) access token**.
+
+## Offer translations
+
+Read and set an offer's translations into other languages via
+`client.offers().translations()`. The SDK currently covers the **title**
+translation (description and safety-information translations are not yet
+modelled):
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TranslationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferTranslation;
+
+OfferTranslations translations = client.offers().translations();
+
+for (OfferTranslation translation : translations.ofOffer(offerId)) {
+    System.out.println(translation.language() + ": " + translation.title()
+            + " (" + translation.titleType() + ")");
+}
+
+translations.update(offerId, "en-US", TranslationRequest.builder().title("Wireless keyboard").build());
+translations.delete(offerId, "en-US");
+```
+
+Each `OfferTranslation` carries the `language`, the translated `title`, and the
+`titleType` (`AUTO`/`MANUAL`/`BASE`). All operations use `sale:offers:*` and need
+a **user (seller) access token**.
+
+## Offer rating
+
+Read an offer's aggregated buyer rating with `client.offers().rating(offerId)`:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
+
+OfferRating rating = client.offers().rating(offerId);
+System.out.println("average " + rating.averageScore() + " over " + rating.totalResponses());
+rating.scoreDistribution().forEach(bucket ->
+        System.out.println("  score " + bucket.name() + ": " + bucket.count()));
+```
+
+`averageScore` is a decimal string (or `null` when the offer has no ratings yet).
+`scoreDistribution` and `sizeFeedback` break the responses down by score and by
+size feedback. Read-only, `sale:offers:read` (user token).
