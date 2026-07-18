@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferBundles;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
@@ -134,4 +135,11 @@ public interface Offers {
      * @return the offer's rating
      */
     OfferRating rating(String offerId);
+
+    /**
+     * The seller's fixed offer bundles.
+     *
+     * @return the offer-bundles sub-facade
+     */
+    OfferBundles bundles();
 }

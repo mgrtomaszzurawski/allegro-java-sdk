@@ -4,13 +4,17 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.BundleDiscountDTORaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.BundleMarketplaceDTORaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ManualTitleTranslationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ManualTranslationUpdateRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TagIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TagIdsRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TagRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.UpdateOfferBundleDiscountDTORaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TagRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TranslationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.BundleDiscount;
 import java.util.List;
 
 /**
@@ -41,5 +45,16 @@ final class OfferExtrasMapper {
     static ManualTranslationUpdateRequestRaw toRaw(TranslationRequest request) {
         return new ManualTranslationUpdateRequestRaw()
                 .title(new ManualTitleTranslationRaw().translation(request.title()));
+    }
+
+    /** Build the bundle discount-update body from the per-marketplace discounts. */
+    static UpdateOfferBundleDiscountDTORaw toDiscountsRaw(List<BundleDiscount> discounts) {
+        List<BundleDiscountDTORaw> raw = discounts.stream()
+                .map(discount -> new BundleDiscountDTORaw()
+                        .marketplace(new BundleMarketplaceDTORaw().id(discount.marketplaceId()))
+                        .amount(discount.amount().amount())
+                        .currency(discount.amount().currency()))
+                .toList();
+        return new UpdateOfferBundleDiscountDTORaw().discounts(raw);
     }
 }

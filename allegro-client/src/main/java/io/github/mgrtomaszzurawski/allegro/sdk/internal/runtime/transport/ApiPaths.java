@@ -214,6 +214,20 @@ public final class ApiPaths {
         return subPath(SALE_OFFERS, offerId, RATING_SEGMENT);
     }
 
+    /** Seller's fixed offer bundles ({@code /sale/bundles}); cursor-paged by {@code page.id}. */
+    public static final String BUNDLES = "/sale/bundles";
+    private static final String DISCOUNT_SEGMENT = "discount";
+
+    /** One offer bundle ({@code /sale/bundles/{bundleId}}). */
+    public static String bundle(String bundleId) {
+        return subPath(BUNDLES, bundleId);
+    }
+
+    /** A bundle's discount ({@code /sale/bundles/{bundleId}/discount}). */
+    public static String bundleDiscount(String bundleId) {
+        return subPath(BUNDLES, bundleId, DISCOUNT_SEGMENT);
+    }
+
     // ---- pricing (bucket G) ----
     /** Automatic pricing rules collection ({@code /sale/price-automation/rules}). */
     public static final String PRICE_AUTOMATION_RULES = "/sale/price-automation/rules";

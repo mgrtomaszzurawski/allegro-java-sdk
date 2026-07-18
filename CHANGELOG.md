@@ -221,6 +221,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   translations (rich structured content) are a documented follow-up.
 - `offers().rating(offerId)` — an offer's aggregated buyer rating (`OfferRating`:
   average, total, score distribution, size feedback). Read-only.
+- `offers().bundles()` — the seller's fixed offer bundles: `streamBundles()`
+  (lazy cursor stream), `get`, `updateDiscount(bundleId, List<BundleDiscount>)`
+  (PUT the per-marketplace discounts, returns the updated bundle), `delete`.
+  Immutable `OfferBundle` (bundled `offers`, per-marketplace `discounts` as
+  `Money`, `publications`, `createdBy`) with `BundledOffer`/`BundleDiscount`/
+  `BundlePublication` records.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
