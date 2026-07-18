@@ -131,6 +131,20 @@ sections. Empty subsections are dropped by the release engineer when folding
   request type left `language` null and pre-initialized empty collections, which the default
   serializer sent as `"language": null` and Allegro rejected with a 400 (live-caught on the
   sandbox). Only the fields actually set are sent.
+- Coverage (fulfilment): `CreateOfferRequest` and the `Offer` read now carry the offer's
+  delivery terms and after-sales conditions. New `OfferDelivery` (shipping-rate table id,
+  handling time, shipment date, delivery info) and `AfterSalesServices` (implied-warranty,
+  return-policy, warranty ids) value types — each an immutable record with a fluent builder,
+  usable both to configure an offer and to read one back. First step of the bucket-A coverage
+  debt: the request builder grows toward every field of `SaleProductOfferRequestV1`.
+- Coverage (selling terms): `CreateOfferRequest` gains `sellingFormat` (`OfferFormat` —
+  `BUY_NOW`/`AUCTION`/`ADVERTISEMENT`), `startingPrice` and `minimalPrice` (auction), and
+  `stockUnit` (new `StockUnit` enum: `UNIT`/`PAIR`/`SET`, forward-compat `UNKNOWN`); the `Offer`
+  read maps them back. `OfferFormat.toRaw()` added for the write path (throws on the read-only
+  `UNKNOWN` sentinel, like `StockUnit.toRaw()`). Pricing is now format-conditional and validated
+  fail-fast: an `AUCTION` requires `startingPrice` (Buy Now optional — a pure auction), any other
+  format requires `buyNowPrice`. `AfterSalesServices` ids are validated as UUIDs when set on the
+  builder (fail-fast `IllegalArgumentException`) rather than deep in the request.
 
 ### B — orders-payments
 
@@ -166,6 +180,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   sentinel instead of serializing it (which the server rejects with 400), and an unknown wire
   enum value now degrades an `Order`/`OrderEvent` to the `UNKNOWN` sentinel rather than failing
   the response. Added forward-compat and filter-guard WireMock tests.
+- `Order` depth — payment: `Order.from` now maps the main `payment()` and any `surcharges()` as
+  `OrderPayment` records (`type` `PaymentType`, `provider` `PaymentProvider`, `finishedAt`,
+  `paidAmount` `Money`, payment feature flags), plus the seller's private `sellerNote()`. Both new
+  enums are forward-compatible (unknown wire value → `UNKNOWN`). The reconciliation figure (internal
+  Allegro accounting) is intentionally not modelled.
 
 ### C — shipping
 
@@ -295,10 +314,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   fail-fast `TagRequest` builder; `offer-tags` write→read demo. New `offerextras`
   package wired onto the bucket-A `Offers` root.
 - `offers().translations()` — an offer's translations into other languages:
-  `ofOffer` (read), `update` (set the title translation), `delete`. Immutable
-  `OfferTranslation` records (`title` + `titleType`) + `TranslationRequest`
-  builder. Title translation only for now; description/safety-information
-  translations (rich structured content) are a documented follow-up.
+  `ofOffer` (read), `update` (partial PATCH), `delete`. Covers the title, the
+  standardized `description` (`StandardizedDescription` → `DescriptionSection` →
+  text/image `DescriptionSectionItem`, with a forward-compat `UNKNOWN` item kind),
+  and the per-product `safetyInformation` (`ProductSafetyInformationTranslation`).
+  `TranslationRequest` sets any subset of the three parts; the update is serialized
+  as a NON_EMPTY partial body so the unset parts are **omitted, not sent as
+  `null`** — fixing a latent data-loss where a title-only update could clear the
+  description/safety translations (KNOWN-SERVER-BEHAVIORS §247).
 - `offers().rating(offerId)` — an offer's aggregated buyer rating (`OfferRating`:
   average, total, score distribution, size feedback). Read-only.
 - `offers().bundles()` — the seller's fixed offer bundles: `streamBundles()`
