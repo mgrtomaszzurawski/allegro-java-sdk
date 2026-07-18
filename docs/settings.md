@@ -70,6 +70,28 @@ Warranty updated = afterSale.updateWarranty(warrantyId,
         request.toBuilder().description("Updated terms").build());
 ```
 
+## Implied warranties (rękojmia)
+
+Implied warranties are the statutory warranty of conformity. The API mirrors the seller-warranty
+shape — `streamImpliedWarranties()` (lazy, single page ≤ 60), `impliedWarranty(id)`,
+`createImpliedWarranty(...)`, `updateImpliedWarranty(...)` — but the period accepts **whole years
+only** (`P2Y`, not `P24M`) and there is no attachment. `name` and the `individual` period are
+required; validated fail-fast at `build()`.
+
+```java
+ImpliedWarrantyRequest request = ImpliedWarrantyRequest.builder()
+        .name("2 year implied warranty")             // required, max 200 chars
+        .individual(ImpliedWarrantyPeriod.of("P2Y"))  // required — whole years only
+        .corporate(ImpliedWarrantyPeriod.of("P1Y"))   // optional
+        .address(new AfterSalesAddress(               // optional; all fields required if set
+                "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+        .description("Statutory warranty of conformity")
+        .build();
+
+ImpliedWarranty created = afterSale.createImpliedWarranty(request);
+afterSale.streamImpliedWarranties().forEach(summary -> System.out.println(summary.name()));
+```
+
 ## Errors
 
 All calls surface the SDK's remediation-grouped exceptions: `AllegroBadRequestException`

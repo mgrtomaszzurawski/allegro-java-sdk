@@ -184,3 +184,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `corporate`) are required, an undocumented server rule (spec marks neither) verified
   live and recorded in `KNOWN-SERVER-BEHAVIORS.md`. Documented in `docs/settings.md`; the
   `settings-warranty` write→read demo is green on the sandbox (create→get round-trip).
+- `settings().afterSale()` implied warranties (rękojmia): `streamImpliedWarranties()`
+  (lazy, single page), `impliedWarranty(id)`, `createImpliedWarranty(...)`,
+  `updateImpliedWarranty(...)`. Immutable `ImpliedWarranty` / `ImpliedWarrantySummary`
+  records, `ImpliedWarrantyPeriod` (whole-year ISO-8601) and a shared self-validating
+  `AfterSalesAddress` value type, and a fail-fast `ImpliedWarrantyRequest` builder
+  (`name` + `individual` required). Documented in `docs/settings.md`; `settings-implied-warranty`
+  write→read demo scenario.
