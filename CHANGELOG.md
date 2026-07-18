@@ -107,6 +107,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /sale/classifieds-packages`). Starter slice of bucket F; immutable
   `ClassifiedPackage` records, WireMock error-path coverage, and a live
   read-shape demo scenario (`-Pdemo.scenario=classifieds`).
+- `classifieds.getPackage(packageId)`, `classifieds.packagesOfOffer(offerId)` and
+  `classifieds.assignPackages(offerId, ClassifiedAssignment)` — read one package
+  configuration, read the packages assigned to an offer, and assign a base plus
+  optional extra packages to an offer (`/sale/classifieds-packages/{packageId}`,
+  `/sale/offer-classifieds-packages/{offerId}`). `ClassifiedAssignment` is built
+  by a fail-fast builder; the write→read demo assigns then reads the packages
+  back. All calls require the seller user token.
 
 ### G — pricing
 - Automatic pricing rules starter slice: `client.pricing().automation()` with
