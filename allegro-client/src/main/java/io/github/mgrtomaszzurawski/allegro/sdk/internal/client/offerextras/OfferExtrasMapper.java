@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) 2026 Tomasz Zurawski
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras;
+
+import io.github.mgrtomaszzurawski.allegro.client.model.TagIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.TagIdsRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.TagRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.TagRequest;
+import java.util.List;
+
+/**
+ * Maps the public offer-add-on request objects to their generated Layer-1
+ * request bodies. Response mapping lives in the domain records' {@code from}
+ * factories; only the write direction needs a mapper.
+ */
+final class OfferExtrasMapper {
+
+    private OfferExtrasMapper() {
+    }
+
+    /** Build the create/rename tag body. */
+    static TagRequestRaw toRaw(TagRequest request) {
+        return new TagRequestRaw().name(request.name()).hidden(request.hidden());
+    }
+
+    /** Build the assign-tags-to-offer body from the tag ids. */
+    static TagIdsRequestRaw toIdsRaw(List<String> tagIds) {
+        TagIdsRequestRaw raw = new TagIdsRequestRaw();
+        for (String tagId : tagIds) {
+            raw.addTagsItem(new TagIdRaw().id(tagId));
+        }
+        return raw;
+    }
+}

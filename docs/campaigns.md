@@ -5,7 +5,7 @@ needs a **seller user-context token** with the `allegro:api:campaigns` scope —
 client-credentials token cannot see a seller's campaigns.
 
 The bucket covers three programmes: **badge campaigns**, **Allegro Prices**, and **AlleDiscount**.
-The badge-campaigns programme is complete; Allegro Prices and AlleDiscount land next.
+Badge campaigns and Allegro Prices are complete; AlleDiscount lands next.
 
 ## Badge campaigns
 
@@ -112,6 +112,68 @@ BadgeOperation finished = client.campaigns().badges()
 An overload takes a `Duration` timeout; if the operation does not finish within it, the SDK throws
 `AllegroAsyncTimeoutException` (the operation may still complete server-side — re-read the badge
 rather than resubmitting).
+
+## Allegro Prices
+
+`client.campaigns().allegroPrices()` manages the seller's participation in the Allegro Prices
+subsidy programme, reads per-offer status, and submits or excludes offers.
+
+### Participation
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.ParticipationUpdate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesParticipation;
+
+AllegroPricesParticipation current = client.campaigns().allegroPrices().participation();
+
+// opt in on allegro-pl, out on allegro-cz
+AllegroPricesParticipation updated = client.campaigns().allegroPrices().updateParticipation(
+        ParticipationUpdate.builder().allow("allegro-pl").deny("allegro-cz").build());
+```
+
+Each `MarketplaceParticipation` carries the `marketplaceId` and a `ParticipationStatus`
+(`ALLOWED` / `DENIED`).
+
+### Offer status
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.AllegroPricesOfferQuery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.OfferScope;
+
+client.campaigns().allegroPrices()
+        .streamOffersStatus(AllegroPricesOfferQuery.builder("allegro-pl")
+                .scope(OfferScope.DISCOUNTED)
+                .build())
+        .forEach(status -> System.out.println(status.offerId() + " → " + status.finalBuyerPrice()));
+```
+
+A lazy `Stream<AllegroPricesOfferStatus>`: each item exposes the base price, whether Allegro sees a
+discount opportunity, the recommended / declared / actual subsidy reduction percentages, and the
+resulting buyer price. `marketplaceId` is required; the query is a POST whose pagination is handled
+internally.
+
+### Submitting and excluding offers
+
+`submitOffers` and `excludeOffers` are subsidy commands: the call blocks until every offer reaches a
+terminal state and returns a per-offer `SubsidyCommandReport`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.SubmitOffersRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.SubsidyCommandReport;
+
+SubsidyCommandReport report = client.campaigns().allegroPrices().submitOffers(
+        SubmitOffersRequest.builder()
+                .addOffer("12345678", "allegro-pl", "5")   // max seller contribution %
+                .build());
+
+report.offers().forEach(offer ->
+        System.out.println(offer.offerId() + " → " + offer.status() + " " + offer.errors()));
+```
+
+Between 1 and 1000 offers per command. A `Duration` overload bounds the wait; on expiry the SDK
+throws `AllegroAsyncTimeoutException` (the command may still complete server-side — re-read the
+offer status rather than resubmitting). `excludeOffers` works the same way with
+`ExcludeOffersRequest`.
 
 ## Errors
 

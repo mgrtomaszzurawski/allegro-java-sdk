@@ -59,12 +59,16 @@ module io.github.mgrtomaszzurawski.allegro {
 
     // Product catalogue: categories, products, compatibility (bucket E).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model;
 
     // Classifieds (advertisement) packages and statistics (bucket F).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.classifieds.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model;
 
     // Pricing: automatic pricing rules, promotions, deposits (bucket G).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing;

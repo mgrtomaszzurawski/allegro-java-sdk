@@ -91,7 +91,7 @@ tags.streamTags()                                 // GET    /sale/offer-tags    
 tags.create(TagRequest)                           // POST   /sale/offer-tags
 tags.rename(tagId, TagRequest)                    // PUT    /sale/offer-tags/{tagId}
 tags.delete(tagId)                                // DELETE /sale/offer-tags/{tagId}
-tags.assignToOffer(offerId, tagIds...)            // POST   /sale/offers/{offerId}/tags
+tags.assignToOffer(offerId, tagIds)               // POST   /sale/offers/{offerId}/tags
 tags.ofOffer(offerId)                             // GET    /sale/offers/{offerId}/tags
 
 // Translations

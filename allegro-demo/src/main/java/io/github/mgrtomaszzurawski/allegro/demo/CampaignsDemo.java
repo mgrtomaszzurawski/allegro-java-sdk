@@ -7,12 +7,17 @@ package io.github.mgrtomaszzurawski.allegro.demo;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.AllegroPrices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.Badges;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.AllegroPricesOfferQuery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeApplicationFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.builder.BadgeFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesOfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.AllegroPricesParticipation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.Badge;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.BadgeApplication;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.BadgeCampaign;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model.MarketplaceParticipation;
 import java.io.IOException;
 import java.util.List;
 
@@ -60,6 +65,31 @@ final class CampaignsDemo {
                         + campaign.eligible());
             }
             readShapeApplicationsAndBadges(client.campaigns().badges());
+            readShapeAllegroPrices(client.campaigns().allegroPrices());
+        }
+    }
+
+    /**
+     * Read-shape check of Allegro Prices through the SDK — participation across
+     * marketplaces and a sample of per-offer status (which exercises the raw-JSON
+     * {@code oneOf} price-reduction mapping on a live response).
+     */
+    private static void readShapeAllegroPrices(AllegroPrices allegroPrices) {
+        AllegroPricesParticipation participation = allegroPrices.participation();
+        System.out.println("allegroPrices().participation(): "
+                + participation.marketplaces().size() + " marketplace(s)");
+        for (MarketplaceParticipation marketplace : participation.marketplaces()) {
+            System.out.println("  - " + marketplace.marketplaceId() + " → " + marketplace.status());
+        }
+        List<AllegroPricesOfferStatus> statuses = allegroPrices
+                .streamOffersStatus(AllegroPricesOfferQuery.builder(MARKETPLACE_PL).build())
+                .limit(READ_SHAPE_SAMPLE)
+                .toList();
+        System.out.println("allegroPrices().streamOffersStatus(" + MARKETPLACE_PL + "): "
+                + statuses.size() + " sampled");
+        for (AllegroPricesOfferStatus status : statuses) {
+            System.out.println("  - " + status.offerId() + " base=" + status.basePrice()
+                    + " opportunity=" + status.discountOpportunity());
         }
     }
 
