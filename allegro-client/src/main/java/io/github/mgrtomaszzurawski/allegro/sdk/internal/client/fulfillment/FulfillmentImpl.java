@@ -164,6 +164,11 @@ public final class FulfillmentImpl implements Fulfillment {
     }
 
     @Override
+    public Stream<RefundDisposition> refundDispositions() {
+        return refundDispositions(RefundDispositionFilter.all());
+    }
+
+    @Override
     public Stream<RefundDisposition> refundDispositions(RefundDispositionFilter filter) {
         Objects.requireNonNull(filter, ERR_FILTER_NULL);
         return PagedSpliterator.stream(pageIndex -> fetchRefundDispositionsPage(filter, pageIndex));
@@ -221,7 +226,7 @@ public final class FulfillmentImpl implements Fulfillment {
         if (totalCount == null) {
             return returnedCount == PAGE_SIZE;
         }
-        return offset + returnedCount < totalCount.intValue();
+        return (long) offset + returnedCount < totalCount.longValue();
     }
 
     private static TaxIdRequestRaw taxIdRequest(String taxId) {

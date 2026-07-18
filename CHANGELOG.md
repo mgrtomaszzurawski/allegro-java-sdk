@@ -137,8 +137,8 @@ sections. Empty subsections are dropped by the release engineer when folding
   `RemovalPreference` / `WithdrawalAddress` / `PhoneNumber` records, the `RemovalOperation`
   enum, and their fluent builders. Consumer guide: `docs/fulfillment.md`.
 - Add the fulfillment read reports and tax-id resource: lazy `stock()` / `stock(StockFilter)`,
-  `availableProducts()` and `refundDispositions(RefundDispositionFilter)` streams,
-  `parcelsOf(orderId)`, and `taxId()` / `addTaxId(...)` / `updateTaxId(...)`. New immutable
+  `availableProducts()` and `refundDispositions()` / `refundDispositions(RefundDispositionFilter)`
+  streams, `parcelsOf(orderId)`, and `taxId()` / `addTaxId(...)` / `updateTaxId(...)`. New immutable
   records (`StockItem` tree, `AvailableProduct`, `FulfillmentOrder`, `RefundDisposition` tree,
   `TaxId`), the `StockFilter` / `RefundDispositionFilter` builders, and forward-compatible
   open-set enums (`ReserveStatus`, `StorageFeeStatus`, `RefundDispositionType`,

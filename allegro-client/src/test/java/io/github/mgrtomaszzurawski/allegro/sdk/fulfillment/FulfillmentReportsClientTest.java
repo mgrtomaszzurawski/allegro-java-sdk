@@ -196,7 +196,11 @@ class FulfillmentReportsClientTest {
     }
 
     private static void stubStockPage(String offset, String body) {
-        stubFor(get(urlPathEqualTo(STOCK_PATH)).withQueryParam(QUERY_OFFSET, equalTo(offset))
+        stubFor(get(urlPathEqualTo(STOCK_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withQueryParam(QUERY_OFFSET, equalTo(offset))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(body)));
     }
 
@@ -339,8 +343,8 @@ class FulfillmentReportsClientTest {
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(refundPage(0))));
 
         try (AllegroClient allegro = client(wmInfo)) {
-            // when
-            long total = allegro.fulfillment().refundDispositions(RefundDispositionFilter.all()).count();
+            // when — the no-arg overload walks the whole report
+            long total = allegro.fulfillment().refundDispositions().count();
 
             // then — the extra (empty) page was fetched, and a third was not
             assertEquals(PAGE_SIZE, total);

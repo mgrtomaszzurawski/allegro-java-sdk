@@ -77,7 +77,14 @@ public interface Fulfillment {
     FulfillmentOrder parcelsOf(String orderId);
 
     /**
-     * Stream the refund-dispositions report for returned or bounced goods.
+     * Stream the entire refund-dispositions report for returned or bounced goods.
+     *
+     * @return a lazy stream over every disposition
+     */
+    Stream<RefundDisposition> refundDispositions();
+
+    /**
+     * Stream the refund-dispositions report for returned or bounced goods, filtered.
      *
      * @param filter creation-time bounds (use {@link RefundDispositionFilter#all()} for none)
      * @return a lazy stream over the matching dispositions

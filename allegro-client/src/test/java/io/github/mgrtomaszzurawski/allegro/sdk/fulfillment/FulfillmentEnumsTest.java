@@ -27,6 +27,9 @@ class FulfillmentEnumsTest {
 
     @Test
     void reserveStatus_roundTripsKnownAndFallsBackOnUnknown() {
+        // given a token this build knows and one it does not
+        // when each is resolved from the wire and rendered back
+        // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(ReserveStatus.LOW_STOCK, ReserveStatus.fromWire("LOW_STOCK"));
         assertEquals("LOW_STOCK", ReserveStatus.LOW_STOCK.wireValue());
         assertEquals(ReserveStatus.UNKNOWN, ReserveStatus.fromWire(UNSEEN_TOKEN));
@@ -35,6 +38,9 @@ class FulfillmentEnumsTest {
 
     @Test
     void storageFeeStatus_roundTripsKnownAndFallsBackOnUnknown() {
+        // given a token this build knows and one it does not
+        // when each is resolved from the wire and rendered back
+        // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(StorageFeeStatus.CHARGED, StorageFeeStatus.fromWire("CHARGED"));
         assertEquals("CHARGED", StorageFeeStatus.CHARGED.wireValue());
         assertEquals(StorageFeeStatus.UNKNOWN, StorageFeeStatus.fromWire(UNSEEN_TOKEN));
@@ -43,6 +49,9 @@ class FulfillmentEnumsTest {
 
     @Test
     void refundDispositionType_roundTripsKnownAndFallsBackOnUnknown() {
+        // given a token this build knows and one it does not
+        // when each is resolved from the wire and rendered back
+        // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(RefundDispositionType.BOUNCE, RefundDispositionType.fromWire("BOUNCE"));
         assertEquals("BOUNCE", RefundDispositionType.BOUNCE.wireValue());
         assertEquals(RefundDispositionType.UNKNOWN, RefundDispositionType.fromWire(UNSEEN_TOKEN));
@@ -51,6 +60,9 @@ class FulfillmentEnumsTest {
 
     @Test
     void refundStockStatus_roundTripsKnownAndFallsBackOnUnknown() {
+        // given a token this build knows and one it does not
+        // when each is resolved from the wire and rendered back
+        // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(RefundStockStatus.ITEM_MISMATCH, RefundStockStatus.fromWire("ITEM_MISMATCH"));
         assertEquals("ITEM_MISMATCH", RefundStockStatus.ITEM_MISMATCH.wireValue());
         assertEquals(RefundStockStatus.UNKNOWN, RefundStockStatus.fromWire(UNSEEN_TOKEN));
@@ -59,6 +71,9 @@ class FulfillmentEnumsTest {
 
     @Test
     void accountableParty_roundTripsKnownAndFallsBackOnUnknown() {
+        // given a token this build knows and one it does not
+        // when each is resolved from the wire and rendered back
+        // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(AccountableParty.WAREHOUSE, AccountableParty.fromWire("WAREHOUSE"));
         assertEquals("WAREHOUSE", AccountableParty.WAREHOUSE.wireValue());
         assertEquals(AccountableParty.UNKNOWN, AccountableParty.fromWire(UNSEEN_TOKEN));
@@ -67,6 +82,9 @@ class FulfillmentEnumsTest {
 
     @Test
     void refundActionState_roundTripsKnownAndFallsBackOnUnknown() {
+        // given a token this build knows and one it does not
+        // when each is resolved from the wire and rendered back
+        // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(RefundActionState.IN_PROGRESS, RefundActionState.fromWire("IN_PROGRESS"));
         assertEquals("IN_PROGRESS", RefundActionState.IN_PROGRESS.wireValue());
         assertEquals(RefundActionState.UNKNOWN, RefundActionState.fromWire(UNSEEN_TOKEN));
