@@ -237,6 +237,31 @@ latter, the fix is core-level (NON_NULL serialization inclusion, or per-field `J
 handling on writes) — a BACKLOG item for the core owner, affecting every SDK write. Until then,
 `update` is safe for offers whose description/safety translations are not manually set.
 
+## Offers — create (bucket A)
+
+### `POST /sale/product-offers` rejects `language: null` — send only set fields (verified 2026-07-18, sandbox)
+
+The generated `SaleProductOfferRequestV1` pre-initializes collection fields to empty and leaves
+nullable scalars (notably `language`) null. Serialized with the default mapper, the create body
+carries `"language": null`, which the server rejects with a 400
+`{path: "language", code: "JsonMappingException", userMessage: "Request contains invalid data"}`.
+The SDK therefore serializes create/edit bodies with `HttpCall.jsonBodyPartial` (NON_EMPTY —
+omits nulls and empties), so only the fields actually set reach the wire.
+
+### A sellable offer requires seller-account terms + a default shipping list (verified 2026-07-18, sandbox)
+
+With a valid leaf category and a well-formed request, `create` still 400s on a fresh seller
+account with three account-configuration errors (not SDK/request faults):
+- `afterSalesServices.impliedWarranty` → `ImpliedWarrantyNotDefinedException` ("no Complaints Terms")
+- `afterSalesServices.returnPolicy` → `ReturnPolicyNotDefinedException` ("no Returns Terms")
+- `delivery.shippingRates` → `DefaultShippingRatesNotFoundException` ("no default shipping price list")
+
+So seeding a live offer needs the seller account to first have warranty terms, return terms and a
+default shipping rate list — configured in the sandbox UI, or referenced by id in the create
+request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delivery` refs — future
+work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
+returns `CATEGORY_NOT_EXISTS`.
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer

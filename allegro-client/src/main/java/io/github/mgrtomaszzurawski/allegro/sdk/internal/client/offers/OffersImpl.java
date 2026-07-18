@@ -124,9 +124,13 @@ public final class OffersImpl implements Offers {
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
         }
+        // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
+        // empty collections and leaves nullable scalars (e.g. `language`) null, and
+        // Allegro rejects `language:null` with a JsonMappingException — send only the
+        // fields actually set.
         return Offer.from(http.request(OP_CREATE)
                 .post(ApiPaths.SALE_PRODUCT_OFFERS)
-                .jsonBody(body)
+                .jsonBodyPartial(body)
                 .fetch(SaleProductOfferResponseV1Raw.class));
     }
 
