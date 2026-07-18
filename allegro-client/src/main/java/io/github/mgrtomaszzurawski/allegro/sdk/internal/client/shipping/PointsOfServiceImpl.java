@@ -38,11 +38,11 @@ public final class PointsOfServiceImpl implements PointsOfService {
     private static final String PARAM_COUNTRY_CODE = "countryCode";
 
     private final HttpSupport http;
-    private final Supplier<String> sellerId;
+    private final Supplier<String> sellerIdSupplier;
 
-    public PointsOfServiceImpl(HttpRuntime runtime, Supplier<String> sellerId) {
+    public PointsOfServiceImpl(HttpRuntime runtime, Supplier<String> sellerIdSupplier) {
         this.http = new HttpSupport(runtime);
-        this.sellerId = sellerId;
+        this.sellerIdSupplier = sellerIdSupplier;
     }
 
     @Override
@@ -53,7 +53,7 @@ public final class PointsOfServiceImpl implements PointsOfService {
     @Override
     public List<PointOfService> list(@Nullable String countryCode) {
         Query query = Query.create()
-                .add(PARAM_SELLER_ID, sellerId.get())
+                .add(PARAM_SELLER_ID, sellerIdSupplier.get())
                 .add(PARAM_COUNTRY_CODE, countryCode);
         SearchResultRaw result = http.request(OP_LIST)
                 .get(ApiPaths.POINTS_OF_SERVICE)
@@ -96,7 +96,7 @@ public final class PointsOfServiceImpl implements PointsOfService {
     // Allegro requires seller.id in the create/update body even though the token
     // identifies the seller; the resolver looks it up once and caches it.
     private PosRaw withSeller(PosRaw raw) {
-        raw.setSeller(new SellerRaw().id(sellerId.get()));
+        raw.setSeller(new SellerRaw().id(sellerIdSupplier.get()));
         return raw;
     }
 

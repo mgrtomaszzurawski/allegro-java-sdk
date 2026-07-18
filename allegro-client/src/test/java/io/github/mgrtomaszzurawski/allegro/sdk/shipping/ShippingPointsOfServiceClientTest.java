@@ -342,6 +342,30 @@ class ShippingPointsOfServiceClientTest {
     }
 
     @Test
+    void sellerIdResolver_resolvesMeOnceAndCachesAcrossOperations(WireMockRuntimeInfo wmInfo) {
+        // given — create and list both need the seller id, resolved from /me
+        stubToken(TEST_TOKEN);
+        stubMe();
+        stubFor(post(urlEqualTo(POS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(CREATED_FIXTURE)));
+        stubFor(get(urlPathEqualTo(POS_PATH))
+                .withQueryParam(PARAM_SELLER_ID, equalTo(SELLER_ID))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(LIST_FIXTURE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — two operations via two fresh points() accessors on one client
+            allegro.shipping().points().create(sampleRequest());
+            allegro.shipping().points().list();
+
+            // then — /me was called exactly once; the id is cached and reused
+            verify(1, getRequestedFor(urlEqualTo(ME_PATH)));
+        }
+    }
+
+    @Test
     void get_whenExists_mapsAllFieldsIncludingNestedAndEnums(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);

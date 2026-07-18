@@ -19,7 +19,10 @@ import org.jspecify.annotations.Nullable;
  * Entry point behind the {@link Shipping} facade. Root-level reads (delivery
  * methods) run through the shared {@link HttpSupport}; the sub-facades are
  * stateless views over the shared runtime, so each accessor returns a fresh
- * instance rather than caching (and exposing) a mutable field.
+ * instance rather than caching (and exposing) a mutable field. The one piece of
+ * retained state is the {@link SellerIdResolver}, held here so its cached
+ * {@code GET /me} lookup is shared across those fresh sub-facades (it is never
+ * exposed — {@link #points()} passes only its {@code sellerId} supplier).
  *
  * @since 0.2.0
  */
