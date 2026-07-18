@@ -49,6 +49,9 @@ class OfferTest {
     private static final String CURRENCY_PLN = "PLN";
     private static final String STARTING_AMOUNT = "1.00";
     private static final String MINIMAL_AMOUNT = "150.00";
+    private static final String NAME_FULL = "Full";
+    private static final String NAME_AUCTION = "Auction";
+    private static final int AUCTION_STOCK = 3;
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -116,7 +119,7 @@ class OfferTest {
         // given — a payload carrying delivery terms and after-sales conditions
         SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
                 .id(OFFER_ID)
-                .name("Full")
+                .name(NAME_FULL)
                 .delivery(new DeliveryProductOfferResponseRaw()
                         .shippingRates(new JustIdRaw().id(SHIPPING_RATES_ID))
                         .handlingTime(HANDLING_TIME))
@@ -145,12 +148,12 @@ class OfferTest {
         // given — an auction payload with a starting and minimal price and a PAIR unit
         SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
                 .id(OFFER_ID)
-                .name("Auction")
+                .name(NAME_AUCTION)
                 .sellingMode(new SellingModeRaw()
                         .format(SellingModeFormatRaw.AUCTION)
                         .startingPrice(new StartingPriceRaw().amount(STARTING_AMOUNT).currency(CURRENCY_PLN))
                         .minimalPrice(new MinimalPriceRaw().amount(MINIMAL_AMOUNT).currency(CURRENCY_PLN)))
-                .stock(new StockRaw().available(3).unit(StockRaw.UnitEnum.PAIR));
+                .stock(new StockRaw().available(AUCTION_STOCK).unit(StockRaw.UnitEnum.PAIR));
 
         // when
         Offer offer = Offer.from(raw);

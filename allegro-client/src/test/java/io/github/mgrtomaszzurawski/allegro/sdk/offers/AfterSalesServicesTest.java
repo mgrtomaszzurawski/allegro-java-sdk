@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
@@ -20,6 +21,7 @@ class AfterSalesServicesTest {
     private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
     private static final String RETURN_POLICY_ID = "22222222-2222-2222-2222-222222222222";
     private static final String WARRANTY_ID = "33333333-3333-3333-3333-333333333333";
+    private static final String MALFORMED_ID = "not-a-uuid";
 
     @Test
     void build_whenAllIdsSet_exposesEachValue() {
@@ -85,6 +87,15 @@ class AfterSalesServicesTest {
     @Test
     void from_whenNull_returnsNull() {
         assertNull(AfterSalesServices.from(null));
+    }
+
+    @Test
+    void builder_whenMalformedUuid_throwsIllegalArgumentFailFast() {
+        // then — a bad id is rejected at the point it is set, not deep in create()
+        AfterSalesServices.Builder builder = AfterSalesServices.builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.impliedWarrantyId(MALFORMED_ID));
+        assertThrows(IllegalArgumentException.class, () -> builder.returnPolicyId(MALFORMED_ID));
+        assertThrows(IllegalArgumentException.class, () -> builder.warrantyId(MALFORMED_ID));
     }
 
     @Test

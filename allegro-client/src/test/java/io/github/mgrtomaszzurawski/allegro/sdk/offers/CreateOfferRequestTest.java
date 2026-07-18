@@ -27,6 +27,7 @@ class CreateOfferRequestTest {
     private static final String IMAGE_URL = "https://img.example/x.jpg";
     private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
     private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
+    private static final Money STARTING_PRICE = Money.of("1.00", "PLN");
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -152,6 +153,27 @@ class CreateOfferRequestTest {
     @Test
     void build_whenStockNegative_throwsIllegalState() {
         CreateOfferRequest.Builder builder = validBuilder().availableStock(-1);
+        assertThrows(IllegalStateException.class, builder::build);
+    }
+
+    @Test
+    void build_whenPureAuction_succeedsWithoutBuyNowPrice() {
+        // given — an auction with a starting price and NO Buy Now price
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).availableStock(STOCK)
+                .sellingFormat(OfferFormat.AUCTION).startingPrice(STARTING_PRICE).build();
+
+        // then — Buy Now is optional for an auction; the starting price stands in
+        assertNull(request.buyNowPrice());
+        assertEquals(STARTING_PRICE, request.startingPrice());
+    }
+
+    @Test
+    void build_whenAuctionWithoutStartingPrice_throwsIllegalState() {
+        // given — an auction missing its required starting price
+        CreateOfferRequest.Builder builder = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).availableStock(STOCK)
+                .sellingFormat(OfferFormat.AUCTION);
         assertThrows(IllegalStateException.class, builder::build);
     }
 }

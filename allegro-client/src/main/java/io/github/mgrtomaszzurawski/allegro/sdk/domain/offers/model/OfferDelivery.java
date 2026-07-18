@@ -54,9 +54,6 @@ public record OfferDelivery(
      * @param raw the generated delivery block (may be {@code null})
      * @return the mapped value, or {@code null} if {@code raw} is {@code null}
      */
-    // getAdditionalInfo(): Allegro @Deprecated the response getter (field still
-    // returned on allegro-pl), so mapping it for full coverage is intentional.
-    @SuppressWarnings("deprecation")
     public static @Nullable OfferDelivery from(@Nullable DeliveryProductOfferResponseRaw raw) {
         if (raw == null) {
             return null;
@@ -66,8 +63,16 @@ public record OfferDelivery(
                 .shippingRatesId(shippingRates == null ? null : shippingRates.getId())
                 .handlingTime(raw.getHandlingTime())
                 .shipmentDate(raw.getShipmentDate())
-                .additionalInfo(raw.getAdditionalInfo())
+                .additionalInfo(additionalInfoOf(raw))
                 .build();
+    }
+
+    // Allegro @Deprecated the response getter (the field is still returned on
+    // allegro-pl), so mapping it for full coverage is intentional; the suppression
+    // is scoped to this one call rather than the whole factory.
+    @SuppressWarnings("deprecation")
+    private static @Nullable String additionalInfoOf(DeliveryProductOfferResponseRaw raw) {
+        return raw.getAdditionalInfo();
     }
 
     /** Fluent builder for {@link OfferDelivery}. */

@@ -130,9 +130,10 @@ public final class OffersImpl implements Offers {
         SellingModeFormatRaw format = request.sellingFormat() == null
                 ? SellingModeFormatRaw.BUY_NOW
                 : request.sellingFormat().toRaw();
-        SellingModeRaw sellingMode = new SellingModeRaw()
-                .format(format)
-                .price(priceOf(request.buyNowPrice()));
+        SellingModeRaw sellingMode = new SellingModeRaw().format(format);
+        if (request.buyNowPrice() != null) {
+            sellingMode.price(priceOf(request.buyNowPrice()));
+        }
         if (request.startingPrice() != null) {
             sellingMode.startingPrice(new StartingPriceRaw()
                     .amount(request.startingPrice().amount()).currency(request.startingPrice().currency()));

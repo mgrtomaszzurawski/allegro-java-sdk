@@ -143,24 +143,27 @@ Both blocks are optional, and both are read back on `client.offers().get(offerId
 
 ### Selling format, auction prices and stock unit
 
-The default is a Buy Now offer counted in single units. For an auction, set the format and the
-starting/minimal prices; set `stockUnit` for offers sold in pairs or sets:
+The default is a Buy Now offer counted in single units, and `buyNowPrice` is required. For an
+auction, set `sellingFormat(AUCTION)` and a `startingPrice` instead — Buy Now becomes optional
+(omit it for a pure auction, or set it for a buy-it-now-or-bid offer). Set `stockUnit` for offers
+sold in pairs or sets:
 
 ```java
 CreateOfferRequest auction = CreateOfferRequest.builder()
         .name("Vintage lamp")
         .categoryId("257")
-        .buyNowPrice(Money.of("300.00", "PLN"))   // optional Buy Now alongside the auction
         .availableStock(1)
         .sellingFormat(OfferFormat.AUCTION)
-        .startingPrice(Money.of("1.00", "PLN"))
-        .minimalPrice(Money.of("150.00", "PLN"))  // reserve price
+        .startingPrice(Money.of("1.00", "PLN"))   // required for an auction
+        .minimalPrice(Money.of("150.00", "PLN"))  // optional reserve price
         .stockUnit(StockUnit.UNIT)
-        .build();
+        .build();                                  // no buyNowPrice → a pure auction
 ```
 
-On the read side, `offer.startingPrice()`, `offer.minimalPrice()` and `offer.stockUnit()` are
-populated for auctions; `offer.buyNowPrice()` is `null` for a pure auction.
+The builder validates this fail-fast: an auction with no `startingPrice`, or any other format
+with no `buyNowPrice`, throws. On the read side, `offer.startingPrice()`, `offer.minimalPrice()`
+and `offer.stockUnit()` are populated for auctions; `offer.buyNowPrice()` is `null` for a pure
+auction.
 
 ## Edit an offer
 

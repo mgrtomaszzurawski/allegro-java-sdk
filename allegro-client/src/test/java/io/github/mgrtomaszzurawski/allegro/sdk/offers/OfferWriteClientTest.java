@@ -43,6 +43,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -72,12 +74,19 @@ class OfferWriteClientTest {
 
     private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
     private static final String HANDLING_TIME = "PT24H";
+    private static final String DELIVERY_INFO = "Ships from Warsaw";
     private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
     private static final String RETURN_POLICY_ID = "22222222-2222-2222-2222-222222222222";
+    private static final String WARRANTY_ID = "33333333-3333-3333-3333-333333333333";
+    private static final OffsetDateTime SHIPMENT_DATE =
+            OffsetDateTime.of(2026, 8, 1, 10, 0, 0, 0, ZoneOffset.UTC);
     private static final String SHIPPING_RATES_JSON_PATH = "$.delivery.shippingRates.id";
     private static final String HANDLING_TIME_JSON_PATH = "$.delivery.handlingTime";
+    private static final String DELIVERY_INFO_JSON_PATH = "$.delivery.additionalInfo";
+    private static final String SHIPMENT_DATE_JSON_PATH = "$.delivery.shipmentDate";
     private static final String IMPLIED_WARRANTY_JSON_PATH = "$.afterSalesServices.impliedWarranty.id";
     private static final String RETURN_POLICY_JSON_PATH = "$.afterSalesServices.returnPolicy.id";
+    private static final String WARRANTY_JSON_PATH = "$.afterSalesServices.warranty.id";
 
     private static final String STARTING_AMOUNT = "1.00";
     private static final String MINIMAL_AMOUNT = "150.00";
@@ -194,21 +203,51 @@ class OfferWriteClientTest {
                 .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
                 .availableStock(STOCK)
                 .delivery(OfferDelivery.builder()
-                        .shippingRatesId(SHIPPING_RATES_ID).handlingTime(HANDLING_TIME).build())
+                        .shippingRatesId(SHIPPING_RATES_ID).handlingTime(HANDLING_TIME)
+                        .shipmentDate(SHIPMENT_DATE).additionalInfo(DELIVERY_INFO).build())
                 .afterSalesServices(AfterSalesServices.builder()
-                        .impliedWarrantyId(IMPLIED_WARRANTY_ID).returnPolicyId(RETURN_POLICY_ID).build())
+                        .impliedWarrantyId(IMPLIED_WARRANTY_ID).returnPolicyId(RETURN_POLICY_ID)
+                        .warrantyId(WARRANTY_ID).build())
                 .build();
 
         // when
         offers(wmInfo).create(request);
 
-        // then — the shipping-rate reference, handling time, and after-sales ids reach the body;
+        // then — every delivery field and all three after-sales ids reach the body;
         // the after-sales ids are serialized as {"id": "<uuid>"} objects
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(SHIPPING_RATES_JSON_PATH, equalTo(SHIPPING_RATES_ID)))
                 .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH, equalTo(HANDLING_TIME)))
+                .withRequestBody(matchingJsonPath(DELIVERY_INFO_JSON_PATH, equalTo(DELIVERY_INFO)))
+                .withRequestBody(matchingJsonPath(SHIPMENT_DATE_JSON_PATH))
                 .withRequestBody(matchingJsonPath(IMPLIED_WARRANTY_JSON_PATH, equalTo(IMPLIED_WARRANTY_ID)))
-                .withRequestBody(matchingJsonPath(RETURN_POLICY_JSON_PATH, equalTo(RETURN_POLICY_ID))));
+                .withRequestBody(matchingJsonPath(RETURN_POLICY_JSON_PATH, equalTo(RETURN_POLICY_ID)))
+                .withRequestBody(matchingJsonPath(WARRANTY_JSON_PATH, equalTo(WARRANTY_ID))));
+    }
+
+    @Test
+    void create_whenPureAuction_omitsBuyNowPriceFromBody(WireMockRuntimeInfo wmInfo) {
+        // given — a pure auction: a starting price and NO Buy Now price
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).availableStock(STOCK)
+                .sellingFormat(OfferFormat.AUCTION)
+                .startingPrice(Money.of(STARTING_AMOUNT, CURRENCY_PLN))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — a STRICT body match (no extra elements) proves the selling mode carries
+        // the auction starting price and NO `price` (Buy Now) key
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(equalToJson(("{\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
+                        + "\"sellingMode\":{\"format\":\"AUCTION\","
+                        + "\"startingPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+                        + "\"stock\":{\"available\":%d}}")
+                        .formatted(NAME, CATEGORY_ID, STARTING_AMOUNT, CURRENCY_PLN, STOCK), true, false)));
     }
 
     @Test

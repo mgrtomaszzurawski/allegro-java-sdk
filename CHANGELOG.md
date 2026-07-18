@@ -141,7 +141,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `BUY_NOW`/`AUCTION`/`ADVERTISEMENT`), `startingPrice` and `minimalPrice` (auction), and
   `stockUnit` (new `StockUnit` enum: `UNIT`/`PAIR`/`SET`, forward-compat `UNKNOWN`); the `Offer`
   read maps them back. `OfferFormat.toRaw()` added for the write path (throws on the read-only
-  `UNKNOWN` sentinel, like `StockUnit.toRaw()`).
+  `UNKNOWN` sentinel, like `StockUnit.toRaw()`). Pricing is now format-conditional and validated
+  fail-fast: an `AUCTION` requires `startingPrice` (Buy Now optional — a pure auction), any other
+  format requires `buyNowPrice`. `AfterSalesServices` ids are validated as UUIDs when set on the
+  builder (fail-fast `IllegalArgumentException`) rather than deep in the request.
 
 ### B — orders-payments
 

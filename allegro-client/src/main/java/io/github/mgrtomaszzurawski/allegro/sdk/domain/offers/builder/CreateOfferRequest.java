@@ -32,12 +32,13 @@ public final class CreateOfferRequest {
 
     private static final String ERR_NAME = "name is required";
     private static final String ERR_CATEGORY = "categoryId is required";
-    private static final String ERR_PRICE = "buyNowPrice is required";
+    private static final String ERR_PRICE = "buyNowPrice is required for a BUY_NOW offer";
+    private static final String ERR_STARTING = "startingPrice is required for an AUCTION offer";
     private static final String ERR_STOCK = "availableStock is required and must not be negative";
 
     private final String name;
     private final String categoryId;
-    private final Money buyNowPrice;
+    private final @Nullable Money buyNowPrice;
     private final int availableStock;
     private final List<String> imageUrls;
     private final @Nullable OfferFormat sellingFormat;
@@ -71,8 +72,8 @@ public final class CreateOfferRequest {
         return categoryId;
     }
 
-    /** The fixed Buy Now price. */
-    public Money buyNowPrice() {
+    /** The fixed Buy Now price, or {@code null} for a pure auction. */
+    public @Nullable Money buyNowPrice() {
         return buyNowPrice;
     }
 
@@ -210,7 +211,13 @@ public final class CreateOfferRequest {
             if (categoryId == null) {
                 throw new IllegalStateException(ERR_CATEGORY);
             }
-            if (buyNowPrice == null) {
+            // Pricing is format-conditional: an auction needs a starting price (Buy
+            // Now optional); every other format needs a Buy Now price.
+            if (sellingFormat == OfferFormat.AUCTION) {
+                if (startingPrice == null) {
+                    throw new IllegalStateException(ERR_STARTING);
+                }
+            } else if (buyNowPrice == null) {
                 throw new IllegalStateException(ERR_PRICE);
             }
             if (availableStock == null || availableStock < 0) {
