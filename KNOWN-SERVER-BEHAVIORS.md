@@ -159,6 +159,19 @@ distinguished on the wire. The SDK surfaces both as `AllegroNotFoundException`. 
 with a buyer user token against a non-existent offer id (device-consent → buyer token minted by
 the one-time `auth-bootstrap -Pdemo.account=buyer` flow; see the DataDome section below).
 
+### Smart! condition `value`/`threshold` is boolean OR number on the wire (verified 2026-07-18, sandbox)
+
+`GET /sale/smart` returns each entry in `conditions[]` with a `value` and `threshold` that are a
+JSON **number** for a metric condition (e.g. `1.5` days) but a JSON **boolean** for a pass/fail
+condition (e.g. `false`) — the spec types both as `number`, so the generated Layer-1 DTO
+(`SmartSellerClassificationReportConditionsInnerRaw`) fields are `BigDecimal` and Jackson aborts
+the WHOLE response with `MismatchedInputException` the moment a boolean value appears. Live-caught
+running the `account` seller demo (`me()` and `salesQuality()` succeed; `smartClassification()`
+threw). The SDK now reads the response from a `JsonNode` (`SmartClassificationMapper`), keeping a
+numeric value/threshold typed as `BigDecimal` and mapping a boolean one to `null` — the pass/fail
+outcome is carried by the condition's `fulfilled` flag. Not a `oneOf`/enum/subtype case, so the
+core C3–C5 forward-compat handlers do not apply.
+
 ## Sale settings (bucket K)
 
 ### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
@@ -183,6 +196,19 @@ are rejected on both `individual.period` and `corporate.period`. This differs fr
 `warranties` endpoint, whose periods are month-denominated (`P12M`) and may be lifetime. The SDK
 leaves the exact value to the server (it can change per legal category) and documents the rule on
 `ImpliedWarrantyPeriod`; only the structural `name`/`individual` requirements are builder-enforced.
+
+### A return policy with returns enabled requires `options` (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/return-policies` (and the `PUT`) reject a body whose
+`availability.range` is not `DISABLED` but which omits the `options` object, with
+`422 UNPROCESSABLE_ENTITY code=AVAILABILITY_ENABLED_RETURN_OPTIONS_INVALID` (`path=null`, a
+body-level error). The spec marks `ReturnPolicyOptions` `nullable: true` with "Can be null if
+availability range is 'DISABLED'", and all five booleans are `required` within it. Verified live
+on seller TestBoxSDK: a `FULL`/`RESTRICTED` policy with `options` (all five flags) creates, reads
+back, updates and deletes cleanly (full round-trip green); the same request without `options` is
+rejected. The SDK's `ReturnPolicyRequest`/`ReturnPolicyUpdateRequest` builders therefore require
+`options` fail-fast whenever the range is not `DISABLED`, turning the opaque 422 into a
+client-side `IllegalStateException`.
 
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
@@ -318,6 +344,34 @@ default shipping rate list — configured in the sandbox UI, or referenced by id
 request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delivery` refs — future
 work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
 returns `CATEGORY_NOT_EXISTS`.
+
+## Campaigns (bucket H)
+
+### Allegro Prices offer-status query requires `offer.ids` 1..1000 (verified 2026-07-18, sandbox)
+
+`POST /sale/allegro-prices/offers-queries` (`allegroPrices().streamOffersStatus(...)`) rejects a
+marketplace-only query with `400 VALIDATION_ERROR`, `message: "Validation error: offer.ids size
+must be between 1 and 1,000"` (example `trace-id` `2b6432bc191218e0`) — even though the vendored
+spec types `offer` and `offer.ids` as OPTIONAL. In practice at least one offer id is mandatory.
+The SDK stays spec-faithful (the builder does not force `offerId`, so it can serialise a
+marketplace-only query) and surfaces the rejection as `AllegroBadRequestException` with the parsed
+`errors[]`; consumers must supply `AllegroPricesOfferQuery.builder(marketplace).addOfferId(...)`.
+The `campaigns` demo now sources a few of the seller's own offer ids before querying, and skips the
+probe when the account has no offers.
+
+### Allegro Prices participation spans four marketplaces (verified 2026-07-18, sandbox)
+
+`GET /sale/allegro-prices/accounts/participations` (`allegroPrices().participation()`) returned four
+marketplaces for the sandbox seller — `allegro-pl`, `allegro-cz`, `allegro-sk`, `allegro-hu`, all
+`ALLOWED` — confirming the `MarketplaceParticipation` mapping across markets on a live response.
+
+### AlleDiscount exposes SOURCING and DISCOUNT campaign types (verified 2026-07-18, sandbox)
+
+`GET /sale/alle-discount/campaigns` (`alleDiscount().campaigns()`) returned 12 campaigns for the
+sandbox seller, spanning both `SOURCING` (co-finance) and `DISCOUNT` (AlleObniżka) campaign types,
+confirming the `AlleDiscountCampaign` / `AlleDiscountCampaignType` mapping. Every listed campaign
+showed the seller as not enrolled, so `streamEligibleOffers`/`streamSubmittedOffers` returned empty
+without error — the write→read command cycles still need an enrolled campaign (risk R5).
 
 ## From external sources (to verify on first contact)
 

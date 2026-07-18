@@ -360,6 +360,12 @@ public final class ApiPaths {
     public static final String ISSUES = "/sale/issues";
     /** Sub-resource: the chat within an issue. */
     public static final String CHAT_SEGMENT = "chat";
+    /** Sub-resource: a message added to an issue. */
+    public static final String MESSAGE_SEGMENT = "message";
+    /** Sub-resource: a claim's formal status. */
+    public static final String STATUS_SEGMENT = "status";
+    /** Issue attachment declarations ({@code /sale/issues/attachments}); append {@code /{attachmentId}}. */
+    public static final String ISSUES_ATTACHMENTS = "/sale/issues/attachments";
 
     // ---- sale-settings (bucket K) ----
     /** Seller after-sale warranty definitions. */
@@ -368,6 +374,9 @@ public final class ApiPaths {
     /** Seller after-sale implied-warranty (rękojmia) definitions. */
     public static final String AFTER_SALES_IMPLIED_WARRANTIES =
             "/after-sales-service-conditions/implied-warranties";
+    /** Seller after-sale return-policy definitions. */
+    public static final String AFTER_SALES_RETURN_POLICIES =
+            "/after-sales-service-conditions/return-policies";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

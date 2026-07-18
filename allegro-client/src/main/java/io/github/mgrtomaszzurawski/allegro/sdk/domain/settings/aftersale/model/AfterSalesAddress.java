@@ -5,7 +5,9 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesAddressRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyAddressRaw;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A postal address attached to an after-sale condition — the address a buyer
@@ -51,8 +53,24 @@ public record AfterSalesAddress(
         }
     }
 
-    /** Map the generated Layer-1 DTO to the public record. */
+    /** Map the generated Layer-1 implied-warranty address DTO to the public record. */
     public static AfterSalesAddress from(AfterSalesServicesAddressRaw raw) {
+        return new AfterSalesAddress(
+                raw.getName(),
+                raw.getStreet(),
+                raw.getPostCode(),
+                raw.getCity(),
+                raw.getCountryCode());
+    }
+
+    /**
+     * Map the generated Layer-1 return-policy address DTO, or {@code null} when
+     * absent (a return policy with a {@code DISABLED} availability carries none).
+     */
+    public static @Nullable AfterSalesAddress from(@Nullable ReturnPolicyAddressRaw raw) {
+        if (raw == null) {
+            return null;
+        }
         return new AfterSalesAddress(
                 raw.getName(),
                 raw.getStreet(),

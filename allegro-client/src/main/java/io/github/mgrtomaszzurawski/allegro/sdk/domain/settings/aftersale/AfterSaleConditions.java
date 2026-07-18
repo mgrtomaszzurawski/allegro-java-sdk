@@ -5,9 +5,12 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ImpliedWarrantyRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyUpdateRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.WarrantyRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarrantySummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.Warranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantySummary;
 import java.util.stream.Stream;
@@ -15,8 +18,8 @@ import java.util.stream.Stream;
 /**
  * After-sale service conditions — reached via {@code settings().afterSale()}.
  *
- * <p>Covers seller warranties and implied warranties (rękojmia). Return policies
- * and warranty attachments land in the following bucket-K PRs.
+ * <p>Covers seller warranties, implied warranties (rękojmia) and return policies.
+ * Warranty attachments land in a following bucket-K PR.
  *
  * @since 0.2.0
  */
@@ -97,4 +100,51 @@ public interface AfterSaleConditions {
      * @return the updated implied-warranty definition
      */
     ImpliedWarranty updateImpliedWarranty(String impliedWarrantyId, ImpliedWarrantyRequest request);
+
+    /**
+     * Lazily stream the seller's return-policy definitions. Unlike the warranty
+     * listings, this endpoint returns full policies (not summaries), so the
+     * stream elements are complete {@link ReturnPolicy} records.
+     *
+     * <p>The endpoint serves a single page (offset capped at 59, limit at 60),
+     * so the stream yields at most the first 60 return policies.
+     *
+     * @return a lazy stream over the seller's return policies (at most 60)
+     */
+    Stream<ReturnPolicy> streamReturnPolicies();
+
+    /**
+     * Fetch a single return-policy definition in full.
+     *
+     * @param returnPolicyId the return-policy definition identifier
+     * @return the full return-policy definition
+     */
+    ReturnPolicy returnPolicy(String returnPolicyId);
+
+    /**
+     * Create a new return-policy definition.
+     *
+     * @param request the validated return-policy request
+     * @return the created return policy, with its server-assigned id
+     */
+    ReturnPolicy createReturnPolicy(ReturnPolicyRequest request);
+
+    /**
+     * Replace an existing return-policy definition. The {@code fulfillment} flag
+     * is fixed at creation and cannot be changed, so it is absent from the update
+     * request.
+     *
+     * @param returnPolicyId the return-policy definition identifier
+     * @param request the validated return-policy update request
+     * @return the updated return-policy definition
+     */
+    ReturnPolicy updateReturnPolicy(String returnPolicyId, ReturnPolicyUpdateRequest request);
+
+    /**
+     * Delete a return-policy definition. The server returns the deleted policy;
+     * the SDK discards that body.
+     *
+     * @param returnPolicyId the return-policy definition identifier
+     */
+    void deleteReturnPolicy(String returnPolicyId);
 }
