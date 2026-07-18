@@ -84,6 +84,21 @@ public final class ApiPaths {
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
+    /** Available stock report for One Fulfillment goods. */
+    public static final String FULFILLMENT_STOCK = "/fulfillment/stock";
+    /** Products the seller may ship into One Fulfillment. */
+    public static final String FULFILLMENT_AVAILABLE_PRODUCTS = "/fulfillment/available-products";
+    /** Refund-dispositions report for returned/bounced One Fulfillment goods. */
+    public static final String FULFILLMENT_REFUND_DISPOSITIONS = "/fulfillment/returns/refund-dispositions";
+    /** Seller's tax identification number for One Fulfillment. */
+    public static final String FULFILLMENT_TAX_ID = "/fulfillment/tax-id";
+    private static final String FULFILLMENT_ORDERS = "/fulfillment/orders";
+    private static final String PARCELS_SEGMENT = "parcels";
+
+    /** Parcels shipped for one fulfillment order ({@code /fulfillment/orders/{orderId}/parcels}). */
+    public static String fulfillmentOrderParcels(String orderId) {
+        return subPath(FULFILLMENT_ORDERS, orderId, PARCELS_SEGMENT);
+    }
 
     // ---- contacts (bucket J) ----
     /** Seller contact cards ({@code /sale/offer-contacts}); append {@code /{id}} via subPath. */
