@@ -115,6 +115,9 @@ class AdvanceShipNoticesClientTest {
     private static final String STATE_REAUTHED = "reauthed";
 
     private static final byte[] LABEL_BYTES = {0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34};
+    private static final String ERROR_CODE = "SomeCode";
+    private static final String ERROR_PATH = "asnId";
+    private static final long RETRY_AFTER_SECONDS = 5L;
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -154,8 +157,8 @@ class AdvanceShipNoticesClientTest {
     private static final String SUBMIT_ACCEPTED = "{}";
 
     private static final String ERROR_RESPONSE = """
-            {"errors":[{"code":"SomeCode","message":"boom","userMessage":"boom","path":null}]}
-            """;
+            {"errors":[{"code":"%s","message":"boom","userMessage":"boom","path":"%s"}]}
+            """.formatted(ERROR_CODE, ERROR_PATH);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return AllegroClient.create(
@@ -557,8 +560,11 @@ class AdvanceShipNoticesClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             AdvanceShipNotices asn = allegro.fulfillment().advanceShipNotices();
-            // then
-            assertThrows(AllegroBadRequestException.class, () -> asn.get(ASN_ID));
+            // then — the typed field errors are parsed from the errors[] payload
+            AllegroBadRequestException failure =
+                    assertThrows(AllegroBadRequestException.class, () -> asn.get(ASN_ID));
+            assertEquals(ERROR_CODE, failure.errors().get(0).code());
+            assertEquals(ERROR_PATH, failure.errors().get(0).path());
         }
     }
 
@@ -582,12 +588,15 @@ class AdvanceShipNoticesClientTest {
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(ASN_ONE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
-                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, "5").withBody(ERROR_RESPONSE)));
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, Long.toString(RETRY_AFTER_SECONDS))
+                        .withBody(ERROR_RESPONSE)));
 
         try (AllegroClient allegro = client(wmInfo)) {
             AdvanceShipNotices asn = allegro.fulfillment().advanceShipNotices();
-            // then
-            assertThrows(AllegroRateLimitException.class, () -> asn.get(ASN_ID));
+            // then — the server's Retry-After is preserved on the typed exception
+            AllegroRateLimitException failure =
+                    assertThrows(AllegroRateLimitException.class, () -> asn.get(ASN_ID));
+            assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
         }
     }
 

@@ -81,7 +81,10 @@ public interface AdvanceShipNotices {
 
     /**
      * Amend an already-submitted Advance Ship Notice, guarding the write with the
-     * notice's current version.
+     * notice's current version. Once a notice has left {@code DRAFT}, the warehouse
+     * requires a handling unit's {@code amount} and {@code labelsType}; those are
+     * optional on {@link SubmittedAsnUpdate}, so an incomplete amendment is rejected
+     * by the server as a typed exception rather than blocked client-side.
      *
      * @param asnId   the notice identifier
      * @param update  the fields to amend
@@ -96,7 +99,8 @@ public interface AdvanceShipNotices {
      *
      * @param asnId the notice identifier
      * @return the terminal outcome; {@link SubmitStatus#FAILED} means the notice
-     *         was not accepted
+     *         was not accepted, and an unrecognized terminal status surfaces as
+     *         {@link SubmitStatus#UNKNOWN}
      */
     SubmitStatus submit(String asnId);
 
@@ -107,7 +111,8 @@ public interface AdvanceShipNotices {
      * @param asnId   the notice identifier
      * @param timeout the longest to wait before giving up
      * @return the terminal outcome; {@link SubmitStatus#FAILED} means the notice
-     *         was not accepted
+     *         was not accepted, and an unrecognized terminal status surfaces as
+     *         {@link SubmitStatus#UNKNOWN}
      */
     SubmitStatus submit(String asnId, Duration timeout);
 

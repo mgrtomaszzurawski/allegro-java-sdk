@@ -40,7 +40,10 @@ import org.jspecify.annotations.Nullable;
  * @param updatedAt     when the notice was last changed
  * @param items         the product lines (never {@code null}; may be empty)
  * @param handlingUnit  how the goods are packed, when declared
- * @param labelsFileUrl a URL to the notice's printed labels, when available
+ * @param labelsFileUrl a server-provided URL to the notice's printed labels, when
+ *                      available; to download the labels use
+ *                      {@code advanceShipNotices().labels(id)} (authenticated) rather
+ *                      than fetching this URL with your own credentials
  * @param submittedAt   when the notice was submitted, once it has been
  * @param volumeInCc    the notice's volume in cubic centimetres, when known
  * @param version       the optimistic-concurrency token ({@code ETag}), when known

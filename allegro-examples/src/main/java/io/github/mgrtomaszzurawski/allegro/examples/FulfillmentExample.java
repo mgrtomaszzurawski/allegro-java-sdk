@@ -39,6 +39,8 @@ public final class FulfillmentExample {
     private static final int ASN_QUANTITY = 12;
     private static final int ASN_REVISED_QUANTITY = 15;
     private static final int HANDLING_UNITS = 2;
+    private static final String ASN_UNIT_TYPE = "BOX";
+    private static final String ASN_LABELS_TYPE = "ONE_FULFILMENT";
 
     private FulfillmentExample() {
     }
@@ -91,7 +93,7 @@ public final class FulfillmentExample {
         AdvanceShipNotices asn = client.fulfillment().advanceShipNotices();
         AdvanceShipNotice draft = asn.create(AsnRequest.builder()
                 .addItem(ASN_PRODUCT_ID, ASN_QUANTITY)
-                .handlingUnit(new HandlingUnit("BOX", BigDecimal.valueOf(HANDLING_UNITS), "ONE_FULFILMENT"))
+                .handlingUnit(new HandlingUnit(ASN_UNIT_TYPE, BigDecimal.valueOf(HANDLING_UNITS), ASN_LABELS_TYPE))
                 .build());
 
         AdvanceShipNotice updated = asn.update(draft.id(),

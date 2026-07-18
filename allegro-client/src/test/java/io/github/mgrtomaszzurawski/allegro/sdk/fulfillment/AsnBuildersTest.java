@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.fulfillment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,15 +67,36 @@ class AsnBuildersTest {
 
     @Test
     void asnRequest_whenItemsSetterUsed_replacesLines() {
-        // given / when
+        // given a builder that already has a line, then the setter is applied
+        // when
         AsnRequest request = AsnRequest.builder()
+                .addItem(PRODUCT_ID, QUANTITY)
                 .items(List.of(new AsnItem(OTHER_PRODUCT_ID, BigDecimal.valueOf(OTHER_QUANTITY))))
                 .build();
 
-        // then
+        // then — the setter replaced the earlier line rather than appending
         assertEquals(1, request.items().size());
         assertEquals(OTHER_PRODUCT_ID, request.items().get(0).productId());
         assertEquals(BigDecimal.valueOf(OTHER_QUANTITY), request.items().get(0).quantity());
+    }
+
+    @Test
+    void asnRequest_whenOnlyRequiredItem_buildsWithoutOptionalFields() {
+        // given / when — the minimal valid request: one item, nothing optional
+        AsnRequest request = AsnRequest.builder().addItem(PRODUCT_ID, QUANTITY).build();
+
+        // then
+        assertEquals(1, request.items().size());
+        assertNull(request.handlingUnit());
+        assertNull(request.declaredVolumeInCc());
+    }
+
+    @Test
+    void asnRequest_whenProductIdNotUuid_throws() {
+        // given
+        AsnRequest.Builder builder = AsnRequest.builder();
+        // then — a non-UUID product id fails fast at the builder
+        assertThrows(IllegalArgumentException.class, () -> builder.addItem("not-a-uuid", QUANTITY));
     }
 
     @Test
@@ -147,11 +169,14 @@ class AsnBuildersTest {
 
     @Test
     void submittedUpdate_whenItemsSetterUsed_replacesLines() {
-        // given / when
+        // given a builder that already has a line, then the setter is applied
+        // when
         SubmittedAsnUpdate update = SubmittedAsnUpdate.builder()
+                .addItem(PRODUCT_ID, QUANTITY)
                 .items(List.of(new AsnItem(OTHER_PRODUCT_ID, BigDecimal.valueOf(OTHER_QUANTITY))))
                 .build();
-        // then
+        // then — the setter replaced the earlier line rather than appending
+        assertEquals(1, update.items().size());
         assertEquals(OTHER_PRODUCT_ID, update.items().get(0).productId());
     }
 
