@@ -137,9 +137,18 @@ the `allegro-e2e` module (`BuyerBrowser`).
   incl. the DataDome cookie + session) and only logs in when there is none. Bootstrap it once with
   `:allegro-e2e:run` (ideally from a clean IP). The state file lives under
   `/workspace/shared/secrets/` at `0600` (live session cookies — outside any git repo, never committed).
-- **Fallback.** If DataDome still hardens from the datacenter IP, seed once by hand in the sandbox UI
-  (orders persist and stay queryable); the API-reachable buyer actions (bidding, Message Center) never
-  need the browser — they use a buyer user-token through the SDK.
+- **DataDome may escalate to an interactive CAPTCHA — we do NOT solve it.** Verified 2026-07-18:
+  the device-flow consent URL (and a fresh login from a stale cookie) can present DataDome's
+  slider/audio puzzle, not just the self-clearing interstitial. Automating an anti-bot puzzle is
+  detection evasion, so `BuyerBrowser` detects it (`isDataDomeChallenge`) and fails loudly instead.
+  Details + tiers: `KNOWN-SERVER-BEHAVIORS.md` (Web UI anti-bot).
+- **Fallback (the buyer token is a one-time human click).** OAuth device-flow consent is by design a
+  single human authorization: run `:allegro-demo:run -Pdemo.scenario=auth-bootstrap -Pdemo.account=buyer`,
+  open the printed URL in a **normal browser** (residential IP → no CAPTCHA), click *Authorize* — the
+  refresh token lands in the shared store and every later run is non-interactive. Fresh web-session
+  automation (buy-now/dispute) from a datacenter IP is puzzle-blocked the same way; seed the session
+  from a clean IP or by hand. The API-reachable buyer actions (bidding, Message Center) never need the
+  browser — they use the buyer user-token through the SDK.
 
 The three verification layers: **§1 WireMock** pins the contract and runs in `check`; **§2 the
 `allegro-demo` tool** does live write→read *through the SDK*; **§3 this E2E layer** adds the web-only

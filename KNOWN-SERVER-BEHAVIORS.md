@@ -62,6 +62,38 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
+
+### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)
+
+Allegro fronts its **web UI** (login + the OAuth device-flow consent page) with DataDome.
+From this container's datacenter IP two distinct challenge tiers were observed:
+
+- **JS interstitial** (self-clearing) — "Potwierdź, że jesteś człowiekiem" served on a 403/429;
+  it sets a cookie and clears after a short wait + one reload. The `allegro-e2e` login recipe
+  handles exactly this tier (and only this tier).
+- **Interactive slider/audio CAPTCHA** (does NOT self-clear) — the same heading, but the
+  `geo.captcha-delivery.com` iframe presents a "Przesuń w prawo, aby zabezpieczyć dostęp"
+  slider puzzle (plus audio + reload controls). Observed on the **device-flow consent URL**
+  (`verification_uri_complete`) when reached with a stale/aged DataDome cookie.
+
+The SDK's REST calls are unaffected — this is purely the browser-facing web UI (login,
+device-consent, and the web-only buyer actions). Implications, baked into the code and tests:
+
+- `allegro-e2e` does **not** attempt to solve the interactive puzzle — automating an anti-bot
+  CAPTCHA is detection evasion. `BuyerBrowser` detects any DataDome challenge
+  (`isDataDomeChallenge`) and fails loudly on the puzzle tier instead of hanging or
+  false-passing.
+- The **buyer device-flow token** is therefore minted by a one-time human consent click in a
+  normal browser (residential IP → no CAPTCHA): run `:allegro-demo:run
+  -Pdemo.scenario=auth-bootstrap -Pdemo.account=buyer`, open the printed URL, click *Authorize*.
+  Every later run reuses the stored refresh token non-interactively (rotation-safe store).
+- Fresh **web-session** automation (buy-now/dispute) from this IP is blocked at the puzzle tier
+  the same way; seed the `storageState`/session from a clean IP or by hand when needed.
+- DataDome hard-blocks the IP after a burst of rapid logins ("Zostałeś zablokowany… w tej
+  samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
+  discipline (`TESTING.md` §3).
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
