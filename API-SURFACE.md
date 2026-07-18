@@ -308,7 +308,7 @@ Campaigns campaigns = client.campaigns();
 
 Badges badges = campaigns.badges();
 badges.availableCampaigns()                       // GET   /sale/badge-campaigns
-badges.apply(BadgeApplicationRequest)             // POST  /sale/badges                       (sync: polls badge-operations)
+badges.apply(BadgeApplicationRequest)             // POST  /sale/badges                       (async: returns created REQUESTED application; verification is e-mail-notified, not polled)
 badges.streamApplications(ApplicationFilter)      // GET   /sale/badge-applications  Stream<BadgeApplication>
 badges.application(applicationId)                 // GET   /sale/badge-applications/{applicationId}
 badges.streamBadges(BadgeFilter)                  // GET   /sale/badges              Stream<Badge>
@@ -402,7 +402,7 @@ afterSale.returnPolicies() / .returnPolicy(id)    // GET  /after-sales-service-c
 afterSale.createReturnPolicy(ReturnPolicyRequest) // POST /after-sales-service-conditions/return-policies
 afterSale.updateReturnPolicy(id, Request)         // PUT  /after-sales-service-conditions/return-policies/{id}
 afterSale.deleteReturnPolicy(id)                  // DELETE /after-sales-service-conditions/return-policies/{id}
-afterSale.warranties() / .warranty(id)            // GET  …/warranties[/{warrantyId}]
+afterSale.streamWarranties() / .warranty(id)      // GET  …/warranties[/{warrantyId}] (lazy Stream, matches stream* convention)
 afterSale.createWarranty(WarrantyRequest)         // POST …/warranties
 afterSale.updateWarranty(id, WarrantyRequest)     // PUT  …/warranties/{warrantyId}
 afterSale.impliedWarranties() / .impliedWarranty(id) // GET …/implied-warranties[/{id}]

@@ -100,6 +100,16 @@ public final class ApiPaths {
     // ---- campaigns (bucket H) ----
     /** Available badge campaigns ({@code /sale/badge-campaigns}). */
     public static final String BADGE_CAMPAIGNS = "/sale/badge-campaigns";
+    /** Badges collection ({@code /sale/badges}); apply and list; build sub-paths via {@link #subPath}. */
+    public static final String BADGES = "/sale/badges";
+    /** Badge applications ({@code /sale/badge-applications}); append {@code /{applicationId}} via subPath. */
+    public static final String BADGE_APPLICATIONS = "/sale/badge-applications";
+    /** Badge operations ({@code /sale/badge-operations}); append {@code /{operationId}} via subPath. */
+    public static final String BADGE_OPERATIONS = "/sale/badge-operations";
+    /** Path segment for an offer within the badge update path. */
+    public static final String BADGE_OFFERS_SEGMENT = "offers";
+    /** Path segment for a campaign within the badge update path. */
+    public static final String BADGE_CAMPAIGNS_SEGMENT = "campaigns";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
@@ -126,6 +136,11 @@ public final class ApiPaths {
     public static final String MESSAGES_SEGMENT = "messages";
     /** Sub-resource: the read-flag toggle of a thread. */
     public static final String READ_SEGMENT = "read";
+
+    // ---- sale-settings (bucket K) ----
+    /** Seller after-sale warranty definitions. */
+    public static final String AFTER_SALES_WARRANTIES =
+            "/after-sales-service-conditions/warranties";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

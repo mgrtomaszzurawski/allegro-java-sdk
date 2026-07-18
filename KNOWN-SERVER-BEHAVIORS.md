@@ -108,6 +108,19 @@ On `CpsConversion`, the `offer.unitPrice`, `commission.publisher` and `commissio
 objects may be present while their `amount`/`currency` are absent. The SDK maps such an
 incomplete price to a `null` `Money` rather than failing the stream.
 
+## Sale settings (bucket K)
+
+### A warranty needs both `individual` and `corporate` periods (verified 2026-07-18, sandbox)
+
+`POST /after-sales-service-conditions/warranties` and `PUT …/warranties/{id}` reject a request
+that omits either buyer-class period with `HTTP 422 UNPROCESSABLE_ENTITY` and a single field
+error whose `path` names the missing one — `path=corporate` when only `individual` is set,
+`path=individual` when only `corporate` is set (both directions verified live on the seller
+sandbox account TestBoxSDK, id 111332841). The spec marks **neither** `required`. A request
+that carries both periods succeeds and reads back cleanly (create→get round-trip green). The
+SDK's `WarrantyRequest` builder therefore requires both fail-fast, turning the opaque 422 into
+a client-side `IllegalStateException` naming the field — no wasted round-trip.
+
 ## Web UI anti-bot — DataDome (E2E layer, bucket A / core)
 
 ### The buyer web UI escalates to an interactive CAPTCHA from datacenter IPs (verified 2026-07-18, sandbox)

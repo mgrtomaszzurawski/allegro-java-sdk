@@ -153,6 +153,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   authenticated seller (GET `/sale/badge-campaigns`), with an optional per-marketplace overload.
   Immutable `BadgeCampaign` model with eligibility, refusal reasons and the application/visibility/
   publication schedules. Starter slice of bucket H.
+- Complete the badges sub-facade: `apply(BadgeApplicationRequest)` (POST `/sale/badges`, returned
+  without blocking — badge verification is e-mail-notified and asynchronous), `streamApplications`
+  (GET `/sale/badge-applications`) and `application(id)`, `streamBadges` (GET `/sale/badges`), and
+  `update(offerId, campaignId, BadgePatch[, Duration])` (PATCH, polled to a terminal badge operation
+  via the shared command poller). Adds `BadgeApplication`, `Badge`, `BadgePrices`, `BadgeOperation`
+  models and their status/type enums, the `BadgeApplicationRequest`/`BadgeApplicationFilter`/
+  `BadgeFilter` builders and the `BadgePatch` change type.
 
 ### I — fulfillment
 
@@ -175,3 +182,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   (self-seeded attachment round-trip + threads read / `markRead` write→read).
 
 ### K — sale-settings
+
+- `settings().afterSale()` starter slice: seller **warranty** definitions —
+  `streamWarranties()` (lazy offset/limit `Stream`), `warranty(id)`,
+  `createWarranty(...)`, `updateWarranty(...)`. Immutable `Warranty` /
+  `WarrantySummary` records, `WarrantyType` / `WarrantyPeriod` value types, and a
+  fail-fast `WarrantyRequest` builder — both buyer-class periods (`individual` /
+  `corporate`) are required, an undocumented server rule (spec marks neither) verified
+  live and recorded in `KNOWN-SERVER-BEHAVIORS.md`. Documented in `docs/settings.md`; the
+  `settings-warranty` write→read demo is green on the sandbox (create→get round-trip).
