@@ -92,10 +92,18 @@ last-write-wins.
 
 ```java
 Order order = client.orders().get(orderId);
-client.orders().markStatus(orderId, SellerStatus.SENT, order.revision());
+String revision = order.revision();
+if (revision != null) {
+    client.orders().markStatus(orderId, SellerStatus.SENT, revision); // optimistic-concurrency guarded
+} else {
+    client.orders().markStatus(orderId, SellerStatus.SENT);           // last-write-wins
+}
 ```
 
-A stale revision fails with `AllegroBadRequestException` — re-read the order and retry.
+A stale revision fails with `AllegroBadRequestException` — re-read the order and retry. Passing a
+blank `revision` to the three-argument overload is rejected up front (`IllegalArgumentException`)
+rather than silently degrading to last-write-wins; use the two-argument overload when you do not
+need the guard.
 
 ## Serial numbers and billing documents
 

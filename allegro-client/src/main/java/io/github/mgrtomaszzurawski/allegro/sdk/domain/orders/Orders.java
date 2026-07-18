@@ -39,6 +39,7 @@ public interface Orders {
      *
      * @param filter the order filter ({@link OrderFilter#all()} for every order)
      * @return a lazy stream of orders
+     * @since 0.4.0
      */
     Stream<Order> streamOrders(OrderFilter filter);
 
@@ -59,6 +60,7 @@ public interface Orders {
      *
      * @param filter the event filter ({@link OrderEventFilter#all()} for all types)
      * @return a lazy stream of order events
+     * @since 0.4.0
      */
     Stream<OrderEvent> streamEvents(OrderEventFilter filter);
 
@@ -67,14 +69,21 @@ public interface Orders {
      *
      * @return the event statistics; its fields are {@code null} when the seller
      *     has no order events yet
+     * @since 0.4.0
      */
     OrderEventStats eventStats();
 
     /**
      * Set the seller-side handling status of an order (last-write-wins).
      *
+     * <p>Accepts any {@link SellerStatus}; the server decides which transitions
+     * are valid for an order and rejects an illegal one with
+     * {@link io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException}
+     * (some values such as {@code CANCELLED} may not be seller-settable).
+     *
      * @param orderId the order identifier
      * @param status the new seller status
+     * @since 0.4.0
      */
     void markStatus(String orderId, SellerStatus status);
 
@@ -85,7 +94,11 @@ public interface Orders {
      *
      * @param orderId the order identifier
      * @param status the new seller status
-     * @param revision the {@link Order#revision()} last read for this order
+     * @param revision the {@link Order#revision()} last read for this order;
+     *     must be non-blank (use {@link #markStatus(String, SellerStatus)} for
+     *     last-write-wins)
+     * @throws IllegalArgumentException if {@code revision} is blank
+     * @since 0.4.0
      */
     void markStatus(String orderId, SellerStatus status, String revision);
 
@@ -94,6 +107,7 @@ public interface Orders {
      *
      * @param orderId the order identifier
      * @param request the per-line-item serial numbers
+     * @since 0.4.0
      */
     void setSerialNumbers(String orderId, SerialNumbersRequest request);
 
@@ -103,7 +117,11 @@ public interface Orders {
      *
      * @param orderId the order identifier
      * @param request the per-line-item serial numbers
-     * @param revision the {@link Order#revision()} last read for this order
+     * @param revision the {@link Order#revision()} last read for this order;
+     *     must be non-blank (use {@link #setSerialNumbers(String, SerialNumbersRequest)}
+     *     for last-write-wins)
+     * @throws IllegalArgumentException if {@code revision} is blank
+     * @since 0.4.0
      */
     void setSerialNumbers(String orderId, SerialNumbersRequest request, String revision);
 
@@ -113,6 +131,7 @@ public interface Orders {
      *
      * @param orderId the order identifier
      * @param url the publicly reachable document URL
+     * @since 0.4.0
      */
     void attachBillingDocumentLink(String orderId, String url);
 
@@ -121,6 +140,7 @@ public interface Orders {
      *
      * @param orderId the order identifier
      * @return the registered waybills; never {@code null}, possibly empty
+     * @since 0.4.0
      */
     List<Waybill> trackingNumbers(String orderId);
 
@@ -130,6 +150,7 @@ public interface Orders {
      * @param orderId the order identifier
      * @param request the tracking number to register
      * @return the created waybill, including the id Allegro assigned it
+     * @since 0.4.0
      */
     Waybill addTrackingNumber(String orderId, ShipmentRequest request);
 
@@ -137,6 +158,7 @@ public interface Orders {
      * List the shipping carriers available for parcel tracking numbers.
      *
      * @return the carrier dictionary; never {@code null}
+     * @since 0.4.0
      */
     List<Carrier> carriers();
 
@@ -146,6 +168,7 @@ public interface Orders {
      * @param carrierId the carrier identifier
      * @param waybill the carrier's tracking (waybill) number
      * @return the tracking history
+     * @since 0.4.0
      */
     CarrierTracking carrierTracking(String carrierId, String waybill);
 
@@ -154,6 +177,7 @@ public interface Orders {
      *
      * @param filter the points filter ({@link PointsFilter#all()} for all carriers)
      * @return the matching points; never {@code null}
+     * @since 0.4.0
      */
     List<PickupPoint> allegroPickupPoints(PointsFilter filter);
 }

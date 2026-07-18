@@ -38,15 +38,19 @@ final class OrdersRequestFactory {
     /** Request body for {@code POST /order/checkout-forms/{id}/serial-numbers}. */
     static CheckoutFormLineItemsSetSerialNumbersRequestRaw serialNumbers(SerialNumbersRequest request) {
         List<CheckoutFormLineItemSetSerialNumbersRequestRaw> lineItems = request.lineItems().stream()
-                .map(entry -> new CheckoutFormLineItemSetSerialNumbersRequestRaw()
-                        .id(UUID.fromString(entry.lineItemId()))
-                        .serialNumbers(new CheckoutFormLineItemSetSerialNumbersEntriesRequestRaw()
-                                .entries(entry.serialNumbers().stream()
-                                        .map(serial -> new CheckoutFormLineItemSetSerialNumbersEntryRequestRaw()
-                                                .value(serial))
-                                        .toList())))
+                .map(OrdersRequestFactory::serialNumbersLineItem)
                 .toList();
         return new CheckoutFormLineItemsSetSerialNumbersRequestRaw().lineItems(lineItems);
+    }
+
+    private static CheckoutFormLineItemSetSerialNumbersRequestRaw serialNumbersLineItem(
+            SerialNumbersRequest.LineItemSerialNumbers entry) {
+        List<CheckoutFormLineItemSetSerialNumbersEntryRequestRaw> entries = entry.serialNumbers().stream()
+                .map(serial -> new CheckoutFormLineItemSetSerialNumbersEntryRequestRaw().value(serial))
+                .toList();
+        return new CheckoutFormLineItemSetSerialNumbersRequestRaw()
+                .id(UUID.fromString(entry.lineItemId()))
+                .serialNumbers(new CheckoutFormLineItemSetSerialNumbersEntriesRequestRaw().entries(entries));
     }
 
     /** Request body for {@code POST /order/{orderId}/billing-documents/links}. */

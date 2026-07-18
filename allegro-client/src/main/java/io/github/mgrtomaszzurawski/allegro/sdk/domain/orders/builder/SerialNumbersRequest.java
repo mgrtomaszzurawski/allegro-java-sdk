@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The serial numbers to assign to an order's line items via
@@ -24,6 +25,7 @@ public final class SerialNumbersRequest {
 
     private static final String ERR_NO_LINE_ITEMS = "at least one line item is required";
     private static final String ERR_BLANK_LINE_ITEM = "lineItemId is required";
+    private static final String ERR_LINE_ITEM_NOT_UUID = "lineItemId must be a UUID: ";
     private static final String ERR_NO_SERIALS = "at least one serial number is required per line item";
 
     private final List<LineItemSerialNumbers> lineItems;
@@ -72,16 +74,34 @@ public final class SerialNumbersRequest {
 
         private final List<LineItemSerialNumbers> lineItems = new ArrayList<>();
 
-        /** Assign serial numbers to one line item. */
+        /**
+         * Assign serial numbers to one line item.
+         *
+         * @param lineItemId the target line item's UUID identifier (validated now)
+         * @param serialNumbers the serial numbers, in order; at least one
+         * @throws IllegalStateException if the id is blank / not a UUID, or the
+         *     serial-number list is empty
+         */
         public Builder lineItem(String lineItemId, List<String> serialNumbers) {
             if (lineItemId.isBlank()) {
                 throw new IllegalStateException(ERR_BLANK_LINE_ITEM);
             }
+            requireUuid(lineItemId);
             if (serialNumbers.isEmpty()) {
                 throw new IllegalStateException(ERR_NO_SERIALS);
             }
             lineItems.add(new LineItemSerialNumbers(lineItemId, serialNumbers));
             return this;
+        }
+
+        private static void requireUuid(String lineItemId) {
+            try {
+                UUID.fromString(lineItemId);
+            } catch (IllegalArgumentException notUuid) {
+                // Fail fast in the builder rather than let a raw
+                // "Invalid UUID string" escape from request serialization.
+                throw new IllegalStateException(ERR_LINE_ITEM_NOT_UUID + lineItemId, notUuid);
+            }
         }
 
         /** Assign serial numbers to one line item. */

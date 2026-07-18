@@ -51,13 +51,20 @@ class OrderBuildersTest {
         // when
         OrderFilter filter = OrderFilter.all();
 
-        // then
+        // then — every criterion is empty/null
         assertTrue(filter.statuses().isEmpty());
         assertTrue(filter.fulfillmentStatuses().isEmpty());
         assertNull(filter.fulfillmentProviderId());
         assertNull(filter.lineItemsSent());
         assertNull(filter.boughtFrom());
+        assertNull(filter.boughtTo());
+        assertNull(filter.updatedFrom());
+        assertNull(filter.updatedTo());
         assertNull(filter.buyerLogin());
+        assertNull(filter.marketplaceId());
+        assertNull(filter.paymentId());
+        assertNull(filter.surchargeId());
+        assertNull(filter.deliveryMethodId());
     }
 
     @Test
@@ -174,17 +181,19 @@ class OrderBuildersTest {
     }
 
     @Test
-    void shipmentRequest_whenCarrierIdMissing_throwsIllegalState() {
-        // then
-        assertThrows(IllegalStateException.class,
+    void shipmentRequest_whenCarrierIdMissing_throwsIllegalStateNamingCarrierId() {
+        // then — the message identifies which required field is missing
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> ShipmentRequest.builder().waybill(WAYBILL).build());
+        assertTrue(failure.getMessage().contains("carrierId"), failure.getMessage());
     }
 
     @Test
-    void shipmentRequest_whenWaybillBlank_throwsIllegalState() {
+    void shipmentRequest_whenWaybillBlank_throwsIllegalStateNamingWaybill() {
         // then
-        assertThrows(IllegalStateException.class,
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> ShipmentRequest.builder().carrierId(CARRIER_ID).waybill(" ").build());
+        assertTrue(failure.getMessage().contains("waybill"), failure.getMessage());
     }
 
     @Test
@@ -218,22 +227,35 @@ class OrderBuildersTest {
     }
 
     @Test
-    void serialNumbersRequest_whenNoLineItems_throwsIllegalState() {
+    void serialNumbersRequest_whenNoLineItems_throwsIllegalStateNamingLineItem() {
         // then
-        assertThrows(IllegalStateException.class, () -> SerialNumbersRequest.builder().build());
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> SerialNumbersRequest.builder().build());
+        assertTrue(failure.getMessage().contains("line item"), failure.getMessage());
     }
 
     @Test
-    void serialNumbersRequest_whenSerialNumbersEmpty_throwsIllegalState() {
+    void serialNumbersRequest_whenSerialNumbersEmpty_throwsIllegalStateNamingSerialNumber() {
         // then
-        assertThrows(IllegalStateException.class,
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> SerialNumbersRequest.builder().lineItem(LINE_ITEM_ID, List.of()).build());
+        assertTrue(failure.getMessage().contains("serial number"), failure.getMessage());
     }
 
     @Test
-    void serialNumbersRequest_whenLineItemIdBlank_throwsIllegalState() {
+    void serialNumbersRequest_whenLineItemIdBlank_throwsIllegalStateNamingLineItemId() {
         // then
-        assertThrows(IllegalStateException.class,
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
                 () -> SerialNumbersRequest.builder().lineItem(" ", SERIAL_ONE).build());
+        assertTrue(failure.getMessage().contains("lineItemId"), failure.getMessage());
+    }
+
+    @Test
+    void serialNumbersRequest_whenLineItemIdNotUuid_throwsIllegalStateNamingUuid() {
+        // then — a non-UUID line-item id fails fast in the builder, not deep in
+        // request serialization
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> SerialNumbersRequest.builder().lineItem("not-a-uuid", SERIAL_ONE).build());
+        assertTrue(failure.getMessage().contains("UUID"), failure.getMessage());
     }
 }

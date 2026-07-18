@@ -86,6 +86,9 @@ public final class OrdersImpl implements Orders {
     private static final String QUERY_WAYBILL = "waybill";
     private static final String QUERY_CARRIERS = "carriers";
 
+    private static final String ERR_BLANK_REVISION =
+            "revision must not be blank; use the two-argument overload for last-write-wins";
+
     private final HttpSupport http;
 
     public OrdersImpl(HttpRuntime runtime) {
@@ -180,7 +183,7 @@ public final class OrdersImpl implements Orders {
 
     @Override
     public void markStatus(String orderId, SellerStatus status, String revision) {
-        putFulfillment(orderId, status, revision);
+        putFulfillment(orderId, status, requireRevision(revision));
     }
 
     private void putFulfillment(String orderId, SellerStatus status, @Nullable String revision) {
@@ -198,7 +201,17 @@ public final class OrdersImpl implements Orders {
 
     @Override
     public void setSerialNumbers(String orderId, SerialNumbersRequest request, String revision) {
-        postSerialNumbers(orderId, request, revision);
+        postSerialNumbers(orderId, request, requireRevision(revision));
+    }
+
+    // The three-argument overloads promise optimistic concurrency, so a blank
+    // revision must fail loudly rather than be silently dropped by Query.add
+    // (which would degrade the guarded write to last-write-wins).
+    private static String requireRevision(String revision) {
+        if (revision == null || revision.isBlank()) {
+            throw new IllegalArgumentException(ERR_BLANK_REVISION);
+        }
+        return revision;
     }
 
     private void postSerialNumbers(String orderId, SerialNumbersRequest request, @Nullable String revision) {
@@ -255,10 +268,7 @@ public final class OrdersImpl implements Orders {
 
     @Override
     public List<PickupPoint> allegroPickupPoints(PointsFilter filter) {
-        Query query = Query.create();
-        for (String code : filter.carrierCodes()) {
-            query.add(QUERY_CARRIERS, code);
-        }
+        Query query = Query.create().addAll(QUERY_CARRIERS, filter.carrierCodes());
         AllegroPickupDropOffPointsResponseRaw response = http.request(OP_PICKUP_POINTS)
                 .get(ApiPaths.ALLEGRO_PICKUP_POINTS)
                 .query(query)

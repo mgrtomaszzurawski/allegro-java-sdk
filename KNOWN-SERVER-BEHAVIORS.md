@@ -94,6 +94,21 @@ device-consent, and the web-only buyer actions). Implications, baked into the co
   samej sieci operuje robot") — hence the `allegro-e2e` serial + rate-limited + login-once
   discipline (`TESTING.md` §3).
 
+## Orders (bucket B)
+
+### `/order/events` pages by an exclusive `from` cursor, not offset/limit (spec-derived, pending live verification)
+
+The order event log (`GET /order/events`) is paginated by a **cursor**, not offset/limit: the
+`from` query parameter takes the last event id seen and the response returns the events *after*
+it (exclusive), newest walk terminating on an empty page. The SDK's `streamEvents(...)` therefore
+uses `PagedSpliterator.cursorStream`, advancing `from` to the last event id of each page and
+stopping on the first empty page. Correct termination **depends on `from` being exclusive** — if
+the server were inclusive, a non-empty page repeating the last event would not terminate (the
+empty-page guard does not catch this). The `from`/`type`/`limit` params are confirmed against the
+spec; the exclusivity and the terminal empty-page behaviour are **to be confirmed on the sandbox**
+once a seeded order produces events (the RAG digest generically labels this endpoint
+"offset/limit", which is inaccurate for `/order/events`).
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer

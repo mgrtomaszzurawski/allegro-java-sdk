@@ -20,7 +20,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,7 +40,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ShipmentReq
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Carrier;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CarrierTracking;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Order;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventStats;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PickupPoint;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
@@ -52,6 +53,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundExceptio
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -116,7 +118,19 @@ class OrdersClientTest {
     private static final String PARAM_CARRIERS = "carriers";
     private static final String PARAM_REVISION = "checkoutForm.revision";
     private static final String PARAM_BUYER_LOGIN = "buyer.login";
+    private static final String PARAM_STATUS = "status";
+    private static final String STATUS_READY_FOR_PROCESSING = "READY_FOR_PROCESSING";
     private static final String JSONPATH_STATUS = "$.status";
+    private static final String JSONPATH_LINE_ITEM_ID = "$.lineItems[0].id";
+    private static final String JSONPATH_SERIAL_VALUE = "$.lineItems[0].serialNumbers.entries[0].value";
+    private static final String JSONPATH_CARRIER_ID = "$.carrierId";
+    private static final String JSONPATH_WAYBILL = "$.waybill";
+    private static final String JSONPATH_URL = "$.url";
+    private static final String EVENT_TIME = "2026-01-01T00:00:00Z";
+    private static final String EVENT_ORDER_ID_PREFIX = "o-";
+    private static final String EVENT_ORDER_REVISION = "r1";
+    private static final String POINT_CITY = "Warsaw";
+    private static final String BLANK_REVISION = "  ";
 
     // Full first page + short second page prove lazy offset pagination.
     private static final int FULL_PAGE = 100;
@@ -190,7 +204,7 @@ class OrdersClientTest {
     // spec-derived: minimal but valid checkout-form shape the mapper needs.
     private static String orderJson(int index) {
         String orderUuid = String.format("00000000-0000-0000-0000-%012d", index);
-        return "{\"id\":\"" + orderUuid + "\",\"status\":\"READY_FOR_PROCESSING\","
+        return "{\"id\":\"" + orderUuid + "\",\"status\":\"" + STATUS_READY_FOR_PROCESSING + "\","
                 + "\"buyer\":{\"id\":\"1\",\"login\":\"b\",\"email\":\"b@example.com\"},"
                 + "\"lineItems\":[],"
                 + "\"summary\":{\"totalToPay\":{\"amount\":\"10.00\",\"currency\":\"PLN\"}}}";
@@ -209,9 +223,10 @@ class OrdersClientTest {
     }
 
     private static String eventJson(String eventId) {
-        return "{\"id\":\"" + eventId + "\",\"type\":\"BOUGHT\","
-                + "\"occurredAt\":\"2026-01-01T00:00:00Z\","
-                + "\"order\":{\"checkoutForm\":{\"id\":\"o-" + eventId + "\",\"revision\":\"r1\"}}}";
+        return "{\"id\":\"" + eventId + "\",\"type\":\"" + OrderEventType.BOUGHT.name() + "\","
+                + "\"occurredAt\":\"" + EVENT_TIME + "\","
+                + "\"order\":{\"checkoutForm\":{\"id\":\"" + EVENT_ORDER_ID_PREFIX + eventId
+                + "\",\"revision\":\"" + EVENT_ORDER_REVISION + "\"}}}";
     }
 
     private static String eventsBody(String... eventIds) {
@@ -493,13 +508,13 @@ class OrdersClientTest {
         stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH))
                 .withQueryParam(PARAM_OFFSET, equalTo("0"))
                 .withQueryParam(PARAM_BUYER_LOGIN, equalTo(EXPECTED_BUYER_LOGIN))
-                .withQueryParam("status", equalTo("READY_FOR_PROCESSING"))
+                .withQueryParam(PARAM_STATUS, equalTo(STATUS_READY_FOR_PROCESSING))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(ordersPage(FULL_PAGE, 0))));
         stubFor(get(urlPathEqualTo(CHECKOUT_FORMS_PATH))
                 .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
                 .withQueryParam(PARAM_BUYER_LOGIN, equalTo(EXPECTED_BUYER_LOGIN))
-                .withQueryParam("status", equalTo("READY_FOR_PROCESSING"))
+                .withQueryParam(PARAM_STATUS, equalTo(STATUS_READY_FOR_PROCESSING))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(ordersPage(SECOND_PAGE, FULL_PAGE))));
         OrderFilter filter = OrderFilter.builder()
@@ -531,10 +546,18 @@ class OrdersClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
 
             // when — consume only the first event
-            var firstOnly = allegro.orders().streamEvents(OrderEventFilter.all()).limit(1).toList();
+            List<OrderEvent> firstOnly =
+                    allegro.orders().streamEvents(OrderEventFilter.all()).limit(1).toList();
 
-            // then — the next page (from=last id) is never fetched
+            // then — the event's fields are mapped from the Raw graph
             assertEquals(1, firstOnly.size());
+            OrderEvent event = firstOnly.get(0);
+            assertEquals(EVENT_ID_ONE, event.id());
+            assertEquals(OrderEventType.BOUGHT, event.type());
+            assertEquals(OffsetDateTime.parse(EVENT_TIME), event.occurredAt());
+            assertEquals(EVENT_ORDER_ID_PREFIX + EVENT_ID_ONE, event.orderId());
+            assertEquals(EVENT_ORDER_REVISION, event.orderRevision());
+            // and the next page (from=last id) is never fetched
             verify(1, getRequestedFor(urlPathEqualTo(EVENTS_PATH)).withQueryParam(PARAM_FROM, absent()));
             verify(0, getRequestedFor(urlPathEqualTo(EVENTS_PATH))
                     .withQueryParam(PARAM_FROM, equalTo(EVENT_ID_TWO)));
@@ -576,7 +599,7 @@ class OrdersClientTest {
         stubFor(get(urlPathEqualTo(EVENT_STATS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody("{\"latestEvent\":{\"id\":\"" + LATEST_EVENT_ID
-                                + "\",\"occurredAt\":\"2026-01-01T00:00:00Z\"}}")));
+                                + "\",\"occurredAt\":\"" + EVENT_TIME + "\"}}")));
 
         try (AllegroClient allegro = client(wmInfo)) {
 
@@ -585,7 +608,7 @@ class OrdersClientTest {
 
             // then
             assertEquals(LATEST_EVENT_ID, stats.latestEventId());
-            assertNotNull(stats.latestEventOccurredAt());
+            assertEquals(OffsetDateTime.parse(EVENT_TIME), stats.latestEventOccurredAt());
         }
     }
 
@@ -604,7 +627,21 @@ class OrdersClientTest {
             // then — status in the body, no optimistic-concurrency query param
             verify(1, putRequestedFor(urlPathEqualTo(FULFILLMENT_PATH))
                     .withQueryParam(PARAM_REVISION, absent())
-                    .withRequestBody(matchingJsonPath(JSONPATH_STATUS, equalTo("SENT"))));
+                    .withRequestBody(matchingJsonPath(JSONPATH_STATUS,
+                            equalTo(SellerStatus.SENT.name()))));
+        }
+    }
+
+    @Test
+    void markStatus_whenRevisionBlank_throwsIllegalArgumentBeforeWrite(WireMockRuntimeInfo wmInfo) {
+        // given — no fulfillment stub: the guard must reject before any HTTP call
+        try (AllegroClient allegro = client(wmInfo)) {
+            var orders = allegro.orders();
+
+            // then — a blank revision fails fast, never silently degrading to last-write-wins
+            assertThrows(IllegalArgumentException.class,
+                    () -> orders.markStatus(ORDER_ID, SellerStatus.SENT, BLANK_REVISION));
+            verify(0, putRequestedFor(urlPathEqualTo(FULFILLMENT_PATH)));
         }
     }
 
@@ -623,7 +660,8 @@ class OrdersClientTest {
             // then — the revision travels as checkoutForm.revision
             verify(1, putRequestedFor(urlPathEqualTo(FULFILLMENT_PATH))
                     .withQueryParam(PARAM_REVISION, equalTo(EXPECTED_REVISION))
-                    .withRequestBody(matchingJsonPath(JSONPATH_STATUS, equalTo("PROCESSING"))));
+                    .withRequestBody(matchingJsonPath(JSONPATH_STATUS,
+                            equalTo(SellerStatus.PROCESSING.name()))));
         }
     }
 
@@ -644,9 +682,25 @@ class OrdersClientTest {
 
             // then — the nested request body reaches the wire
             verify(1, postRequestedFor(urlPathEqualTo(SERIAL_NUMBERS_PATH))
-                    .withRequestBody(matchingJsonPath("$.lineItems[0].id", equalTo(LINE_ITEM_UUID)))
-                    .withRequestBody(matchingJsonPath(
-                            "$.lineItems[0].serialNumbers.entries[0].value", equalTo(SERIAL_ONE))));
+                    .withRequestBody(matchingJsonPath(JSONPATH_LINE_ITEM_ID, equalTo(LINE_ITEM_UUID)))
+                    .withRequestBody(matchingJsonPath(JSONPATH_SERIAL_VALUE, equalTo(SERIAL_ONE))));
+        }
+    }
+
+    @Test
+    void setSerialNumbers_whenRevisionBlank_throwsIllegalArgumentBeforeWrite(WireMockRuntimeInfo wmInfo) {
+        // given
+        SerialNumbersRequest request = SerialNumbersRequest.builder()
+                .lineItem(LINE_ITEM_UUID, SERIAL_ONE)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var orders = allegro.orders();
+
+            // then — a blank revision is rejected before any HTTP call
+            assertThrows(IllegalArgumentException.class,
+                    () -> orders.setSerialNumbers(ORDER_ID, request, BLANK_REVISION));
+            verify(0, postRequestedFor(urlPathEqualTo(SERIAL_NUMBERS_PATH)));
         }
     }
 
@@ -664,7 +718,7 @@ class OrdersClientTest {
 
             // then
             verify(1, postRequestedFor(urlPathEqualTo(BILLING_LINKS_PATH))
-                    .withRequestBody(matchingJsonPath("$.url", equalTo(DOC_URL))));
+                    .withRequestBody(matchingJsonPath(JSONPATH_URL, equalTo(DOC_URL))));
         }
     }
 
@@ -715,8 +769,8 @@ class OrdersClientTest {
             assertEquals(CREATED_WAYBILL_ID, created.id());
             assertEquals(CREATED_WAYBILL, created.waybill());
             verify(1, postRequestedFor(urlPathEqualTo(SHIPMENTS_PATH))
-                    .withRequestBody(matchingJsonPath("$.carrierId", equalTo(CARRIER_ID)))
-                    .withRequestBody(matchingJsonPath("$.waybill", equalTo(CREATED_WAYBILL))));
+                    .withRequestBody(matchingJsonPath(JSONPATH_CARRIER_ID, equalTo(CARRIER_ID)))
+                    .withRequestBody(matchingJsonPath(JSONPATH_WAYBILL, equalTo(CREATED_WAYBILL))));
         }
     }
 
@@ -757,7 +811,7 @@ class OrdersClientTest {
 
             // then
             assertEquals(2, carriers.size());
-            assertEquals("DPD", carriers.get(0).id());
+            assertEquals(CARRIER_ID, carriers.get(0).id());
         }
     }
 
@@ -798,7 +852,7 @@ class OrdersClientTest {
                         .withBody("{\"points\":[{\"id\":\"" + POINT_ID + "\",\"name\":\"Point 1\","
                                 + "\"type\":\"PUDO\",\"description\":\"desc\","
                                 + "\"address\":{\"street\":\"Main 1\",\"postCode\":\"00-001\","
-                                + "\"city\":\"Warsaw\",\"countryCode\":\"PL\"}}]}")));
+                                + "\"city\":\"" + POINT_CITY + "\",\"countryCode\":\"PL\"}}]}")));
 
         try (AllegroClient allegro = client(wmInfo)) {
 
@@ -809,7 +863,7 @@ class OrdersClientTest {
             // then
             assertEquals(1, points.size());
             assertEquals(POINT_ID, points.get(0).id());
-            assertEquals("Warsaw", points.get(0).address().city());
+            assertEquals(POINT_CITY, points.get(0).address().city());
             verify(1, getRequestedFor(urlPathEqualTo(PICKUP_POINTS_PATH))
                     .withQueryParam(PARAM_CARRIERS, equalTo(POINT_CARRIER)));
         }
