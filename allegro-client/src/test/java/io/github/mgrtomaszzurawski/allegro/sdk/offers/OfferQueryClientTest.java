@@ -14,6 +14,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,21 +67,29 @@ class OfferQueryClientTest {
     private static final String FILTER_NAME = "klawiatura";
     private static final String STATUS_ACTIVE_WIRE = "ACTIVE";
     private static final String FORMAT_BUY_NOW_WIRE = "BUY_NOW";
+    private static final String OFFER_NAME = "Klawiatura";
+    private static final String CATEGORY_ID = "257";
+    private static final int AVAILABLE = 7;
+    private static final int SOLD = 3;
     private static final String AMOUNT = "199.99";
     private static final String CURRENCY_PLN = "PLN";
     private static final String IMAGE_URL = "https://img.example/x.jpg";
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
-            + "\"name\":\"Klawiatura\",\"category\":{\"id\":\"257\"},"
+            + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
             + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
-            + "\"stock\":{\"available\":7,\"sold\":3},\"publication\":{\"status\":\"ACTIVE\"},"
+            + "\"stock\":{\"available\":%d,\"sold\":%d},\"publication\":{\"status\":\"ACTIVE\"},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
-            .formatted(OFFER_ID, AMOUNT, CURRENCY_PLN, IMAGE_URL);
+            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD, IMAGE_URL);
 
+    private static final String CONDITION_MET_CODE = "DELIVERY";
+    private static final String CONDITION_MET_NAME = "Wysyłka";
+    private static final String CONDITION_MET_DESCRIPTION = "szybko";
     private static final String SMART_BODY = "{\"classification\":{\"fulfilled\":true,"
             + "\"lastChanged\":\"2026-01-01T00:00:00Z\"},\"scheduledForReclassification\":false,"
-            + "\"conditions\":[{\"code\":\"DELIVERY\",\"name\":\"Wysyłka\",\"description\":\"szybko\","
-            + "\"fulfilled\":true},{\"code\":\"RETURNS\",\"name\":\"Zwroty\",\"fulfilled\":false}]}";
+            + "\"conditions\":[{\"code\":\"" + CONDITION_MET_CODE + "\",\"name\":\"" + CONDITION_MET_NAME
+            + "\",\"description\":\"" + CONDITION_MET_DESCRIPTION + "\",\"fulfilled\":true},"
+            + "{\"code\":\"RETURNS\",\"name\":\"Zwroty\",\"fulfilled\":false}]}";
     private static final String NOT_FOUND_BODY =
             "{\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"offer not found\"}]}";
     private static final String BAD_REQUEST_BODY =
@@ -151,10 +160,10 @@ class OfferQueryClientTest {
                 .name(FILTER_NAME).status(OfferStatus.ACTIVE).format(OfferFormat.BUY_NOW).build();
 
         // when — consume the whole stream
-        List<OfferSummary> all = offers(wmInfo).streamOffers(filter).toList();
+        List<OfferSummary> allSummaries = offers(wmInfo).streamOffers(filter).toList();
 
         // then — every item across both pages, and the filter params survive each page
-        assertEquals(TOTAL, all.size());
+        assertEquals(TOTAL, allSummaries.size());
         verify(1, getRequestedFor(urlPathEqualTo(OFFERS_PATH))
                 .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
                 .withQueryParam(QUERY_LIMIT, equalTo(PAGE_SIZE))
@@ -192,14 +201,15 @@ class OfferQueryClientTest {
         // when
         OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
 
-        // then
+        // then — every OfferSummary field, including name
         assertEquals(OFFER_ID, summary.id());
-        assertEquals("257", summary.categoryId());
+        assertEquals(OFFER_NAME, summary.name());
+        assertEquals(CATEGORY_ID, summary.categoryId());
         assertEquals(OfferFormat.BUY_NOW, summary.format());
         assertEquals(OfferStatus.ACTIVE, summary.status());
         assertEquals(Money.of(AMOUNT, CURRENCY_PLN), summary.buyNowPrice());
-        assertEquals(7, summary.availableStock());
-        assertEquals(3, summary.soldCount());
+        assertEquals(AVAILABLE, summary.availableStock());
+        assertEquals(SOLD, summary.soldCount());
         assertEquals(IMAGE_URL, summary.primaryImageUrl());
     }
 
@@ -242,9 +252,15 @@ class OfferQueryClientTest {
         assertTrue(report.fulfilled());
         assertFalse(report.scheduledForReclassification());
         assertEquals(2, report.conditions().size());
-        assertEquals("DELIVERY", report.conditions().get(0).code());
-        assertTrue(report.conditions().get(0).fulfilled());
-        assertFalse(report.conditions().get(1).fulfilled());
+        SmartClassification.Condition met = report.conditions().get(0);
+        assertEquals(CONDITION_MET_CODE, met.code());
+        assertEquals(CONDITION_MET_NAME, met.name());
+        assertEquals(CONDITION_MET_DESCRIPTION, met.description());
+        assertTrue(met.fulfilled());
+        SmartClassification.Condition unmet = report.conditions().get(1);
+        assertFalse(unmet.fulfilled());
+        // the second condition carries no description — the nullable branch maps to null
+        assertNull(unmet.description());
     }
 
     @Test

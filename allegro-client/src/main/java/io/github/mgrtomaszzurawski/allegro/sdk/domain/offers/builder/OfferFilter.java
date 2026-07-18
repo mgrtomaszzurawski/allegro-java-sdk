@@ -29,7 +29,6 @@ public final class OfferFilter {
     private final @Nullable OfferFormat format;
     private final @Nullable String priceFrom;
     private final @Nullable String priceTo;
-    private final @Nullable String sort;
 
     private OfferFilter(Builder builder) {
         this.name = builder.name;
@@ -37,7 +36,6 @@ public final class OfferFilter {
         this.format = builder.format;
         this.priceFrom = builder.priceFrom;
         this.priceTo = builder.priceTo;
-        this.sort = builder.sort;
     }
 
     /** Substring the offer name must contain, or {@code null} for no name filter. */
@@ -65,11 +63,6 @@ public final class OfferFilter {
         return priceTo;
     }
 
-    /** Sort expression (e.g. {@code -startTime}), or {@code null} for the default order. */
-    public @Nullable String sort() {
-        return sort;
-    }
-
     /** A filter that matches every offer. */
     public static OfferFilter all() {
         return builder().build();
@@ -87,8 +80,7 @@ public final class OfferFilter {
                 .status(status)
                 .format(format)
                 .priceFrom(priceFrom)
-                .priceTo(priceTo)
-                .sort(sort);
+                .priceTo(priceTo);
     }
 
     /** Fluent builder for {@link OfferFilter}. */
@@ -99,7 +91,6 @@ public final class OfferFilter {
         private @Nullable OfferFormat format;
         private @Nullable String priceFrom;
         private @Nullable String priceTo;
-        private @Nullable String sort;
 
         /** Keep only offers whose name contains this text. */
         public Builder name(@Nullable String name) {
@@ -119,21 +110,15 @@ public final class OfferFilter {
             return this;
         }
 
-        /** Keep only offers priced at or above this amount. */
+        /** Keep only offers priced at or above this amount (exact decimal, e.g. {@code "10.00"}). */
         public Builder priceFrom(@Nullable String priceFrom) {
             this.priceFrom = priceFrom;
             return this;
         }
 
-        /** Keep only offers priced at or below this amount. */
+        /** Keep only offers priced at or below this amount (exact decimal, e.g. {@code "500.00"}). */
         public Builder priceTo(@Nullable String priceTo) {
             this.priceTo = priceTo;
-            return this;
-        }
-
-        /** Order the results by this sort expression. */
-        public Builder sort(@Nullable String sort) {
-            this.sort = sort;
             return this;
         }
 

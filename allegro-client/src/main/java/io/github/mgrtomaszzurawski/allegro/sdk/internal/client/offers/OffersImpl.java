@@ -49,7 +49,6 @@ public final class OffersImpl implements Offers {
     private static final String QUERY_FORMAT = "sellingMode.format";
     private static final String QUERY_PRICE_FROM = "sellingMode.price.amount.gte";
     private static final String QUERY_PRICE_TO = "sellingMode.price.amount.lte";
-    private static final String QUERY_SORT = "sort";
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
 
@@ -96,7 +95,6 @@ public final class OffersImpl implements Offers {
                 .add(QUERY_FORMAT, wireValueOf(filter.format()))
                 .add(QUERY_PRICE_FROM, filter.priceFrom())
                 .add(QUERY_PRICE_TO, filter.priceTo())
-                .add(QUERY_SORT, filter.sort())
                 .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
                 .add(QUERY_LIMIT, PAGE_SIZE);
         OffersSearchResultDtoRaw response = http.request(OP_STREAM)

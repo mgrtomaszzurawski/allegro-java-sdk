@@ -17,7 +17,6 @@ class OfferFilterTest {
     private static final String NAME = "keyboard";
     private static final String PRICE_FROM = "10.00";
     private static final String PRICE_TO = "500.00";
-    private static final String SORT = "-startTime";
 
     @Test
     void all_whenNoFilters_leavesEveryFieldUnset() {
@@ -30,7 +29,6 @@ class OfferFilterTest {
         assertNull(filter.format());
         assertNull(filter.priceFrom());
         assertNull(filter.priceTo());
-        assertNull(filter.sort());
     }
 
     @Test
@@ -42,7 +40,6 @@ class OfferFilterTest {
                 .format(OfferFormat.BUY_NOW)
                 .priceFrom(PRICE_FROM)
                 .priceTo(PRICE_TO)
-                .sort(SORT)
                 .build();
 
         // then
@@ -51,7 +48,6 @@ class OfferFilterTest {
         assertEquals(OfferFormat.BUY_NOW, filter.format());
         assertEquals(PRICE_FROM, filter.priceFrom());
         assertEquals(PRICE_TO, filter.priceTo());
-        assertEquals(SORT, filter.sort());
     }
 
     @Test
@@ -63,7 +59,6 @@ class OfferFilterTest {
                 .format(OfferFormat.AUCTION)
                 .priceFrom(PRICE_FROM)
                 .priceTo(PRICE_TO)
-                .sort(SORT)
                 .build();
 
         // when
@@ -75,6 +70,5 @@ class OfferFilterTest {
         assertEquals(original.format(), copy.format());
         assertEquals(original.priceFrom(), copy.priceFrom());
         assertEquals(original.priceTo(), copy.priceTo());
-        assertEquals(original.sort(), copy.sort());
     }
 }
