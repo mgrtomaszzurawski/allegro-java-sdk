@@ -74,20 +74,19 @@ delivery methods; the first mapped cleanly (`paymentPolicy=IN_ADVANCE`,
 record's field shape against the wire. `dispatchCountry` arrived `null` on that
 method, confirming it is genuinely nullable.
 
-### `deliveryMethods().paymentPolicy` is a closed typed enum (verified 2026-07-18, sandbox)
+### `deliveryMethods().paymentPolicy` — read-only, fail-soft (verified 2026-07-18, sandbox)
 
-Each method's `paymentPolicy` is one of a fixed set (`IN_ADVANCE`,
-`CASH_ON_DELIVERY`). In the generated Layer-1 model this field is a typed
-enumeration whose Jackson creator **rejects** any other value, so — unlike the
-free-form string enums on a point of service, which fall back to an `UNKNOWN`
-sentinel — a `paymentPolicy` value Allegro might add in future would fail
-deserialization of the whole response (surfaced as `AllegroServerException`)
-rather than mapping to a sentinel. The SDK's `PaymentPolicy` is modelled closed to
-match, and the raw→domain map is a by-name lookup guarded by a name-parity test
-(`ShippingEnumsTest`) that iterates both enums. If Allegro extends the set, a
-Layer-1 regeneration adds the constant and that test then fails in the build —
-forcing the domain enum to gain the value in the same change, rather than leaking
-a runtime error.
+Each method's `paymentPolicy` is one of a known set (`IN_ADVANCE`,
+`CASH_ON_DELIVERY`). The generated Layer-1 model is a typed enumeration; since the
+core `enumUnknownDefaultCase` change (C3) an unrecognised wire value deserialises
+to the generator's `UNKNOWN_DEFAULT_OPEN_API` sentinel instead of throwing. The
+SDK's domain `PaymentPolicy` mirrors the bucket's other read enums: `fromWire`
+maps that sentinel (and any value this release does not model) to
+`PaymentPolicy.UNKNOWN`, so a payment policy Allegro adds in future degrades one
+field rather than failing the whole `deliveryMethods()` read. `null` stays `null`
+(the server omitted the field). A `ShippingEnumsTest` parity test still iterates
+both enums and fails the build if a spec regeneration renames a real value on one
+side only (which would silently degrade a known policy to `UNKNOWN`).
 
 ### Creating a point of service requires `seller.id` and `coordinates` (verified 2026-07-18, sandbox)
 

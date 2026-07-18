@@ -20,9 +20,9 @@ what a shipping-rate row references to price it. The call is read-only and works
 with an application (client-credentials) token; no user-context scope is needed.
 The response is not paginated, so it is a plain `List`.
 
-`paymentPolicy` (`IN_ADVANCE` / `CASH_ON_DELIVERY`) is a closed server enum: a
-value outside the set would fail deserialization rather than mapping to a
-sentinel — see `KNOWN-SERVER-BEHAVIORS.md`.
+`paymentPolicy` (`IN_ADVANCE` / `CASH_ON_DELIVERY`) is read-only and fail-soft:
+a value this SDK release does not model maps to `PaymentPolicy.UNKNOWN` rather
+than breaking the read, and `null` means the server omitted it.
 
 Points of service are a seller's personal-collection locations (click &amp;
 collect). They require a user-context token with `sale:settings:read` (to read)
