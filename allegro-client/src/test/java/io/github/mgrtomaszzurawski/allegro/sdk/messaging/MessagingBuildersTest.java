@@ -40,7 +40,7 @@ class MessagingBuildersTest {
     private static final String ERR_FILENAME_REQUIRED = "filename is required";
     private static final String ERR_SIZE_REQUIRED = "size is required";
     private static final String ERR_SIZE_NEGATIVE = "size must not be negative";
-    private static final String TEXT_TOO_LONG_MARKER = "at most";
+    private static final String AT_MOST_MARKER = "at most";
 
     private static final OffsetDateTime AFTER =
             OffsetDateTime.of(2026, 7, 10, 8, 30, 15, 0, ZoneOffset.UTC);
@@ -130,7 +130,20 @@ class MessagingBuildersTest {
 
         // then
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
-        assertTrue(failure.getMessage().contains(TEXT_TOO_LONG_MARKER));
+        assertTrue(failure.getMessage().contains(AT_MOST_MARKER));
+    }
+
+    @Test
+    void newMessageRequest_whenTextAtMax_builds() {
+        // given — exactly the limit is accepted (two-sided boundary)
+        String atMax = "x".repeat(NewMessageRequest.TEXT_MAX_LENGTH);
+
+        // when
+        NewMessageRequest request = NewMessageRequest.builder()
+                .recipientLogin(RECIPIENT).orderId(ORDER_ID).text(atMax).build();
+
+        // then
+        assertEquals(NewMessageRequest.TEXT_MAX_LENGTH, request.text().length());
     }
 
     @Test
@@ -192,7 +205,7 @@ class MessagingBuildersTest {
 
         // then
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
-        assertTrue(failure.getMessage().contains(TEXT_TOO_LONG_MARKER));
+        assertTrue(failure.getMessage().contains(AT_MOST_MARKER));
     }
 
     @Test
@@ -260,13 +273,24 @@ class MessagingBuildersTest {
     }
 
     @Test
+    void attachmentDeclaration_whenSizeAtMax_builds() {
+        // given — exactly the limit is accepted (two-sided boundary)
+        AttachmentDeclaration declaration = AttachmentDeclaration.builder()
+                .filename(FILE_NAME).size(AttachmentDeclaration.MAX_SIZE_BYTES).build();
+
+        // then
+        assertEquals(AttachmentDeclaration.MAX_SIZE_BYTES, declaration.size());
+    }
+
+    @Test
     void attachmentDeclaration_whenSizeExceedsMax_throwsIllegalState() {
         // given
         AttachmentDeclaration.Builder builder = AttachmentDeclaration.builder()
                 .filename(FILE_NAME).size(AttachmentDeclaration.MAX_SIZE_BYTES + 1L);
 
         // then
-        assertThrows(IllegalStateException.class, builder::build);
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(AT_MOST_MARKER));
     }
 
     // ---- MessageFilter ----

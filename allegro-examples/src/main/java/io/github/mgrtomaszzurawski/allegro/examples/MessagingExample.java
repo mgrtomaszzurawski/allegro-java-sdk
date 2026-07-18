@@ -22,6 +22,7 @@ import java.util.List;
 public final class MessagingExample {
 
     private static final String MIME_PDF = "application/pdf";
+    private static final int RECENT_THREAD_LIMIT = 20;
 
     private MessagingExample() {
     }
@@ -29,7 +30,7 @@ public final class MessagingExample {
     static List<MessageThread> recentThreads(AllegroCredentials credentials) {
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
             // Streams are lazy — take only what you consume.
-            return client.messaging().streamThreads().limit(20).toList();
+            return client.messaging().streamThreads().limit(RECENT_THREAD_LIMIT).toList();
         }
     }
 

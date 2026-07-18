@@ -117,6 +117,7 @@ class MessagingClientTest {
     private static final String JSON_PATH_READ = "$.read";
     private static final String JSON_PATH_FILENAME = "$.filename";
     private static final String JSON_PATH_SIZE = "$.size";
+    private static final String JSON_PATH_ATTACHMENT_ID = "$.attachments[0].id";
 
     private static final int RETRY_TWICE = 2;
     private static final String RETRY_AFTER_SECONDS = "1";
@@ -293,6 +294,39 @@ class MessagingClientTest {
         }
     }
 
+    @Test
+    void streamMessages_whenTraversedWithFilter_filterSurvivesToPageTwo(WireMockRuntimeInfo wmInfo) {
+        // given — page one full (20) at offset 0, page two short (1) at offset 20; BOTH
+        // stubs require the before/after params, so a page-2 request that dropped the
+        // filter would miss its stub (404) and fail the traversal
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(THREAD_MESSAGES_PATH))
+                .withQueryParam(OFFSET_PARAM, equalTo("0"))
+                .withQueryParam(BEFORE_PARAM, equalTo(FILTER_BEFORE.toString()))
+                .withQueryParam(AFTER_PARAM, equalTo(FILTER_AFTER.toString()))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(fullPageOfMessages(PAGE_SIZE))));
+        stubFor(get(urlPathEqualTo(THREAD_MESSAGES_PATH))
+                .withQueryParam(OFFSET_PARAM, equalTo(String.valueOf(PAGE_SIZE)))
+                .withQueryParam(BEFORE_PARAM, equalTo(FILTER_BEFORE.toString()))
+                .withQueryParam(AFTER_PARAM, equalTo(FILTER_AFTER.toString()))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(fullPageOfMessages(1))));
+        MessageFilter filter = MessageFilter.builder().after(FILTER_AFTER).before(FILTER_BEFORE).build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — traverse fully, forcing the page-2 fetch
+            long total = allegro.messaging().streamMessages(THREAD_ID, filter).count();
+
+            // then — page two was fetched WITH the same filter still applied
+            assertEquals(PAGE_SIZE + 1L, total);
+            verify(1, getRequestedFor(urlPathEqualTo(THREAD_MESSAGES_PATH))
+                    .withQueryParam(OFFSET_PARAM, equalTo(String.valueOf(PAGE_SIZE)))
+                    .withQueryParam(BEFORE_PARAM, equalTo(FILTER_BEFORE.toString()))
+                    .withQueryParam(AFTER_PARAM, equalTo(FILTER_AFTER.toString())));
+        }
+    }
+
     // ---- reads ----
 
     @Test
@@ -389,6 +423,26 @@ class MessagingClientTest {
     }
 
     @Test
+    void send_whenAttachmentAttached_includesAttachmentIdInBody(WireMockRuntimeInfo wmInfo) {
+        // given — the stub only matches when the declared attachment id is in the body
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(MESSAGES_PATH))
+                .withRequestBody(matchingJsonPath(JSON_PATH_ATTACHMENT_ID, equalTo(ATTACHMENT_ID)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(MESSAGE_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.messaging().send(NewMessageRequest.builder()
+                    .recipientLogin(RECIPIENT_LOGIN).orderId(ORDER_ID).text(MESSAGE_TEXT)
+                    .attachment(ATTACHMENT_ID).build());
+
+            // then — the declared attachment id is serialized into the request body
+            verify(1, postRequestedFor(urlEqualTo(MESSAGES_PATH))
+                    .withRequestBody(matchingJsonPath(JSON_PATH_ATTACHMENT_ID, equalTo(ATTACHMENT_ID))));
+        }
+    }
+
+    @Test
     void reply_whenValid_postsTextToThreadMessagesAndMapsMessage(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
@@ -438,13 +492,14 @@ class MessagingClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             // when
-            AttachmentRef ref = allegro.messaging().declareAttachment(AttachmentDeclaration.builder()
-                    .filename(FILE_NAME)
-                    .size(ATTACHMENT_BYTES.length)
-                    .build());
+            AttachmentRef declaredRef = allegro.messaging().declareAttachment(
+                    AttachmentDeclaration.builder()
+                            .filename(FILE_NAME)
+                            .size(ATTACHMENT_BYTES.length)
+                            .build());
 
             // then
-            assertEquals(ATTACHMENT_ID, ref.id());
+            assertEquals(ATTACHMENT_ID, declaredRef.id());
             verify(1, postRequestedFor(urlEqualTo(ATTACHMENTS_PATH)));
         }
     }
@@ -461,11 +516,11 @@ class MessagingClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             // when
-            AttachmentRef ref = allegro.messaging()
+            AttachmentRef uploadedRef = allegro.messaging()
                     .uploadAttachment(ATTACHMENT_ID, ATTACHMENT_BYTES, MIME_PDF);
 
             // then — the exact bytes and content type reached the wire
-            assertEquals(ATTACHMENT_ID, ref.id());
+            assertEquals(ATTACHMENT_ID, uploadedRef.id());
             verify(1, putRequestedFor(urlEqualTo(ATTACHMENT_PATH))
                     .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(MIME_PDF))
                     .withRequestBody(binaryEqualTo(ATTACHMENT_BYTES)));

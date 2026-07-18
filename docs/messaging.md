@@ -31,7 +31,7 @@ A `MessageThread` is an immutable record: `id()`, `read()`, `lastMessageDateTime
 `null`) and `interlocutor()` (may be `null`). A `Message` carries `id()`, `status()`, `type()`,
 `createdAt()`, `threadId()`, `author()`, `text()`, `subject()` (may be `null`), `relatesTo()`
 (offer/order ids, either may be `null`), `hasAdditionalAttachments()`, `attachments()`, and
-`vin()` (may be `null`). Enum-typed fields (`status`, `type`, attachment `status`) map to
+`vehicleVin()` (may be `null`). Enum-typed fields (`status`, `type`, attachment `status`) map to
 `UNKNOWN` for any value a future server introduces that this release does not model yet.
 
 To restrict a large thread to a time window, pass a `MessageFilter`:
