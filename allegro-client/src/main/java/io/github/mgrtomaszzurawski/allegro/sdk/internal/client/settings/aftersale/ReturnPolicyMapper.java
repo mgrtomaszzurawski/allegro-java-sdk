@@ -58,9 +58,8 @@ final class ReturnPolicyMapper {
         ReturnPolicyAvailabilityRaw raw = new ReturnPolicyAvailabilityRaw()
                 .range(ReturnPolicyAvailabilityRaw.RangeEnum.fromValue(availability.range().name()));
         ReturnRestrictionCause cause = availability.restrictionCause();
-        // Domain names equal the wire values; UNKNOWN is a read-only sentinel and
-        // has no wire representation, so it is never sent.
-        if (cause != null && cause != ReturnRestrictionCause.UNKNOWN) {
+        // Domain names equal the wire values.
+        if (cause != null) {
             raw.restrictionCause(new RestrictionCauseRaw()
                     .name(RestrictionCauseRaw.NameEnum.fromValue(cause.name())));
         }

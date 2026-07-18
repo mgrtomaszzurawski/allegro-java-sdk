@@ -11,9 +11,13 @@ import io.github.mgrtomaszzurawski.allegro.client.model.RestrictionCauseRaw;
  * {@link ReturnRange} is {@code RESTRICTED} or {@code DISABLED}).
  *
  * <p>Allegro documents {@code ALCOHOL}, {@code FULLY_IMPLEMENTED_SERVICE} and
- * {@code BOOKED_SERVICE} as deprecated. Unlike the closed {@link ReturnRange},
- * this set can change, so an unrecognised server value maps to {@link #UNKNOWN}
- * rather than failing the read.
+ * {@code BOOKED_SERVICE} as deprecated. The wire value and the constant name
+ * coincide, so mapping fails loudly via {@link #valueOf(String)} on an
+ * unmapped value — though in practice a future server value fails one layer
+ * earlier, at Layer-1 deserialization, because the generated enum rejects it.
+ * Graceful degradation of an unrecognised enum to a sentinel is a cross-cutting
+ * concern owned by the (frozen) runtime ObjectMapper, tracked as a core
+ * follow-up (shared with bucket E's category-parameter {@code type}).
  *
  * @since 0.3.0
  */
@@ -42,16 +46,10 @@ public enum ReturnRestrictionCause {
     /** Deprecated. */
     FULLY_IMPLEMENTED_SERVICE,
     /** Deprecated. */
-    BOOKED_SERVICE,
-    /** A cause not known to this SDK version. */
-    UNKNOWN;
+    BOOKED_SERVICE;
 
-    /** Map the generated Layer-1 enum, falling back to {@link #UNKNOWN}. */
+    /** Map the generated Layer-1 enum (names coincide with the wire values). */
     public static ReturnRestrictionCause from(RestrictionCauseRaw.NameEnum raw) {
-        try {
-            return valueOf(raw.name());
-        } catch (IllegalArgumentException unmapped) {
-            return UNKNOWN;
-        }
+        return valueOf(raw.name());
     }
 }

@@ -11,6 +11,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
@@ -163,12 +164,12 @@ class AfterSaleConditionsClientTest {
                "collectBySellerOnly":true}}
             """.formatted(RETURN_POLICY_ID, SELLER_ID, NAME, RESTRICTION_NAME, WITHDRAWAL_PERIOD,
             ADDRESS_CITY, SELLER_EMAIL);
-    // A DISABLED policy carries no withdrawalPeriod/address/options — pins those
-    // nullable-mapping branches in ReturnPolicy.from.
+    // A DISABLED policy carries no withdrawalPeriod/returnCost/address/contact/
+    // options — pins those nullable-mapping branches in ReturnPolicy.from.
     private static final String RETURN_POLICY_DISABLED_RESPONSE = """
-            {"id":"%s","isFulfillment":true,"name":"%s",
+            {"id":"%s","isFulfillment":true,"seller":{"id":"%s"},"name":"%s",
              "availability":{"range":"DISABLED","restrictionCause":{"name":"%s"}}}
-            """.formatted(RETURN_POLICY_ID, NAME, RESTRICTION_NAME);
+            """.formatted(RETURN_POLICY_ID, SELLER_ID, NAME, RESTRICTION_NAME);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -727,9 +728,10 @@ class AfterSaleConditionsClientTest {
             if (index > 0) {
                 items.append(',');
             }
-            String suffix = (index < 10 ? "0" : "") + index;
+            String suffix = "%02d".formatted(index);
             items.append("{\"id\":\"00000000-0000-0000-0000-0000000000").append(suffix)
-                    .append("\",\"name\":\"").append(WARRANTY_NAME_PREFIX).append(index)
+                    .append("\",\"seller\":{\"id\":\"").append(SELLER_ID)
+                    .append("\"},\"name\":\"").append(WARRANTY_NAME_PREFIX).append(index)
                     .append("\",\"availability\":{\"range\":\"FULL\"}}");
         }
         return "{\"count\":" + count + ",\"returnPolicies\":[" + items + "]}";
@@ -788,9 +790,11 @@ class AfterSaleConditionsClientTest {
 
     @Test
     void returnPolicy_whenDisabledRange_mapsAbsentFieldsAsNull(WireMockRuntimeInfo wmInfo) {
-        // given — a DISABLED policy omits withdrawalPeriod/address/contact/options
+        // given — a DISABLED policy omits withdrawalPeriod/returnCost/address/contact/options
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(RETURN_POLICY_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(RETURN_POLICY_DISABLED_RESPONSE)));
 
@@ -801,7 +805,7 @@ class AfterSaleConditionsClientTest {
             // then
             assertTrue(policy.fulfillment());
             assertEquals(ReturnRange.DISABLED, policy.availability().range());
-            assertNull(policy.sellerId());
+            assertEquals(SELLER_ID, policy.sellerId());
             assertNull(policy.withdrawalPeriod());
             assertNull(policy.returnCost());
             assertNull(policy.address());
@@ -845,6 +849,8 @@ class AfterSaleConditionsClientTest {
         stubFor(put(urlEqualTo(RETURN_POLICY_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(RETURN_POLICY_RESPONSE)));
 
@@ -857,7 +863,8 @@ class AfterSaleConditionsClientTest {
             assertEquals(RETURN_POLICY_ID, updated.id());
             verify(1, putRequestedFor(urlEqualTo(RETURN_POLICY_PATH))
                     .withRequestBody(matchingJsonPath("$.name", equalTo(NAME)))
-                    .withRequestBody(matchingJsonPath("$.availability.range", equalTo("FULL"))));
+                    .withRequestBody(matchingJsonPath("$.availability.range", equalTo("FULL")))
+                    .withRequestBody(notMatching("(?s).*isFulfillment.*")));
         }
     }
 

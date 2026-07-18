@@ -28,9 +28,17 @@ public record ReturnPolicyAvailability(
     private static final String ERR_RANGE = "range is required";
     private static final String ERR_CAUSE = "restrictionCause is required for a restricted/disabled range";
 
-    /** Canonical constructor — {@code range} is required. */
+    /**
+     * Canonical constructor — {@code range} is required, and a
+     * {@code restrictionCause} is required whenever the range is not
+     * {@code FULL}. Prefer the {@link #full()} / {@link #restricted} /
+     * {@link #disabled} factories over direct construction.
+     */
     public ReturnPolicyAvailability {
         Objects.requireNonNull(range, ERR_RANGE);
+        if (range != ReturnRange.FULL && restrictionCause == null) {
+            throw new IllegalArgumentException(ERR_CAUSE);
+        }
     }
 
     /** Full return availability (no restriction). */
@@ -40,14 +48,12 @@ public record ReturnPolicyAvailability(
 
     /** Restricted availability for the given cause. */
     public static ReturnPolicyAvailability restricted(ReturnRestrictionCause cause) {
-        return new ReturnPolicyAvailability(ReturnRange.RESTRICTED,
-                Objects.requireNonNull(cause, ERR_CAUSE), null);
+        return new ReturnPolicyAvailability(ReturnRange.RESTRICTED, cause, null);
     }
 
     /** Returns disabled for the given cause. */
     public static ReturnPolicyAvailability disabled(ReturnRestrictionCause cause) {
-        return new ReturnPolicyAvailability(ReturnRange.DISABLED,
-                Objects.requireNonNull(cause, ERR_CAUSE), null);
+        return new ReturnPolicyAvailability(ReturnRange.DISABLED, cause, null);
     }
 
     /** Map the generated Layer-1 DTO to the public record. */

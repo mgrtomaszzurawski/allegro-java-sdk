@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,7 +56,7 @@ class ReturnPolicyBuilderTest {
                 .build();
 
         assertEquals(NAME, request.name());
-        assertEquals(false, request.fulfillment());
+        assertFalse(request.fulfillment());
         assertEquals(ReturnRange.FULL, request.availability().range());
         assertNull(request.withdrawalPeriod());
         assertNull(request.returnCost());
@@ -77,7 +78,8 @@ class ReturnPolicyBuilderTest {
                 .options(options())
                 .build();
 
-        assertEquals(true, request.fulfillment());
+        assertEquals(NAME, request.name());
+        assertTrue(request.fulfillment());
         assertEquals(ReturnRange.RESTRICTED, request.availability().range());
         assertEquals(ReturnRestrictionCause.SEALED_MEDIA, request.availability().restrictionCause());
         assertEquals(WITHDRAWAL_PERIOD, request.withdrawalPeriod());
@@ -103,6 +105,7 @@ class ReturnPolicyBuilderTest {
 
         assertEquals(original.name(), copy.name());
         assertEquals(original.fulfillment(), copy.fulfillment());
+        assertEquals(original.availability().range(), copy.availability().range());
         assertEquals(original.withdrawalPeriod(), copy.withdrawalPeriod());
         assertEquals(original.returnCost(), copy.returnCost());
         assertEquals(original.address().street(), copy.address().street());
