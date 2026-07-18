@@ -35,6 +35,7 @@ class ReturnPolicyBuilderTest {
     private static final String FIELD_NAME = "name";
     private static final String FIELD_FULFILLMENT = "fulfillment";
     private static final String FIELD_AVAILABILITY = "availability";
+    private static final String FIELD_OPTIONS = "options";
     private static final String LENGTH_WORD = "exceeds";
 
     private static AfterSalesAddress address() {
@@ -48,11 +49,13 @@ class ReturnPolicyBuilderTest {
     // ---- create request ----
 
     @Test
-    void build_whenRequiredFieldsOnly_succeeds() {
+    void build_whenEnabledMinimalWithOptions_succeeds() {
+        // options are required once availability is enabled (not DISABLED)
         ReturnPolicyRequest request = ReturnPolicyRequest.builder()
                 .name(NAME)
                 .fulfillment(false)
                 .availability(ReturnPolicyAvailability.full())
+                .options(options())
                 .build();
 
         assertEquals(NAME, request.name());
@@ -62,7 +65,30 @@ class ReturnPolicyBuilderTest {
         assertNull(request.returnCost());
         assertNull(request.address());
         assertNull(request.contact());
+        assertEquals(options(), request.options());
+    }
+
+    @Test
+    void build_whenDisabledWithoutOptions_succeeds() {
+        // a DISABLED policy may omit options (spec: options nullable iff DISABLED)
+        ReturnPolicyRequest request = ReturnPolicyRequest.builder()
+                .name(NAME)
+                .fulfillment(false)
+                .availability(ReturnPolicyAvailability.disabled(ReturnRestrictionCause.CUSTOM_ITEM))
+                .build();
+
+        assertEquals(ReturnRange.DISABLED, request.availability().range());
         assertNull(request.options());
+    }
+
+    @Test
+    void build_whenEnabledWithoutOptions_throws() {
+        var builder = ReturnPolicyRequest.builder()
+                .name(NAME)
+                .fulfillment(false)
+                .availability(ReturnPolicyAvailability.full());
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(FIELD_OPTIONS));
     }
 
     @Test
@@ -139,6 +165,7 @@ class ReturnPolicyBuilderTest {
                 .name(maxName)
                 .fulfillment(false)
                 .availability(ReturnPolicyAvailability.full())
+                .options(options())
                 .build();
         assertEquals(maxName, request.name());
     }
@@ -218,6 +245,15 @@ class ReturnPolicyBuilderTest {
         var builder = ReturnPolicyUpdateRequest.builder().name(NAME);
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertTrue(failure.getMessage().contains(FIELD_AVAILABILITY));
+    }
+
+    @Test
+    void update_build_whenEnabledWithoutOptions_throws() {
+        var builder = ReturnPolicyUpdateRequest.builder()
+                .name(NAME)
+                .availability(ReturnPolicyAvailability.full());
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(FIELD_OPTIONS));
     }
 
     // ---- availability value type ----

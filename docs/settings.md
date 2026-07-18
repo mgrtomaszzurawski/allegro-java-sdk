@@ -97,9 +97,11 @@ afterSale.streamImpliedWarranties().forEach(summary -> System.out.println(summar
 
 Return policies model how a seller accepts returns. `name`, the `fulfillment` flag (fixed at
 creation) and `availability` are required on create; `updateReturnPolicy(...)` takes a separate
-`ReturnPolicyUpdateRequest` that omits `fulfillment` (the server rejects changing it). Return
-policies also support **delete**. `streamReturnPolicies()` returns **full** `ReturnPolicy` records
-(not summaries), lazily, single page ≤ 60.
+`ReturnPolicyUpdateRequest` that omits `fulfillment` (the server rejects changing it). `options`
+(the boolean return-handling flags) is **required whenever the availability range is not
+`DISABLED`** — the builder rejects an enabled policy without them fail-fast, mirroring the server.
+Return policies also support **delete**. `streamReturnPolicies()` returns **full** `ReturnPolicy`
+records (not summaries), lazily, single page ≤ 60.
 
 ```java
 ReturnPolicyRequest request = ReturnPolicyRequest.builder()
@@ -110,6 +112,7 @@ ReturnPolicyRequest request = ReturnPolicyRequest.builder()
         .returnCost(ReturnCostCoveredBy.SELLER)
         .address(new AfterSalesAddress(
                 "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+        .options(new ReturnPolicyOptions(true, false, false, false, false)) // required unless DISABLED
         .build();
 
 ReturnPolicy created = afterSale.createReturnPolicy(request);
@@ -117,6 +120,7 @@ afterSale.updateReturnPolicy(created.id(), ReturnPolicyUpdateRequest.builder()
         .name(created.name())
         .availability(ReturnPolicyAvailability.full())
         .withdrawalPeriod("P30D")
+        .options(new ReturnPolicyOptions(true, false, false, false, false))
         .build());
 afterSale.deleteReturnPolicy(created.id());
 ```

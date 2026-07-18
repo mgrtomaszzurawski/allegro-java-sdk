@@ -430,5 +430,7 @@ sections. Empty subsections are dropped by the release engineer when folding
   `ReturnPolicyAvailability` (`ReturnRange` + `ReturnRestrictionCause`), `ReturnCostCoveredBy`,
   `ReturnPolicyContact` and `ReturnPolicyOptions`; separate fail-fast `ReturnPolicyRequest`
   (create — requires `name`/`fulfillment`/`availability`) and `ReturnPolicyUpdateRequest`
-  (update — no `fulfillment`, which is fixed at creation) builders. Documented in
-  `docs/settings.md`; `settings-return-policy` write→read→delete demo scenario.
+  (update — no `fulfillment`, which is fixed at creation) builders. Both require `options`
+  when the availability range is not `DISABLED` (live-verified — the server rejects an enabled
+  policy without options). Documented in `docs/settings.md`; `settings-return-policy`
+  write→read→update→delete demo scenario.

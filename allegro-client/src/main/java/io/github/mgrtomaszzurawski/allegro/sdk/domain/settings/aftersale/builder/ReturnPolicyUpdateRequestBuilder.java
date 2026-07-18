@@ -9,12 +9,15 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.R
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyAvailability;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyContact;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyOptions;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnRange;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Fluent builder for {@link ReturnPolicyUpdateRequest}. Enforces the required
  * {@code name} (with the length cap) and {@code availability} fail-fast at
- * {@link #build()}; the remaining fields are optional.
+ * {@link #build()}; {@code options} is required whenever the availability range
+ * is not {@code DISABLED} (live-verified — the server rejects an enabled policy
+ * without options). The remaining fields are optional.
  *
  * @since 0.3.0
  */
@@ -27,6 +30,8 @@ public final class ReturnPolicyUpdateRequestBuilder {
     private static final String ERR_NAME_TOO_LONG =
             "Return policy name exceeds the " + MAX_NAME_LENGTH + "-character limit";
     private static final String ERR_AVAILABILITY_REQUIRED = "Return policy availability is required";
+    private static final String ERR_OPTIONS_REQUIRED =
+            "Return policy options are required when the availability range is not DISABLED";
 
     private @Nullable String name;
     private @Nullable ReturnPolicyAvailability availability;
@@ -96,6 +101,9 @@ public final class ReturnPolicyUpdateRequestBuilder {
         }
         if (availability == null) {
             throw new IllegalStateException(ERR_AVAILABILITY_REQUIRED);
+        }
+        if (availability.range() != ReturnRange.DISABLED && options == null) {
+            throw new IllegalStateException(ERR_OPTIONS_REQUIRED);
         }
         return new ReturnPolicyUpdateRequest(name, availability, withdrawalPeriod,
                 returnCost, address, contact, options);

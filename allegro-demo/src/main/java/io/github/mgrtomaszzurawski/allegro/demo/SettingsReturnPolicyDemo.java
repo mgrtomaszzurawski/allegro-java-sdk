@@ -14,6 +14,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.A
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnCostCoveredBy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyAvailability;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import java.io.IOException;
@@ -36,6 +37,12 @@ final class SettingsReturnPolicyDemo {
     private static final String DEMO_NAME = DEMO_PREFIX + "return policy";
     private static final String UPDATED_WITHDRAWAL_PERIOD = "P30D";
     private static final String INITIAL_WITHDRAWAL_PERIOD = "P14D";
+    private static final AfterSalesAddress DEMO_ADDRESS = new AfterSalesAddress(
+            "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL");
+    // The server requires return options whenever availability is not DISABLED
+    // (spec: ReturnPolicyOptions "Can be null if availability range is 'DISABLED'").
+    private static final ReturnPolicyOptions DEMO_OPTIONS =
+            new ReturnPolicyOptions(true, false, false, false, false);
     private static final String MSG_NO_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String MSG_TOKEN_EXPIRED = "(stored token expired - rerun auth-bootstrap)";
@@ -96,8 +103,8 @@ final class SettingsReturnPolicyDemo {
                 .availability(ReturnPolicyAvailability.full())
                 .withdrawalPeriod(INITIAL_WITHDRAWAL_PERIOD)
                 .returnCost(ReturnCostCoveredBy.SELLER)
-                .address(new AfterSalesAddress(
-                        "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+                .address(DEMO_ADDRESS)
+                .options(DEMO_OPTIONS)
                 .build();
     }
 
@@ -107,8 +114,8 @@ final class SettingsReturnPolicyDemo {
                 .availability(ReturnPolicyAvailability.full())
                 .withdrawalPeriod(UPDATED_WITHDRAWAL_PERIOD)
                 .returnCost(ReturnCostCoveredBy.SELLER)
-                .address(new AfterSalesAddress(
-                        "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+                .address(DEMO_ADDRESS)
+                .options(DEMO_OPTIONS)
                 .build();
     }
 

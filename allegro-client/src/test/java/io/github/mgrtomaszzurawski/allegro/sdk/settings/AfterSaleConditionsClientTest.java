@@ -45,6 +45,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.I
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnCostCoveredBy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyAvailability;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnRestrictionCause;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.Warranty;
@@ -153,8 +154,8 @@ class AfterSaleConditionsClientTest {
     private static final String WITHDRAWAL_PERIOD = "P14D";
     private static final String RESTRICTION_NAME = "SEALED_MEDIA";
     private static final String SELLER_EMAIL = "seller@example.com";
-    // spec-derived: not yet wire-verified — confirmed by the settings-return-policy
-    // demo write->read before the bucket's final PR.
+    // Live-verified 2026-07-18 (sandbox, seller TestBoxSDK) via the
+    // settings-return-policy demo create->read->update->delete round-trip (green).
     private static final String RETURN_POLICY_RESPONSE = """
             {"id":"%s","isFulfillment":false,"seller":{"id":"%s"},"name":"%s",
              "availability":{"range":"RESTRICTED","restrictionCause":{"name":"%s","description":"d"}},
@@ -743,6 +744,10 @@ class AfterSaleConditionsClientTest {
         return "{\"count\":" + count + ",\"returnPolicies\":[" + items + "]}";
     }
 
+    // The server requires options once availability is enabled (not DISABLED).
+    private static final ReturnPolicyOptions SAMPLE_OPTIONS =
+            new ReturnPolicyOptions(true, false, false, false, false);
+
     private static ReturnPolicyRequest sampleReturnPolicy() {
         return ReturnPolicyRequest.builder()
                 .name(NAME)
@@ -750,6 +755,7 @@ class AfterSaleConditionsClientTest {
                 .availability(ReturnPolicyAvailability.restricted(ReturnRestrictionCause.SEALED_MEDIA))
                 .withdrawalPeriod(WITHDRAWAL_PERIOD)
                 .returnCost(ReturnCostCoveredBy.SELLER)
+                .options(SAMPLE_OPTIONS)
                 .build();
     }
 
@@ -757,6 +763,7 @@ class AfterSaleConditionsClientTest {
         return ReturnPolicyUpdateRequest.builder()
                 .name(NAME)
                 .availability(ReturnPolicyAvailability.full())
+                .options(SAMPLE_OPTIONS)
                 .build();
     }
 
@@ -842,6 +849,7 @@ class AfterSaleConditionsClientTest {
                     .withRequestBody(matchingJsonPath("$.name", equalTo(NAME)))
                     .withRequestBody(matchingJsonPath("$.isFulfillment", equalTo("false")))
                     .withRequestBody(matchingJsonPath("$.availability.range", equalTo("RESTRICTED")))
+                    .withRequestBody(matchingJsonPath("$.options.cashOnDeliveryNotAllowed", equalTo("true")))
                     .withRequestBody(matchingJsonPath("$.availability.restrictionCause.name",
                             equalTo(RESTRICTION_NAME)))
                     .withRequestBody(matchingJsonPath("$.returnCost.coveredBy", equalTo("SELLER"))));

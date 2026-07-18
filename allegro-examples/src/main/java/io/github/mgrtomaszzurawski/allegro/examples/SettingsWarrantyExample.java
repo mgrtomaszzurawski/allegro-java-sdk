@@ -15,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.I
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnCostCoveredBy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyAvailability;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicyOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.Warranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyPeriod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.WarrantyType;
@@ -74,6 +75,7 @@ public final class SettingsWarrantyExample {
                 .returnCost(ReturnCostCoveredBy.SELLER)
                 .address(new AfterSalesAddress(
                         "Allegro sp. z o.o.", "Grunwaldzka 182", "60-166", "Poznań", "PL"))
+                .options(new ReturnPolicyOptions(true, false, false, false, false))
                 .build();
 
         ReturnPolicy created = afterSale.createReturnPolicy(request);
