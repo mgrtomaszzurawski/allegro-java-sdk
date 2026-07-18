@@ -112,6 +112,18 @@ sections. Empty subsections are dropped by the release engineer when folding
   client-credentials token. Includes the `catalog-categories` sandbox
   shape-verification demo scenario. Products and compatibility follow in the
   same bucket.
+- `categories().parameters(categoryId)` — the parameters a category expects on
+  its offers and products, as immutable `CategoryParameter` records: the
+  `CategoryParameterType` (dictionary/float/integer/string), a flattened
+  `ParameterRestrictions` (numeric bounds/precision, text lengths,
+  `multipleChoices`), the dictionary `DictionaryValue`s and
+  `CategoryParameterOptions`. An unmodelled parameter type maps to the mapper's
+  `CategoryParameterType.OTHER` default (today an unknown `type` still fails
+  deserialization on the wire — end-to-end degradation is a tracked core follow-up).
+- `categories().suggest(productName)` — categories whose names best match a
+  product or offer name (`GET /sale/matching-categories`) as `CategorySuggestion`
+  records, each reachable up its parent breadcrumb.
+
 ### F — offers-extras
 
 - `client.classifieds()` accessor with `availablePackages(categoryId)` — read the
