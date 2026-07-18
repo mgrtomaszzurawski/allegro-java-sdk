@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras;
 import io.github.mgrtomaszzurawski.allegro.client.model.FlexibleBundleGetDTORaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.FlexibleBundlesListingDTORaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.FlexibleBundles;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
@@ -28,6 +29,8 @@ public final class FlexibleBundlesImpl implements FlexibleBundles {
 
     private static final String OP_STREAM = "stream flexible bundles";
     private static final String OP_GET = "get flexible bundle";
+    private static final String OP_CREATE = "create flexible bundle";
+    private static final String OP_UPDATE = "update flexible bundle";
     private static final String OP_DELETE = "delete flexible bundle";
 
     /** Flexible-bundle list page size; the endpoint is cursor-paged by {@code page.id}. */
@@ -37,6 +40,7 @@ public final class FlexibleBundlesImpl implements FlexibleBundles {
     private static final String QUERY_LIMIT = "limit";
 
     private static final String ERR_BUNDLE_ID_NULL = "bundleId must not be null";
+    private static final String ERR_REQUEST_NULL = "request must not be null";
 
     private final HttpSupport http;
 
@@ -64,6 +68,25 @@ public final class FlexibleBundlesImpl implements FlexibleBundles {
         Objects.requireNonNull(bundleId, ERR_BUNDLE_ID_NULL);
         return FlexibleBundle.from(http.request(OP_GET)
                 .get(ApiPaths.flexibleBundle(bundleId))
+                .fetch(FlexibleBundleGetDTORaw.class));
+    }
+
+    @Override
+    public FlexibleBundle create(FlexibleBundleRequest request) {
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        return FlexibleBundle.from(http.request(OP_CREATE)
+                .post(ApiPaths.FLEXIBLE_BUNDLES)
+                .jsonBodyPartial(FlexibleBundleMapper.toCreateRaw(request))
+                .fetch(FlexibleBundleGetDTORaw.class));
+    }
+
+    @Override
+    public FlexibleBundle update(String bundleId, FlexibleBundleRequest request) {
+        Objects.requireNonNull(bundleId, ERR_BUNDLE_ID_NULL);
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        return FlexibleBundle.from(http.request(OP_UPDATE)
+                .put(ApiPaths.flexibleBundle(bundleId))
+                .jsonBodyPartial(FlexibleBundleMapper.toUpdateRaw(request))
                 .fetch(FlexibleBundleGetDTORaw.class));
     }
 

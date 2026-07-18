@@ -32,6 +32,28 @@ public record FlexibleBundleDiscount(
         slotDiscounts = List.copyOf(slotDiscounts);
     }
 
+    /**
+     * A whole-bundle discount, applied once across the bundle. Use this when
+     * creating or updating a flexible bundle.
+     *
+     * @param wholeBundle the whole-bundle discount configuration
+     * @return a {@link FlexibleBundleDiscountType#WHOLE_BUNDLE_DISCOUNT} discount
+     */
+    public static FlexibleBundleDiscount wholeBundle(WholeBundleDiscount wholeBundle) {
+        return new FlexibleBundleDiscount(FlexibleBundleDiscountType.WHOLE_BUNDLE_DISCOUNT, wholeBundle, List.of());
+    }
+
+    /**
+     * A per-slot discount, configured separately for each slot. Use this when
+     * creating or updating a flexible bundle.
+     *
+     * @param slotDiscounts the per-slot discounts
+     * @return a {@link FlexibleBundleDiscountType#SLOT_DISCOUNT} discount
+     */
+    public static FlexibleBundleDiscount perSlot(List<SlotDiscount> slotDiscounts) {
+        return new FlexibleBundleDiscount(FlexibleBundleDiscountType.SLOT_DISCOUNT, null, slotDiscounts);
+    }
+
     /** Map the generated Layer-1 discount DTO to the public record. */
     static FlexibleBundleDiscount from(FlexibleBundleDiscountDTORaw raw) {
         return new FlexibleBundleDiscount(

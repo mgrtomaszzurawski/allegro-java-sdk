@@ -207,6 +207,26 @@ class OfferBundlesClientTest {
     }
 
     @Test
+    void get_whenCreatedByUnknownWireValue_degradesToUnknown(WireMockRuntimeInfo wmInfo) {
+        // given — a createdBy value this SDK version does not model (C3 forward-compat):
+        // the Layer-1 enum degrades it to its sentinel and the domain maps it to UNKNOWN
+        // rather than failing the read (before C3 this fixture failed deserialization)
+        stubToken();
+        String unknownCreatorBundle = BUNDLE.replace("\"createdBy\":\"USER\"", "\"createdBy\":\"SYSTEM\"");
+        stubFor(get(urlPathEqualTo(BUNDLE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(unknownCreatorBundle)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            OfferBundle bundle = allegro.offers().bundles().get(TEST_BUNDLE_ID);
+
+            // then
+            assertEquals(BundleCreatedBy.UNKNOWN, bundle.createdBy());
+        }
+    }
+
+    @Test
     void updateDiscount_whenDiscountsGiven_putsBodyAndReturnsUpdatedBundle(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken();
