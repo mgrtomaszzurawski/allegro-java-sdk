@@ -18,8 +18,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.PaymentOp
 
 client.payments().streamOperations(PaymentOperationFilter.builder().group("REFUND").build())
         .limit(100)
-        .forEach(op -> System.out.println(op.occurredAt() + "  " + op.type()
-                + "  " + (op.value() == null ? "-" : op.value().amount())));
+        .forEach(operation -> System.out.println(operation.occurredAt() + "  " + operation.type()
+                + "  " + (operation.value() == null ? "-" : operation.value().amount())));
 ```
 
 ## Refunded payments

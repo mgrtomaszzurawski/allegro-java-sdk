@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
  * <p>A bounded core of the billing entry; per-entry tax detail and free-form
  * additional info are available on the wire and can be surfaced by later methods.
  *
- * @param id billing entry identifier
+ * @param id billing entry identifier, or {@code null} when absent
  * @param occurredAt when the charge/credit was booked, or {@code null}
  * @param typeId billing type id (see {@code billing().types()}), or {@code null}
  * @param typeName billing type description, or {@code null}
@@ -33,7 +33,7 @@ import org.jspecify.annotations.Nullable;
  * @since 0.5.0
  */
 public record BillingEntry(
-        String id,
+        @Nullable String id,
         @Nullable OffsetDateTime occurredAt,
         @Nullable String typeId,
         @Nullable String typeName,
@@ -50,13 +50,20 @@ public record BillingEntry(
         BillingEntryOfferRaw offer = raw.getOffer();
         BillingEntryOrderRaw order = raw.getOrder();
         return new BillingEntry(
-                raw.getId().toString(),
+                raw.getId() == null ? null : raw.getId().toString(),
                 raw.getOccurredAt(),
                 type == null ? null : type.getId(),
                 type == null ? null : type.getName(),
-                value == null ? null : Money.of(value.getAmount(), value.getCurrency()),
-                balance == null ? null : Money.of(balance.getAmount(), balance.getCurrency()),
+                value == null ? null : money(value.getAmount(), value.getCurrency()),
+                balance == null ? null : money(balance.getAmount(), balance.getCurrency()),
                 offer == null ? null : offer.getId(),
                 order == null || order.getId() == null ? null : order.getId().toString());
+    }
+
+    // A billing value object can arrive partially populated; map an absent
+    // amount/currency to null rather than letting Money.of() throw and abort
+    // the whole lazy stream mid-walk.
+    private static @Nullable Money money(@Nullable String amount, @Nullable String currency) {
+        return amount == null || currency == null ? null : Money.of(amount, currency);
     }
 }

@@ -71,6 +71,8 @@ class BillingClientTest {
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
             """;
+    // Wire-verified: the billing-types shape was confirmed live on the sandbox via
+    // the `billing-types` demo (234 types read, mapped cleanly, 2026-07-18).
     private static final String TYPES_BODY =
             "[{\"id\":\"" + TYPE_ID + "\",\"description\":\"" + TYPE_DESCRIPTION + "\"}]";
     // spec-derived: not yet wire-verified.
@@ -98,6 +100,8 @@ class BillingClientTest {
                         .withBody(TOKEN_RESPONSE.formatted(accessToken, EXPIRY_SECONDS))));
     }
 
+    // spec-derived: not yet wire-verified. The billing-entries shape awaits the §2
+    // sandbox pass (blocked on the seller token / a seeded ledger).
     private static String entryJson(int index) {
         String entryUuid = String.format("00000000-0000-0000-0000-%012d", index);
         return "{\"id\":\"" + entryUuid + "\",\"occurredAt\":\"2026-01-01T00:00:00Z\","
@@ -314,6 +318,34 @@ class BillingClientTest {
 
             // then
             verify(getRequestedFor(urlPathEqualTo(ENTRIES_PATH))
+                    .withQueryParam(PARAM_TYPE_ID, equalTo(TYPE_ID)));
+        }
+    }
+
+    @Test
+    void streamEntries_whenFilterGiven_carriesFilterAcrossPageBoundary(WireMockRuntimeInfo wmInfo) {
+        // given — both pages require the filter param; a page-2 request that dropped
+        // it would miss the stub and 404, failing the walk
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(ENTRIES_PATH)).withQueryParam(PARAM_OFFSET, equalTo("0"))
+                .withQueryParam(PARAM_TYPE_ID, equalTo(TYPE_ID))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(entriesPage(PAGE_SIZE, 0))));
+        stubFor(get(urlPathEqualTo(ENTRIES_PATH)).withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
+                .withQueryParam(PARAM_TYPE_ID, equalTo(TYPE_ID))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(entriesPage(SHORT_PAGE, PAGE_SIZE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            long total = allegro.billing().streamEntries(
+                    BillingFilter.builder().typeId(TYPE_ID).build()).count();
+
+            // then — page two carried the filter param (else it would not match)
+            assertEquals(PAGE_SIZE + (long) SHORT_PAGE, total);
+            verify(1, getRequestedFor(urlPathEqualTo(ENTRIES_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_TWO))
                     .withQueryParam(PARAM_TYPE_ID, equalTo(TYPE_ID)));
         }
     }

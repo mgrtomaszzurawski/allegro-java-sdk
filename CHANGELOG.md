@@ -89,8 +89,8 @@ sections. Empty subsections are dropped by the release engineer when folding
   — initiate a full refund with an idempotency `commandId` and typed `RefundReason`
   (UUID-validated fail-fast). Models `PaymentOperation`/`PaymentRefund`; `docs/payments.md`.
 - `client.billing()` facade: `streamEntries(BillingFilter)` (lazy stream) and `types()`
-  (billing-type dictionary; public, app-token friendly). Models `BillingEntry`/`BillingType`;
-  `docs/billing.md` and the `billing-types` sandbox probe.
+  (billing-type dictionary; public, app-token friendly — **live-verified on the sandbox: 234
+  types**). Models `BillingEntry`/`BillingType`; `docs/billing.md` and the `billing-types` probe.
 
 ### C — shipping
 

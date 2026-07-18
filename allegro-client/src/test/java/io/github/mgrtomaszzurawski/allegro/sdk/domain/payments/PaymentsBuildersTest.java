@@ -110,7 +110,7 @@ class PaymentsBuildersTest {
     }
 
     @Test
-    void refundReason_mapsEveryValueToRaw() {
+    void refundReason_whenMapped_producesMatchingRawValueForEveryConstant() {
         // then — every domain reason has a Layer-1 mapping (exhaustive switch)
         for (RefundReason reason : RefundReason.values()) {
             assertEquals(reason.name(), reason.toRaw().getValue());

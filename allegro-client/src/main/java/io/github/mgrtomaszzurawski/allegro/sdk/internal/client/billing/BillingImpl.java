@@ -80,6 +80,6 @@ public final class BillingImpl implements Billing {
     public List<BillingType> types() {
         BillingTypeRaw[] types = http.getAuthenticated(
                 ApiPaths.BILLING_TYPES, BillingTypeRaw[].class, OP_TYPES);
-        return Arrays.stream(types).map(BillingType::from).toList();
+        return types == null ? List.of() : Arrays.stream(types).map(BillingType::from).toList();
     }
 }

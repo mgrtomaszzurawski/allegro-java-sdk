@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
@@ -32,6 +33,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.PaymentOper
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.PaymentRefund;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.RefundReason;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
@@ -49,8 +51,12 @@ class PaymentsClientTest {
     private static final String TEST_CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_SECRET = "client-secret";
     private static final String TEST_TOKEN = "token-one";
+    private static final String TEST_TOKEN_2 = "token-two";
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final long EXPIRY_SECONDS = 3600L;
+
+    private static final String SCENARIO_REPLAY = "replay-401";
+    private static final String STATE_REAUTHED = "reauthed";
 
     private static final String OPERATIONS_PATH = "/payments/payment-operations";
     private static final String REFUNDS_PATH = "/payments/refunds";
@@ -77,6 +83,9 @@ class PaymentsClientTest {
     private static final String ERRORS_BODY = """
             {"errors":[{"code":"InvalidQuery","message":"bad","path":"payment.id"}]}
             """;
+    // spec-derived: not yet wire-verified. Payment-operations and refund shapes
+    // await the §2 sandbox pass (blocked on the seller token; refund is a
+    // destructive write — see KNOWN-SERVER-BEHAVIORS.md).
     private static final String REFUND_BODY = "{\"id\":\"" + REFUND_ID + "\","
             + "\"payment\":{\"id\":\"" + PAYMENT_ID + "\"},"
             + "\"status\":\"" + REFUND_STATUS_NEW + "\","
@@ -181,10 +190,11 @@ class PaymentsClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
             var payments = allegro.payments();
 
-            // then
+            // then — the errors[] payload survives as typed field errors
             AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                     () -> payments.streamOperations(PaymentOperationFilter.all()).toList());
             assertEquals(TEST_TRACE_ID, failure.traceId());
+            assertEquals("payment.id", failure.errors().get(0).path());
         }
     }
 
@@ -207,6 +217,60 @@ class PaymentsClientTest {
             AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
                     () -> payments.streamOperations(PaymentOperationFilter.all()).toList());
             assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
+            verify(FAST_MAX_ATTEMPTS, getRequestedFor(urlPathEqualTo(OPERATIONS_PATH)));
+        }
+    }
+
+    @Test
+    void streamOperations_when401Once_reauthenticatesAndReplays(WireMockRuntimeInfo wmInfo) {
+        // given — first token rejected, replay with a fresh token succeeds
+        stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
+                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(TOKEN_RESPONSE.formatted(TEST_TOKEN, EXPIRY_SECONDS)))
+                .willSetStateTo(STATE_REAUTHED));
+        stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
+                .inScenario(SCENARIO_REPLAY).whenScenarioStateIs(STATE_REAUTHED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(TOKEN_RESPONSE.formatted(TEST_TOKEN_2, EXPIRY_SECONDS))));
+        stubFor(get(urlPathEqualTo(OPERATIONS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_UNAUTHORIZED)));
+        stubFor(get(urlPathEqualTo(OPERATIONS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_2))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(operationsPage(SECOND_PAGE))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when — consuming the first element triggers the (replayed) first fetch
+            List<PaymentOperation> firstOnly = allegro.payments()
+                    .streamOperations(PaymentOperationFilter.all()).limit(1).toList();
+
+            // then — replayed once, the replay carried the fresh token
+            assertEquals(1, firstOnly.size());
+            verify(1, getRequestedFor(urlPathEqualTo(OPERATIONS_PATH))
+                    .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                            equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN_2)));
+        }
+    }
+
+    @Test
+    void streamRefunds_when404_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(get(urlPathEqualTo(REFUNDS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withBody(ERRORS_BODY)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var payments = allegro.payments();
+
+            // then
+            assertThrows(AllegroNotFoundException.class,
+                    () -> payments.streamRefunds(RefundFilter.all()).toList());
         }
     }
 
