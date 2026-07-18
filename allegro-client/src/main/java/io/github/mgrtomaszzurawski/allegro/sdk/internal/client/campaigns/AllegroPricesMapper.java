@@ -42,11 +42,12 @@ import org.jspecify.annotations.Nullable;
  * <p>Both writes and reads map through the generated DTOs. The offer-status
  * response's per-stage price-reduction fields are a generated
  * {@code oneOf[Object, …Dto]}; the SDK's strict {@code oneOf} mapper (core C5)
- * resolves each wrapper to its concrete {@code …PriceReductionDtoRaw} — or leaves an
- * empty {@code Object} when the stage does not apply — so they read through typed
- * getters like every other field (the BACKLOG Phase 1.1 raw-JSON workaround is
- * retired now that the strict resolver no longer over-matches the {@code Object}
- * branch).
+ * resolves each wrapper to its concrete {@code …PriceReductionDtoRaw} (with null
+ * inner fields when the stage carries no data) — or, for a payload foreign to that
+ * type, a plain {@code Object} — and this mapper degrades both to {@code null}, so
+ * the reductions read through typed getters like every other field (the BACKLOG
+ * Phase 1.1 raw-JSON workaround is retired now that the strict resolver no longer
+ * over-matches the {@code Object} branch).
  */
 final class AllegroPricesMapper {
 

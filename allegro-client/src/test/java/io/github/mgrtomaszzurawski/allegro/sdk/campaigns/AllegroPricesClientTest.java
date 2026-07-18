@@ -311,6 +311,7 @@ class AllegroPricesClientTest {
             assertNull(status.declaredReductionPercentage());
             assertEquals(TEST_DECLARED_PCT, status.actualReductionPercentage());
             assertNull(status.finalBuyerPrice());
+            verify(1, postRequestedFor(urlEqualTo(OFFERS_QUERIES_PATH)));
         }
     }
 
