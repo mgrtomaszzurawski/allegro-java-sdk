@@ -110,6 +110,17 @@ public final class ApiPaths {
     public static final String BADGE_OFFERS_SEGMENT = "offers";
     /** Path segment for a campaign within the badge update path. */
     public static final String BADGE_CAMPAIGNS_SEGMENT = "campaigns";
+    /** Allegro Prices account participation ({@code /sale/allegro-prices/accounts/participations}). */
+    public static final String ALLEGRO_PRICES_PARTICIPATIONS =
+            "/sale/allegro-prices/accounts/participations";
+    /** Allegro Prices offer-status query ({@code /sale/allegro-prices/offers-queries}). */
+    public static final String ALLEGRO_PRICES_OFFERS_QUERIES = "/sale/allegro-prices/offers-queries";
+    /** Allegro Prices submit-offer commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLEGRO_PRICES_SUBMIT_COMMANDS =
+            "/sale/allegro-prices/offers/submit-offer-commands";
+    /** Allegro Prices exclusion commands; append {@code /{commandId}} via subPath. */
+    public static final String ALLEGRO_PRICES_EXCLUSION_COMMANDS =
+            "/sale/allegro-prices/offers/exclusion-commands";
 
     // ---- shipping (bucket C) ----
     /** Seller's points of service (personal-collection locations). */
