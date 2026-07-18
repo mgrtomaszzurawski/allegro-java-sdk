@@ -21,6 +21,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassification
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.FlexibleBundles;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferBundles;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
@@ -37,6 +38,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.FlexibleBundlesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferBundlesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTranslationsImpl;
@@ -86,6 +88,7 @@ public final class OffersImpl implements Offers {
     private final OfferTags tags;
     private final OfferTranslations translations;
     private final OfferBundles bundles;
+    private final FlexibleBundles flexibleBundles;
 
     public OffersImpl(HttpRuntime runtime) {
         this.http = new HttpSupport(runtime);
@@ -98,6 +101,7 @@ public final class OffersImpl implements Offers {
         this.tags = new OfferTagsImpl(runtime);
         this.translations = new OfferTranslationsImpl(runtime);
         this.bundles = new OfferBundlesImpl(runtime);
+        this.flexibleBundles = new FlexibleBundlesImpl(runtime);
     }
 
     @Override
@@ -260,6 +264,11 @@ public final class OffersImpl implements Offers {
     @Override
     public OfferBundles bundles() {
         return bundles;
+    }
+
+    @Override
+    public FlexibleBundles flexibleBundles() {
+        return flexibleBundles;
     }
 
     /** The wire token for a filter enum, or {@code null} to omit it (never {@code UNKNOWN}). */

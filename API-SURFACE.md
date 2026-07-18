@@ -112,11 +112,10 @@ bundles.delete(bundleId)                          // DELETE /sale/bundles/{bundl
 
 // Flexible bundles
 FlexibleBundles flexible = offers.flexibleBundles();
-flexible.streamBundles()                          // GET    /sale/flexible-bundles   Stream<FlexibleBundle>
-flexible.get(bundleId)                            // GET    /sale/flexible-bundles/{bundleId}
-flexible.create(FlexibleBundleRequest)            // POST   /sale/flexible-bundles
-flexible.update(bundleId, FlexibleBundleRequest)  // PUT    /sale/flexible-bundles/{bundleId}
+flexible.streamBundles()                          // GET    /sale/flexible-bundles   Stream<FlexibleBundleSummary> (cursor)
+flexible.get(bundleId)                            // GET    /sale/flexible-bundles/{bundleId}  -> FlexibleBundle
 flexible.delete(bundleId)                         // DELETE /sale/flexible-bundles/{bundleId}
+// create(POST) + update(PUT) planned — need the nested slot/offer/discount write builders
 
 // Classifieds (advertisements) — own top-level accessor
 Classifieds classifieds = client.classifieds();
