@@ -60,7 +60,13 @@ final class StrictOneOfDeserializer extends JsonDeserializer<Object>
 
     @Override
     public JsonDeserializer<?> createContextual(DeserializationContext context, BeanProperty property) {
-        JavaType type = property != null ? property.getType() : context.getContextualType();
+        // Prefer the contextual type: it is the wrapper itself in all cases,
+        // whereas property.getType() is the COLLECTION type (List<Wrapper>) when
+        // the wrapper is a list element — which would resolve no candidate schemas.
+        JavaType type = context.getContextualType();
+        if (type == null && property != null) {
+            type = property.getType();
+        }
         Class<?> wrapper = type != null ? type.getRawClass() : null;
         return new StrictOneOfDeserializer(wrapper, StrictOneOfModule.candidateSchemasOf(wrapper));
     }
@@ -70,13 +76,13 @@ final class StrictOneOfDeserializer extends JsonDeserializer<Object>
         ObjectMapper mapper = (ObjectMapper) parser.getCodec();
         JsonNode tree = mapper.readTree(parser);
 
-        Object strict = singleMatch(mapper, tree, true);
-        if (strict != NO_MATCH) {
-            return wrap(strict);
+        Object strictMatch = singleMatch(mapper, tree, true);
+        if (strictMatch != NO_MATCH) {
+            return wrap(strictMatch);
         }
-        Object lenient = singleMatch(mapper, tree, false);
-        if (lenient != NO_MATCH) {
-            return wrap(lenient);
+        Object lenientMatch = singleMatch(mapper, tree, false);
+        if (lenientMatch != NO_MATCH) {
+            return wrap(lenientMatch);
         }
         if (candidateSchemas.containsValue(Object.class)) {
             return wrap(mapper.convertValue(tree, Object.class));
