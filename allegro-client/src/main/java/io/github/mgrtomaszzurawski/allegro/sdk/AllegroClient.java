@@ -54,6 +54,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2Token
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.UnknownSubtypeToBaseHandler;
 import java.net.http.HttpClient;
 import java.util.Objects;
@@ -135,6 +136,9 @@ public final class AllegroClient implements AutoCloseable {
         ObjectMapper objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .registerModule(new JsonNullableModule())
+                // Resolve generated oneOf wrappers by strict property matching so a
+                // structural oneOf does not over-match ("N classes match"); see module.
+                .registerModule(new StrictOneOfModule())
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 // Unknown polymorphic subtype -> deserialize as the base so a domain
