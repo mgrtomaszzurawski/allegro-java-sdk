@@ -47,6 +47,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   generic over the body type, so a byte download still shares retry, 401 replay
   and typed error mapping (the error body is decoded from bytes). Unblocks
   bucket I (PDF, `If-Match`) and bucket J (attachment downloads).
+- `HttpCall.jsonBodyNonNull(body)` — serialize a request body omitting null
+  fields, for partial (PATCH) updates where an unset field must be absent from
+  the payload rather than sent as `null` (which would reset it server-side).
+  Reusable by every bucket's partial-update endpoints.
 
 ### A — offers-core
 
