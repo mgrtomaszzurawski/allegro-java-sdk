@@ -308,6 +308,34 @@ request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delive
 work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
 returns `CATEGORY_NOT_EXISTS`.
 
+## Campaigns (bucket H)
+
+### Allegro Prices offer-status query requires `offer.ids` 1..1000 (verified 2026-07-18, sandbox)
+
+`POST /sale/allegro-prices/offers-queries` (`allegroPrices().streamOffersStatus(...)`) rejects a
+marketplace-only query with `400 VALIDATION_ERROR`, `message: "Validation error: offer.ids size
+must be between 1 and 1,000"` (example `trace-id` `2b6432bc191218e0`) — even though the vendored
+spec types `offer` and `offer.ids` as OPTIONAL. In practice at least one offer id is mandatory.
+The SDK stays spec-faithful (the builder does not force `offerId`, so it can serialise a
+marketplace-only query) and surfaces the rejection as `AllegroBadRequestException` with the parsed
+`errors[]`; consumers must supply `AllegroPricesOfferQuery.builder(marketplace).addOfferId(...)`.
+The `campaigns` demo now sources a few of the seller's own offer ids before querying, and skips the
+probe when the account has no offers.
+
+### Allegro Prices participation spans four marketplaces (verified 2026-07-18, sandbox)
+
+`GET /sale/allegro-prices/accounts/participations` (`allegroPrices().participation()`) returned four
+marketplaces for the sandbox seller — `allegro-pl`, `allegro-cz`, `allegro-sk`, `allegro-hu`, all
+`ALLOWED` — confirming the `MarketplaceParticipation` mapping across markets on a live response.
+
+### AlleDiscount exposes SOURCING and DISCOUNT campaign types (verified 2026-07-18, sandbox)
+
+`GET /sale/alle-discount/campaigns` (`alleDiscount().campaigns()`) returned 12 campaigns for the
+sandbox seller, spanning both `SOURCING` (co-finance) and `DISCOUNT` (AlleObniżka) campaign types,
+confirming the `AlleDiscountCampaign` / `AlleDiscountCampaignType` mapping. Every listed campaign
+showed the seller as not enrolled, so `streamEligibleOffers`/`streamSubmittedOffers` returned empty
+without error — the write→read command cycles still need an enrolled campaign (risk R5).
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
