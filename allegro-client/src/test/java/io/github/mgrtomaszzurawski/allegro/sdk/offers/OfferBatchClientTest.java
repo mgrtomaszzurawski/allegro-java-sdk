@@ -68,6 +68,7 @@ class OfferBatchClientTest {
     private static final String STATE_COMPLETED = "completed";
     private static final String ACTION_JSON_PATH = "$.publication.action";
     private static final String OFFERS_JSON_PATH = "$.offerCriteria[0].offers[0].id";
+    private static final String OFFERS_SECOND_JSON_PATH = "$.offerCriteria[0].offers[1].id";
     private static final String TYPE_JSON_PATH = "$.offerCriteria[0].type";
 
     private static OfferBatchImpl batchClient(WireMockRuntimeInfo wmInfo) {
@@ -146,7 +147,8 @@ class OfferBatchClientTest {
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(matchingJsonPath(ACTION_JSON_PATH, equalTo("ACTIVATE")))
                 .withRequestBody(matchingJsonPath(TYPE_JSON_PATH, equalTo("CONTAINS_OFFERS")))
-                .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE))));
+                .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE)))
+                .withRequestBody(matchingJsonPath(OFFERS_SECOND_JSON_PATH, equalTo(OFFER_TWO))));
         // and the terminal report is mapped
         assertEquals(2, report.total());
         assertEquals(2, report.success());
