@@ -63,6 +63,9 @@ sections. Empty subsections are dropped by the release engineer when folding
   bulk publish/unpublish wrapped sync-default over `CommandPoller` (submit → poll to terminal →
   gather every task page), returning a `BatchReport` of per-offer `TaskResult`s. No
   `CompletableFuture` in the surface.
+- Batch price/quantity: `batch().changePrices(offerIds, Money)` sets a fixed Buy Now price and
+  `batch().changeQuantities(offerIds, quantity)` sets available stock across many offers — same
+  submit→poll→gather `BatchReport` flow, on the price-change and quantity-change command endpoints.
 
 ### B — orders-payments
 

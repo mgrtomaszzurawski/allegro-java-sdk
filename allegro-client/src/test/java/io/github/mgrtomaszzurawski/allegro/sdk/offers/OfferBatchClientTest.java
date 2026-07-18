@@ -24,6 +24,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OfferBatchImpl;
@@ -43,6 +44,18 @@ class OfferBatchClientTest {
     private static final String UUID_PATTERN = "[0-9a-fA-F-]{36}";
     private static final String COMMAND_PATH = "/sale/offer-publication-commands/" + UUID_PATTERN;
     private static final String TASKS_PATH = COMMAND_PATH + "/tasks";
+    private static final String PRICE_COMMAND_PATH = "/sale/offer-price-change-commands/" + UUID_PATTERN;
+    private static final String PRICE_TASKS_PATH = PRICE_COMMAND_PATH + "/tasks";
+    private static final String QTY_COMMAND_PATH = "/sale/offer-quantity-change-commands/" + UUID_PATTERN;
+    private static final String QTY_TASKS_PATH = QTY_COMMAND_PATH + "/tasks";
+
+    private static final String NEW_PRICE = "50.00";
+    private static final String CURRENCY_PLN = "PLN";
+    private static final int NEW_QUANTITY = 25;
+    private static final String PRICE_TYPE_JSON_PATH = "$.modification.type";
+    private static final String PRICE_AMOUNT_JSON_PATH = "$.modification.price.amount";
+    private static final String QTY_CHANGE_TYPE_JSON_PATH = "$.modification.changeType";
+    private static final String QTY_VALUE_JSON_PATH = "$.modification.value";
 
     private static final String OFFER_ONE = "111";
     private static final String OFFER_TWO = "222";
@@ -130,6 +143,15 @@ class OfferBatchClientTest {
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
         stubFor(get(urlPathMatching(COMMAND_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+    }
+
+    private static void stubCompletedCommandAt(String commandPath, String tasksPath) {
+        stubFor(put(urlPathMatching(commandPath))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(commandPath))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(tasksPath))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TWO_TASKS)));
     }
 
     @Test
@@ -225,6 +247,40 @@ class OfferBatchClientTest {
         // then — an empty first page terminates gathering with no tasks
         assertEquals(0, report.tasks().size());
         verify(1, getRequestedFor(urlPathMatching(TASKS_PATH)));
+    }
+
+    @Test
+    void changePrices_whenCommandCompletes_submitsFixedPriceToPriceEndpoint(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubCompletedCommandAt(PRICE_COMMAND_PATH, PRICE_TASKS_PATH);
+
+        // when
+        BatchReport report = batchClient(wmInfo)
+                .changePrices(List.of(OFFER_ONE), Money.of(NEW_PRICE, CURRENCY_PLN));
+
+        // then — a FIXED_PRICE modification carrying the new amount hits the price endpoint
+        verify(1, putRequestedFor(urlPathMatching(PRICE_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(PRICE_TYPE_JSON_PATH, equalTo("FIXED_PRICE")))
+                .withRequestBody(matchingJsonPath(PRICE_AMOUNT_JSON_PATH, equalTo(NEW_PRICE)))
+                .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE))));
+        assertEquals(2, report.total());
+    }
+
+    @Test
+    void changeQuantities_whenCommandCompletes_submitsFixedQuantityToQuantityEndpoint(
+            WireMockRuntimeInfo wmInfo) {
+        // given
+        stubCompletedCommandAt(QTY_COMMAND_PATH, QTY_TASKS_PATH);
+
+        // when
+        BatchReport report = batchClient(wmInfo).changeQuantities(List.of(OFFER_ONE), NEW_QUANTITY);
+
+        // then — a FIXED quantity change carrying the new value hits the quantity endpoint
+        verify(1, putRequestedFor(urlPathMatching(QTY_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(QTY_CHANGE_TYPE_JSON_PATH, equalTo("FIXED")))
+                .withRequestBody(matchingJsonPath(QTY_VALUE_JSON_PATH, equalTo(String.valueOf(NEW_QUANTITY))))
+                .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE))));
+        assertEquals(2, report.total());
     }
 
     @Test

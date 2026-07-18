@@ -49,6 +49,8 @@ public final class ApiPaths {
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
     private static final String SALE_OFFER_PUBLICATION_COMMANDS = "/sale/offer-publication-commands";
+    private static final String SALE_OFFER_PRICE_CHANGE_COMMANDS = "/sale/offer-price-change-commands";
+    private static final String SALE_OFFER_QUANTITY_CHANGE_COMMANDS = "/sale/offer-quantity-change-commands";
     private static final String TASKS_SEGMENT = "tasks";
 
     /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
@@ -77,6 +79,26 @@ public final class ApiPaths {
     /** Per-offer tasks of a publish/unpublish command ({@code …/{commandId}/tasks}). */
     public static String offerPublicationCommandTasks(String commandId) {
         return subPath(SALE_OFFER_PUBLICATION_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Batch price-change command ({@code /sale/offer-price-change-commands/{commandId}}). */
+    public static String offerPriceChangeCommand(String commandId) {
+        return subPath(SALE_OFFER_PRICE_CHANGE_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a price-change command ({@code …/{commandId}/tasks}). */
+    public static String offerPriceChangeCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_PRICE_CHANGE_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Batch quantity-change command ({@code /sale/offer-quantity-change-commands/{commandId}}). */
+    public static String offerQuantityChangeCommand(String commandId) {
+        return subPath(SALE_OFFER_QUANTITY_CHANGE_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a quantity-change command ({@code …/{commandId}/tasks}). */
+    public static String offerQuantityChangeCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_QUANTITY_CHANGE_COMMANDS, commandId, TASKS_SEGMENT);
     }
 
     // ---- orders (bucket B) ----

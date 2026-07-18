@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import java.util.List;
 
@@ -32,4 +33,22 @@ public interface OfferBatch {
      * @return the command report once every offer has been processed
      */
     BatchReport unpublish(List<String> offerIds);
+
+    /**
+     * Set a fixed Buy Now price on the given offers in one command.
+     *
+     * @param offerIds the offers to reprice
+     * @param price    the new fixed Buy Now price
+     * @return the command report once every offer has been processed
+     */
+    BatchReport changePrices(List<String> offerIds, Money price);
+
+    /**
+     * Set the available quantity of the given offers in one command.
+     *
+     * @param offerIds the offers to restock
+     * @param quantity the new available quantity
+     * @return the command report once every offer has been processed
+     */
+    BatchReport changeQuantities(List<String> offerIds, int quantity);
 }
