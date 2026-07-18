@@ -23,6 +23,8 @@ class OfferTest {
 
     private static final String OFFER_ID = "13579";
     private static final String CATEGORY_ID = "257";
+    private static final String TEST_UNKNOWN_FORMAT = "FUTURE_FORMAT";
+    private static final String TEST_UNKNOWN_STATUS = "FUTURE_STATUS";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -50,9 +52,9 @@ class OfferTest {
         // given — Allegro returns a selling-mode format and a status value added
         // after this SDK release (a value the generated enums do not model)
         SellingModeFormatRaw unknownFormat =
-                assertDoesNotThrow(() -> SellingModeFormatRaw.fromValue("FUTURE_FORMAT"));
+                assertDoesNotThrow(() -> SellingModeFormatRaw.fromValue(TEST_UNKNOWN_FORMAT));
         OfferStatusRaw unknownStatus =
-                assertDoesNotThrow(() -> OfferStatusRaw.fromValue("FUTURE_STATUS"));
+                assertDoesNotThrow(() -> OfferStatusRaw.fromValue(TEST_UNKNOWN_STATUS));
 
         // then — Layer 1 returns the forward-compat sentinel instead of throwing
         // (enumUnknownDefaultCase), and the domain mapping degrades it to UNKNOWN
