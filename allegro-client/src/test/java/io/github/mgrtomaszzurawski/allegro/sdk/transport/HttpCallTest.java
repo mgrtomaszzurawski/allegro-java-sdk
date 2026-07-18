@@ -8,6 +8,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.binaryEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.patch;
@@ -51,6 +52,7 @@ class HttpCallTest {
     private static final String OK_BODY = "{\"value\":\"ok\"}";
     private static final String OK_VALUE = "ok";
     private static final String OPERATION = "exercise call";
+    private static final String PRESENT_VALUE = "here";
     private static final String LANGUAGE = "pl-PL";
     private static final String ETAG = "\"v3\"";
     private static final String IMAGE_CONTENT_TYPE = "image/png";
@@ -288,5 +290,40 @@ class HttpCallTest {
         // then — the wire saw the diacritics intact (would fail on ISO-8859-1)
         verify(1, postRequestedFor(urlEqualTo(PATH))
                 .withRequestBody(containing(diacritics)));
+    }
+
+    @Test
+    void jsonBodyNonNull_whenFieldNull_omitsItFromBody(WireMockRuntimeInfo wmInfo) {
+        // given — a partial payload with one unset (null) field
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        support(wmInfo).request(OPERATION).post(PATH)
+                .jsonBodyNonNull(new Payload(PRESENT_VALUE, null)).send();
+
+        // then — the null field is absent (a strict match rejects any extra field)
+        verify(1, postRequestedFor(urlEqualTo(PATH))
+                .withRequestBody(equalToJson("{\"present\":\"" + PRESENT_VALUE + "\"}", true, false)));
+    }
+
+    @Test
+    void jsonBody_whenFieldNull_includesNullInBody(WireMockRuntimeInfo wmInfo) {
+        // given — the same payload sent with the plain serializer
+        stubFor(post(urlEqualTo(PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(OK_BODY)));
+
+        // when
+        support(wmInfo).request(OPERATION).post(PATH)
+                .jsonBody(new Payload(PRESENT_VALUE, null)).send();
+
+        // then — the default serializer keeps the null field (the contrast that makes
+        // jsonBodyNonNull necessary for a PATCH)
+        verify(1, postRequestedFor(urlEqualTo(PATH))
+                .withRequestBody(containing("absent")));
+    }
+
+    /** A partial payload where {@code absent} may be null (a PATCH-style body). */
+    private record Payload(String present, String absent) {
     }
 }

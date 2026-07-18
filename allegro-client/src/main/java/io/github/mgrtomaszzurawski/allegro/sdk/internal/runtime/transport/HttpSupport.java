@@ -4,7 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.CallContext;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
@@ -50,10 +52,14 @@ public final class HttpSupport {
 
     private final HttpRuntime runtime;
     private final ServerErrorParser errorParser;
+    /** Omits null fields — used for partial (PATCH) bodies so unset fields are not reset. */
+    private final ObjectMapper nonNullMapper;
 
     public HttpSupport(HttpRuntime runtime) {
         this.runtime = runtime;
         this.errorParser = new ServerErrorParser(runtime.objectMapper());
+        this.nonNullMapper = runtime.objectMapper().copy()
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
     /** Resolve an {@link ApiPaths} path against the environment base URL. */
@@ -171,6 +177,21 @@ public final class HttpSupport {
     String serialize(Object body) {
         try {
             String json = runtime.objectMapper().writeValueAsString(body);
+            SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
+            return json;
+        } catch (JacksonException e) {
+            throw new AllegroException(ERR_SERIALIZE, e);
+        }
+    }
+
+    /**
+     * Serialize {@code body} omitting null fields, for a partial (PATCH) update
+     * where an unset field must be absent from the payload rather than sent as
+     * {@code null} (which would reset it server-side).
+     */
+    String serializeNonNull(Object body) {
+        try {
+            String json = nonNullMapper.writeValueAsString(body);
             SdkLoggers.REQUEST.debug(LOG_SERIALIZED, body.getClass().getSimpleName(), json.length());
             return json;
         } catch (JacksonException e) {
