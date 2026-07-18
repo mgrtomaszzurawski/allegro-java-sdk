@@ -71,6 +71,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   their own `UNKNOWN` via a switch default; enums that had no `UNKNOWN` gained a
   read-only sentinel constant. Affected domain buckets should add coverage —
   see BACKLOG C3 follow-ups.
+- Forward compatibility for discriminated polymorphic responses: a shared
+  `UnknownSubtypeToBaseHandler` (Jackson `DeserializationProblemHandler`) resolves
+  a `@JsonTypeInfo` subtype discriminator this SDK release does not model to the
+  polymorphic base instead of throwing `InvalidTypeIdException`, so a domain mapper
+  can degrade it (e.g. `CategoryParameterType.OTHER`) rather than failing the whole
+  response. Applies to every discriminated `*Raw` base with a concrete base type.
 
 ### A — offers-core
 

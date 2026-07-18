@@ -533,13 +533,13 @@ class CatalogCategoriesClientTest {
     }
 
     @Test
-    void parameters_whenTypeUnknown_failsDeserializationRatherThanDegrading(
+    void parameters_whenTypeUnknown_degradesToOtherRatherThanFailing(
             WireMockRuntimeInfo wmInfo) {
         // given — a parameter whose discriminator is outside the four modelled types.
-        // The generated Raw base declares no @JsonSubTypes defaultImpl, so Jackson rejects
-        // it during deserialization. This pins the CURRENT wire behaviour: an unknown type
-        // surfaces as a deserialization failure, NOT CategoryParameterType.OTHER. (Letting
-        // unknown types degrade needs a core change — generator defaultImpl / mapper config.)
+        // The generated Raw base has no @JsonSubTypes defaultImpl, so the core
+        // UnknownSubtypeToBaseHandler deserializes it as the polymorphic base and the
+        // domain mapper lands it on CategoryParameterType.OTHER instead of failing the
+        // whole response (BACKLOG C4 — core forward-compat for discriminated subtypes).
         stubToken(TEST_TOKEN);
         stubFor(get(urlEqualTo(CATEGORY_PARAMETERS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -547,8 +547,11 @@ class CatalogCategoriesClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             var categories = allegro.catalog().categories();
-            // then
-            assertThrows(AllegroServerException.class, () -> categories.parameters(CATEGORY_ID));
+            // when
+            List<CategoryParameter> parameters = categories.parameters(CATEGORY_ID);
+            // then — the unmodelled parameter survives, mapped to OTHER, not thrown
+            assertEquals(1, parameters.size());
+            assertEquals(CategoryParameterType.OTHER, parameters.get(0).type());
         }
     }
 
