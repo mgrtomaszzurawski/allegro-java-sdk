@@ -54,6 +54,40 @@ Every field maps to an immutable record; enum-typed fields (`type`, `status`,
 `confirmationType`) fall back to an `UNKNOWN` sentinel if Allegro returns a value
 a given SDK release does not model, so reads never break on a new server value.
 
+## List a seller's points of service
+
+```java
+List<PointOfService> points = client.shipping().points().list(sellerId);
+
+// optionally limited to one country
+List<PointOfService> polishPoints = client.shipping().points().list(sellerId, "PL");
+```
+
+`sellerId` is required (Allegro's `seller.id` query parameter). The response is
+not paginated — the seller's full set arrives in one call — so this returns a
+plain `List`, not a lazy `Stream`.
+
+## Modify a point of service
+
+```java
+PointOfService updated = client.shipping().points().update(pointOfServiceId,
+    PointOfServiceRequest.builder()
+        .name("Pickup Point Center East")
+        .type(PosType.PICKUP_POINT)
+        .status(PosStatus.ACTIVE)
+        .confirmationType(ConfirmationType.CONTACT_NOT_REQUIRED)
+        .address(Address.builder()
+            .street("Grunwaldzka 100").city("Gdansk")
+            .zipCode("80-244").state("pomorskie").countryCode("PL").build())
+        .openHours(List.of(
+            OpenHour.builder().dayOfWeek("MONDAY").fromTime("08:00").toTime("16:00").build()))
+        .build());
+```
+
+`update` replaces the point with the supplied state (PUT semantics), so build
+the request from every field the point should keep, not only the ones that
+change. The same required fields and length limits as `create` apply.
+
 ## Delete a point of service
 
 ```java

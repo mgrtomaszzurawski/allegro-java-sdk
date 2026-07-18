@@ -70,6 +70,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `points().delete(id)`, immutable `PointOfService` records with fluent builders
   (fail-fast required fields, replicated length limits) and read-only enum
   fallbacks.
+- `points().list(sellerId)` / `points().list(sellerId, countryCode)` (returns a
+  `List<PointOfService>` — the endpoint is not paginated) and
+  `points().update(id, PointOfServiceRequest)`, completing the points-of-service
+  CRUD surface.
 
 ### D — account-meta
 
