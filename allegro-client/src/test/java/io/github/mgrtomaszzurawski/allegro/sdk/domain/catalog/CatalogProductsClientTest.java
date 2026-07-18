@@ -121,13 +121,15 @@ class CatalogProductsClientTest {
     private static final String PRODUCT_PARAMETERS_PATH =
             "/sale/categories/" + CATEGORY_ID + "/product-parameters";
     // One parameter of each modelled wire type, so the polymorphic mapping and the
-    // by-type restriction/dictionary flattening are all exercised. Shapes wire-verified
-    // 2026-07-18 via the catalog-products demo: parametersIn(353) returned 18 real
-    // product parameters with STRING/DICTIONARY types and required flags mapping cleanly.
+    // by-type restriction/dictionary flattening are all exercised. The STRING/DICTIONARY
+    // shapes were wire-verified 2026-07-18 via the catalog-products demo (parametersIn(353)
+    // returned 18 real product parameters mapping cleanly); the FLOAT/INTEGER restriction
+    // shapes remain spec-derived (category 353 carried no numeric params live) but are
+    // structurally identical to the already-shipped category-parameter variants.
     private static final String PRODUCT_PARAMETERS = """
             {"parameters":[
               {"id":"1","name":"Marka","type":"dictionary","required":true,
-               "restrictions":{"multipleChoices":false},
+               "restrictions":{"multipleChoices":true},
                "dictionary":[{"id":"1_1","value":"Apple"},{"id":"1_2","value":"Samsung"}]},
               {"id":"2","name":"Przekatna ekranu","type":"float","required":false,"unit":"cal",
                "restrictions":{"min":1.0,"max":100.0,"range":false,"precision":2}},
@@ -510,7 +512,8 @@ class CatalogProductsClientTest {
             assertEquals(CategoryParameterType.DICTIONARY, dictionary.type());
             assertTrue(dictionary.required());
             assertNull(dictionary.unit());
-            assertFalse(dictionary.restrictions().multipleChoices());
+            // a non-default restriction value proves it is read, not defaulted
+            assertTrue(dictionary.restrictions().multipleChoices());
             assertEquals(2, dictionary.dictionary().size());
             assertEquals("Apple", dictionary.dictionary().get(0).value());
             // product-side dictionary values carry no combination dependencies
@@ -560,6 +563,7 @@ class CatalogProductsClientTest {
             assertEquals(CategoryParameterType.OTHER, parameters.get(0).type());
             assertNull(parameters.get(0).restrictions());
             assertTrue(parameters.get(0).dictionary().isEmpty());
+            verify(1, getRequestedFor(urlEqualTo(PRODUCT_PARAMETERS_PATH)));
         }
     }
 
@@ -574,6 +578,7 @@ class CatalogProductsClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
             // then — an absent array maps to an empty list, never null
             assertTrue(allegro.catalog().products().parametersIn(CATEGORY_ID).isEmpty());
+            verify(1, getRequestedFor(urlEqualTo(PRODUCT_PARAMETERS_PATH)));
         }
     }
 
