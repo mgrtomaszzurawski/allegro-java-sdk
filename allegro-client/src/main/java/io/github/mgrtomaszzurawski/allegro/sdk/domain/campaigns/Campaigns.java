@@ -33,4 +33,12 @@ public interface Campaigns {
      * @return the Allegro Prices sub-facade
      */
     AllegroPrices allegroPrices();
+
+    /**
+     * AlleDiscount: discover campaigns, read eligible and submitted offers, and
+     * submit or withdraw an offer.
+     *
+     * @return the AlleDiscount sub-facade
+     */
+    AlleDiscount alleDiscount();
 }
