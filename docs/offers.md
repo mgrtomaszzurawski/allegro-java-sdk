@@ -229,6 +229,34 @@ for (OfferParameter parameter : offer.parameters()) {
 A read parameter can be fed straight back into a create: `toRaw()` sends only the value ids of a
 dictionary parameter (the labels are read-only — echoing them back is rejected by Allegro).
 
+### Product set (productized categories)
+
+Many categories are **productized**: an offer must be bound to a catalogue product. Add a
+`ProductSetElement` referencing the product by id — a single product for a normal offer, or
+several (each with its own `quantity`) for a set or multipack. A productized category also
+requires the GPSR **responsible producer**, referenced by id or by name:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Wireless mouse")
+        .categoryId("325040")
+        .buyNowPrice(Money.of("79.99", "PLN"))
+        .availableStock(10)
+        .addProductSetElement(ProductSetElement.of("8f2b1c00-…-000000000001")  // product id
+                .withResponsibleProducer(ResponsibleProducerRef.byId("44444444-…"))
+                .withMarketedBeforeGpsrObligation(false))
+        .build();
+```
+
+Use `ProductSetElement.of(productId, quantity)` for a set element, and
+`ResponsibleProducerRef.byName("ACME Manufacturing")` to reference a producer by name instead of
+id (the SDK writes the `oneOf` discriminator for you). On the read side, `offer.productSet()`
+returns the bindings; each element's `productId()`, `quantity()`, `responsibleProducer()` (id-only
+on read) and `marketedBeforeGpsrObligation()` are populated. Register responsible producers via
+`client.settings()` (bucket K). This is the product-**reference** form; defining a brand-new
+product inline, `responsiblePerson`, the `safetyInformation` details and `deposits` are not
+modelled yet.
+
 ### External id, language and size table
 
 An offer can also carry the seller's own **external identifier** (your system's SKU/id for the

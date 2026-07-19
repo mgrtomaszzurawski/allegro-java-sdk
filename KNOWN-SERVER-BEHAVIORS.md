@@ -395,6 +395,32 @@ seller offers ×0. NOTE: with 0 existing offers and the create blocked by produc
 echoed as BCP-47) are still WireMock-asserted only — to be live-confirmed once `productSet`/media
 land and a real offer can be seeded.
 
+### `productSet` create — the SDK request deserializes; product lookup is a business rule (verified 2026-07-19, sandbox)
+
+Sending a `productSet` through the SDK (`offers().create` with `addProductSetElement`,
+`-Pdemo.scenario=offer -Pdemo.createProductId=<uuid> -Pdemo.createCategory=325040`) POSTs a
+productized-category create. The live server **deserializes the whole `productSet` element** and
+rejects only on the business rule, returning a typed field error at the exact wire path the SDK
+builds:
+
+```
+path=productSet[0].product  code=ProductNotFoundException
+userMessage=Product with ID: <uuid> not found
+```
+
+This confirms the write mapping is wire-valid: `productSet[]` is an array of elements, each with a
+`product.{id}` object (not double-wrapped), and the server parses it — a wrong shape would fail
+with a `400`/JsonMapping error *before* the product lookup, not a field error *at*
+`productSet[0].product`. The SDK's typed error parsing surfaces it as `AllegroBadRequestException`
+with the parsed field error.
+
+**Still WireMock-only (blocked):** a full write→read round-trip (create a real productized offer,
+read the `productSet` back) needs a **seeded catalogue product + a registered responsible producer
++ ≥1 image** on the sandbox seller — the documented productization prerequisites (seller offers ×0,
+above). The GPSR `responsibleProducer` (`type: ID/NAME` discriminator) and `marketedBeforeGPSRObligation`
+serialization are WireMock-pinned; they reach the server only once a valid product lets the create
+pass the product lookup. Read-back of `productSet` stays deferred until that seed exists.
+
 ## Fulfillment (bucket I)
 
 ### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)

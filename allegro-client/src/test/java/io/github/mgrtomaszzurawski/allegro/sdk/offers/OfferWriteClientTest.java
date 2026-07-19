@@ -17,6 +17,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -39,6 +40,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -134,6 +137,20 @@ class OfferWriteClientTest {
     private static final String PARAM_RANGE_FROM_JSON_PATH = "$.parameters[1].rangeValue.from";
     private static final String PARAM_RANGE_TO_JSON_PATH = "$.parameters[1].rangeValue.to";
 
+    private static final String PRODUCT_ID = "8f2b1c00-0000-4000-8000-000000000001";
+    private static final int PRODUCT_SET_QUANTITY = 2;
+    private static final String PRODUCER_ID = "44444444-4444-4444-4444-444444444444";
+    private static final String PRODUCT_ID_JSON_PATH = "$.productSet[0].product.id";
+    private static final String PRODUCT_QUANTITY_JSON_PATH = "$.productSet[0].quantity.value";
+    private static final String PRODUCER_TYPE_JSON_PATH = "$.productSet[0].responsibleProducer.type";
+    private static final String PRODUCER_ID_JSON_PATH = "$.productSet[0].responsibleProducer.id";
+    private static final String MARKETED_BEFORE_JSON_PATH = "$.productSet[0].marketedBeforeGPSRObligation";
+    private static final String PRODUCER_TYPE_ID = "ID";
+    private static final String PRODUCT_SET_RESPONSE_BODY = ("{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"productSet\":[{\"product\":{\"id\":\"%s\"},\"quantity\":{\"value\":%d},"
+            + "\"responsibleProducer\":{\"id\":\"%s\"},\"marketedBeforeGPSRObligation\":true}]}")
+            .formatted(CREATED_OFFER_ID, NAME, PRODUCT_ID, PRODUCT_SET_QUANTITY, PRODUCER_ID);
+
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"bad name\",\"path\":\"name\"}]}";
     private static final String NOT_FOUND_BODY =
@@ -210,6 +227,43 @@ class OfferWriteClientTest {
                         true, false)));
         // and the response is mapped to the created offer
         assertEquals(CREATED_OFFER_ID, created.id());
+    }
+
+    @Test
+    void create_whenProductSetProvided_serializesBindingAndReadsItBack(WireMockRuntimeInfo wmInfo) {
+        // given — the create echoes a productized offer (product ref + GPSR producer)
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, TestHttpConstants.VND_ALLEGRO_V1)
+                        .withBody(PRODUCT_SET_RESPONSE_BODY)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME)
+                .categoryId(CATEGORY_ID)
+                .buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addProductSetElement(ProductSetElement.of(PRODUCT_ID, PRODUCT_SET_QUANTITY)
+                        .withResponsibleProducer(ResponsibleProducerRef.byId(PRODUCER_ID))
+                        .withMarketedBeforeGpsrObligation(true))
+                .build();
+
+        // when
+        Offer created = offers(wmInfo).create(request);
+
+        // then — the product binding + GPSR are on the wire (write mapping)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PRODUCT_ID_JSON_PATH, equalTo(PRODUCT_ID)))
+                .withRequestBody(matchingJsonPath(PRODUCT_QUANTITY_JSON_PATH,
+                        equalTo(String.valueOf(PRODUCT_SET_QUANTITY))))
+                .withRequestBody(matchingJsonPath(PRODUCER_TYPE_JSON_PATH, equalTo(PRODUCER_TYPE_ID)))
+                .withRequestBody(matchingJsonPath(PRODUCER_ID_JSON_PATH, equalTo(PRODUCER_ID)))
+                .withRequestBody(matchingJsonPath(MARKETED_BEFORE_JSON_PATH, equalTo("true"))));
+        // and the productSet is read back off the response (read mapping)
+        assertEquals(1, created.productSet().size());
+        ProductSetElement element = created.productSet().get(0);
+        assertEquals(PRODUCT_ID, element.productId());
+        assertEquals(PRODUCT_SET_QUANTITY, element.quantity());
+        assertEquals(PRODUCER_ID, requireNonNull(element.responsibleProducer()).id());
+        assertEquals(Boolean.TRUE, element.marketedBeforeGpsrObligation());
     }
 
     @Test
