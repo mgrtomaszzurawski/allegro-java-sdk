@@ -208,9 +208,26 @@ CreateOfferRequest request = CreateOfferRequest.builder()
 ```
 
 Use `parameters(List<OfferParameter>)` to set them all at once. The value ids and their meaning
-come from the category definition (see `client.categories()` in bucket E). On the read side,
-`offer.parameters()` returns every parameter the offer carries, each with the value kind it was
-set with (an unset kind reads back as an empty list or a `null` range).
+come from the category definition (see `client.categories()` in bucket E).
+
+On the read side, `offer.parameters()` returns every parameter the offer carries. Call
+`parameter.kind()` (`DICTIONARY` / `FREE_TEXT` / `RANGE`) to tell them apart rather than guessing
+from which list is populated — a **dictionary** parameter is read back with both its `valuesIds`
+(the ids) **and** `values` (the human-readable labels of those ids):
+
+```java
+for (OfferParameter parameter : offer.parameters()) {
+    switch (parameter.kind()) {
+        case DICTIONARY -> System.out.println(parameter.valuesIds() + " = " + parameter.values());
+        case FREE_TEXT  -> System.out.println(parameter.values());
+        case RANGE      -> System.out.println(parameter.rangeValue().lowerBound()
+                                              + ".." + parameter.rangeValue().upperBound());
+    }
+}
+```
+
+A read parameter can be fed straight back into a create: `toRaw()` sends only the value ids of a
+dictionary parameter (the labels are read-only — echoing them back is rejected by Allegro).
 
 ## Edit an offer
 

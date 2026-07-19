@@ -72,9 +72,11 @@ class OfferTest {
     private static final String PARAM_DICT_ID = "11321";
     private static final String PARAM_DICT_NAME = "Color";
     private static final String PARAM_DICT_VALUE_ID = "1";
+    private static final String PARAM_DICT_LABEL = "Red";
     private static final String PARAM_RANGE_ID = "12345";
     private static final String PARAM_RANGE_FROM = "10";
     private static final String PARAM_RANGE_TO = "20";
+    private static final int EXPECTED_PARAM_COUNT = 2;
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -148,7 +150,8 @@ class OfferTest {
                 .name(NAME_FULL)
                 .parameters(List.of(
                         new ParameterProductOfferResponseRaw()
-                                .id(PARAM_DICT_ID).name(PARAM_DICT_NAME).valuesIds(List.of(PARAM_DICT_VALUE_ID)),
+                                .id(PARAM_DICT_ID).name(PARAM_DICT_NAME)
+                                .values(List.of(PARAM_DICT_LABEL)).valuesIds(List.of(PARAM_DICT_VALUE_ID)),
                         new ParameterProductOfferResponseRaw()
                                 .id(PARAM_RANGE_ID)
                                 .rangeValue(new ParameterRangeValueRaw().from(PARAM_RANGE_FROM).to(PARAM_RANGE_TO))));
@@ -156,14 +159,15 @@ class OfferTest {
         // when
         Offer offer = Offer.from(raw);
 
-        // then — both parameters project in order, each carrying only its value kind
+        // then — both parameters project in order; the dictionary one carries BOTH its
+        // ids and their labels (the real read shape), the range one carries its bounds
         List<OfferParameter> parameters = offer.parameters();
-        assertEquals(2, parameters.size());
+        assertEquals(EXPECTED_PARAM_COUNT, parameters.size());
         OfferParameter dictionary = parameters.get(0);
         assertEquals(PARAM_DICT_ID, dictionary.id());
         assertEquals(PARAM_DICT_NAME, dictionary.name());
         assertEquals(List.of(PARAM_DICT_VALUE_ID), dictionary.valuesIds());
-        assertEquals(List.of(), dictionary.values());
+        assertEquals(List.of(PARAM_DICT_LABEL), dictionary.values());
         assertNull(dictionary.rangeValue());
         OfferParameter range = parameters.get(1);
         assertEquals(PARAM_RANGE_ID, range.id());

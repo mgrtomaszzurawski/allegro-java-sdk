@@ -115,6 +115,9 @@ class OfferWriteClientTest {
 
     private static final String PARAM_DICT_ID = "11321";
     private static final String PARAM_DICT_VALUE_ID = "1";
+    private static final String PARAM_FREE_ID = "11324";
+    private static final String PARAM_FREE_VALUE = "Cherry MX";
+    private static final String PARAM_FREE_VALUE_JSON_PATH = "$.parameters[0].values[0]";
     private static final String PARAM_RANGE_ID = "12345";
     private static final String PARAM_RANGE_FROM = "10";
     private static final String PARAM_RANGE_TO = "20";
@@ -355,6 +358,27 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(PARAM_RANGE_ID_JSON_PATH, equalTo(PARAM_RANGE_ID)))
                 .withRequestBody(matchingJsonPath(PARAM_RANGE_FROM_JSON_PATH, equalTo(PARAM_RANGE_FROM)))
                 .withRequestBody(matchingJsonPath(PARAM_RANGE_TO_JSON_PATH, equalTo(PARAM_RANGE_TO))));
+    }
+
+    @Test
+    void create_whenFreeTextParameterSet_serializesValues(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying a single free-text parameter
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addParameter(OfferParameter.freeText(PARAM_FREE_ID, PARAM_FREE_VALUE))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the free-text parameter reaches the body as {id, values:[...]}
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PARAM_DICT_ID_JSON_PATH, equalTo(PARAM_FREE_ID)))
+                .withRequestBody(matchingJsonPath(PARAM_FREE_VALUE_JSON_PATH, equalTo(PARAM_FREE_VALUE))));
     }
 
     @Test

@@ -14,6 +14,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParamete
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -243,16 +244,17 @@ public final class CreateOfferRequest {
             return this;
         }
 
-        /** Replace the offer's category parameters with the given list (optional). */
+        /** Replace the offer's category parameters with the given list (optional, non-null). */
         public Builder parameters(List<OfferParameter> parameters) {
+            Objects.requireNonNull(parameters, "parameters");
             this.parameters.clear();
             this.parameters.addAll(parameters);
             return this;
         }
 
-        /** Add a single category parameter (optional; call repeatedly to add several). */
+        /** Add a single category parameter (optional, non-null; call repeatedly to add several). */
         public Builder addParameter(OfferParameter parameter) {
-            this.parameters.add(parameter);
+            this.parameters.add(Objects.requireNonNull(parameter, "parameter"));
             return this;
         }
 

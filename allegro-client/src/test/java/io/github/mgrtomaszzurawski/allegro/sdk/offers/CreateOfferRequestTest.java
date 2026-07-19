@@ -37,6 +37,7 @@ class CreateOfferRequestTest {
     private static final String PARAM_DICT_VALUE_ID = "1";
     private static final String PARAM_FREE_ID = "11324";
     private static final String PARAM_FREE_VALUE = "Cherry MX";
+    private static final int EXPECTED_PARAM_COUNT = 2;
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -221,7 +222,7 @@ class CreateOfferRequestTest {
                 .build();
 
         // then — both are exposed in the order added
-        assertEquals(2, request.parameters().size());
+        assertEquals(EXPECTED_PARAM_COUNT, request.parameters().size());
         assertEquals(PARAM_DICT_ID, request.parameters().get(0).id());
         assertEquals(PARAM_FREE_ID, request.parameters().get(1).id());
     }

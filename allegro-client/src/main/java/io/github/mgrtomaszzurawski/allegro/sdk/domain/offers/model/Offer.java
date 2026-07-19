@@ -66,6 +66,15 @@ public record Offer(
         @Nullable OfferLocation location,
         List<OfferParameter> parameters) {
 
+    /**
+     * Canonical constructor. Normalizes {@code parameters} to an immutable copy so the
+     * non-null "empty when the payload omits them" contract holds on every construction
+     * path (the mapper already supplies an immutable list).
+     */
+    public Offer {
+        parameters = List.copyOf(parameters);
+    }
+
     /** Project a generated product-offer response onto the consumer record. */
     public static Offer from(SaleProductOfferResponseV1Raw raw) {
         SellingModeRaw sellingMode = raw.getSellingMode();
