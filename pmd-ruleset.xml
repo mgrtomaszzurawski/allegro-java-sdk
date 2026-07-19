@@ -95,7 +95,9 @@
          CreateOfferRequest.Builder, which flattens the ~27+ fields of SaleProductOfferRequestV1
          (name/category/selling terms/stock/delivery/after-sales/description/location/parameters/
          external/language/size-table/payments/…). 40 covers the fully-complete offer builder
-         with margin; raise further only per-case, citing the concrete builder here. -->
+         with margin; raise further only per-case, citing the concrete builder here. This applies
+         to DTO/builder mirrors of an API body — hand-rolled aggregates are still guarded by the
+         excluded-elsewhere DataClass/GodClass heuristics. -->
     <rule ref="category/java/design.xml/TooManyFields">
         <properties>
             <property name="maxfields" value="40"/>

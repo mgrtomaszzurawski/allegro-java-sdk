@@ -95,6 +95,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   branch the payload actually fits wins; it falls back to the lenient single match
   and then an `Object` branch, never worse than before. Buckets that hand-read such
   `oneOf`s from `JsonNode` (pricing, campaigns) can now deserialize them directly.
+- Quality: PMD `TooManyFields` threshold raised 15 → 40. A typed SDK's request builders mirror
+  the full field set of their endpoint's body — a request builder must carry EVERY field for the
+  SDK to be complete. The driver is `CreateOfferRequest.Builder`, flattening the ~27+ fields of
+  `SaleProductOfferRequestV1`; the raise applies to DTO/builder mirrors, not hand-rolled aggregates
+  (`DataClass`/`GodClass` already guard those). Documented in `pmd-ruleset.xml` with the driver.
 
 ### A — offers-core
 
@@ -160,11 +165,9 @@ sections. Empty subsections are dropped by the release engineer when folding
   dropped so a read parameter round-trips into a create without Allegro's `InvalidDictionaryParameter`).
   Completes the publish-critical content fields (description + parameters).
 - Coverage (offer references): `CreateOfferRequest` and the `Offer` read now carry the seller's
-  own `externalId`, the listing `language` (ISO 639-1), and the attached `sizeTableId`. The
-  external id and size-table id are exposed as flat `String`s (the `{id}` wire wrappers are
-  hidden). Core: the PMD `TooManyFields` threshold is raised to 40 — a typed SDK's request
-  builders mirror the full field set of their endpoint's body, and `CreateOfferRequest.Builder`
-  grows toward every field of `SaleProductOfferRequestV1`.
+  own `externalId` (their system's SKU/id), the listing `language` (BCP-47 code, e.g. `pl-PL`),
+  and the attached `sizeTableId`. The external id and size-table id are exposed as flat `String`s
+  (the `{id}` wire wrappers are hidden).
 
 ### B — orders-payments
 

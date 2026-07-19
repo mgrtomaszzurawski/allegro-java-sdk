@@ -39,7 +39,7 @@ class CreateOfferRequestTest {
     private static final String PARAM_FREE_VALUE = "Cherry MX";
     private static final int EXPECTED_PARAM_COUNT = 2;
     private static final String EXTERNAL_ID = "SKU-12345";
-    private static final String LANGUAGE = "pl";
+    private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
 
     private static CreateOfferRequest.Builder validBuilder() {

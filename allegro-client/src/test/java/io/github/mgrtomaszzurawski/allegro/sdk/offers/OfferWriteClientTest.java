@@ -123,7 +123,7 @@ class OfferWriteClientTest {
     private static final String PARAM_RANGE_TO = "20";
 
     private static final String EXTERNAL_ID = "SKU-12345";
-    private static final String LANGUAGE = "pl";
+    private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
     private static final String EXTERNAL_ID_JSON_PATH = "$.external.id";
     private static final String LANGUAGE_JSON_PATH = "$.language";

@@ -15,21 +15,21 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.LocationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StandardizedDescriptionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
@@ -80,7 +80,7 @@ class OfferTest {
     private static final String PARAM_RANGE_TO = "20";
     private static final int EXPECTED_PARAM_COUNT = 2;
     private static final String EXTERNAL_ID = "SKU-12345";
-    private static final String LANGUAGE = "pl";
+    private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
 
     @Test

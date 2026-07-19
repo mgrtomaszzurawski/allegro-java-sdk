@@ -232,8 +232,8 @@ dictionary parameter (the labels are read-only — echoing them back is rejected
 ### External id, language and size table
 
 An offer can also carry the seller's own **external identifier** (your system's SKU/id for the
-offer), the **listing language** (ISO 639-1, e.g. `"pl"`, defaults to the account language), and
-the id of a **size table** to attach. All three are optional and read back on `offers().get(offerId)`:
+offer), the **listing language** (BCP-47 code, e.g. `"pl-PL"`, defaults to the account language),
+and the id of a **size table** to attach. All three are optional and read back on `offers().get(offerId)`:
 
 ```java
 CreateOfferRequest request = CreateOfferRequest.builder()
@@ -242,7 +242,7 @@ CreateOfferRequest request = CreateOfferRequest.builder()
         .buyNowPrice(Money.of("199.99", "PLN"))
         .availableStock(10)
         .externalId("SKU-12345")
-        .language("pl")
+        .language("pl-PL")
         .sizeTableId("size-table-1")
         .build();
 ```

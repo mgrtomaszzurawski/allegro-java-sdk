@@ -47,8 +47,8 @@ import org.jspecify.annotations.Nullable;
  *                       {@code null} if omitted
  * @param location       the ship-from location, or {@code null} if omitted
  * @param parameters     the offer's category parameters (empty when the payload omits them)
- * @param externalId     the seller's own external identifier for the offer, or {@code null}
- * @param language       the listing language (ISO 639-1), or {@code null} if omitted
+ * @param externalId     the seller's own external identifier (their system's SKU/id), or {@code null}
+ * @param language       the listing language (BCP-47 code, e.g. {@code pl-PL}), or {@code null} if omitted
  * @param sizeTableId    the id of the attached size table, or {@code null} if omitted
  * @since 0.2.0
  */

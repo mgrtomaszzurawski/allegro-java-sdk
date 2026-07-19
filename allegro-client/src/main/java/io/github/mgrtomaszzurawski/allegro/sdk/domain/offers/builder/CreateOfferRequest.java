@@ -149,12 +149,12 @@ public final class CreateOfferRequest {
         return parameters;
     }
 
-    /** The seller's own external identifier for the offer, or {@code null} if not set. */
+    /** The seller's own external identifier (your system's SKU/id) for the offer, or {@code null} if not set. */
     public @Nullable String externalId() {
         return externalId;
     }
 
-    /** The listing language (ISO 639-1, e.g. {@code "pl"}), or {@code null} to use the account default. */
+    /** The listing language (BCP-47 code, e.g. {@code "pl-PL"}), or {@code null} to use the account default. */
     public @Nullable String language() {
         return language;
     }
@@ -288,7 +288,7 @@ public final class CreateOfferRequest {
             return this;
         }
 
-        /** Set the listing language (ISO 639-1, e.g. {@code "pl"}; optional). */
+        /** Set the listing language (BCP-47 code, e.g. {@code "pl-PL"}; optional). */
         public Builder language(@Nullable String language) {
             this.language = language;
             return this;
