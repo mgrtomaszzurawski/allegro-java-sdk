@@ -72,7 +72,7 @@ OfferPromoOptions promo = offers.promoOptions();
 promo.availablePackages()                         // GET  /sale/offer-promotion-packages
 promo.forAllOffers()                              // GET  /sale/offers/promo-options
 promo.forOffer(offerId)                           // GET  /sale/offers/{offerId}/promo-options
-promo.modify(offerId, PromoOptionsChange)         // POST /sale/offers/{offerId}/promo-options-modification (sync)
+promo.modify(offerId, List<PromoOptionModification>) // POST /sale/offers/{offerId}/promo-options-modification
 promo.modifyBatch(BatchPromoOptionsRequest)       // PUT  /sale/offers/promo-options-commands/{id}          (sync)
 
 // Images and attachments

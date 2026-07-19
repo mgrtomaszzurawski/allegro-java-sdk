@@ -18,6 +18,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -32,10 +33,11 @@ public final class PromoOptionsImpl implements PromoOptions {
     private static final String OP_FOR_OFFER = "get offer promotion packages";
     private static final String OP_MODIFY = "modify offer promotion packages";
 
-    /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
+    /** 100 balances round-trips against payload size (well within the endpoint's limit). */
     private static final int PAGE_SIZE = 100;
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
+    private static final String ERR_NO_CHANGES = "at least one promo-option change is required";
 
     private final HttpSupport http;
 
@@ -77,6 +79,10 @@ public final class PromoOptionsImpl implements PromoOptions {
 
     @Override
     public void modify(String offerId, List<PromoOptionModification> changes) {
+        Objects.requireNonNull(offerId, "offerId");
+        if (changes == null || changes.isEmpty()) {
+            throw new IllegalArgumentException(ERR_NO_CHANGES);
+        }
         PromoOptionsModificationsRaw body = new PromoOptionsModificationsRaw()
                 .modifications(changes.stream().map(PromoOptionModification::toRaw).toList());
         http.request(OP_MODIFY)

@@ -15,6 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -143,6 +144,12 @@ class PromoOptionsWriteClientTest {
                 .withRequestBody(matchingJsonPath(MOD_TYPE_PATH, equalTo("CHANGE")))
                 .withRequestBody(matchingJsonPath(PKG_TYPE_PATH, equalTo("BASE")))
                 .withRequestBody(matchingJsonPath(PKG_ID_PATH, equalTo(PACKAGE_ID))));
+    }
+
+    @Test
+    void modify_whenNoChanges_throws(WireMockRuntimeInfo wmInfo) {
+        // then — an empty change list would post an empty modifications[]; reject it fail-fast
+        assertThrows(IllegalArgumentException.class, () -> promo(wmInfo).modify(OFFER_ID, List.of()));
     }
 
     @Test
