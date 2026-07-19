@@ -7,12 +7,14 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -44,6 +46,7 @@ import org.jspecify.annotations.Nullable;
  * @param description    the standardized description (sections of text/images), or
  *                       {@code null} if omitted
  * @param location       the ship-from location, or {@code null} if omitted
+ * @param parameters     the offer's category parameters (empty when the payload omits them)
  * @since 0.2.0
  */
 public record Offer(
@@ -60,7 +63,8 @@ public record Offer(
         @Nullable OfferDelivery delivery,
         @Nullable AfterSalesServices afterSalesServices,
         @Nullable OfferDescription description,
-        @Nullable OfferLocation location) {
+        @Nullable OfferLocation location,
+        List<OfferParameter> parameters) {
 
     /** Project a generated product-offer response onto the consumer record. */
     public static Offer from(SaleProductOfferResponseV1Raw raw) {
@@ -81,7 +85,13 @@ public record Offer(
                 OfferDelivery.from(raw.getDelivery()),
                 AfterSalesServices.from(raw.getAfterSalesServices()),
                 OfferDescription.from(raw.getDescription()),
-                OfferLocation.from(raw.getLocation()));
+                OfferLocation.from(raw.getLocation()),
+                parametersOf(raw));
+    }
+
+    private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {
+        List<ParameterProductOfferResponseRaw> parameters = raw.getParameters();
+        return parameters == null ? List.of() : parameters.stream().map(OfferParameter::from).toList();
     }
 
     private static @Nullable Money buyNowPriceOf(@Nullable SellingModeRaw sellingMode) {

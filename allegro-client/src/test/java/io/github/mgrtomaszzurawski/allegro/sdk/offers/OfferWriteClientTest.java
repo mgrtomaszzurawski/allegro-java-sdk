@@ -38,6 +38,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -111,6 +112,17 @@ class OfferWriteClientTest {
     private static final String STOCK_UNIT_JSON_PATH = "$.stock.unit";
     private static final String FORMAT_AUCTION = "AUCTION";
     private static final String UNIT_PAIR = "PAIR";
+
+    private static final String PARAM_DICT_ID = "11321";
+    private static final String PARAM_DICT_VALUE_ID = "1";
+    private static final String PARAM_RANGE_ID = "12345";
+    private static final String PARAM_RANGE_FROM = "10";
+    private static final String PARAM_RANGE_TO = "20";
+    private static final String PARAM_DICT_ID_JSON_PATH = "$.parameters[0].id";
+    private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
+    private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
+    private static final String PARAM_RANGE_FROM_JSON_PATH = "$.parameters[1].rangeValue.from";
+    private static final String PARAM_RANGE_TO_JSON_PATH = "$.parameters[1].rangeValue.to";
 
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"bad name\",\"path\":\"name\"}]}";
@@ -317,6 +329,32 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(STARTING_PRICE_JSON_PATH, equalTo(STARTING_AMOUNT)))
                 .withRequestBody(matchingJsonPath(MINIMAL_PRICE_JSON_PATH, equalTo(MINIMAL_AMOUNT)))
                 .withRequestBody(matchingJsonPath(STOCK_UNIT_JSON_PATH, equalTo(UNIT_PAIR))));
+    }
+
+    @Test
+    void create_whenParametersSet_serializesDictionaryAndRange(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying a dictionary parameter (value ids) and a range parameter
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addParameter(OfferParameter.dictionary(PARAM_DICT_ID, PARAM_DICT_VALUE_ID))
+                .addParameter(OfferParameter.range(PARAM_RANGE_ID, PARAM_RANGE_FROM, PARAM_RANGE_TO))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — both parameters reach the body in order: the dictionary one as
+        // {id, valuesIds:[...]} and the range one as {id, rangeValue:{from,to}}
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PARAM_DICT_ID_JSON_PATH, equalTo(PARAM_DICT_ID)))
+                .withRequestBody(matchingJsonPath(PARAM_DICT_VALUE_JSON_PATH, equalTo(PARAM_DICT_VALUE_ID)))
+                .withRequestBody(matchingJsonPath(PARAM_RANGE_ID_JSON_PATH, equalTo(PARAM_RANGE_ID)))
+                .withRequestBody(matchingJsonPath(PARAM_RANGE_FROM_JSON_PATH, equalTo(PARAM_RANGE_FROM)))
+                .withRequestBody(matchingJsonPath(PARAM_RANGE_TO_JSON_PATH, equalTo(PARAM_RANGE_TO))));
     }
 
     @Test

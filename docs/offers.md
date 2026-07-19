@@ -188,6 +188,30 @@ CreateOfferRequest request = CreateOfferRequest.builder()
 An item kind Allegro adds after this SDK release reads back as `DescriptionItemType.UNKNOWN`
 rather than failing the response.
 
+### Category parameters
+
+A category dictates which parameters an offer must carry and the shape each takes. Build each
+one with the factory that matches its kind — a **dictionary** parameter with value ids chosen
+from the category's dictionary, a **free-text** parameter with plain strings, or a **range**
+parameter with a `from`…`to` span — and add them to the request:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .addParameter(OfferParameter.dictionary("11321", "1"))       // a dictionary value id
+        .addParameter(OfferParameter.freeText("11324", "Cherry MX"))  // a free-text value
+        .addParameter(OfferParameter.range("11325", "10", "20"))      // a numeric/date range
+        .build();
+```
+
+Use `parameters(List<OfferParameter>)` to set them all at once. The value ids and their meaning
+come from the category definition (see `client.categories()` in bucket E). On the read side,
+`offer.parameters()` returns every parameter the offer carries, each with the value kind it was
+set with (an unset kind reads back as an empty list or a `null` range).
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its
