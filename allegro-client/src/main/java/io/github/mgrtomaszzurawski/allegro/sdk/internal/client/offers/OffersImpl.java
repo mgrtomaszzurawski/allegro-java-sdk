@@ -16,6 +16,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfDeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
@@ -44,6 +45,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesSer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
@@ -191,6 +193,11 @@ public final class OffersImpl implements Offers {
         return raw;
     }
 
+    /** The generated request parameters for the SDK category parameters, in order. */
+    private static List<ParameterProductOfferRequestRaw> parametersRawOf(List<OfferParameter> parameters) {
+        return parameters.stream().map(OfferParameter::toRaw).toList();
+    }
+
     @Override
     public Offer create(CreateOfferRequest request) {
         SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
@@ -212,6 +219,9 @@ public final class OffersImpl implements Offers {
         }
         if (request.location() != null) {
             body.location(request.location().toRaw());
+        }
+        if (!request.parameters().isEmpty()) {
+            body.parameters(parametersRawOf(request.parameters()));
         }
         // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
         // empty collections and leaves nullable scalars (e.g. `language`) null, and
