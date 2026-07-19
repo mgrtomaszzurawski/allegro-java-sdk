@@ -16,9 +16,9 @@ import org.jspecify.annotations.Nullable;
  * statuses.
  *
  * <p>This record exposes the fields a seller needs to identify and process an
- * order, including the payment breakdown (main payment plus any surcharges) and
- * the seller's private note. The delivery and invoice breakdowns are added by a
- * later slice; see {@code docs/orders.md}.
+ * order: the payment breakdown (main payment plus any surcharges), how it is
+ * delivered, the invoice requirement, and the seller's private note. See
+ * {@code docs/orders.md}.
  *
  * @param id order (checkout form) identifier
  * @param status buyer-side lifecycle status
@@ -29,6 +29,8 @@ import org.jspecify.annotations.Nullable;
  * @param payment the main payment on the order, or {@code null} when unpaid
  * @param surcharges additional charges beyond the main payment; never
  *     {@code null}, possibly empty
+ * @param delivery how the order is delivered, or {@code null} when not set
+ * @param invoice the buyer's invoice requirement, or {@code null} when not set
  * @param messageToSeller buyer's message to the seller, or {@code null}
  * @param sellerNote the seller's private note on the order, or {@code null}
  * @param marketplaceId marketplace the order was placed on, or {@code null}
@@ -47,6 +49,8 @@ public record Order(
         Money totalToPay,
         @Nullable OrderPayment payment,
         List<OrderPayment> surcharges,
+        @Nullable OrderDelivery delivery,
+        @Nullable InvoiceRequirement invoice,
         @Nullable String messageToSeller,
         @Nullable String sellerNote,
         @Nullable String marketplaceId,
@@ -66,6 +70,8 @@ public record Order(
         var payment = raw.getPayment();
         var note = raw.getNote();
         var surcharges = raw.getSurcharges();
+        var delivery = raw.getDelivery();
+        var invoice = raw.getInvoice();
         return new Order(
                 raw.getId().toString(),
                 OrderStatus.from(raw.getStatus()),
@@ -75,6 +81,8 @@ public record Order(
                 Money.of(totalToPay.getAmount(), totalToPay.getCurrency()),
                 payment == null ? null : OrderPayment.from(payment),
                 surcharges.stream().map(OrderPayment::from).toList(),
+                delivery == null ? null : OrderDelivery.from(delivery),
+                invoice == null ? null : InvoiceRequirement.from(invoice),
                 raw.getMessageToSeller(),
                 note == null ? null : note.getText(),
                 marketplace == null ? null : marketplace.getId(),

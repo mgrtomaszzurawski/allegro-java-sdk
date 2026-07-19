@@ -42,6 +42,36 @@
     }
   ],
   "note": { "text": "Fragile - handle with care" },
+  "delivery": {
+    "method": { "id": "dm-1", "name": "Courier" },
+    "address": {
+      "firstName": "Anna",
+      "lastName": "Nowak",
+      "street": "Main 5",
+      "city": "Warsaw",
+      "zipCode": "00-001",
+      "countryCode": "PL",
+      "phoneNumber": "+48500100200"
+    },
+    "cost": { "amount": "9.99", "currency": "PLN" },
+    "time": { "from": "2026-07-16T08:00:00Z", "to": "2026-07-16T18:00:00Z" },
+    "smart": true
+  },
+  "invoice": {
+    "required": true,
+    "dueDate": "2026-07-30",
+    "address": {
+      "street": "Biz 7",
+      "city": "Krakow",
+      "zipCode": "30-001",
+      "countryCode": "PL",
+      "company": {
+        "name": "Acme Sp. z o.o.",
+        "vatPayerStatus": "ACTIVE",
+        "ids": [{ "type": "PL_NIP", "value": "1234567890" }]
+      }
+    }
+  },
   "summary": {
     "totalToPay": { "amount": "39.98", "currency": "PLN" }
   },
