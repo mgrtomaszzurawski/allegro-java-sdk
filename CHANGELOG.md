@@ -535,3 +535,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   and `ResponsiblePartyContact` value types (a contact requires an `email` or `formUrl`), with
   fail-fast request builders. Lazy offset/limit paging (`limit` ≤ 1000). Documented in
   `docs/settings.md`; `settings-compliance` write→read demo scenario (green on the sandbox).
+- `settings().additionalServices()` read surface: `categoryDefinitions()` (the definition catalog
+  by category, each with a `maxPrice`), `streamGroups()` (lazy offset/limit `Stream`), `group(id)`,
+  and `translations(id)`. Immutable `AdditionalServicesGroup` → `AdditionalService` →
+  `ServiceConfiguration` (`ServiceConstraint` + `Money` price) records, plus `AdditionalServiceCategory`
+  / `AdditionalServiceDefinition` and `GroupTranslations` / `GroupTranslation` / `ServiceTranslation`
+  (with `ServiceConstraintType` / `TranslationType` enums). Documented in `docs/settings.md`;
+  `settings-additional-services` read demo. Group/translation writes ship in a follow-up slice.

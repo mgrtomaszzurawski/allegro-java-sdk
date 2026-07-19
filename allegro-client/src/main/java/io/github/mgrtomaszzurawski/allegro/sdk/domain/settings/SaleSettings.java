@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.AdditionalServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.AfterSaleConditions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.Compliance;
 
@@ -33,4 +34,11 @@ public interface SaleSettings {
      * @return the compliance sub-facade
      */
     Compliance compliance();
+
+    /**
+     * Additional-services groups, their definition catalog and translations.
+     *
+     * @return the additional-services sub-facade
+     */
+    AdditionalServices additionalServices();
 }

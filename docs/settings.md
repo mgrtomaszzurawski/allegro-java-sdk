@@ -151,6 +151,28 @@ compliance.streamResponsiblePersons().forEach(person -> System.out.println(perso
 ResponsibleProducer producer = compliance.responsibleProducer(producerId);
 ```
 
+## Additional services
+
+`settings().additionalServices()` reads the additional-services a seller offers on their listings:
+the **definition catalog** available to the seller (grouped by category, each definition carrying a
+`maxPrice`), the seller's own **groups** (lazy list + single read; each group holds services, and
+each service its priced `configurations` with a country/delivery `constraint`), and a group's
+**translations** (one `GroupTranslation` per language, `MANUAL` or `AUTO`). Group create/update and
+translation writes ship in a follow-up slice.
+
+```java
+AdditionalServices additional = client.settings().additionalServices();
+
+additional.categoryDefinitions()                     // catalog: categories -> definitions (+ maxPrice)
+        .forEach(category -> System.out.println(category.name()));
+
+additional.streamGroups().forEach(group ->           // lazy Stream<AdditionalServicesGroup>
+        System.out.println(group.name() + " (" + group.services().size() + " services)"));
+
+AdditionalServicesGroup group = additional.group(groupId);
+GroupTranslations translations = additional.translations(groupId);
+```
+
 ## Errors
 
 All calls surface the SDK's remediation-grouped exceptions: `AllegroBadRequestException`

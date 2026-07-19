@@ -94,6 +94,7 @@ public final class DemoApp {
         SCENARIOS.put(SettingsImpliedWarrantyDemo.SCENARIO, SettingsImpliedWarrantyDemo::run);
         SCENARIOS.put(SettingsReturnPolicyDemo.SCENARIO, SettingsReturnPolicyDemo::run);
         SCENARIOS.put(ComplianceDemo.SCENARIO, ComplianceDemo::run);
+        SCENARIOS.put(AdditionalServicesDemo.SCENARIO, AdditionalServicesDemo::run);
     }
 
     private DemoApp() {

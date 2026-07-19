@@ -417,7 +417,7 @@ afterSale.uploadAttachment(attachmentId, bytes)   // PUT  …/attachments/{attac
 // Additional services
 AdditionalServices additional = settings.additionalServices();
 additional.categoryDefinitions()                  // GET   /sale/offer-additional-services/categories
-additional.groups() / .group(groupId)             // GET   /sale/offer-additional-services/groups[/{groupId}]
+additional.streamGroups() / .group(groupId)       // GET   /sale/offer-additional-services/groups[/{groupId}] (lazy Stream)
 additional.createGroup(ServiceGroupRequest)       // POST  /sale/offer-additional-services/groups
 additional.updateGroup(groupId, ServiceGroupRequest) // PUT /sale/offer-additional-services/groups/{groupId}
 additional.translations(groupId)                  // GET   …/groups/{groupId}/translations

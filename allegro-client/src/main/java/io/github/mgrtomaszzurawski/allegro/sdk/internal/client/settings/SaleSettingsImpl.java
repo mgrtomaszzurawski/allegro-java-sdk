@@ -5,8 +5,10 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.AdditionalServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.AfterSaleConditions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.Compliance;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.additionalservices.AdditionalServicesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.aftersale.AfterSaleConditionsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.compliance.ComplianceImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -21,10 +23,12 @@ public final class SaleSettingsImpl implements SaleSettings {
 
     private final AfterSaleConditions afterSaleConditions;
     private final Compliance compliance;
+    private final AdditionalServices additionalServices;
 
     public SaleSettingsImpl(HttpRuntime runtime) {
         this.afterSaleConditions = new AfterSaleConditionsImpl(runtime);
         this.compliance = new ComplianceImpl(runtime);
+        this.additionalServices = new AdditionalServicesImpl(runtime);
     }
 
     @Override
@@ -35,5 +39,10 @@ public final class SaleSettingsImpl implements SaleSettings {
     @Override
     public Compliance compliance() {
         return compliance;
+    }
+
+    @Override
+    public AdditionalServices additionalServices() {
+        return additionalServices;
     }
 }
