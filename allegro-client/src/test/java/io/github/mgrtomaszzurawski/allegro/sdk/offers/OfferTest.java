@@ -15,17 +15,21 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.LocationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StandardizedDescriptionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
@@ -39,7 +43,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ParameterRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import java.util.UUID;
@@ -65,6 +71,17 @@ class OfferTest {
     private static final String DESC_CONTENT = "<p>Great keyboard</p>";
     private static final String CITY = "Warszawa";
     private static final String COUNTRY_CODE = "PL";
+    private static final String PARAM_DICT_ID = "11321";
+    private static final String PARAM_DICT_NAME = "Color";
+    private static final String PARAM_DICT_VALUE_ID = "1";
+    private static final String PARAM_DICT_LABEL = "Red";
+    private static final String PARAM_RANGE_ID = "12345";
+    private static final String PARAM_RANGE_FROM = "10";
+    private static final String PARAM_RANGE_TO = "20";
+    private static final int EXPECTED_PARAM_COUNT = 2;
+    private static final String EXTERNAL_ID = "SKU-12345";
+    private static final String LANGUAGE = "pl-PL";
+    private static final String SIZE_TABLE_ID = "size-table-1";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -127,6 +144,62 @@ class OfferTest {
         assertNull(offer.afterSalesServices());
         assertNull(offer.description());
         assertNull(offer.location());
+        assertEquals(List.of(), offer.parameters());
+        assertNull(offer.externalId());
+        assertNull(offer.language());
+        assertNull(offer.sizeTableId());
+    }
+
+    @Test
+    void from_whenOfferRefsPresent_mapsExternalIdLanguageAndSizeTable() {
+        // given — a payload carrying the seller external id, listing language and a size table
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .external(new ExternalIdRaw().id(EXTERNAL_ID))
+                .language(LANGUAGE)
+                .sizeTable(new SizeTableRaw().id(SIZE_TABLE_ID));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — each reference is unwrapped onto the flat consumer field
+        assertEquals(EXTERNAL_ID, offer.externalId());
+        assertEquals(LANGUAGE, offer.language());
+        assertEquals(SIZE_TABLE_ID, offer.sizeTableId());
+    }
+
+    @Test
+    void from_whenParametersPresent_mapsDictionaryAndRangeInOrder() {
+        // given — a payload with a dictionary parameter (value ids) and a range parameter
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .parameters(List.of(
+                        new ParameterProductOfferResponseRaw()
+                                .id(PARAM_DICT_ID).name(PARAM_DICT_NAME)
+                                .values(List.of(PARAM_DICT_LABEL)).valuesIds(List.of(PARAM_DICT_VALUE_ID)),
+                        new ParameterProductOfferResponseRaw()
+                                .id(PARAM_RANGE_ID)
+                                .rangeValue(new ParameterRangeValueRaw().from(PARAM_RANGE_FROM).to(PARAM_RANGE_TO))));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — both parameters project in order; the dictionary one carries BOTH its
+        // ids and their labels (the real read shape), the range one carries its bounds
+        List<OfferParameter> parameters = offer.parameters();
+        assertEquals(EXPECTED_PARAM_COUNT, parameters.size());
+        OfferParameter dictionary = parameters.get(0);
+        assertEquals(PARAM_DICT_ID, dictionary.id());
+        assertEquals(PARAM_DICT_NAME, dictionary.name());
+        assertEquals(List.of(PARAM_DICT_VALUE_ID), dictionary.valuesIds());
+        assertEquals(List.of(PARAM_DICT_LABEL), dictionary.values());
+        assertNull(dictionary.rangeValue());
+        OfferParameter range = parameters.get(1);
+        assertEquals(PARAM_RANGE_ID, range.id());
+        assertEquals(new ParameterRange(PARAM_RANGE_FROM, PARAM_RANGE_TO), range.rangeValue());
+        assertEquals(List.of(), range.valuesIds());
     }
 
     @Test

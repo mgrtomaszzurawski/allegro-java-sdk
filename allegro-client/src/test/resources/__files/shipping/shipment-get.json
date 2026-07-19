@@ -1,0 +1,47 @@
+{
+  "id": "SHIP-1001",
+  "credentialsId": "CRED-77",
+  "sender": {
+    "name": "Sender One",
+    "company": "Seller Ltd",
+    "street": "Grunwaldzka 100",
+    "postalCode": "80-244",
+    "city": "Gdansk",
+    "state": "pomorskie",
+    "email": "sender@example.com",
+    "phone": "+48500100100"
+  },
+  "receiver": {
+    "name": "Receiver Two",
+    "street": "Marszalkowska 1",
+    "postalCode": "00-001",
+    "city": "Warszawa",
+    "email": "receiver@example.com",
+    "phone": "+48500200200",
+    "point": "POP-42"
+  },
+  "referenceNumber": "REF-2026-01",
+  "packages": [
+    {
+      "type": "PACKAGE",
+      "length": { "value": 30.0, "unit": "CENTIMETER" },
+      "width": { "value": 20.0, "unit": "CENTIMETER" },
+      "height": { "value": 10.0, "unit": "CENTIMETER" },
+      "weight": { "value": 2.5, "unit": "KILOGRAMS" },
+      "textOnLabel": "handle with care",
+      "waybill": "WB-555"
+    }
+  ],
+  "insurance": { "amount": "199.99", "currency": "PLN" },
+  "cashOnDelivery": {
+    "amount": "250.00",
+    "currency": "PLN",
+    "ownerName": "Seller Ltd",
+    "iban": "PL61109010140000071219812874"
+  },
+  "createdDate": "2026-07-18T10:00:00Z",
+  "canceledDate": null,
+  "carrier": "ALLEGRO",
+  "labelFormat": "PDF",
+  "pickupAvailable": true
+}

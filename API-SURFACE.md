@@ -186,7 +186,7 @@ Shipping shipping = client.shipping();
 shipping.createShipment(ShipmentRequest)          // POST /shipment-management/shipments/create-commands (sync)
 shipping.getShipment(shipmentId)                  // GET  /shipment-management/shipments/{shipmentId}
 shipping.cancelShipment(shipmentId)               // POST /shipment-management/shipments/cancel-commands (sync)
-shipping.labels(shipmentIds...)                   // POST /shipment-management/label            byte[] PDF/ZPL
+shipping.labels(LabelRequest)                     // POST /shipment-management/label            byte[] PDF/ZPL (body: shipmentIds + pageSize/cutLine/summaryReport)
 shipping.protocol(shipmentIds...)                 // POST /shipment-management/protocol         byte[] PDF
 shipping.requestPickup(PickupRequest)             // POST /shipment-management/pickups/create-commands (sync)
 shipping.getPickup(pickupId)                      // GET  /shipment-management/pickups/{pickupId}

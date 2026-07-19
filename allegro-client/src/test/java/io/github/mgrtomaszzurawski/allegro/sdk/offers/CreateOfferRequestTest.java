@@ -18,6 +18,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,14 @@ class CreateOfferRequestTest {
     private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
     private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
     private static final Money STARTING_PRICE = Money.of("1.00", "PLN");
+    private static final String PARAM_DICT_ID = "11321";
+    private static final String PARAM_DICT_VALUE_ID = "1";
+    private static final String PARAM_FREE_ID = "11324";
+    private static final String PARAM_FREE_VALUE = "Cherry MX";
+    private static final int EXPECTED_PARAM_COUNT = 2;
+    private static final String EXTERNAL_ID = "SKU-12345";
+    private static final String LANGUAGE = "pl-PL";
+    private static final String SIZE_TABLE_ID = "size-table-1";
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -205,5 +214,67 @@ class CreateOfferRequestTest {
         // then
         assertNull(request.description());
         assertNull(request.location());
+    }
+
+    @Test
+    void addParameter_whenCalledRepeatedly_accumulatesInOrder() {
+        // when — two parameters added one at a time
+        CreateOfferRequest request = validBuilder()
+                .addParameter(OfferParameter.dictionary(PARAM_DICT_ID, PARAM_DICT_VALUE_ID))
+                .addParameter(OfferParameter.freeText(PARAM_FREE_ID, PARAM_FREE_VALUE))
+                .build();
+
+        // then — both are exposed in the order added
+        assertEquals(EXPECTED_PARAM_COUNT, request.parameters().size());
+        assertEquals(PARAM_DICT_ID, request.parameters().get(0).id());
+        assertEquals(PARAM_FREE_ID, request.parameters().get(1).id());
+    }
+
+    @Test
+    void parameters_whenSetAsList_replacesTheParameters() {
+        // given — a builder that already has one parameter added
+        CreateOfferRequest.Builder builder = validBuilder()
+                .addParameter(OfferParameter.dictionary(PARAM_DICT_ID, PARAM_DICT_VALUE_ID));
+
+        // when — a bulk set replaces (does not append to) the accumulated parameters
+        CreateOfferRequest request = builder
+                .parameters(List.of(OfferParameter.freeText(PARAM_FREE_ID, PARAM_FREE_VALUE)))
+                .build();
+
+        // then — only the list's parameter remains
+        assertEquals(1, request.parameters().size());
+        assertEquals(PARAM_FREE_ID, request.parameters().get(0).id());
+    }
+
+    @Test
+    void build_whenNoParameters_defaultsToEmptyList() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertTrue(request.parameters().isEmpty());
+    }
+
+    @Test
+    void build_whenOfferRefsSet_exposesThem() {
+        // when — the external id, listing language and size-table id are set
+        CreateOfferRequest request = validBuilder()
+                .externalId(EXTERNAL_ID).language(LANGUAGE).sizeTableId(SIZE_TABLE_ID).build();
+
+        // then
+        assertEquals(EXTERNAL_ID, request.externalId());
+        assertEquals(LANGUAGE, request.language());
+        assertEquals(SIZE_TABLE_ID, request.sizeTableId());
+    }
+
+    @Test
+    void build_whenOfferRefsNotSet_leavesThemNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.externalId());
+        assertNull(request.language());
+        assertNull(request.sizeTableId());
     }
 }

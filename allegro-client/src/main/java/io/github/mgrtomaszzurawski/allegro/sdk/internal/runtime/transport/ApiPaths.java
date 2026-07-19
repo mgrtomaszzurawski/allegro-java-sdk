@@ -324,6 +324,18 @@ public final class ApiPaths {
     public static final String DELIVERY_SETTINGS = "/sale/delivery-settings";
     /** Seller's shipping-rate sets. */
     public static final String SHIPPING_RATES = "/sale/shipping-rates";
+    /** Async create-shipment commands; append {@code /{commandId}} via {@link #subPath}. */
+    public static final String SHIPMENT_CREATE_COMMANDS =
+            "/shipment-management/shipments/create-commands";
+    /** Async cancel-shipment commands; append {@code /{commandId}} via {@link #subPath}. */
+    public static final String SHIPMENT_CANCEL_COMMANDS =
+            "/shipment-management/shipments/cancel-commands";
+    /** Created shipments; append {@code /{shipmentId}} via {@link #subPath}. */
+    public static final String SHIPMENTS = "/shipment-management/shipments";
+    /** Shipment label rendering (returns binary). */
+    public static final String SHIPMENT_LABEL = "/shipment-management/label";
+    /** Shipment handover protocol rendering (returns binary). */
+    public static final String SHIPMENT_PROTOCOL = "/shipment-management/protocol";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
