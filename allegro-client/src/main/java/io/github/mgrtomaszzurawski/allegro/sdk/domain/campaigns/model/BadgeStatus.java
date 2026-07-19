@@ -27,10 +27,21 @@ public enum BadgeStatus {
     FINISHED,
 
     /** The badge was rejected — see {@link Badge#rejectionReasons()}. */
-    DECLINED;
+    DECLINED,
 
-    /** Map the generated Layer-1 status enum to the public enum. */
+    /** A value Allegro introduced that this SDK version does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
+
+    /**
+     * Map the generated Layer-1 status enum to the public enum, degrading a value
+     * Allegro added after this SDK version to {@link #UNKNOWN} rather than failing
+     * the read.
+     */
     static BadgeStatus from(BadgeProcessRaw.StatusEnum wireValue) {
-        return valueOf(wireValue.name());
+        try {
+            return valueOf(wireValue.name());
+        } catch (IllegalArgumentException unmodelledValue) {
+            return UNKNOWN;
+        }
     }
 }

@@ -448,6 +448,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AlleDiscountSubmitResult`/`AlleDiscountWithdrawResult` and their status/type enums (plus the shared
   `ConditionViolation`), and the `SubmitOfferRequest`/`EligibleOffersFilter`/`SubmittedOffersFilter`
   builders.
+- Make every campaigns domain enum forward-compatible (core C3): an Allegro wire value this SDK
+  release does not model now degrades to a read-only `UNKNOWN` sentinel instead of throwing on the
+  read. Covers `BadgeStatus`, `BadgeApplicationStatus`, `BadgeOperationStatus`, `BadgeOperationType`,
+  `AlleDiscountCampaignType`, `AlleDiscountOfferStatus`, `AlleDiscountCommandStatus`,
+  `ParticipationStatus`, `SchedulePolicyType` and `SubsidyOfferStatus` (`CampaignType` already
+  degraded); `ParticipationStatus.UNKNOWN` is never emitted on a participation update, which only
+  writes `ALLOWED`/`DENIED`.
 
 ### I — fulfillment
 

@@ -15,10 +15,26 @@ public enum ParticipationStatus {
     ALLOWED,
 
     /** The account does not take part in Allegro Prices on the marketplace. */
-    DENIED;
+    DENIED,
 
-    /** Map the Allegro wire value (identical to the constant name) to the enum. */
+    /**
+     * A value Allegro introduced that this SDK version does not model yet. It is a
+     * read-only forward-compat sentinel — it degrades an unknown wire status on a
+     * read; the {@code updateParticipation} builder only ever emits {@link #ALLOWED}
+     * or {@link #DENIED}, so it is never sent back on a write.
+     */
+    UNKNOWN;
+
+    /**
+     * Map the Allegro wire value (identical to the constant name) to the enum,
+     * degrading a value Allegro added after this SDK version to {@link #UNKNOWN}
+     * rather than failing the read.
+     */
     static ParticipationStatus from(String wireValue) {
-        return valueOf(wireValue);
+        try {
+            return valueOf(wireValue);
+        } catch (IllegalArgumentException unmodelledValue) {
+            return UNKNOWN;
+        }
     }
 }

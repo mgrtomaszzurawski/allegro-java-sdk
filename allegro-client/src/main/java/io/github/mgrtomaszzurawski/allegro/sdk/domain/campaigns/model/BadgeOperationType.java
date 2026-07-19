@@ -18,10 +18,21 @@ public enum BadgeOperationType {
     UPDATE,
 
     /** Finish the badge, ending its display. */
-    FINISH;
+    FINISH,
 
-    /** Map the generated Layer-1 type enum to the public enum. */
+    /** A value Allegro introduced that this SDK version does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
+
+    /**
+     * Map the generated Layer-1 type enum to the public enum, degrading a value
+     * Allegro added after this SDK version to {@link #UNKNOWN} rather than failing
+     * the read.
+     */
     static BadgeOperationType from(BadgeOperationRaw.TypeEnum wireValue) {
-        return valueOf(wireValue.name());
+        try {
+            return valueOf(wireValue.name());
+        } catch (IllegalArgumentException unmodelledValue) {
+            return UNKNOWN;
+        }
     }
 }
