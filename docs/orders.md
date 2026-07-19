@@ -52,6 +52,8 @@ If no order with that id exists for the seller, `get` throws `AllegroNotFoundExc
 | `totalToPay` | `Money` | amount + ISO-4217 currency the buyer pays |
 | `payment` | `OrderPayment` (nullable) | main payment: id, `type`, `provider`, `finishedAt`, `paidAmount`, feature flags — `null` while unpaid |
 | `surcharges` | `List<OrderPayment>` | additional charges beyond the main payment; never `null`, possibly empty |
+| `delivery` | `OrderDelivery` (nullable) | method, recipient `address` or `pickupPoint`, `cost`, estimated `time`, Smart! flag |
+| `invoice` | `InvoiceRequirement` (nullable) | whether the buyer wants an invoice, the due date, and the `InvoiceAddress` (company or private person) |
 | `messageToSeller` | `String` (nullable) | buyer's message to the seller |
 | `sellerNote` | `String` (nullable) | the seller's own private note on the order |
 | `marketplaceId` | `String` (nullable) | marketplace the order was placed on |
@@ -76,6 +78,26 @@ if (order.payment() != null && order.payment().type() == PaymentType.CASH_ON_DEL
     // collect on delivery
 }
 ```
+
+### Delivery and invoice
+
+`order.delivery()` describes how the order ships: the `method`, the destination as either a recipient
+`address()` or a `pickupPoint()` (exactly one is set), the `cost`, the estimated `time` window, and a
+`smart()` flag for Allegro Smart! deliveries. `order.invoice()` says whether the buyer `required()` an
+invoice and, if so, the `dueDate()` and the `InvoiceAddress` — addressed to a `company()` (with
+`vatPayerStatus` and typed `taxIds`, e.g. `PL_NIP`) or a private `naturalPerson()`.
+
+```java
+OrderDelivery delivery = order.delivery();
+if (delivery != null && delivery.pickupPoint() != null) {
+    ship(delivery.pickupPoint().id());
+} else if (delivery != null && delivery.address() != null) {
+    ship(delivery.address());          // recipient address (PII redacted in toString)
+}
+```
+
+Records carrying personal data (`Buyer`, `DeliveryAddress`, `InvoicePerson`) redact it in
+`toString()`; read the fields through the typed accessors.
 
 ## List and stream orders
 

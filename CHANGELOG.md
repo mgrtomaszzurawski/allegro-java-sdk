@@ -190,6 +190,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   `paidAmount` `Money`, payment feature flags), plus the seller's private `sellerNote()`. Both new
   enums are forward-compatible (unknown wire value → `UNKNOWN`). The reconciliation figure (internal
   Allegro accounting) is intentionally not modelled.
+- `Order` depth — delivery + invoice: `Order.from` now maps `delivery()` as an `OrderDelivery`
+  (`DeliveryMethod`, recipient `DeliveryAddress` or `DeliveryPickupPoint`, `cost`, estimated
+  `DeliveryTime`, Smart! flag) and `invoice()` as an `InvoiceRequirement` (required flag, due date,
+  and an `InvoiceAddress` addressed to an `InvoiceCompany` — with a forward-compatible
+  `VatPayerStatus` and typed `taxIds` (`CompanyTaxId`/`CompanyTaxIdType`, e.g. `PL_NIP`) — or a
+  private `InvoicePerson`). `DeliveryAddress`, `InvoicePerson` and `InvoiceAddress` redact personal
+  data in `toString()`. The company's deprecated single `taxId` string (superseded by `taxIds`), the
+  delivery cancellation/package-count, guaranteed/dispatch time sub-windows, and invoice feature
+  flags are intentionally not modelled. This completes the `Order` depth fill.
 
 ### C — shipping
 

@@ -39,6 +39,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.SerialNumbe
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.ShipmentRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Carrier;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CarrierTracking;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.CompanyTaxIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Order;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.OrderEventStats;
@@ -48,6 +49,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentProvid
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PaymentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.PickupPoint;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.SellerStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.VatPayerStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model.Waybill;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
@@ -101,6 +103,14 @@ class OrdersClientTest {
     private static final String EXPECTED_PAYMENT_FINISHED_AT = "2026-07-15T10:32:00Z";
     private static final String EXPECTED_SURCHARGE_AMOUNT = "5.00";
     private static final String EXPECTED_SELLER_NOTE = "Fragile - handle with care";
+    private static final String EXPECTED_DELIVERY_METHOD = "Courier";
+    private static final String EXPECTED_DELIVERY_CITY = "Warsaw";
+    private static final String EXPECTED_DELIVERY_COST = "9.99";
+    private static final String EXPECTED_DELIVERY_FROM = "2026-07-16T08:00:00Z";
+    private static final String EXPECTED_INVOICE_COMPANY = "Acme Sp. z o.o.";
+    private static final String EXPECTED_INVOICE_TAX_ID = "1234567890";
+    private static final String PICKUP_POINT_ID = "pp-1";
+    private static final String INVOICE_PERSON_FIRST_NAME = "Jan";
     private static final String FUTURE_PAYMENT_TYPE = "SOME_FUTURE_PAYMENT_TYPE";
     private static final String FUTURE_PAYMENT_PROVIDER = "SOME_FUTURE_PROVIDER";
     private static final String PAYMENT_ID = "9a8b7c6d-1111-2222-3333-444455556666";
@@ -315,6 +325,27 @@ class OrdersClientTest {
             assertEquals(1, order.surcharges().size());
             assertEquals(EXPECTED_SURCHARGE_AMOUNT, order.surcharges().get(0).paidAmount().amount());
             assertEquals(EXPECTED_SELLER_NOTE, order.sellerNote());
+
+            // delivery: method, recipient address, cost, Smart! flag (address, not pickup point)
+            assertEquals(EXPECTED_DELIVERY_METHOD, order.delivery().method().name());
+            assertEquals(EXPECTED_DELIVERY_CITY, order.delivery().address().city());
+            assertEquals(EXPECTED_DELIVERY_COST, order.delivery().cost().amount());
+            assertEquals(OffsetDateTime.parse(EXPECTED_DELIVERY_FROM),
+                    order.delivery().time().earliestAt());
+            assertTrue(order.delivery().smart());
+            assertNull(order.delivery().pickupPoint());
+
+            // invoice: requirement + company address (natural person absent)
+            assertTrue(order.invoice().required());
+            assertEquals(EXPECTED_INVOICE_COMPANY, order.invoice().address().company().name());
+            assertEquals(VatPayerStatus.ACTIVE,
+                    order.invoice().address().company().vatPayerStatus());
+            assertEquals(1, order.invoice().address().company().taxIds().size());
+            assertEquals(CompanyTaxIdType.PL_NIP,
+                    order.invoice().address().company().taxIds().get(0).type());
+            assertEquals(EXPECTED_INVOICE_TAX_ID,
+                    order.invoice().address().company().taxIds().get(0).value());
+            assertNull(order.invoice().address().naturalPerson());
             verify(1, getRequestedFor(urlEqualTo(ORDER_PATH)));
         }
     }
@@ -479,6 +510,8 @@ class OrdersClientTest {
             assertNull(order.messageToSeller());
             assertNull(order.payment());
             assertNull(order.sellerNote());
+            assertNull(order.delivery());
+            assertNull(order.invoice());
             assertTrue(order.lineItems().isEmpty());
             assertTrue(order.surcharges().isEmpty());
             // and optional buyer fields map to null, guest defaults to false
@@ -487,6 +520,40 @@ class OrdersClientTest {
             assertNull(order.buyer().companyName());
             assertNull(order.buyer().phoneNumber());
             assertFalse(order.buyer().guest());
+        }
+    }
+
+    @Test
+    void get_whenDeliveryToPickupPointAndPersonInvoice_mapsThoseVariants(WireMockRuntimeInfo wmInfo) {
+        // given — an order delivered to a pickup point (no recipient address) with an
+        // invoice addressed to a private person (no company): the alternate branches
+        stubToken(TEST_TOKEN);
+        String body = "{\"id\":\"" + ORDER_ID + "\",\"status\":\"READY_FOR_PROCESSING\","
+                + "\"buyer\":{\"id\":\"1\",\"login\":\"b\",\"email\":\"b@example.com\"},"
+                + "\"lineItems\":[],"
+                + "\"delivery\":{\"pickupPoint\":{\"id\":\"" + PICKUP_POINT_ID + "\",\"name\":\"Kiosk\","
+                + "\"address\":{\"street\":\"Pt 1\",\"zipCode\":\"00-002\",\"city\":\""
+                + EXPECTED_DELIVERY_CITY + "\",\"countryCode\":\"PL\"}},\"smart\":false},"
+                + "\"invoice\":{\"required\":true,\"address\":{\"street\":\"S 1\",\"city\":\"Lodz\","
+                + "\"zipCode\":\"90-001\",\"countryCode\":\"PL\",\"naturalPerson\":{\"firstName\":\""
+                + INVOICE_PERSON_FIRST_NAME + "\",\"lastName\":\"Kowalski\"}}},"
+                + "\"summary\":{\"totalToPay\":{\"amount\":\"0.00\",\"currency\":\"PLN\"}}}";
+        stubFor(get(urlEqualTo(ORDER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(body)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Order order = allegro.orders().get(ORDER_ID);
+
+            // then — pickup-point branch mapped (address absent); person invoice mapped (company absent)
+            assertEquals(PICKUP_POINT_ID, order.delivery().pickupPoint().id());
+            assertEquals(EXPECTED_DELIVERY_CITY, order.delivery().pickupPoint().city());
+            assertNull(order.delivery().address());
+            assertFalse(order.delivery().smart());
+            assertEquals(INVOICE_PERSON_FIRST_NAME,
+                    order.invoice().address().naturalPerson().firstName());
+            assertNull(order.invoice().address().company());
         }
     }
 
