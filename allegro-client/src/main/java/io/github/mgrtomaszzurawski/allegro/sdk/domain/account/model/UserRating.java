@@ -86,6 +86,8 @@ public record UserRating(
      * @param deliveryCost delivery-cost score (1&ndash;5), or {@code null}
      * @param description offer-description accuracy score (1&ndash;5), or {@code null}
      * @param service customer-service score (1&ndash;5), or {@code null}
+     *
+     * @since 0.2.0
      */
     public record Rates(
             @Nullable Integer delivery,
@@ -100,11 +102,15 @@ public record UserRating(
             if (raw == null) {
                 return null;
             }
+            RatesRaw.DeliveryEnum delivery = raw.getDelivery();
+            RatesRaw.DeliveryCostEnum deliveryCost = raw.getDeliveryCost();
+            RatesRaw.DescriptionEnum description = raw.getDescription();
+            RatesRaw.ServiceEnum service = raw.getService();
             return new Rates(
-                    rate(raw.getDelivery() == null ? null : raw.getDelivery().getValue()),
-                    rate(raw.getDeliveryCost() == null ? null : raw.getDeliveryCost().getValue()),
-                    rate(raw.getDescription() == null ? null : raw.getDescription().getValue()),
-                    rate(raw.getService() == null ? null : raw.getService().getValue()));
+                    rate(delivery == null ? null : delivery.getValue()),
+                    rate(deliveryCost == null ? null : deliveryCost.getValue()),
+                    rate(description == null ? null : description.getValue()),
+                    rate(service == null ? null : service.getValue()));
         }
 
         /** A wire score kept only when it is a real 1&ndash;5 rating, else {@code null}. */

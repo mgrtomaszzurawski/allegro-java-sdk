@@ -48,6 +48,11 @@ public record UserRatingSummary(
                 Statistics.from(raw.getStatistics()));
     }
 
+    /** A nullable server count treated as zero when absent. */
+    private static long orZero(@Nullable Long value) {
+        return value == null ? 0L : value;
+    }
+
     /**
      * A recommended/not-recommended tally.
      *
@@ -69,10 +74,6 @@ public record UserRatingSummary(
             }
             return new RatingCount(orZero(raw.getUnique()), orZero(raw.getTotal()));
         }
-
-        private static long orZero(@Nullable Long value) {
-            return value == null ? 0L : value;
-        }
     }
 
     /**
@@ -81,6 +82,8 @@ public record UserRatingSummary(
      * @param receivedTotal total number of ratings received
      * @param excludedTotal number of ratings excluded from the average
      * @param removed how removed ratings break down by who removed them
+     *
+     * @since 0.2.0
      */
     public record Statistics(long receivedTotal, long excludedTotal, Removed removed) {
 
@@ -96,10 +99,6 @@ public record UserRatingSummary(
                     Removed.from(raw.getRemoved()));
         }
 
-        private static long orZero(@Nullable Long value) {
-            return value == null ? 0L : value;
-        }
-
         /**
          * How removed ratings break down by the party that removed them.
          *
@@ -107,6 +106,8 @@ public record UserRatingSummary(
          * @param byAdmin ratings removed by an Allegro administrator
          * @param byBuyer ratings removed by the buyer
          * @param byBuyerDueToCompensation ratings the buyer removed after compensation
+         *
+         * @since 0.2.0
          */
         public record Removed(long total, long byAdmin, long byBuyer, long byBuyerDueToCompensation) {
 

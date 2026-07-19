@@ -85,21 +85,23 @@ class UserRatingsClientTest {
             {"recommended":{"unique":120,"total":130},"notRecommended":{"unique":2,"total":3},
              "recommendedPercentage":"98.5","user":{"createdAt":"2015-06-01"}}
             """;
+    private static final String EXCLUSION_REASON = "TEST_PURCHASE";
+    private static final String UNKNOWN_REMOVAL_SOURCE = "ROBOT";
     // A rating carrying the per-category scores + exclusion reason. `description`
     // holds an out-of-range wire value (9) — an unknown score that must degrade to
     // null, not surface as a bogus number.
     private static final String RATING_FULL_RESPONSE = """
             {"id":"%s","buyer":{"id":"b1","login":"buyer-login"},"recommended":false,
              "createdAt":"2025-01-15T08:36:57.292Z",
-             "excludedFromAverageRates":true,"excludedFromAverageRatesReason":"TEST_PURCHASE",
+             "excludedFromAverageRates":true,"excludedFromAverageRatesReason":"%s",
              "rates":{"delivery":5,"deliveryCost":4,"description":9,"service":3},
              "order":{"id":"order-1"}}
-            """.formatted(RATING_ID);
+            """.formatted(RATING_ID, EXCLUSION_REASON);
     // A removal whose `source` is an unmodelled value — must map to null, never SELLER.
     private static final String REMOVAL_UNKNOWN_SOURCE_RESPONSE = """
             {"possibleTo":"2025-02-01T00:00:00Z",
-             "request":{"createdAt":"2025-01-16T08:36:57.292Z","message":"%s","source":"ROBOT"}}
-            """.formatted(REMOVAL_MESSAGE);
+             "request":{"createdAt":"2025-01-16T08:36:57.292Z","message":"%s","source":"%s"}}
+            """.formatted(REMOVAL_MESSAGE, UNKNOWN_REMOVAL_SOURCE);
     private static final String SUMMARY_WITH_STATISTICS_RESPONSE = """
             {"recommended":{"unique":120,"total":130},"notRecommended":{"unique":2,"total":3},
              "recommendedPercentage":"98.5","user":{"createdAt":"2015-06-01"},
@@ -275,7 +277,7 @@ class UserRatingsClientTest {
 
             // then — exclusion + reason mapped
             assertTrue(rating.excludedFromAverageRates());
-            assertEquals("TEST_PURCHASE", rating.excludedFromAverageRatesReason());
+            assertEquals(EXCLUSION_REASON, rating.excludedFromAverageRatesReason());
             // and — the valid 1..5 scores map, the unknown one degrades to null
             UserRating.Rates rates = rating.rates();
             assertEquals(5, rates.delivery().intValue());

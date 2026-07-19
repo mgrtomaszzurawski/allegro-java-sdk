@@ -52,6 +52,10 @@ class AffiliateClientTest {
             {"access_token":"%s","expires_in":%d}
             """;
     private static final String OFFER_CATEGORY_ID = "257";
+    private static final String UTM_SOURCE_KEY = "utm_source";
+    private static final String UTM_SOURCE_VALUE = "blog";
+    private static final String CLICK_ID_KEY = "clickId";
+    private static final String CLICK_ID_VALUE = "abc123";
     private static final String CONVERSIONS_RESPONSE = """
             {"conversions":[{"id":"conv-1","status":"CONFIRMED","quantity":2,
               "marketplace":{"id":"allegro-pl"},
@@ -60,8 +64,9 @@ class AffiliateClientTest {
                 "seller":{"login":"seller1"}},
               "commission":{"publisher":{"amount":"%s","currency":"%s"},
                 "allegro":{"amount":"0.50","currency":"%s"}},
-              "publisherUrlParameters":{"utm_source":"blog","clickId":"abc123"}}]}
-            """.formatted(OFFER_CATEGORY_ID, PUBLISHER_AMOUNT, CURRENCY_PLN, CURRENCY_PLN);
+              "publisherUrlParameters":{"%s":"%s","%s":"%s"}}]}
+            """.formatted(OFFER_CATEGORY_ID, PUBLISHER_AMOUNT, CURRENCY_PLN, CURRENCY_PLN,
+            UTM_SOURCE_KEY, UTM_SOURCE_VALUE, CLICK_ID_KEY, CLICK_ID_VALUE);
     // A conversion whose price/commission objects are present but omit their
     // amount/currency — must map to null money, not abort the whole stream.
     private static final String INCOMPLETE_PRICE_RESPONSE = """
@@ -114,8 +119,8 @@ class AffiliateClientTest {
             assertEquals("seller1", conversion.offer().sellerLogin());
             assertEquals(OFFER_CATEGORY_ID, conversion.offer().categoryId());
             // and — the affiliate tracking parameters are echoed back in full
-            assertEquals("blog", conversion.publisherUrlParameters().get("utm_source"));
-            assertEquals("abc123", conversion.publisherUrlParameters().get("clickId"));
+            assertEquals(UTM_SOURCE_VALUE, conversion.publisherUrlParameters().get(UTM_SOURCE_KEY));
+            assertEquals(CLICK_ID_VALUE, conversion.publisherUrlParameters().get(CLICK_ID_KEY));
             // and — beta Accept header + status filter + first-page offset on the wire
             verify(getRequestedFor(urlPathEqualTo(CONVERSIONS_PATH))
                     .withHeader(TestHttpConstants.ACCEPT_HEADER,
