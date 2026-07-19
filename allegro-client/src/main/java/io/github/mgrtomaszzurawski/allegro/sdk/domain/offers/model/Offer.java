@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
@@ -50,6 +51,8 @@ import org.jspecify.annotations.Nullable;
  * @param externalId     the seller's own external identifier (their system's SKU/id), or {@code null}
  * @param language       the listing language (BCP-47 code, e.g. {@code pl-PL}), or {@code null} if omitted
  * @param sizeTableId    the id of the attached size table, or {@code null} if omitted
+ * @param productSet     the offer's product-set elements (product bindings), empty when the
+ *                       offer is not productized or the payload omits them
  * @since 0.2.0
  */
 public record Offer(
@@ -70,15 +73,17 @@ public record Offer(
         List<OfferParameter> parameters,
         @Nullable String externalId,
         @Nullable String language,
-        @Nullable String sizeTableId) {
+        @Nullable String sizeTableId,
+        List<ProductSetElement> productSet) {
 
     /**
-     * Canonical constructor. Normalizes {@code parameters} to an immutable copy so the
-     * non-null "empty when the payload omits them" contract holds on every construction
-     * path (the mapper already supplies an immutable list).
+     * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists to
+     * immutable copies so the non-null "empty when the payload omits them" contract holds on
+     * every construction path (the mapper already supplies immutable lists).
      */
     public Offer {
         parameters = List.copyOf(parameters);
+        productSet = List.copyOf(productSet);
     }
 
     /** Project a generated product-offer response onto the consumer record. */
@@ -104,12 +109,18 @@ public record Offer(
                 parametersOf(raw),
                 externalIdOf(raw),
                 raw.getLanguage(),
-                sizeTableIdOf(raw));
+                sizeTableIdOf(raw),
+                productSetOf(raw));
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {
         List<ParameterProductOfferResponseRaw> parameters = raw.getParameters();
         return parameters == null ? List.of() : parameters.stream().map(OfferParameter::from).toList();
+    }
+
+    private static List<ProductSetElement> productSetOf(SaleProductOfferResponseV1Raw raw) {
+        List<SaleProductOfferResponseV1AllOfProductSetRaw> productSet = raw.getProductSet();
+        return productSet == null ? List.of() : productSet.stream().map(ProductSetElement::from).toList();
     }
 
     private static @Nullable String externalIdOf(SaleProductOfferResponseV1Raw raw) {

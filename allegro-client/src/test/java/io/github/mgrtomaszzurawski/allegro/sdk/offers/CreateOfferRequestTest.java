@@ -19,6 +19,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class CreateOfferRequestTest {
     private static final String PARAM_FREE_ID = "11324";
     private static final String PARAM_FREE_VALUE = "Cherry MX";
     private static final int EXPECTED_PARAM_COUNT = 2;
+    private static final String PRODUCT_ID_A = "8f2b1c00-0000-4000-8000-00000000000a";
+    private static final String PRODUCT_ID_B = "8f2b1c00-0000-4000-8000-00000000000b";
+    private static final int PRODUCT_SET_QUANTITY = 2;
     private static final String EXTERNAL_ID = "SKU-12345";
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
@@ -253,6 +257,23 @@ class CreateOfferRequestTest {
 
         // then
         assertTrue(request.parameters().isEmpty());
+    }
+
+    @Test
+    void productSet_whenSetAsList_replacesTheAddedElements() {
+        // given — a builder that already has one product-set element added
+        CreateOfferRequest.Builder builder = validBuilder()
+                .addProductSetElement(ProductSetElement.of(PRODUCT_ID_A));
+
+        // when — a bulk set replaces (does not append to) the accumulated elements
+        CreateOfferRequest request = builder
+                .productSet(List.of(ProductSetElement.of(PRODUCT_ID_B, PRODUCT_SET_QUANTITY)))
+                .build();
+
+        // then — only the list's element remains
+        assertEquals(1, request.productSet().size());
+        assertEquals(PRODUCT_ID_B, request.productSet().get(0).productId());
+        assertEquals(PRODUCT_SET_QUANTITY, request.productSet().get(0).quantity());
     }
 
     @Test

@@ -168,6 +168,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   own `externalId` (their system's SKU/id), the listing `language` (BCP-47 code, e.g. `pl-PL`),
   and the attached `sizeTableId`. The external id and size-table id are exposed as flat `String`s
   (the `{id}` wire wrappers are hidden).
+- Coverage (product set): `CreateOfferRequest` gains a `productSet` (`addProductSetElement` /
+  `productSet(List)`) and the `Offer` read maps it back — the binding of an offer to a catalogue
+  product, required to create in a productized category. New `ProductSetElement` value type
+  (`of(productId)` / `of(productId, quantity)`, plus `withResponsibleProducer` /
+  `withMarketedBeforeGpsrObligation` copies) referencing a product by id, and a
+  `ResponsibleProducerRef` (GPSR responsible producer — `byId` / `byName`, the `oneOf`
+  discriminator written for you). This is the product-reference form; defining a new product
+  inline, `responsiblePerson`, `safetyInformation` details, and `deposits` are not modelled yet.
 
 ### B — orders-payments
 

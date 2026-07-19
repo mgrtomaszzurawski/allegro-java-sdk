@@ -11,6 +11,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,7 @@ public final class CreateOfferRequest {
     private final @Nullable OfferDescription description;
     private final @Nullable OfferLocation location;
     private final List<OfferParameter> parameters;
+    private final List<ProductSetElement> productSet;
     private final @Nullable String externalId;
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
@@ -74,6 +76,7 @@ public final class CreateOfferRequest {
         this.description = builder.description;
         this.location = builder.location;
         this.parameters = List.copyOf(builder.parameters);
+        this.productSet = List.copyOf(builder.productSet);
         this.externalId = builder.externalId;
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
@@ -149,6 +152,11 @@ public final class CreateOfferRequest {
         return parameters;
     }
 
+    /** The offer's product-set elements (product bindings), in the order added (possibly empty). */
+    public List<ProductSetElement> productSet() {
+        return productSet;
+    }
+
     /** The seller's own external identifier (your system's SKU/id) for the offer, or {@code null} if not set. */
     public @Nullable String externalId() {
         return externalId;
@@ -186,6 +194,7 @@ public final class CreateOfferRequest {
         private @Nullable OfferDescription description;
         private @Nullable OfferLocation location;
         private final List<OfferParameter> parameters = new ArrayList<>();
+        private final List<ProductSetElement> productSet = new ArrayList<>();
         private @Nullable String externalId;
         private @Nullable String language;
         private @Nullable String sizeTableId;
@@ -279,6 +288,20 @@ public final class CreateOfferRequest {
         /** Add a single category parameter (optional, non-null; call repeatedly to add several). */
         public Builder addParameter(OfferParameter parameter) {
             this.parameters.add(Objects.requireNonNull(parameter, "parameter"));
+            return this;
+        }
+
+        /** Replace the offer's product-set elements with the given list (optional, non-null). */
+        public Builder productSet(List<ProductSetElement> productSet) {
+            Objects.requireNonNull(productSet, "productSet");
+            this.productSet.clear();
+            this.productSet.addAll(productSet);
+            return this;
+        }
+
+        /** Add a single product-set element (optional, non-null; call repeatedly to add several). */
+        public Builder addProductSetElement(ProductSetElement element) {
+            this.productSet.add(Objects.requireNonNull(element, "element"));
             return this;
         }
 
