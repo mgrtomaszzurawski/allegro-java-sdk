@@ -259,6 +259,17 @@ sections. Empty subsections are dropped by the release engineer when folding
   server value maps to `PaymentPolicy.UNKNOWN` instead of failing the whole read
   (forward-compat, matching the bucket's other read enums after the core
   `enumUnknownDefaultCase` change).
+- Carrier shipment management ("Wysyłam z Allegro"): `createShipment(ShipmentRequest)`
+  and `cancelShipment(shipmentId)` (asynchronous command endpoints wrapped
+  sync-default via the core `CommandPoller`, each with an optional
+  `Duration timeout` overload), `getShipment(shipmentId)`, and
+  `labels(LabelRequest)` / `protocol(shipmentIds…)` returning the rendered
+  documents as `byte[]`. Models: `Shipment`, `ShipmentRequest`, `PostalAddress`,
+  `ShipmentPackage` (centimetre/kilogram dimensions), `CashOnDelivery`,
+  `LabelRequest` and `LabelSummaryReport`, with fluent builders and the
+  read-soft/write-strict `LabelFormat`, `PackageType`, `LabelPageSize`,
+  `LabelSummaryPlacement` and `LabelSummaryField` enums. The spec-deprecated
+  `deliveryMethodId` is not exposed (use `credentialsId` and delivery proposals).
 
 ### D — account-meta
 
@@ -297,6 +308,20 @@ sections. Empty subsections are dropped by the release engineer when folding
   now read from a `JsonNode` (`SmartClassificationMapper`): a numeric
   value/threshold stays typed as `BigDecimal`, a boolean one maps to `null` (the
   pass/fail outcome is on the condition's `fulfilled` flag). No public API change.
+- Full field coverage for the account response models (closing coverage debt —
+  these previously mapped only a subset of the payload):
+  - `UserRating` now exposes `rates` (the buyer's per-category 1–5 scores:
+    delivery, delivery cost, description, service — a score outside 1–5 maps to
+    `null`) and `excludedFromAverageRatesReason`, both previously dropped.
+  - `UserRatingSummary` now exposes `statistics` (received / excluded totals and
+    the removed-ratings breakdown: total, by admin, by buyer, by buyer after
+    compensation), previously dropped.
+  - `CpsConversion` now exposes `publisherUrlParameters` (the affiliate tracking
+    parameters echoed back) and `CpsConversion.Offer.categoryId`, both previously
+    dropped.
+  - Fixed: an unmodelled rating-`Removal` source (a forward-compat value newer
+    than `SELLER`/`ADMIN`) now maps to `null` instead of being silently reported
+    as `SELLER`.
 - `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
   bucket D's live verification, run with a stored buyer token
   (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path

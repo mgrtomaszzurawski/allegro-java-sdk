@@ -51,14 +51,22 @@ class AffiliateClientTest {
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
             """;
+    private static final String OFFER_CATEGORY_ID = "257";
+    private static final String UTM_SOURCE_KEY = "utm_source";
+    private static final String UTM_SOURCE_VALUE = "blog";
+    private static final String CLICK_ID_KEY = "clickId";
+    private static final String CLICK_ID_VALUE = "abc123";
     private static final String CONVERSIONS_RESPONSE = """
             {"conversions":[{"id":"conv-1","status":"CONFIRMED","quantity":2,
               "marketplace":{"id":"allegro-pl"},
-              "offer":{"id":"o1","name":"Widget","unitPrice":{"amount":"10.00","currency":"PLN"},
+              "offer":{"id":"o1","name":"Widget","category":{"id":"%s"},
+                "unitPrice":{"amount":"10.00","currency":"PLN"},
                 "seller":{"login":"seller1"}},
               "commission":{"publisher":{"amount":"%s","currency":"%s"},
-                "allegro":{"amount":"0.50","currency":"%s"}}}]}
-            """.formatted(PUBLISHER_AMOUNT, CURRENCY_PLN, CURRENCY_PLN);
+                "allegro":{"amount":"0.50","currency":"%s"}},
+              "publisherUrlParameters":{"%s":"%s","%s":"%s"}}]}
+            """.formatted(OFFER_CATEGORY_ID, PUBLISHER_AMOUNT, CURRENCY_PLN, CURRENCY_PLN,
+            UTM_SOURCE_KEY, UTM_SOURCE_VALUE, CLICK_ID_KEY, CLICK_ID_VALUE);
     // A conversion whose price/commission objects are present but omit their
     // amount/currency — must map to null money, not abort the whole stream.
     private static final String INCOMPLETE_PRICE_RESPONSE = """
@@ -109,6 +117,10 @@ class AffiliateClientTest {
             assertEquals(Money.of("10.00", CURRENCY_PLN), conversion.offer().unitPrice());
             assertEquals(Money.of(PUBLISHER_AMOUNT, CURRENCY_PLN), conversion.commission().publisher());
             assertEquals("seller1", conversion.offer().sellerLogin());
+            assertEquals(OFFER_CATEGORY_ID, conversion.offer().categoryId());
+            // and — the affiliate tracking parameters are echoed back in full
+            assertEquals(UTM_SOURCE_VALUE, conversion.publisherUrlParameters().get(UTM_SOURCE_KEY));
+            assertEquals(CLICK_ID_VALUE, conversion.publisherUrlParameters().get(CLICK_ID_KEY));
             // and — beta Accept header + status filter + first-page offset on the wire
             verify(getRequestedFor(urlPathEqualTo(CONVERSIONS_PATH))
                     .withHeader(TestHttpConstants.ACCEPT_HEADER,

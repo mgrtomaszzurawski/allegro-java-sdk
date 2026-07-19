@@ -1,0 +1,12 @@
+{
+  "commandId": "CMD-CANCEL-1",
+  "status": "ERROR",
+  "errors": [
+    {
+      "code": "ShipmentAlreadyCanceled",
+      "message": "the shipment is already canceled",
+      "userMessage": "Przesylka zostala juz anulowana",
+      "path": "input.shipmentId"
+    }
+  ]
+}
