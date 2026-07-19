@@ -84,6 +84,10 @@ PricingRule updated = client.pricing().automation().update(ruleId,
 follow rules. `PricingRule.isDefault()` distinguishes the built-in defaults from
 rules you created.
 
+A rule strategy introduced by Allegro after this SDK release is surfaced as
+`PricingRuleType.UNKNOWN` (rather than failing the read); it is a read-only
+value and cannot be used to create or edit a rule.
+
 ### Rules assigned to an offer
 
 Defining and editing rules lives here in `pricing()`. Applying a rule to a set of
