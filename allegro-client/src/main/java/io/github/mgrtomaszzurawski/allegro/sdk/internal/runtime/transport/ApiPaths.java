@@ -175,6 +175,8 @@ public final class ApiPaths {
     /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
     public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
             "/sale/compatibility-list/supported-categories";
+    /** Suggested compatibility list for an offer or product ({@code /sale/compatibility-list-suggestions}). */
+    public static final String COMPATIBILITY_SUGGESTIONS = "/sale/compatibility-list-suggestions";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */

@@ -5,12 +5,14 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -25,7 +27,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibilitySuggestionRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityInputType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityList;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityListType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleCategory;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -39,7 +45,9 @@ import org.junit.jupiter.api.Test;
  * WireMock contract for the {@code catalog().compatibility()} facade: vendor
  * headers, Raw → {@link CompatibleCategory} mapping (per-{@link
  * CompatibilityInputType} rules, the enum degrade for an unmodelled input type),
- * the empty-response case, and the mandatory error-path table.
+ * the {@code suggestionsFor} polymorphic {@code MANUAL}/{@code PRODUCT_BASED}
+ * mapping and its unknown-type degrade, the request builder's offer-xor-product
+ * guard, the empty-response case, and the mandatory error-path table.
  */
 @WireMockTest
 class CompatibilityClientTest {
@@ -94,6 +102,42 @@ class CompatibilityClientTest {
     private static final String CATEGORY_ID_TEXT_TYPE = "258";
     private static final int EXPECTED_MAX_ROWS = 2000;
     private static final int EXPECTED_MAX_CHARS_PER_LINE = 100;
+
+    // ---- suggestionsFor ----
+
+    private static final String SUGGESTIONS_PATH = "/sale/compatibility-list-suggestions";
+    private static final String OFFER_ID_PARAM = "offer.id";
+    private static final String PRODUCT_ID_PARAM = "product.id";
+    private static final String LANGUAGE_PARAM = "language";
+    private static final String TEST_OFFER_ID = "12345678";
+    private static final String TEST_PRODUCT_ID = "5a1b2c3d-0000-4000-8000-000000000001";
+    private static final String TEST_LANGUAGE = "pl-PL";
+    private static final String PRODUCT_LIST_ID = "9f8e7d6c";
+    private static final String COMPATIBLE_ITEM_ID = "5019";
+    private static final String MANUAL_ID_ITEM_TEXT = "BMW X5 (E70) 2007-2013";
+    private static final String MANUAL_TEXT_ITEM_TEXT = "Uniwersalny do serii E";
+    private static final String ADDITIONAL_INFO_ENGINE = "3.0d";
+    private static final String ADDITIONAL_INFO_CODE = "M57";
+    private static final String PRODUCT_BASED_ITEM_TEXT = "BMW X6 (E71)";
+    private static final int EXPECTED_ITEM_COUNT = 2;
+
+    // spec-derived: not yet wire-verified (buyer/seller-scoped suggestion for a
+    // real offer/product; to be confirmed by the bucket's exploration pass). A
+    // MANUAL list mixes an ID item (id + label + additionalInfo) and a free-TEXT item.
+    private static final String MANUAL_SUGGESTION = """
+            {"type":"MANUAL","items":[
+              {"type":"ID","id":"%s","text":"%s","additionalInfo":[{"value":"%s"},{"value":"%s"}]},
+              {"type":"TEXT","text":"%s"}]}
+            """.formatted(COMPATIBLE_ITEM_ID, MANUAL_ID_ITEM_TEXT,
+            ADDITIONAL_INFO_ENGINE, ADDITIONAL_INFO_CODE, MANUAL_TEXT_ITEM_TEXT);
+    // spec-derived: a PRODUCT_BASED list carries the derived list id and read-only text items.
+    private static final String PRODUCT_BASED_SUGGESTION = """
+            {"type":"PRODUCT_BASED","id":"%s","items":[{"text":"%s"},{"text":"%s"}]}
+            """.formatted(PRODUCT_LIST_ID, MANUAL_ID_ITEM_TEXT, PRODUCT_BASED_ITEM_TEXT);
+    // a list type this SDK version does not model — must degrade, not fail the read.
+    private static final String UNKNOWN_SUGGESTION = """
+            {"type":"FUTURE_KIND","items":[]}
+            """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -302,5 +346,136 @@ class CompatibilityClientTest {
             assertThrows(AllegroServerException.class, compatibility::supportedCategories);
             verify(RETRY_MAX_ATTEMPTS, getRequestedFor(urlEqualTo(SUPPORTED_CATEGORIES_PATH)));
         }
+    }
+
+    // ---- suggestionsFor: mapping ----
+
+    @Test
+    void suggestionsFor_whenManualList_mapsIdAndTextItemsAndSendsOfferId(WireMockRuntimeInfo wmInfo) {
+        // given — a manual suggestion for an offer, localized
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SUGGESTIONS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(MANUAL_SUGGESTION)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            CompatibilityList list = allegro.catalog().compatibility().suggestionsFor(
+                    CompatibilitySuggestionRequest.builder()
+                            .offerId(TEST_OFFER_ID).language(TEST_LANGUAGE).build());
+
+            // then — MANUAL, no list id, both item variants mapped
+            assertEquals(CompatibilityListType.MANUAL, list.type());
+            assertNull(list.id());
+            assertEquals(EXPECTED_ITEM_COUNT, list.items().size());
+
+            CompatibilityItem idItem = list.items().get(0);
+            assertEquals(CompatibilityInputType.ID, idItem.type());
+            assertEquals(COMPATIBLE_ITEM_ID, idItem.id());
+            assertEquals(MANUAL_ID_ITEM_TEXT, idItem.text());
+            assertEquals(List.of(ADDITIONAL_INFO_ENGINE, ADDITIONAL_INFO_CODE), idItem.additionalInfo());
+
+            CompatibilityItem textItem = list.items().get(1);
+            assertEquals(CompatibilityInputType.TEXT, textItem.type());
+            assertNull(textItem.id());
+            assertEquals(MANUAL_TEXT_ITEM_TEXT, textItem.text());
+            assertTrue(textItem.additionalInfo().isEmpty());
+
+            // and the offer id (not product id) and language reached the wire
+            verify(1, getRequestedFor(urlPathEqualTo(SUGGESTIONS_PATH))
+                    .withQueryParam(OFFER_ID_PARAM, equalTo(TEST_OFFER_ID))
+                    .withQueryParam(PRODUCT_ID_PARAM, absent())
+                    .withQueryParam(LANGUAGE_PARAM, equalTo(TEST_LANGUAGE)));
+        }
+    }
+
+    @Test
+    void suggestionsFor_whenProductBasedList_mapsListIdAndTextItemsAndSendsProductId(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a product-based suggestion for a product
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SUGGESTIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(PRODUCT_BASED_SUGGESTION)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            CompatibilityList list = allegro.catalog().compatibility().suggestionsFor(
+                    CompatibilitySuggestionRequest.forProduct(TEST_PRODUCT_ID));
+
+            // then — PRODUCT_BASED, derived list id, text-only items
+            assertEquals(CompatibilityListType.PRODUCT_BASED, list.type());
+            assertEquals(PRODUCT_LIST_ID, list.id());
+            assertEquals(EXPECTED_ITEM_COUNT, list.items().size());
+            CompatibilityItem first = list.items().get(0);
+            assertEquals(CompatibilityInputType.TEXT, first.type());
+            assertNull(first.id());
+            assertEquals(MANUAL_ID_ITEM_TEXT, first.text());
+            assertEquals(PRODUCT_BASED_ITEM_TEXT, list.items().get(1).text());
+
+            // and the product id (not offer id) reached the wire
+            verify(1, getRequestedFor(urlPathEqualTo(SUGGESTIONS_PATH))
+                    .withQueryParam(PRODUCT_ID_PARAM, equalTo(TEST_PRODUCT_ID))
+                    .withQueryParam(OFFER_ID_PARAM, absent()));
+        }
+    }
+
+    @Test
+    void suggestionsFor_whenUnknownListType_degradesToUnknownWithEmptyItems(WireMockRuntimeInfo wmInfo) {
+        // given — a list type Allegro introduced after this SDK version
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SUGGESTIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(UNKNOWN_SUGGESTION)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            CompatibilityList list = allegro.catalog().compatibility().suggestionsFor(
+                    CompatibilitySuggestionRequest.forOffer(TEST_OFFER_ID));
+
+            // then — degrades rather than failing the whole read
+            assertEquals(CompatibilityListType.UNKNOWN, list.type());
+            assertNull(list.id());
+            assertTrue(list.items().isEmpty());
+        }
+    }
+
+    @Test
+    void suggestionsFor_when404_throwsNotFoundWithTraceId(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SUGGESTIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(NOT_FOUND)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var compatibility = allegro.catalog().compatibility();
+            CompatibilitySuggestionRequest request = CompatibilitySuggestionRequest.forProduct(TEST_PRODUCT_ID);
+
+            // then — the tree-fetch path surfaces errors like any other GET
+            AllegroNotFoundException failure = assertThrows(AllegroNotFoundException.class,
+                    () -> compatibility.suggestionsFor(request));
+            assertEquals(TEST_TRACE_ID, failure.traceId());
+            verify(1, getRequestedFor(urlPathEqualTo(SUGGESTIONS_PATH)));
+        }
+    }
+
+    // ---- suggestionsFor: request builder offer-xor-product guard ----
+
+    @Test
+    void suggestionsFor_whenNeitherOfferNorProduct_throwsIllegalState() {
+        // then — a request targeting nothing is rejected fail-fast at build time
+        assertThrows(IllegalStateException.class,
+                () -> CompatibilitySuggestionRequest.builder().language(TEST_LANGUAGE).build());
+    }
+
+    @Test
+    void suggestionsFor_whenBothOfferAndProduct_throwsIllegalState() {
+        // then — offer and product are mutually exclusive
+        assertThrows(IllegalStateException.class,
+                () -> CompatibilitySuggestionRequest.builder()
+                        .offerId(TEST_OFFER_ID).productId(TEST_PRODUCT_ID).build());
     }
 }

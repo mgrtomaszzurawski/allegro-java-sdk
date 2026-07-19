@@ -4,6 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibilitySuggestionRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityList;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleCategory;
 import java.util.List;
 
@@ -25,4 +27,14 @@ public interface Compatibility {
      * @return the supported categories; empty when none are returned
      */
     List<CompatibleCategory> supportedCategories();
+
+    /**
+     * Suggests the compatibility list for an offer or a product — the same hint the
+     * sell form offers when classifying a car part.
+     *
+     * @param request the target: exactly one of an offer id or a product id
+     * @return the suggested list (manual or product-based)
+     * @throws IllegalStateException if the request targets neither or both
+     */
+    CompatibilityList suggestionsFor(CompatibilitySuggestionRequest request);
 }
