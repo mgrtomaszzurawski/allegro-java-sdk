@@ -18,8 +18,11 @@ import org.jspecify.annotations.Nullable;
  * line's quantity must be between {@code 1} and {@code 1000000}, enforced
  * fail-fast so an out-of-range value never reaches the server.
  *
- * <p>Declaring the notice's polymorphic {@code shipping} details is a deferred
- * follow-up and is not offered here yet.
+ * <p>Declaring the notice's polymorphic {@code shipping} details is deferred: the
+ * write body is sound, but the create response echoes the shipping declaration
+ * through the same Layer-1 read DTO that cannot deserialize the courier /
+ * own-transport / third-party methods, so a write cannot round-trip until that
+ * Layer-1 defect is fixed.
  *
  * <pre>{@code
  * AsnRequest request = AsnRequest.builder()

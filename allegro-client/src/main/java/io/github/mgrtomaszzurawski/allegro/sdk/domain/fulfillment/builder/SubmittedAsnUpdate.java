@@ -18,8 +18,9 @@ import org.jspecify.annotations.Nullable;
  * product line supplied is quantity-checked to the spec's {@code 1}..{@code 1000000}
  * bounds fail-fast.
  *
- * <p>Amending the notice's polymorphic {@code shipping} details is a deferred
- * follow-up and is not offered here yet.
+ * <p>Amending the notice's polymorphic {@code shipping} details is deferred behind
+ * the same Layer-1 read-DTO defect that stops the courier / own-transport /
+ * third-party methods from deserializing (see {@link AsnRequest}).
  *
  * @since 0.4.0
  */

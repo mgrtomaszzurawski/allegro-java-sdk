@@ -28,10 +28,13 @@ import org.jspecify.annotations.Nullable;
  * per-row version. {@link #volumeInCc()} is likewise present only on single-notice
  * reads/writes.
  *
- * <p>The notice's {@code shipping} declaration (the polymorphic
+ * <p>The notice's polymorphic {@code shipping} declaration (the
  * {@code COURIER_BY_SELLER} / {@code OWN_TRANSPORT} / {@code THIRD_PARTY_DELIVERY}
- * variants, each with its own courier / carrier / arrival details) is a deferred
- * follow-up and is not yet modelled here.
+ * variants, each with its own courier / carrier / arrival details) is not modelled
+ * here yet: the generated Layer-1 read DTO cannot deserialize those three methods —
+ * their generated subtypes extend the write base, not the read base — so a real
+ * notice carrying them fails to read until Layer-1 is regenerated. Exposing the
+ * declaration is deferred behind that fix.
  *
  * @param id            the notice identifier (a UUID)
  * @param displayNumber the human-readable notice number
