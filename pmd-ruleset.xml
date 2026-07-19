@@ -89,6 +89,19 @@
         </properties>
     </rule>
 
+    <!-- TooManyFields threshold raised to 40 (default 15): a typed SDK's request builders
+         mirror the full field set of a large API request DTO — a request builder must carry
+         EVERY field of its endpoint's body for the SDK to be complete. The driver is
+         CreateOfferRequest.Builder, which flattens the ~27+ fields of SaleProductOfferRequestV1
+         (name/category/selling terms/stock/delivery/after-sales/description/location/parameters/
+         external/language/size-table/payments/…). 40 covers the fully-complete offer builder
+         with margin; raise further only per-case, citing the concrete builder here. -->
+    <rule ref="category/java/design.xml/TooManyFields">
+        <properties>
+            <property name="maxfields" value="40"/>
+        </properties>
+    </rule>
+
     <rule ref="category/java/errorprone.xml">
         <!-- Java records use field-name accessors (record.baseUrl() returns field baseUrl).
              SDK follows the same convention for non-record classes. -->

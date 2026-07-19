@@ -11,6 +11,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProduc
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
@@ -25,6 +26,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponse
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
@@ -222,6 +224,15 @@ public final class OffersImpl implements Offers {
         }
         if (!request.parameters().isEmpty()) {
             body.parameters(parametersRawOf(request.parameters()));
+        }
+        if (request.externalId() != null) {
+            body.external(new ExternalIdRaw().id(request.externalId()));
+        }
+        if (request.language() != null) {
+            body.language(request.language());
+        }
+        if (request.sizeTableId() != null) {
+            body.sizeTable(new SizeTableRaw().id(request.sizeTableId()));
         }
         // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
         // empty collections and leaves nullable scalars (e.g. `language`) null, and

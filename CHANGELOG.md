@@ -159,6 +159,12 @@ sections. Empty subsections are dropped by the release engineer when folding
   guessing, and `toRaw()` writes only the ids of a dictionary parameter (the read-only labels are
   dropped so a read parameter round-trips into a create without Allegro's `InvalidDictionaryParameter`).
   Completes the publish-critical content fields (description + parameters).
+- Coverage (offer references): `CreateOfferRequest` and the `Offer` read now carry the seller's
+  own `externalId`, the listing `language` (ISO 639-1), and the attached `sizeTableId`. The
+  external id and size-table id are exposed as flat `String`s (the `{id}` wire wrappers are
+  hidden). Core: the PMD `TooManyFields` threshold is raised to 40 — a typed SDK's request
+  builders mirror the full field set of their endpoint's body, and `CreateOfferRequest.Builder`
+  grows toward every field of `SaleProductOfferRequestV1`.
 
 ### B — orders-payments
 

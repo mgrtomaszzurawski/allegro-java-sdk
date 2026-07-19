@@ -47,6 +47,9 @@ import org.jspecify.annotations.Nullable;
  *                       {@code null} if omitted
  * @param location       the ship-from location, or {@code null} if omitted
  * @param parameters     the offer's category parameters (empty when the payload omits them)
+ * @param externalId     the seller's own external identifier for the offer, or {@code null}
+ * @param language       the listing language (ISO 639-1), or {@code null} if omitted
+ * @param sizeTableId    the id of the attached size table, or {@code null} if omitted
  * @since 0.2.0
  */
 public record Offer(
@@ -64,7 +67,10 @@ public record Offer(
         @Nullable AfterSalesServices afterSalesServices,
         @Nullable OfferDescription description,
         @Nullable OfferLocation location,
-        List<OfferParameter> parameters) {
+        List<OfferParameter> parameters,
+        @Nullable String externalId,
+        @Nullable String language,
+        @Nullable String sizeTableId) {
 
     /**
      * Canonical constructor. Normalizes {@code parameters} to an immutable copy so the
@@ -95,12 +101,23 @@ public record Offer(
                 AfterSalesServices.from(raw.getAfterSalesServices()),
                 OfferDescription.from(raw.getDescription()),
                 OfferLocation.from(raw.getLocation()),
-                parametersOf(raw));
+                parametersOf(raw),
+                externalIdOf(raw),
+                raw.getLanguage(),
+                sizeTableIdOf(raw));
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {
         List<ParameterProductOfferResponseRaw> parameters = raw.getParameters();
         return parameters == null ? List.of() : parameters.stream().map(OfferParameter::from).toList();
+    }
+
+    private static @Nullable String externalIdOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getExternal() == null ? null : raw.getExternal().getId();
+    }
+
+    private static @Nullable String sizeTableIdOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getSizeTable() == null ? null : raw.getSizeTable().getId();
     }
 
     private static @Nullable Money buyNowPriceOf(@Nullable SellingModeRaw sellingMode) {
