@@ -26,6 +26,9 @@ public final class PricingRuleRequestBuilder {
     private static final String ERR_NAME_TOO_LONG =
             "name must be at most " + NAME_MAX_LENGTH + " characters";
     private static final String ERR_TYPE_REQUIRED = "type is required";
+    private static final String ERR_TYPE_UNKNOWN =
+            "type UNKNOWN is a read-only forward-compatibility value and cannot be used "
+                    + "to create a rule";
 
     private @Nullable String name;
     private @Nullable PricingRuleType type;
@@ -69,8 +72,8 @@ public final class PricingRuleRequestBuilder {
      * Validate and build the request.
      *
      * @return the immutable request
-     * @throws IllegalStateException if the name is missing or too long, or the
-     *     type is missing
+     * @throws IllegalStateException if the name is missing or too long, the type
+     *     is missing, or the type is the read-only {@link PricingRuleType#UNKNOWN}
      */
     public PricingRuleRequest build() {
         if (name == null || name.isBlank()) {
@@ -81,6 +84,9 @@ public final class PricingRuleRequestBuilder {
         }
         if (type == null) {
             throw new IllegalStateException(ERR_TYPE_REQUIRED);
+        }
+        if (type == PricingRuleType.UNKNOWN) {
+            throw new IllegalStateException(ERR_TYPE_UNKNOWN);
         }
         return new PricingRuleRequest(name, type, configuration);
     }

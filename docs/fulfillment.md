@@ -6,9 +6,10 @@ fulfils their orders. All operations require an account enrolled in One Fulfillm
 `fulfillment:read` / `fulfillment:write` OAuth scopes; a call from a non-enrolled account is
 rejected with a typed error.
 
-> **Preview.** This bucket lands incrementally. Removal preferences, the read reports (stock,
-> available products, parcels, refund dispositions) and tax id ship now; the advance-ship-notice
-> lifecycle (create/submit/labels/receiving) follows.
+> **Scope.** Removal preferences, the read reports (stock, available products, parcels, refund
+> dispositions), tax id and the advance-ship-notice lifecycle (create/submit/labels/receiving) are
+> all available. The notice's polymorphic `shipping` declaration is the one deferred piece — see
+> the note under Advance Ship Notices below.
 
 ## Removal preferences
 
@@ -173,8 +174,11 @@ ReceivingState state = asn.receivingState(notice.id());   // stage(), content() 
 ```
 
 > The notice's polymorphic `shipping` declaration (the `COURIER_BY_SELLER` / `OWN_TRANSPORT` /
-> `THIRD_PARTY_DELIVERY` variants, each with its own courier / carrier / arrival details) is a
-> deferred follow-up and is not yet part of the read model or the write builders.
+> `THIRD_PARTY_DELIVERY` variants, each with its own courier / carrier / arrival details) is not
+> yet part of the read model or the write builders. It is blocked on a Layer-1 generation defect:
+> the read DTO cannot deserialize those three methods (their generated subtypes extend the write
+> base rather than the read base), so exposing the declaration waits on a Layer-1 regeneration.
+> The `ALREADY_IN_WAREHOUSE` read method and the write body itself are unaffected.
 
 ## Errors
 
