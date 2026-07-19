@@ -356,6 +356,45 @@ request (a richer `CreateOfferRequest` that carries `afterSalesServices`/`delive
 work). Category ids must be real leaves: `353` (Etui i pokrowce) exists; the placeholder `257`
 returns `CATEGORY_NOT_EXISTS`.
 
+### Full-body create — the SDK request deserializes; remaining 422s are business rules (verified 2026-07-19, sandbox)
+
+Live write→read of the now-richer `CreateOfferRequest` (carrying `delivery`, `afterSalesServices`,
+`description`, `location`, `parameters`, `language`, `external`) POSTed the exact body the SDK's
+`OffersImpl.create` produces. The server did NOT reject any field on shape/deserialization — every
+error returned was a **business rule**, confirming the Layer-2 mapping for all those fields is
+wire-valid. Findings:
+
+- **A productized category (e.g. `325040`) cannot be created bare.** `422` cascade requires a linked
+  catalog product (`product.id` / `ConstraintViolationException.ValidProductization`), GPSR
+  (`productSet[].responsibleProducer` `RESPONSIBLE_PRODUCER_NOT_SPECIFIED`, `…safetyInformation`
+  `SAFETY_INFO_NOT_DEFINED`), at least one image (`ConstraintViolationException.GallerySize`), a
+  title of ≥3 words (`ConstraintViolationException.MinWords`), and a valid `location.province`
+  (`INVALID_STATE`). ⇒ a full sellable live seed needs **`productSet` + GPSR + media** — fields
+  still on the bucket-A/bucket-K backlog; the live seed sequences AFTER they land.
+- **"One Fulfillment" shipping-rate sets impose warehouse-only rules.** Selecting a shipping-rate id
+  whose set is named `One Fulfillment …` forces `stock.available = 0`, an active One Fulfillment
+  service, a withdrawal address, GTIN-linked products, etc. Use a NON-One-Fulfillment rate for an
+  ordinary seller offer.
+
+### Creating a return policy — request shape (verified 2026-07-19, sandbox, 201)
+
+`POST /after-sales-service-conditions/return-policies` (bucket K) requires: `name`,
+`isFulfillment` (Boolean), `availability.range` ∈ {`FULL`,`RESTRICTED`,`DISABLED`},
+`returnCost.coveredBy` ∈ {`BUYER`,`SELLER`}, `address` (name/street/postCode/city/countryCode), and
+`options` (the 5 booleans) — `options` is **required unless** `availability.range = DISABLED`. The
+enum wire fields are `range` / `coveredBy` (NOT `value`). A missing required field returns a generic
+`400 {code: ERROR, path: null, message: Bad Request}` with **no field path** — validate against this
+shape rather than the error. (This live-confirms the bucket-K `ReturnPolicyMapper` shape.)
+
+### Account state snapshot (sandbox seller, 2026-07-19)
+
+implied-warranty ×1 + warranty ×1 (`[K-demo]`); return-policies ×1 (`[A-demo]`, created during this
+verification, id `ca36b384-…`); size-tables ×0; shipping-rate sets ×7 (several are One Fulfillment);
+seller offers ×0. NOTE: with 0 existing offers and the create blocked by productization, the offer
+**read-back** shapes (a dictionary parameter carrying both `values`+`valuesIds`; `language`
+echoed as BCP-47) are still WireMock-asserted only — to be live-confirmed once `productSet`/media
+land and a real offer can be seeded.
+
 ## Fulfillment (bucket I)
 
 ### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)
