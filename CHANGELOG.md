@@ -504,6 +504,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `IssueRight`, `IssueStatus`, `ChatAuthorRole`), request enums (`IssueMessageType`,
   `ClaimStatus`), fail-fast `IssueFilter`/`IssueMessageRequest`/`ClaimStatusChange`/
   `IssueAttachmentDeclaration` builders, and a `disputes` demo scenario.
+- Forward-compatibility (C3) coverage: full-stack WireMock tests prove that a wire enum value
+  this SDK version predates degrades end-to-end to `UNKNOWN` instead of failing deserialization —
+  disputes `IssueStatus` and `ChatAuthorRole`, messaging `MessageType`, `MessageStatus`, and
+  `AttachmentStatus`.
 
 ### K — sale-settings
 
