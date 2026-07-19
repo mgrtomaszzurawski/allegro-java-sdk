@@ -150,6 +150,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   `DescriptionSection` → `DescriptionItem`, each `text(html)` or `image(url)`; unknown item kinds
   degrade to `DescriptionItemType.UNKNOWN` via C4) and `OfferLocation` (city/countryCode/postCode/
   province) value types — immutable, usable both to configure an offer and to read one back.
+- Coverage (parameters): `CreateOfferRequest` gains category `parameters` (`addParameter` /
+  `parameters(List)`) and the `Offer` read maps them back. New `OfferParameter` value type with a
+  factory per kind — `dictionary(id, valueIds…)`, `freeText(id, values…)`, `range(id, from, to)` —
+  plus a `ParameterRange` (`lowerBound`…`upperBound`) value and an `OfferParameterKind`
+  (`DICTIONARY`/`FREE_TEXT`/`RANGE`) discriminator via `OfferParameter.kind()`. On read a dictionary
+  parameter carries both its `valuesIds` and their `values` labels; `kind()` disambiguates without
+  guessing, and `toRaw()` writes only the ids of a dictionary parameter (the read-only labels are
+  dropped so a read parameter round-trips into a create without Allegro's `InvalidDictionaryParameter`).
+  Completes the publish-critical content fields (description + parameters).
 
 ### B — orders-payments
 

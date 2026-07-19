@@ -10,8 +10,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -51,6 +54,7 @@ public final class CreateOfferRequest {
     private final @Nullable AfterSalesServices afterSalesServices;
     private final @Nullable OfferDescription description;
     private final @Nullable OfferLocation location;
+    private final List<OfferParameter> parameters;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -66,6 +70,7 @@ public final class CreateOfferRequest {
         this.afterSalesServices = builder.afterSalesServices;
         this.description = builder.description;
         this.location = builder.location;
+        this.parameters = List.copyOf(builder.parameters);
     }
 
     /** The offer title. */
@@ -133,6 +138,11 @@ public final class CreateOfferRequest {
         return location;
     }
 
+    /** The offer's category parameters, in the order added (possibly empty). */
+    public List<OfferParameter> parameters() {
+        return parameters;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -154,6 +164,7 @@ public final class CreateOfferRequest {
         private @Nullable AfterSalesServices afterSalesServices;
         private @Nullable OfferDescription description;
         private @Nullable OfferLocation location;
+        private final List<OfferParameter> parameters = new ArrayList<>();
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -230,6 +241,20 @@ public final class CreateOfferRequest {
         /** Set the offer's ship-from location (optional). */
         public Builder location(@Nullable OfferLocation location) {
             this.location = location;
+            return this;
+        }
+
+        /** Replace the offer's category parameters with the given list (optional, non-null). */
+        public Builder parameters(List<OfferParameter> parameters) {
+            Objects.requireNonNull(parameters, "parameters");
+            this.parameters.clear();
+            this.parameters.addAll(parameters);
+            return this;
+        }
+
+        /** Add a single category parameter (optional, non-null; call repeatedly to add several). */
+        public Builder addParameter(OfferParameter parameter) {
+            this.parameters.add(Objects.requireNonNull(parameter, "parameter"));
             return this;
         }
 
