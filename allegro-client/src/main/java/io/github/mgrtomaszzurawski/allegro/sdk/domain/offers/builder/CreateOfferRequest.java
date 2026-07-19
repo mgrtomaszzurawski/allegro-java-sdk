@@ -7,7 +7,9 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -47,6 +49,8 @@ public final class CreateOfferRequest {
     private final @Nullable StockUnit stockUnit;
     private final @Nullable OfferDelivery delivery;
     private final @Nullable AfterSalesServices afterSalesServices;
+    private final @Nullable OfferDescription description;
+    private final @Nullable OfferLocation location;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -60,6 +64,8 @@ public final class CreateOfferRequest {
         this.stockUnit = builder.stockUnit;
         this.delivery = builder.delivery;
         this.afterSalesServices = builder.afterSalesServices;
+        this.description = builder.description;
+        this.location = builder.location;
     }
 
     /** The offer title. */
@@ -117,6 +123,16 @@ public final class CreateOfferRequest {
         return afterSalesServices;
     }
 
+    /** The offer's standardized description, or {@code null} if not set. */
+    public @Nullable OfferDescription description() {
+        return description;
+    }
+
+    /** The offer's ship-from location, or {@code null} if not set. */
+    public @Nullable OfferLocation location() {
+        return location;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -136,6 +152,8 @@ public final class CreateOfferRequest {
         private @Nullable StockUnit stockUnit;
         private @Nullable OfferDelivery delivery;
         private @Nullable AfterSalesServices afterSalesServices;
+        private @Nullable OfferDescription description;
+        private @Nullable OfferLocation location;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -200,6 +218,18 @@ public final class CreateOfferRequest {
         /** Set the offer's after-sales conditions (optional). */
         public Builder afterSalesServices(@Nullable AfterSalesServices afterSalesServices) {
             this.afterSalesServices = afterSalesServices;
+            return this;
+        }
+
+        /** Set the offer's standardized description (optional). */
+        public Builder description(@Nullable OfferDescription description) {
+            this.description = description;
+            return this;
+        }
+
+        /** Set the offer's ship-from location (optional). */
+        public Builder location(@Nullable OfferLocation location) {
+            this.location = location;
             return this;
         }
 

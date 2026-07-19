@@ -13,8 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.LocationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
@@ -23,16 +26,22 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicat
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StandardizedDescriptionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.WarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItemType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -52,6 +61,10 @@ class OfferTest {
     private static final String NAME_FULL = "Full";
     private static final String NAME_AUCTION = "Auction";
     private static final int AUCTION_STOCK = 3;
+    private static final String DESC_TEXT_TYPE = "TEXT";
+    private static final String DESC_CONTENT = "<p>Great keyboard</p>";
+    private static final String CITY = "Warszawa";
+    private static final String COUNTRY_CODE = "PL";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -112,6 +125,31 @@ class OfferTest {
         assertNull(offer.availableStock());
         assertNull(offer.delivery());
         assertNull(offer.afterSalesServices());
+        assertNull(offer.description());
+        assertNull(offer.location());
+    }
+
+    @Test
+    void from_whenDescriptionAndLocationPresent_mapsBoth() {
+        // given — a payload with a one-section text description and a location
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .description(new StandardizedDescriptionRaw().sections(List.of(
+                        new DescriptionSectionRaw().items(List.of(
+                                new DescriptionSectionItemTextRaw().type(DESC_TEXT_TYPE).content(DESC_CONTENT))))))
+                .location(new LocationRaw().city(CITY).countryCode(COUNTRY_CODE));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — the description text item and the location are projected
+        OfferDescription description = offer.description();
+        assertNotNull(description);
+        DescriptionItem item = description.sections().get(0).items().get(0);
+        assertEquals(DescriptionItemType.TEXT, item.type());
+        assertEquals(DESC_CONTENT, item.content());
+        assertEquals(new OfferLocation(CITY, COUNTRY_CODE, null, null), offer.location());
     }
 
     @Test

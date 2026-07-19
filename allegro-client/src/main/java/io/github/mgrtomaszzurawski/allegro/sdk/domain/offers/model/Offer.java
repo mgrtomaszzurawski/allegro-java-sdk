@@ -41,6 +41,9 @@ import org.jspecify.annotations.Nullable;
  *                       {@code null} if the payload omits them
  * @param afterSalesServices after-sales conditions (implied warranty, return
  *                       policy, warranty), or {@code null} if omitted
+ * @param description    the standardized description (sections of text/images), or
+ *                       {@code null} if omitted
+ * @param location       the ship-from location, or {@code null} if omitted
  * @since 0.2.0
  */
 public record Offer(
@@ -55,7 +58,9 @@ public record Offer(
         @Nullable Integer availableStock,
         @Nullable StockUnit stockUnit,
         @Nullable OfferDelivery delivery,
-        @Nullable AfterSalesServices afterSalesServices) {
+        @Nullable AfterSalesServices afterSalesServices,
+        @Nullable OfferDescription description,
+        @Nullable OfferLocation location) {
 
     /** Project a generated product-offer response onto the consumer record. */
     public static Offer from(SaleProductOfferResponseV1Raw raw) {
@@ -74,7 +79,9 @@ public record Offer(
                 availableStockOf(raw),
                 stockUnitOf(raw),
                 OfferDelivery.from(raw.getDelivery()),
-                AfterSalesServices.from(raw.getAfterSalesServices()));
+                AfterSalesServices.from(raw.getAfterSalesServices()),
+                OfferDescription.from(raw.getDescription()),
+                OfferLocation.from(raw.getLocation()));
     }
 
     private static @Nullable Money buyNowPriceOf(@Nullable SellingModeRaw sellingMode) {

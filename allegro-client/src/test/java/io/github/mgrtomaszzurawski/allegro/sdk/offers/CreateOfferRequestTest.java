@@ -12,8 +12,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -175,5 +179,31 @@ class CreateOfferRequestTest {
                 .name(NAME).categoryId(CATEGORY_ID).availableStock(STOCK)
                 .sellingFormat(OfferFormat.AUCTION);
         assertThrows(IllegalStateException.class, builder::build);
+    }
+
+    @Test
+    void build_whenDescriptionAndLocationSet_exposesThem() {
+        // given
+        OfferDescription description = OfferDescription.of(
+                DescriptionSection.of(DescriptionItem.text("<p>hello</p>")));
+        OfferLocation location = OfferLocation.builder().city("Warszawa").countryCode("PL").build();
+
+        // when
+        CreateOfferRequest request = validBuilder()
+                .description(description).location(location).build();
+
+        // then
+        assertEquals(description, request.description());
+        assertEquals(location, request.location());
+    }
+
+    @Test
+    void build_whenContentNotSet_leavesThoseFieldsNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.description());
+        assertNull(request.location());
     }
 }

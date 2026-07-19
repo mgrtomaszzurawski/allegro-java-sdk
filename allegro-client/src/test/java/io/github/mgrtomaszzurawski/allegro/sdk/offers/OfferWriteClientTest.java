@@ -31,9 +31,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -87,6 +91,13 @@ class OfferWriteClientTest {
     private static final String IMPLIED_WARRANTY_JSON_PATH = "$.afterSalesServices.impliedWarranty.id";
     private static final String RETURN_POLICY_JSON_PATH = "$.afterSalesServices.returnPolicy.id";
     private static final String WARRANTY_JSON_PATH = "$.afterSalesServices.warranty.id";
+
+    private static final String DESC_CONTENT = "<h1>Mechanical keyboard</h1>";
+    private static final String CITY = "Warszawa";
+    private static final String DESC_TYPE_JSON_PATH = "$.description.sections[0].items[0].type";
+    private static final String DESC_CONTENT_JSON_PATH = "$.description.sections[0].items[0].content";
+    private static final String LOCATION_CITY_JSON_PATH = "$.location.city";
+    private static final String ITEM_TYPE_TEXT = "TEXT";
 
     private static final String STARTING_AMOUNT = "1.00";
     private static final String MINIMAL_AMOUNT = "150.00";
@@ -223,6 +234,30 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(IMPLIED_WARRANTY_JSON_PATH, equalTo(IMPLIED_WARRANTY_ID)))
                 .withRequestBody(matchingJsonPath(RETURN_POLICY_JSON_PATH, equalTo(RETURN_POLICY_ID)))
                 .withRequestBody(matchingJsonPath(WARRANTY_JSON_PATH, equalTo(WARRANTY_ID))));
+    }
+
+    @Test
+    void create_whenDescriptionAndLocationSet_serializesThem(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying a one-section text description and a location
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .description(OfferDescription.of(
+                        DescriptionSection.of(DescriptionItem.text(DESC_CONTENT))))
+                .location(OfferLocation.builder().city(CITY).build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the description item (typed TEXT with its content) and the location reach the body
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(DESC_TYPE_JSON_PATH, equalTo(ITEM_TYPE_TEXT)))
+                .withRequestBody(matchingJsonPath(DESC_CONTENT_JSON_PATH, equalTo(DESC_CONTENT)))
+                .withRequestBody(matchingJsonPath(LOCATION_CITY_JSON_PATH, equalTo(CITY))));
     }
 
     @Test
