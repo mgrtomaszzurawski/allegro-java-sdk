@@ -121,7 +121,7 @@ class OfferWriteClientTest {
     private static final String PARAM_RANGE_ID = "12345";
     private static final String PARAM_RANGE_FROM = "10";
     private static final String PARAM_RANGE_TO = "20";
-    private static final String PARAM_DICT_ID_JSON_PATH = "$.parameters[0].id";
+    private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
     private static final String PARAM_RANGE_FROM_JSON_PATH = "$.parameters[1].rangeValue.from";
@@ -353,7 +353,7 @@ class OfferWriteClientTest {
         // then — both parameters reach the body in order: the dictionary one as
         // {id, valuesIds:[...]} and the range one as {id, rangeValue:{from,to}}
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
-                .withRequestBody(matchingJsonPath(PARAM_DICT_ID_JSON_PATH, equalTo(PARAM_DICT_ID)))
+                .withRequestBody(matchingJsonPath(PARAM_ID_JSON_PATH, equalTo(PARAM_DICT_ID)))
                 .withRequestBody(matchingJsonPath(PARAM_DICT_VALUE_JSON_PATH, equalTo(PARAM_DICT_VALUE_ID)))
                 .withRequestBody(matchingJsonPath(PARAM_RANGE_ID_JSON_PATH, equalTo(PARAM_RANGE_ID)))
                 .withRequestBody(matchingJsonPath(PARAM_RANGE_FROM_JSON_PATH, equalTo(PARAM_RANGE_FROM)))
@@ -377,7 +377,7 @@ class OfferWriteClientTest {
 
         // then — the free-text parameter reaches the body as {id, values:[...]}
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
-                .withRequestBody(matchingJsonPath(PARAM_DICT_ID_JSON_PATH, equalTo(PARAM_FREE_ID)))
+                .withRequestBody(matchingJsonPath(PARAM_ID_JSON_PATH, equalTo(PARAM_FREE_ID)))
                 .withRequestBody(matchingJsonPath(PARAM_FREE_VALUE_JSON_PATH, equalTo(PARAM_FREE_VALUE))));
     }
 

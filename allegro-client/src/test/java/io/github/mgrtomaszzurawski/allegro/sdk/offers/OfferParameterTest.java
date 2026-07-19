@@ -92,14 +92,18 @@ class OfferParameterTest {
     }
 
     @Test
-    void toRaw_whenNameSet_writesName() {
+    void toRaw_whenNameSet_omitsNameBecauseItIsReadOnly() {
         // given — a parameter carrying a name (as a read-back one does), built via the
         // canonical constructor since the write factories leave the name null
         OfferParameter named =
                 new OfferParameter(PARAM_ID, PARAM_NAME, List.of(), List.of(VALUE_ID_ONE), null);
 
-        // then — the name reaches the request (the server still keys on the id)
-        assertEquals(PARAM_NAME, named.toRaw().getName());
+        // then — the read-only name is not sent on write (the server keys on the id); only
+        // the id and the value ids reach the request
+        ParameterProductOfferRequestRaw raw = named.toRaw();
+        assertNull(raw.getName());
+        assertEquals(PARAM_ID, raw.getId());
+        assertEquals(List.of(VALUE_ID_ONE), raw.getValuesIds());
     }
 
     @Test
@@ -239,7 +243,7 @@ class OfferParameterTest {
     }
 
     @Test
-    void constructor_whenIdNull_throwsNullPointer() {
+    void dictionary_whenIdNull_throwsNullPointer() {
         assertThrows(NullPointerException.class, () -> OfferParameter.dictionary(null, VALUE_ID_ONE));
     }
 }

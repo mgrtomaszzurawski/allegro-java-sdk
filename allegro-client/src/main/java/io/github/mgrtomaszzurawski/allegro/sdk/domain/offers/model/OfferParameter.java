@@ -34,10 +34,11 @@ import org.jspecify.annotations.Nullable;
  * fed straight back into a create.
  *
  * <p>The parameter {@code id} (from the category definition) is required; {@code name}
- * is populated on read and, when present, sent on write (the server keys on the id).
+ * is populated on read and is not sent on write (the server keys on the id and derives
+ * the name from the category), so it is read-only like a dictionary parameter's labels.
  *
  * @param id         the category parameter id (required)
- * @param name       the parameter name (populated on read), or {@code null}
+ * @param name       the parameter name (populated on read, read-only), or {@code null}
  * @param values     free-text values of a free-text parameter, or the read-only labels
  *                   of a dictionary parameter's ids; empty for a range parameter
  * @param valuesIds  dictionary value ids; empty for a free-text or range parameter
@@ -125,17 +126,15 @@ public record OfferParameter(
     }
 
     /**
-     * The generated request parameter for this value. Only the writable value kind is sent:
-     * a dictionary parameter is written with its {@code valuesIds} only — the {@code values}
-     * a read dictionary parameter also carries are read-only labels, and echoing them back
-     * alongside the ids is rejected by Allegro ({@code InvalidDictionaryParameter}). The
-     * {@code name} is sent when present but the server keys on the {@code id}.
+     * The generated request parameter for this value. Only the {@code id} and the writable
+     * value kind are sent: a dictionary parameter is written with its {@code valuesIds} only —
+     * the {@code values} a read dictionary parameter also carries are read-only labels, and
+     * echoing them back alongside the ids is rejected by Allegro ({@code InvalidDictionaryParameter}).
+     * The read-only {@code name} is not sent (the server keys on the {@code id}), so a read
+     * parameter round-trips cleanly into a create.
      */
     public ParameterProductOfferRequestRaw toRaw() {
         ParameterProductOfferRequestRaw raw = new ParameterProductOfferRequestRaw().id(id);
-        if (name != null) {
-            raw.name(name);
-        }
         // Write only the value kind: a dictionary parameter by its ids (empty labels are
         // dropped), a free-text one by its values, a range one by its bounds. An empty list
         // set here is omitted from the wire by the transport's jsonBodyPartial (NON_EMPTY).
