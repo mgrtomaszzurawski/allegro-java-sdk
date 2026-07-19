@@ -466,6 +466,13 @@ shape deserializes and the lazy stream ends cleanly. The polymorphic event-subty
 exercise it live. `operationStatus(offerId, operationId)` needs a live async operation id (an
 async create/edit that returns one) to verify and stays WireMock-pinned until a seed exists.
 
+### Seller-wide promo-options feed reachable; sandbox seller has none (verified 2026-07-19, sandbox)
+
+`offers().promoOptions().forAllOffers()` (`GET /sale/offers/promo-options`) is reachable and
+authenticates on the sandbox seller, returning an empty page (`0 offer(s)`) that deserializes and
+ends the lazy stream cleanly. `modify(offerId, …)` needs a real offer + an available package to
+live-exercise and stays WireMock-pinned until a seed exists.
+
 ## Fulfillment (bucket I)
 
 ### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)
