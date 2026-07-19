@@ -110,6 +110,13 @@ class PricingAutomationClientTest {
             {"id":"%s","type":"FOLLOW_BY_TOP_OFFER_PRICE","name":"%s","default":true,
              "updatedAt":"2026-07-17T10:15:30Z"}
             """;
+    // forward-compat: a rule strategy this SDK release does not model (the generated
+    // type enum yields no constant for it) must degrade to UNKNOWN, not fail the read.
+    private static final String UNKNOWN_TYPE_RULE_RESPONSE = """
+            {"id":"%s","type":"PRICE_MATCH_FUTURE","name":"%s","default":false,
+             "updatedAt":"2026-07-17T10:15:30Z",
+             "configuration":{"changeByPercentage":{"operation":"SUBTRACT","value":"5"}}}
+            """;
     // spec-derived: not yet wire-verified (errors[] contract shape)
     private static final String VALIDATION_ERROR_RESPONSE = """
             {"errors":[{"code":"%s","message":"Invalid rule type",
@@ -279,6 +286,29 @@ class PricingAutomationClientTest {
             assertEquals(PricingRuleType.FOLLOW_BY_TOP_OFFER_PRICE, rule.type());
             assertTrue(rule.isDefault());
             assertNull(rule.configuration());
+            verify(1, getRequestedFor(urlEqualTo(RULE_PATH)));
+        }
+    }
+
+    @Test
+    void get_whenUnknownRuleType_mapsTypeToUnknownAndKeepsOtherFields(WireMockRuntimeInfo wmInfo) {
+        // given — the server returns a rule strategy introduced after this release
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(RULE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_TYPE_RULE_RESPONSE.formatted(TEST_RULE_ID, TEST_RULE_NAME))));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            PricingRule rule = allegro.pricing().automation().get(TEST_RULE_ID);
+
+            // then — the unknown type degrades to UNKNOWN; the rest of the rule
+            // (including its configuration oneOf) still maps
+            assertEquals(PricingRuleType.UNKNOWN, rule.type());
+            assertEquals(TEST_RULE_ID, rule.id());
+            assertEquals(TEST_RULE_NAME, rule.name());
+            assertInstanceOf(PricingRuleConfiguration.ChangeByPercentage.class, rule.configuration());
             verify(1, getRequestedFor(urlEqualTo(RULE_PATH)));
         }
     }

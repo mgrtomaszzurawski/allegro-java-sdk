@@ -109,6 +109,18 @@ class PricingRuleRequestBuilderTest {
     }
 
     @Test
+    void build_whenTypeUnknown_throwsIllegalState() {
+        // given — UNKNOWN is a read-only forward-compat value, invalid to write
+        var builder = PricingRuleRequest.builder()
+                .name(TEST_NAME)
+                .type(PricingRuleType.UNKNOWN);
+
+        // then
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(TYPE_TOKEN));
+    }
+
+    @Test
     void build_whenNameAtMaxLength_succeeds() {
         // given — 33 characters is the server limit and must be accepted
         String maxLengthName = "a".repeat(NAME_MAX_LENGTH);

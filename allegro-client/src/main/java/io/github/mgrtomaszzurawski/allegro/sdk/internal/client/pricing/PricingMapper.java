@@ -4,7 +4,6 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationChangeByAmountChangeByAmountRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationChangeByAmountChangeByAmountValuesInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationChangeByAmountRaw;
@@ -13,52 +12,38 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConf
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleConfigurationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRulePostRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRulePutRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleTypeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRulesResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRule;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleConfiguration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleEdit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PricingRuleType;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.StreamSupport;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Package-private mapper between the pricing domain records and the Allegro
  * wire form.
  *
- * <p><strong>Writes</strong> use the generated Layer-1 request DTOs (they
- * serialize the {@code configuration} oneOf correctly). <strong>Reads</strong>
- * of the rule response are mapped from a {@link JsonNode} rather than the
- * generated response DTO: the generated {@code native} oneOf deserializer does
- * not validate schema constraints, so under the SDK's forward-compatible
- * {@code FAIL_ON_UNKNOWN_PROPERTIES=false} mapper a {@code changeByPercentage}
- * payload also matches the {@code changeByAmount} branch and deserialization
- * fails with "2 classes match". Discriminating on the present property name is
- * both correct and immune to that generator flaw. See the shared BACKLOG core
- * item for the systemic fix that would let reads move back to the DTO.
+ * <p>Both directions use the generated Layer-1 DTOs. The {@code configuration}
+ * field is a structural {@code oneOf} ({@code changeByAmount} vs
+ * {@code changeByPercentage}); the shared {@code StrictOneOfModule} runtime core
+ * resolves it by strict property matching, so reads deserialize straight into
+ * {@link AutomaticPricingRuleConfigurationRaw} without the earlier hand-rolled
+ * {@code JsonNode} discrimination.
  */
 final class PricingMapper {
 
-    private static final String FIELD_RULES = "rules";
-    private static final String FIELD_ID = "id";
-    private static final String FIELD_TYPE = "type";
-    private static final String FIELD_NAME = "name";
-    private static final String FIELD_DEFAULT = "default";
-    private static final String FIELD_UPDATED_AT = "updatedAt";
-    private static final String FIELD_CONFIGURATION = "configuration";
-    private static final String FIELD_CHANGE_BY_AMOUNT = "changeByAmount";
-    private static final String FIELD_CHANGE_BY_PERCENTAGE = "changeByPercentage";
-    private static final String FIELD_OPERATION = "operation";
-    private static final String FIELD_VALUES = "values";
-    private static final String FIELD_VALUE = "value";
-    private static final String FIELD_AMOUNT = "amount";
-    private static final String FIELD_CURRENCY = "currency";
+    private static final String OPERATION_ADD = "ADD";
+    private static final String OPERATION_SUBTRACT = "SUBTRACT";
     private static final String ERR_UNKNOWN_CONFIGURATION =
             "Unknown pricing rule configuration variant: ";
+    private static final String ERR_UNKNOWN_TYPE =
+            "PricingRuleType.UNKNOWN is a read-only forward-compatibility value and "
+                    + "cannot be used to create or edit a rule";
 
     private PricingMapper() {
     }
@@ -86,54 +71,81 @@ final class PricingMapper {
         return raw;
     }
 
-    /** Map a rules-list response (as raw JSON) to public records. */
-    static List<PricingRule> toRules(JsonNode wrapper) {
-        JsonNode rulesArray = wrapper.get(FIELD_RULES);
-        if (rulesArray == null) {
-            return List.of();
-        }
-        return StreamSupport.stream(rulesArray.spliterator(), false)
-                .map(PricingMapper::toRule)
-                .toList();
+    /** Map a rules-list response to public records. */
+    static List<PricingRule> toRules(AutomaticPricingRulesResponseRaw response) {
+        return response.getRules().stream().map(PricingMapper::toRule).toList();
     }
 
-    /** Map a rule response (as raw JSON) to the public record. */
-    static PricingRule toRule(JsonNode node) {
+    /** Map a single rule response to the public record. */
+    static PricingRule toRule(AutomaticPricingRuleResponseRaw raw) {
         return new PricingRule(
-                node.get(FIELD_ID).asText(),
-                PricingRuleType.valueOf(node.get(FIELD_TYPE).asText()),
-                node.get(FIELD_NAME).asText(),
-                node.get(FIELD_DEFAULT).asBoolean(),
-                Instant.parse(node.get(FIELD_UPDATED_AT).asText()),
-                configurationFrom(node.get(FIELD_CONFIGURATION)));
+                raw.getId(),
+                typeFrom(raw.getType()),
+                raw.getName(),
+                raw.getDefault(),
+                raw.getUpdatedAt().toInstant(),
+                configurationFrom(raw.getConfiguration()));
     }
 
-    private static @Nullable PricingRuleConfiguration configurationFrom(@Nullable JsonNode configuration) {
-        if (configuration == null || configuration.isNull()) {
+    private static PricingRuleType typeFrom(@Nullable AutomaticPricingRuleTypeRaw raw) {
+        if (raw == null) {
+            // The generator's fromValue yields null (not the sentinel constant)
+            // for a wire value it does not model; surface it as UNKNOWN.
+            return PricingRuleType.UNKNOWN;
+        }
+        return switch (raw) {
+            case EXCHANGE_RATE -> PricingRuleType.EXCHANGE_RATE;
+            case FOLLOW_BY_ALLEGRO_MIN_PRICE -> PricingRuleType.FOLLOW_BY_ALLEGRO_MIN_PRICE;
+            case FOLLOW_BY_MARKET_MIN_PRICE -> PricingRuleType.FOLLOW_BY_MARKET_MIN_PRICE;
+            case FOLLOW_BY_TOP_OFFER_PRICE -> PricingRuleType.FOLLOW_BY_TOP_OFFER_PRICE;
+            case UNKNOWN_DEFAULT_OPEN_API -> PricingRuleType.UNKNOWN;
+        };
+    }
+
+    private static @Nullable PricingRuleConfiguration configurationFrom(
+            @Nullable AutomaticPricingRuleConfigurationRaw raw) {
+        if (raw == null) {
             return null;
         }
-        JsonNode amountNode = configuration.get(FIELD_CHANGE_BY_AMOUNT);
-        if (amountNode != null) {
-            List<Money> values = new ArrayList<>();
-            for (JsonNode entry : amountNode.get(FIELD_VALUES)) {
-                values.add(Money.of(entry.get(FIELD_AMOUNT).asText(), entry.get(FIELD_CURRENCY).asText()));
+        Object actual = raw.getActualInstance();
+        if (actual instanceof AutomaticPricingRuleConfigurationChangeByAmountRaw amountWrapper) {
+            AutomaticPricingRuleConfigurationChangeByAmountChangeByAmountRaw amount =
+                    amountWrapper.getChangeByAmount();
+            PricingRuleConfiguration.Operation operation = operationFrom(
+                    amount.getOperation() == null ? null : amount.getOperation().getValue());
+            if (operation == null) {
+                return null;
             }
-            return new PricingRuleConfiguration.ChangeByAmount(
-                    operationFrom(amountNode.get(FIELD_OPERATION)), values);
+            List<Money> values = amount.getValues().stream()
+                    .map(value -> Money.of(value.getAmount(), value.getCurrency()))
+                    .toList();
+            return new PricingRuleConfiguration.ChangeByAmount(operation, values);
         }
-        JsonNode percentageNode = configuration.get(FIELD_CHANGE_BY_PERCENTAGE);
-        if (percentageNode != null) {
-            return new PricingRuleConfiguration.ChangeByPercentage(
-                    operationFrom(percentageNode.get(FIELD_OPERATION)),
-                    percentageNode.get(FIELD_VALUE).asText());
+        if (actual instanceof AutomaticPricingRuleConfigurationChangeByPercentageRaw percentageWrapper) {
+            AutomaticPricingRuleConfigurationChangeByPercentageChangeByPercentageRaw percentage =
+                    percentageWrapper.getChangeByPercentage();
+            PricingRuleConfiguration.Operation operation = operationFrom(
+                    percentage.getOperation() == null ? null : percentage.getOperation().getValue());
+            if (operation == null) {
+                return null;
+            }
+            return new PricingRuleConfiguration.ChangeByPercentage(operation, percentage.getValue());
         }
         // Forward-compat: a configuration shape the SDK does not model yet is
         // surfaced as "no adjustment" rather than failing the whole read.
         return null;
     }
 
-    private static PricingRuleConfiguration.Operation operationFrom(JsonNode operation) {
-        return PricingRuleConfiguration.Operation.valueOf(operation.asText());
+    private static PricingRuleConfiguration.@Nullable Operation operationFrom(
+            @Nullable String wireOperation) {
+        if (wireOperation == null) {
+            return null;
+        }
+        return switch (wireOperation) {
+            case OPERATION_ADD -> PricingRuleConfiguration.Operation.ADD;
+            case OPERATION_SUBTRACT -> PricingRuleConfiguration.Operation.SUBTRACT;
+            default -> null;
+        };
     }
 
     private static AutomaticPricingRuleTypeRaw typeToRaw(PricingRuleType type) {
@@ -142,6 +154,7 @@ final class PricingMapper {
             case FOLLOW_BY_ALLEGRO_MIN_PRICE -> AutomaticPricingRuleTypeRaw.FOLLOW_BY_ALLEGRO_MIN_PRICE;
             case FOLLOW_BY_MARKET_MIN_PRICE -> AutomaticPricingRuleTypeRaw.FOLLOW_BY_MARKET_MIN_PRICE;
             case FOLLOW_BY_TOP_OFFER_PRICE -> AutomaticPricingRuleTypeRaw.FOLLOW_BY_TOP_OFFER_PRICE;
+            case UNKNOWN -> throw new IllegalArgumentException(ERR_UNKNOWN_TYPE);
         };
     }
 
