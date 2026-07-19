@@ -207,6 +207,12 @@ public final class OffersImpl implements Offers {
         if (request.afterSalesServices() != null) {
             body.afterSalesServices(afterSalesRawOf(request.afterSalesServices()));
         }
+        if (request.description() != null) {
+            body.description(request.description().toRaw());
+        }
+        if (request.location() != null) {
+            body.location(request.location().toRaw());
+        }
         // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
         // empty collections and leaves nullable scalars (e.g. `language`) null, and
         // Allegro rejects `language:null` with a JsonMappingException — send only the

@@ -165,6 +165,29 @@ with no `buyNowPrice`, throws. On the read side, `offer.startingPrice()`, `offer
 and `offer.stockUnit()` are populated for auctions; `offer.buyNowPrice()` is `null` for a pure
 auction.
 
+### Description and location
+
+The standardized description is an ordered list of sections, each a group of text and image
+items; the location is where the offer ships from. Both are read back on `offers().get(offerId)`:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .description(OfferDescription.of(
+                DescriptionSection.of(DescriptionItem.text("<h1>Mechanical keyboard</h1>")),
+                DescriptionSection.of(DescriptionItem.image("https://img.example/keyboard.jpg"))))
+        .location(OfferLocation.builder()
+                .city("Warszawa").countryCode("PL").postCode("00-001").province("mazowieckie")
+                .build())
+        .build();
+```
+
+An item kind Allegro adds after this SDK release reads back as `DescriptionItemType.UNKNOWN`
+rather than failing the response.
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its

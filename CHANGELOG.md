@@ -145,6 +145,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   fail-fast: an `AUCTION` requires `startingPrice` (Buy Now optional — a pure auction), any other
   format requires `buyNowPrice`. `AfterSalesServices` ids are validated as UUIDs when set on the
   builder (fail-fast `IllegalArgumentException`) rather than deep in the request.
+- Coverage (content): `CreateOfferRequest` and the `Offer` read now carry the standardized
+  `description` and the ship-from `location`. New `OfferDescription` (sections of
+  `DescriptionSection` → `DescriptionItem`, each `text(html)` or `image(url)`; unknown item kinds
+  degrade to `DescriptionItemType.UNKNOWN` via C4) and `OfferLocation` (city/countryCode/postCode/
+  province) value types — immutable, usable both to configure an offer and to read one back.
 
 ### B — orders-payments
 
