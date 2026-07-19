@@ -158,6 +158,20 @@ class MessagingClientTest {
               "userMessage":"Nie znaleziono","path":null}]}
             """;
     private static final String BUSY_RESPONSE = "{\"errors\":[]}";
+    // forward-compat (C3): wire enum values this SDK version predates must degrade to UNKNOWN,
+    // not fail deserialization (Layer-1 enumUnknownDefaultCase → the mappers' `default -> UNKNOWN`).
+    private static final String FUTURE_WIRE_TYPE = "FUTURE_MESSAGE_TYPE";
+    private static final String FUTURE_WIRE_STATUS = "FUTURE_MESSAGE_STATUS";
+    private static final String FUTURE_WIRE_ATTACHMENT_STATUS = "FUTURE_ATTACHMENT_STATUS";
+    private static final String UNKNOWN_ENUMS_MESSAGE_RESPONSE = """
+            {"id":"%s","status":"%s","type":"%s",
+             "createdAt":"2026-07-17T10:15:30Z","thread":{"id":"%s"},
+             "author":{"login":"seller-login","isInterlocutor":false},
+             "text":"%s","relatesTo":{},"hasAdditionalAttachments":false,
+             "attachments":[{"fileName":"%s","mimeType":"%s",
+               "url":"https://x.allegro.pl/a.pdf","status":"%s"}]}
+            """.formatted(MESSAGE_ID, FUTURE_WIRE_STATUS, FUTURE_WIRE_TYPE, THREAD_ID,
+            MESSAGE_TEXT, FILE_NAME, MIME_PDF, FUTURE_WIRE_ATTACHMENT_STATUS);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -370,6 +384,30 @@ class MessagingClientTest {
             assertEquals(AttachmentStatus.SAFE, message.attachments().get(0).status());
             assertEquals(FILE_NAME, message.attachments().get(0).fileName());
             assertEquals(VIN, message.vehicleVin());
+        }
+    }
+
+    // ---- forward compatibility (C3): unknown wire enum values degrade to UNKNOWN ----
+
+    @Test
+    void message_whenWireEnumsUnknown_degradeTypeStatusAndAttachmentStatusToUnknown(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the server introduces message type/status and attachment status values
+        // this SDK version predates
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(MESSAGE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_ENUMS_MESSAGE_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — deserialization must not throw on the unrecognized enum values
+            Message message = allegro.messaging().message(MESSAGE_ID);
+
+            // then — every unknown wire value degrades to UNKNOWN end-to-end
+            assertEquals(MessageType.UNKNOWN, message.type());
+            assertEquals(MessageStatus.UNKNOWN, message.status());
+            assertEquals(1, message.attachments().size());
+            assertEquals(AttachmentStatus.UNKNOWN, message.attachments().get(0).status());
         }
     }
 

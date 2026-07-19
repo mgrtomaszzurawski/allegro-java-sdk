@@ -27,6 +27,7 @@ class PricingRuleRequestBuilderTest {
     private static final String TEST_PERCENTAGE = "5";
     private static final String NAME_TOKEN = "name";
     private static final String TYPE_TOKEN = "type";
+    private static final String UNKNOWN_TOKEN = "UNKNOWN";
 
     private static PricingRuleConfiguration percentageConfiguration() {
         return new PricingRuleConfiguration.ChangeByPercentage(
@@ -106,6 +107,18 @@ class PricingRuleRequestBuilderTest {
         // then
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertTrue(failure.getMessage().contains(TYPE_TOKEN));
+    }
+
+    @Test
+    void build_whenTypeUnknown_throwsIllegalState() {
+        // given — UNKNOWN is a read-only forward-compat value, invalid to write
+        var builder = PricingRuleRequest.builder()
+                .name(TEST_NAME)
+                .type(PricingRuleType.UNKNOWN);
+
+        // then
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains(UNKNOWN_TOKEN));
     }
 
     @Test

@@ -95,6 +95,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   branch the payload actually fits wins; it falls back to the lenient single match
   and then an `Object` branch, never worse than before. Buckets that hand-read such
   `oneOf`s from `JsonNode` (pricing, campaigns) can now deserialize them directly.
+- Quality: PMD `TooManyFields` threshold raised 15 → 40. A typed SDK's request builders mirror
+  the full field set of their endpoint's body — a request builder must carry EVERY field for the
+  SDK to be complete. The driver is `CreateOfferRequest.Builder`, flattening the ~27+ fields of
+  `SaleProductOfferRequestV1`; the raise applies to DTO/builder mirrors, not hand-rolled aggregates
+  (`DataClass`/`GodClass` already guard those). Documented in `pmd-ruleset.xml` with the driver.
 
 ### A — offers-core
 
@@ -150,6 +155,19 @@ sections. Empty subsections are dropped by the release engineer when folding
   `DescriptionSection` → `DescriptionItem`, each `text(html)` or `image(url)`; unknown item kinds
   degrade to `DescriptionItemType.UNKNOWN` via C4) and `OfferLocation` (city/countryCode/postCode/
   province) value types — immutable, usable both to configure an offer and to read one back.
+- Coverage (parameters): `CreateOfferRequest` gains category `parameters` (`addParameter` /
+  `parameters(List)`) and the `Offer` read maps them back. New `OfferParameter` value type with a
+  factory per kind — `dictionary(id, valueIds…)`, `freeText(id, values…)`, `range(id, from, to)` —
+  plus a `ParameterRange` (`lowerBound`…`upperBound`) value and an `OfferParameterKind`
+  (`DICTIONARY`/`FREE_TEXT`/`RANGE`) discriminator via `OfferParameter.kind()`. On read a dictionary
+  parameter carries both its `valuesIds` and their `values` labels; `kind()` disambiguates without
+  guessing, and `toRaw()` writes only the ids of a dictionary parameter (the read-only labels are
+  dropped so a read parameter round-trips into a create without Allegro's `InvalidDictionaryParameter`).
+  Completes the publish-critical content fields (description + parameters).
+- Coverage (offer references): `CreateOfferRequest` and the `Offer` read now carry the seller's
+  own `externalId` (their system's SKU/id), the listing `language` (BCP-47 code, e.g. `pl-PL`),
+  and the attached `sizeTableId`. The external id and size-table id are exposed as flat `String`s
+  (the `{id}` wire wrappers are hidden).
 
 ### B — orders-payments
 
@@ -199,6 +217,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   data in `toString()`. The company's deprecated single `taxId` string (superseded by `taxIds`), the
   delivery cancellation/package-count, guaranteed/dispatch time sub-windows, and invoice feature
   flags are intentionally not modelled. This completes the `Order` depth fill.
+- `RefundRequest` depth — partial refunds: `payments().refund(RefundRequest)` now accepts a partial
+  breakdown alongside a full refund — per line item (`RefundLineItem.byAmount`/`byQuantity`), per
+  deposit (`RefundDeposit`), per surcharge (`RefundSurcharge`), and the `delivery()`/`overpaid()`/
+  `additionalServices()` amounts (each `Money`), plus an optional `sellerComment()`. Component ids are
+  UUID-validated and each amount is required, fail-fast at construction. The refund body is now
+  serialized with the partial (NON_EMPTY) writer, so a full refund no longer emits the generated
+  DTO's pre-initialized empty component arrays (an empty `[]` would signal "refund these
+  components"). Builder round-trip + per-field validation tests and WireMock wire-body tests
+  (partial breakdown present; full refund omits the empty arrays). `docs/payments.md`.
 
 ### C — shipping
 
@@ -235,6 +262,17 @@ sections. Empty subsections are dropped by the release engineer when folding
   server value maps to `PaymentPolicy.UNKNOWN` instead of failing the whole read
   (forward-compat, matching the bucket's other read enums after the core
   `enumUnknownDefaultCase` change).
+- Carrier shipment management ("Wysyłam z Allegro"): `createShipment(ShipmentRequest)`
+  and `cancelShipment(shipmentId)` (asynchronous command endpoints wrapped
+  sync-default via the core `CommandPoller`, each with an optional
+  `Duration timeout` overload), `getShipment(shipmentId)`, and
+  `labels(LabelRequest)` / `protocol(shipmentIds…)` returning the rendered
+  documents as `byte[]`. Models: `Shipment`, `ShipmentRequest`, `PostalAddress`,
+  `ShipmentPackage` (centimetre/kilogram dimensions), `CashOnDelivery`,
+  `LabelRequest` and `LabelSummaryReport`, with fluent builders and the
+  read-soft/write-strict `LabelFormat`, `PackageType`, `LabelPageSize`,
+  `LabelSummaryPlacement` and `LabelSummaryField` enums. The spec-deprecated
+  `deliveryMethodId` is not exposed (use `credentialsId` and delivery proposals).
 
 ### D — account-meta
 
@@ -273,6 +311,20 @@ sections. Empty subsections are dropped by the release engineer when folding
   now read from a `JsonNode` (`SmartClassificationMapper`): a numeric
   value/threshold stays typed as `BigDecimal`, a boolean one maps to `null` (the
   pass/fail outcome is on the condition's `fulfilled` flag). No public API change.
+- Full field coverage for the account response models (closing coverage debt —
+  these previously mapped only a subset of the payload):
+  - `UserRating` now exposes `rates` (the buyer's per-category 1–5 scores:
+    delivery, delivery cost, description, service — a score outside 1–5 maps to
+    `null`) and `excludedFromAverageRatesReason`, both previously dropped.
+  - `UserRatingSummary` now exposes `statistics` (received / excluded totals and
+    the removed-ratings breakdown: total, by admin, by buyer, by buyer after
+    compensation), previously dropped.
+  - `CpsConversion` now exposes `publisherUrlParameters` (the affiliate tracking
+    parameters echoed back) and `CpsConversion.Offer.categoryId`, both previously
+    dropped.
+  - Fixed: an unmodelled rating-`Removal` source (a forward-compat value newer
+    than `SELLER`/`ADMIN`) now maps to `null` instead of being silently reported
+    as `SELLER`.
 - `bidding` demo scenario (`allegro-demo`, not published) — the buyer half of
   bucket D's live verification, run with a stored buyer token
   (`-Pdemo.scenario=bidding -Pdemo.account=buyer`). Always probes the read path
@@ -417,6 +469,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   core) and an unmodelled promotion status or offer-criterion type degrades to
   its `UNKNOWN` enum constant instead of failing the read, completing bucket G at
   17/17 ops.
+- Automatic pricing rule reads now deserialize the `configuration` `oneOf`
+  straight into the generated DTO via the shared `StrictOneOfModule` core,
+  dropping the hand-rolled `JsonNode` discrimination that worked around the
+  generator's structural-`oneOf` over-match. Rule reads are also forward-safe: a
+  rule strategy the SDK does not model degrades to the new read-only
+  `PricingRuleType.UNKNOWN` (rejected on create) instead of failing the listing
+  or fetch.
 
 ### H — campaigns
 
@@ -448,6 +507,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AlleDiscountSubmitResult`/`AlleDiscountWithdrawResult` and their status/type enums (plus the shared
   `ConditionViolation`), and the `SubmitOfferRequest`/`EligibleOffersFilter`/`SubmittedOffersFilter`
   builders.
+- Make every campaigns domain enum forward-compatible (core C3): an Allegro wire value this SDK
+  release does not model now degrades to a read-only `UNKNOWN` sentinel instead of throwing on the
+  read. Covers `BadgeStatus`, `BadgeApplicationStatus`, `BadgeOperationStatus`, `BadgeOperationType`,
+  `AlleDiscountCampaignType`, `AlleDiscountOfferStatus`, `AlleDiscountCommandStatus`,
+  `ParticipationStatus`, `SchedulePolicyType` and `SubsidyOfferStatus` (`CampaignType` already
+  degraded); `ParticipationStatus.UNKNOWN` is never emitted on a participation update, which only
+  writes `ALLOWED`/`DENIED`.
 
 ### I — fulfillment
 
@@ -472,7 +538,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   records (`AdvanceShipNotice`, `AsnItem`, `HandlingUnit`, `ReceivingState` tree), the `AsnRequest`
   / `SubmittedAsnUpdate` / `AsnFilter` builders, and open-set enums (`AsnStatus`, `ReceivingStage`,
   `ReceivedType`, `ReasonCode`, `SubmitStatus`) that degrade unknown wire values to `UNKNOWN`. The
-  polymorphic `shipping` declaration is a deferred follow-up.
+  polymorphic `shipping` declaration is deferred behind a Layer-1 generation defect (below).
+- Root-cause and pin (regression test) the Layer-1 defect that blocks the ASN `shipping`
+  declaration: the read DTO's `ShippingExtendedRaw` cannot deserialize the `COURIER_BY_SELLER` /
+  `OWN_TRANSPORT` / `THIRD_PARTY_DELIVERY` methods because their generated subtypes extend the
+  write base `ShippingRaw`, not the read base — so a real notice carrying them fails to read, and a
+  write cannot round-trip either. Only `ALREADY_IN_WAREHOUSE` reads; the write base is sound. The
+  fix (regenerate those subtypes under `ShippingExtendedRaw`) is a Layer-1 change; once it lands the
+  domain shipping model can be wired.
 - The forward-compatibility of the fulfillment open-set enums is now proven end-to-end: with the
   Layer-1 `enumUnknownDefaultCase` fallback in place, an unrecognized wire enum value degrades to
   the domain `UNKNOWN` instead of failing the response.
@@ -499,6 +572,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `IssueRight`, `IssueStatus`, `ChatAuthorRole`), request enums (`IssueMessageType`,
   `ClaimStatus`), fail-fast `IssueFilter`/`IssueMessageRequest`/`ClaimStatusChange`/
   `IssueAttachmentDeclaration` builders, and a `disputes` demo scenario.
+- Forward-compatibility (C3) coverage: full-stack WireMock tests prove that a wire enum value
+  this SDK version predates degrades end-to-end to `UNKNOWN` instead of failing deserialization —
+  disputes `IssueStatus` and `ChatAuthorRole`, messaging `MessageType`, `MessageStatus`, and
+  `AttachmentStatus`.
 
 ### K — sale-settings
 

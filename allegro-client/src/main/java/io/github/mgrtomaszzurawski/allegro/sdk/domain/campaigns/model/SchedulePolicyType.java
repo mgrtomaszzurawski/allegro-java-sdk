@@ -26,10 +26,21 @@ public enum SchedulePolicyType {
     UNTIL,
 
     /** The window never opens — {@code from} and {@code to} are absent. */
-    NEVER;
+    NEVER,
 
-    /** Map the Allegro wire value (identical to the constant name) to the enum. */
+    /** A value Allegro introduced that this SDK version does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
+
+    /**
+     * Map the Allegro wire value (identical to the constant name) to the enum,
+     * degrading a value Allegro added after this SDK version to {@link #UNKNOWN}
+     * rather than failing the read.
+     */
     static SchedulePolicyType from(String wireValue) {
-        return SchedulePolicyType.valueOf(wireValue);
+        try {
+            return SchedulePolicyType.valueOf(wireValue);
+        } catch (IllegalArgumentException unmodelledValue) {
+            return UNKNOWN;
+        }
     }
 }

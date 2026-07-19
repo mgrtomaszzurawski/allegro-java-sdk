@@ -190,6 +190,50 @@ are optional. A rate-set request requires a `name` and at least one rate. Each
 row's `deliveryMethodId` is an id from `deliveryMethods()`. `RateSetType` reads
 fail-soft (`UNKNOWN`) and writes strict.
 
+## Shipment management (Wysyłam z Allegro)
+
+Create a carrier shipment, read it back, cancel it, and render its documents.
+Creation and cancellation are asynchronous on Allegro's side — the SDK submits
+the command and polls it to a terminal state internally, so the calls are plain
+blocking methods with no command handle. Each has an optional
+`Duration` timeout overload.
+
+```java
+Shipment shipment = client.shipping().createShipment(
+        ShipmentRequest.builder()
+                .credentialsId(credentialsId)                 // carrier account; or from a delivery proposal
+                .sender(PostalAddress.builder()
+                        .street("Grunwaldzka 100").postalCode("80-244").city("Gdansk")
+                        .email("sender@example.com").phone("+48500100100").build())
+                .receiver(PostalAddress.builder()
+                        .street("Marszalkowska 1").postalCode("00-001").city("Warszawa")
+                        .email("receiver@example.com").phone("+48500200200").build())
+                .packages(List.of(ShipmentPackage.builder()
+                        .type(PackageType.PACKAGE)
+                        .lengthCm(new BigDecimal("30")).widthCm(new BigDecimal("20"))
+                        .heightCm(new BigDecimal("10")).weightKg(new BigDecimal("2.5"))
+                        .build()))
+                .labelFormat(LabelFormat.PDF)                 // optional
+                .build());
+
+Shipment fetched = client.shipping().getShipment(shipment.id());
+
+byte[] label = client.shipping().labels(LabelRequest.builder()
+        .shipmentIds(List.of(shipment.id()))
+        .pageSize(LabelPageSize.A4)                           // optional
+        .build());
+byte[] protocol = client.shipping().protocol(shipment.id());
+
+client.shipping().cancelShipment(shipment.id());
+```
+
+A shipment request requires a sender, a receiver and at least one package; each
+package needs its type and its centimetre dimensions and kilogram weight. The
+`labels(...)` and `protocol(...)` calls return the rendered documents as raw
+`byte[]` (PDF or ZPL, per the shipment's format) — write them to a file or a
+print stream. `createShipment` reads the created shipment back once the command
+succeeds; a command that ends in a non-success state throws.
+
 ## Notes
 
 - **Conflict on create.** Allegro returns `409 Conflict` when a *similar* point

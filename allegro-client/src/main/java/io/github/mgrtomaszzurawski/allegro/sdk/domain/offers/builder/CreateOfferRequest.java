@@ -10,8 +10,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -51,6 +54,10 @@ public final class CreateOfferRequest {
     private final @Nullable AfterSalesServices afterSalesServices;
     private final @Nullable OfferDescription description;
     private final @Nullable OfferLocation location;
+    private final List<OfferParameter> parameters;
+    private final @Nullable String externalId;
+    private final @Nullable String language;
+    private final @Nullable String sizeTableId;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -66,6 +73,10 @@ public final class CreateOfferRequest {
         this.afterSalesServices = builder.afterSalesServices;
         this.description = builder.description;
         this.location = builder.location;
+        this.parameters = List.copyOf(builder.parameters);
+        this.externalId = builder.externalId;
+        this.language = builder.language;
+        this.sizeTableId = builder.sizeTableId;
     }
 
     /** The offer title. */
@@ -133,6 +144,26 @@ public final class CreateOfferRequest {
         return location;
     }
 
+    /** The offer's category parameters, in the order added (possibly empty). */
+    public List<OfferParameter> parameters() {
+        return parameters;
+    }
+
+    /** The seller's own external identifier (your system's SKU/id) for the offer, or {@code null} if not set. */
+    public @Nullable String externalId() {
+        return externalId;
+    }
+
+    /** The listing language (BCP-47 code, e.g. {@code "pl-PL"}), or {@code null} to use the account default. */
+    public @Nullable String language() {
+        return language;
+    }
+
+    /** The id of the seller's size table to attach, or {@code null} if not set. */
+    public @Nullable String sizeTableId() {
+        return sizeTableId;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -154,6 +185,10 @@ public final class CreateOfferRequest {
         private @Nullable AfterSalesServices afterSalesServices;
         private @Nullable OfferDescription description;
         private @Nullable OfferLocation location;
+        private final List<OfferParameter> parameters = new ArrayList<>();
+        private @Nullable String externalId;
+        private @Nullable String language;
+        private @Nullable String sizeTableId;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -230,6 +265,38 @@ public final class CreateOfferRequest {
         /** Set the offer's ship-from location (optional). */
         public Builder location(@Nullable OfferLocation location) {
             this.location = location;
+            return this;
+        }
+
+        /** Replace the offer's category parameters with the given list (optional, non-null). */
+        public Builder parameters(List<OfferParameter> parameters) {
+            Objects.requireNonNull(parameters, "parameters");
+            this.parameters.clear();
+            this.parameters.addAll(parameters);
+            return this;
+        }
+
+        /** Add a single category parameter (optional, non-null; call repeatedly to add several). */
+        public Builder addParameter(OfferParameter parameter) {
+            this.parameters.add(Objects.requireNonNull(parameter, "parameter"));
+            return this;
+        }
+
+        /** Set the seller's own external identifier for the offer (optional). */
+        public Builder externalId(@Nullable String externalId) {
+            this.externalId = externalId;
+            return this;
+        }
+
+        /** Set the listing language (BCP-47 code, e.g. {@code "pl-PL"}; optional). */
+        public Builder language(@Nullable String language) {
+            this.language = language;
+            return this;
+        }
+
+        /** Set the id of the seller's size table to attach (optional). */
+        public Builder sizeTableId(@Nullable String sizeTableId) {
+            this.sizeTableId = sizeTableId;
             return this;
         }
 

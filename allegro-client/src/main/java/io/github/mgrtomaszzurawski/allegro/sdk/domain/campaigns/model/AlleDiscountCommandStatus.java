@@ -18,10 +18,21 @@ public enum AlleDiscountCommandStatus {
     SUCCESSFUL,
 
     /** The command failed. */
-    FAILED;
+    FAILED,
 
-    /** Map the Allegro wire value (identical to the constant name) to the enum. */
+    /** A terminal state Allegro introduced that this SDK version does not model yet (read-only forward-compat sentinel). */
+    UNKNOWN;
+
+    /**
+     * Map the Allegro wire value (identical to the constant name) to the enum,
+     * degrading a value Allegro added after this SDK version to {@link #UNKNOWN}
+     * rather than failing the read.
+     */
     static AlleDiscountCommandStatus from(String wireValue) {
-        return valueOf(wireValue);
+        try {
+            return valueOf(wireValue);
+        } catch (IllegalArgumentException unmodelledValue) {
+            return UNKNOWN;
+        }
     }
 }

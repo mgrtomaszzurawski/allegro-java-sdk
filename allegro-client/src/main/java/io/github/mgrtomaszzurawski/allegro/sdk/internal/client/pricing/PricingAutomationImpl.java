@@ -4,7 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRuleResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AutomaticPricingRulesResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRulesRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.PricingAutomation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferPricingRules;
@@ -40,35 +41,35 @@ public final class PricingAutomationImpl implements PricingAutomation {
 
     @Override
     public List<PricingRule> rules() {
-        JsonNode response = http.request(OP_LIST_RULES)
+        AutomaticPricingRulesResponseRaw response = http.request(OP_LIST_RULES)
                 .get(ApiPaths.PRICE_AUTOMATION_RULES)
-                .fetch(JsonNode.class);
+                .fetch(AutomaticPricingRulesResponseRaw.class);
         return PricingMapper.toRules(response);
     }
 
     @Override
     public PricingRule create(PricingRuleRequest request) {
-        JsonNode response = http.request(OP_CREATE_RULE)
+        AutomaticPricingRuleResponseRaw response = http.request(OP_CREATE_RULE)
                 .post(ApiPaths.PRICE_AUTOMATION_RULES)
                 .jsonBody(PricingMapper.toRaw(request))
-                .fetch(JsonNode.class);
+                .fetch(AutomaticPricingRuleResponseRaw.class);
         return PricingMapper.toRule(response);
     }
 
     @Override
     public PricingRule get(String ruleId) {
-        JsonNode response = http.request(OP_GET_RULE)
+        AutomaticPricingRuleResponseRaw response = http.request(OP_GET_RULE)
                 .get(ApiPaths.subPath(ApiPaths.PRICE_AUTOMATION_RULES, ruleId))
-                .fetch(JsonNode.class);
+                .fetch(AutomaticPricingRuleResponseRaw.class);
         return PricingMapper.toRule(response);
     }
 
     @Override
     public PricingRule update(String ruleId, PricingRuleEdit edit) {
-        JsonNode response = http.request(OP_UPDATE_RULE)
+        AutomaticPricingRuleResponseRaw response = http.request(OP_UPDATE_RULE)
                 .put(ApiPaths.subPath(ApiPaths.PRICE_AUTOMATION_RULES, ruleId))
                 .jsonBody(PricingMapper.editToRaw(edit))
-                .fetch(JsonNode.class);
+                .fetch(AutomaticPricingRuleResponseRaw.class);
         return PricingMapper.toRule(response);
     }
 

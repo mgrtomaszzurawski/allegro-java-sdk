@@ -188,6 +188,67 @@ CreateOfferRequest request = CreateOfferRequest.builder()
 An item kind Allegro adds after this SDK release reads back as `DescriptionItemType.UNKNOWN`
 rather than failing the response.
 
+### Category parameters
+
+A category dictates which parameters an offer must carry and the shape each takes. Build each
+one with the factory that matches its kind — a **dictionary** parameter with value ids chosen
+from the category's dictionary, a **free-text** parameter with plain strings, or a **range**
+parameter with a `from`…`to` span — and add them to the request:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .addParameter(OfferParameter.dictionary("11321", "1"))       // a dictionary value id
+        .addParameter(OfferParameter.freeText("11324", "Cherry MX"))  // a free-text value
+        .addParameter(OfferParameter.range("11325", "10", "20"))      // a numeric/date range
+        .build();
+```
+
+Use `parameters(List<OfferParameter>)` to set them all at once. The value ids and their meaning
+come from the category definition (see `client.categories()` in bucket E).
+
+On the read side, `offer.parameters()` returns every parameter the offer carries. Call
+`parameter.kind()` (`DICTIONARY` / `FREE_TEXT` / `RANGE`) to tell them apart rather than guessing
+from which list is populated — a **dictionary** parameter is read back with both its `valuesIds`
+(the ids) **and** `values` (the human-readable labels of those ids):
+
+```java
+for (OfferParameter parameter : offer.parameters()) {
+    switch (parameter.kind()) {
+        case DICTIONARY -> System.out.println(parameter.valuesIds() + " = " + parameter.values());
+        case FREE_TEXT  -> System.out.println(parameter.values());
+        case RANGE      -> System.out.println(parameter.rangeValue().lowerBound()
+                                              + ".." + parameter.rangeValue().upperBound());
+    }
+}
+```
+
+A read parameter can be fed straight back into a create: `toRaw()` sends only the value ids of a
+dictionary parameter (the labels are read-only — echoing them back is rejected by Allegro).
+
+### External id, language and size table
+
+An offer can also carry the seller's own **external identifier** (your system's SKU/id for the
+offer), the **listing language** (BCP-47 code, e.g. `"pl-PL"`, defaults to the account language),
+and the id of a **size table** to attach. All three are optional and read back on `offers().get(offerId)`:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .externalId("SKU-12345")
+        .language("pl-PL")
+        .sizeTableId("size-table-1")
+        .build();
+```
+
+On the read side they surface as `offer.externalId()`, `offer.language()` and `offer.sizeTableId()`.
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its

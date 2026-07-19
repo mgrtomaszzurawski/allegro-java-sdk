@@ -59,6 +59,13 @@ The rating list has no total count, so the stream stops when a page returns
 fewer than the page size. `RatingFilter` filters by `recommended` and a
 last-changed date range; `RatingFilter.all()` matches everything.
 
+Each `UserRating` also carries `rates` — the buyer's per-category scores
+(`delivery`, `deliveryCost`, `description`, `service`), each an `Integer` on a
+1–5 scale (a value outside that range maps to `null`) — and, when the rating is
+excluded from the seller's averages, `excludedFromAverageRatesReason`.
+`UserRatingSummary.statistics()` adds the received/excluded totals and the
+removed-ratings breakdown (by admin, by buyer, by buyer after compensation).
+
 ## Additional e-mail addresses
 
 ```java
@@ -116,6 +123,9 @@ client.affiliate().streamCpsConversions(                                  // GET
 `charity().searchCampaigns` requires a search `phrase` and a bounded `limit`
 (1–100, default 100). `affiliate().streamCpsConversions` is a lazy stream over
 CPS conversions filtered by order/modification dates and status; it needs the
-`affiliate:read` scope. A conversion whose `status` a future Allegro release
+`affiliate:read` scope. Each `CpsConversion` carries the converted `offer` (id,
+name, `categoryId`, unit price, seller), the `commission` split, and
+`publisherUrlParameters` — the affiliate tracking parameters echoed back on the
+publisher link. A conversion whose `status` a future Allegro release
 introduces is read back as `ConversionStatus.UNKNOWN` rather than failing the
 stream; passing `UNKNOWN` as a `status` filter simply omits the parameter.
