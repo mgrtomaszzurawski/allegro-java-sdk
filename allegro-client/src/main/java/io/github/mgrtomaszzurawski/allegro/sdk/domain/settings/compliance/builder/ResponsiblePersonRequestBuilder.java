@@ -28,6 +28,8 @@ public final class ResponsiblePersonRequestBuilder {
             "Responsible person name exceeds the " + MAX_NAME_LENGTH + "-character limit";
     private static final String ERR_PERSON_NAME_TOO_LONG =
             "Responsible person's personName exceeds the " + MAX_PERSON_NAME_LENGTH + "-character limit";
+    private static final String ERR_CONTACT_CHANNEL =
+            "Responsible person contact requires at least one of email or formUrl";
 
     private @Nullable String name;
     private @Nullable String personName;
@@ -76,6 +78,13 @@ public final class ResponsiblePersonRequestBuilder {
         if (personName != null && personName.length() > MAX_PERSON_NAME_LENGTH) {
             throw new IllegalStateException(ERR_PERSON_NAME_TOO_LONG);
         }
+        if (contact != null && isBlank(contact.email()) && isBlank(contact.formUrl())) {
+            throw new IllegalStateException(ERR_CONTACT_CHANNEL);
+        }
         return new ResponsiblePersonRequest(name, personName, address, contact);
+    }
+
+    private static boolean isBlank(@Nullable String value) {
+        return value == null || value.isBlank();
     }
 }

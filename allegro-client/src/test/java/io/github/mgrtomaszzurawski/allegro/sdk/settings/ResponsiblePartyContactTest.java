@@ -6,14 +6,17 @@ package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.ResponsiblePersonContactRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ResponsibleProducerContactRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.model.ResponsiblePartyContact;
 import org.junit.jupiter.api.Test;
 
-/** Construction-time validation and Raw mapping for {@link ResponsiblePartyContact}. */
+/**
+ * Raw mapping for {@link ResponsiblePartyContact}. The record is a plain value
+ * type — the email-or-formUrl write rule lives in the request builders, so
+ * response mapping accepts whatever the server sends.
+ */
 class ResponsiblePartyContactTest {
 
     private static final String EMAIL = "some@email.com";
@@ -21,28 +24,27 @@ class ResponsiblePartyContactTest {
     private static final String FORM_URL = "https://example.com/contact";
 
     @Test
-    void constructor_whenEmailOnly_succeeds() {
+    void constructor_whenEmailOnly_leavesFormUrlNull() {
         ResponsiblePartyContact contact = new ResponsiblePartyContact(EMAIL, PHONE, null);
         assertEquals(EMAIL, contact.email());
         assertEquals(PHONE, contact.phoneNumber());
+        assertNull(contact.formUrl());
     }
 
     @Test
-    void constructor_whenFormUrlOnly_succeeds() {
+    void constructor_whenFormUrlOnly_leavesEmailNull() {
         ResponsiblePartyContact contact = new ResponsiblePartyContact(null, null, FORM_URL);
         assertEquals(FORM_URL, contact.formUrl());
+        assertNull(contact.email());
     }
 
     @Test
-    void constructor_whenNeitherEmailNorFormUrl_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new ResponsiblePartyContact(null, PHONE, null));
-    }
-
-    @Test
-    void constructor_whenEmailAndFormUrlBlank_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> new ResponsiblePartyContact("  ", PHONE, "  "));
+    void constructor_whenPhoneOnly_constructs() {
+        // the record does not enforce the write rule, so a read never rejects a payload
+        ResponsiblePartyContact contact = new ResponsiblePartyContact(null, PHONE, null);
+        assertEquals(PHONE, contact.phoneNumber());
+        assertNull(contact.email());
+        assertNull(contact.formUrl());
     }
 
     @Test

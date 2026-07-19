@@ -105,4 +105,13 @@ class ResponsibleProducerRequestBuilderTest {
         IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
         assertTrue(failure.getMessage().contains(LENGTH_WORD));
     }
+
+    @Test
+    void build_whenContactHasNeitherEmailNorFormUrl_throws() {
+        var builder = ResponsibleProducerRequest.builder()
+                .name(NAME)
+                .contact(new ResponsiblePartyContact(null, "123123123", null));
+        IllegalStateException failure = assertThrows(IllegalStateException.class, builder::build);
+        assertTrue(failure.getMessage().contains("email"));
+    }
 }

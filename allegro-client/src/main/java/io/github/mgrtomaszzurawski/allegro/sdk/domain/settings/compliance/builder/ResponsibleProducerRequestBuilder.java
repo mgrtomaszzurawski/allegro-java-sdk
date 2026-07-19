@@ -28,6 +28,8 @@ public final class ResponsibleProducerRequestBuilder {
             "Responsible producer name exceeds the " + MAX_NAME_LENGTH + "-character limit";
     private static final String ERR_TRADE_NAME_TOO_LONG =
             "Responsible producer tradeName exceeds the " + MAX_TRADE_NAME_LENGTH + "-character limit";
+    private static final String ERR_CONTACT_CHANNEL =
+            "Responsible producer contact requires at least one of email or formUrl";
 
     private @Nullable String name;
     private @Nullable String tradeName;
@@ -76,6 +78,13 @@ public final class ResponsibleProducerRequestBuilder {
         if (tradeName != null && tradeName.length() > MAX_TRADE_NAME_LENGTH) {
             throw new IllegalStateException(ERR_TRADE_NAME_TOO_LONG);
         }
+        if (contact != null && isBlank(contact.email()) && isBlank(contact.formUrl())) {
+            throw new IllegalStateException(ERR_CONTACT_CHANNEL);
+        }
         return new ResponsibleProducerRequest(name, tradeName, address, contact);
+    }
+
+    private static boolean isBlank(@Nullable String value) {
+        return value == null || value.isBlank();
     }
 }

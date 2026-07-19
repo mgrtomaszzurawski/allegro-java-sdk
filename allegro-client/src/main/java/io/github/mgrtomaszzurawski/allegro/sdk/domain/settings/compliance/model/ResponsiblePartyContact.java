@@ -12,8 +12,9 @@ import org.jspecify.annotations.Nullable;
  * Contact channel of a product-compliance responsible party.
  *
  * <p>The wire contract requires <strong>at least one</strong> of {@code email} or
- * {@code formUrl}; the compact constructor enforces that so a contact is never
- * built without a reachable channel. {@code phoneNumber} is optional.
+ * {@code formUrl}; that write-side rule is enforced fail-fast by the request
+ * builders (not here) so response mapping never rejects a server payload.
+ * {@code phoneNumber} is optional.
  *
  * @param email contact e-mail (or {@code null} when only a form URL is given)
  * @param phoneNumber optional phone number
@@ -25,19 +26,6 @@ public record ResponsiblePartyContact(
         @Nullable String email,
         @Nullable String phoneNumber,
         @Nullable String formUrl) {
-
-    private static final String ERR_CHANNEL = "at least one of email or formUrl is required";
-
-    /** Canonical constructor — requires an e-mail or a form URL. */
-    public ResponsiblePartyContact {
-        if (isBlank(email) && isBlank(formUrl)) {
-            throw new IllegalArgumentException(ERR_CHANNEL);
-        }
-    }
-
-    private static boolean isBlank(@Nullable String value) {
-        return value == null || value.isBlank();
-    }
 
     /** Map the generated person-contact DTO, or {@code null} when absent. */
     public static @Nullable ResponsiblePartyContact from(@Nullable ResponsiblePersonContactRaw raw) {

@@ -35,6 +35,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.model.
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.model.ResponsibleProducer;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -76,6 +78,7 @@ class ComplianceClientTest {
     private static final String CITY = "Warszawa";
     private static final String EMAIL = "some@email.com";
     private static final String TRACE_ID = "4631702648f0524e";
+    private static final String RETRY_AFTER_SECONDS = "1";
     private static final String BAD_REQUEST_CODE = "ValidationException";
     private static final String BAD_REQUEST_PATH = "personalData.contact";
 
@@ -212,6 +215,7 @@ class ComplianceClientTest {
         stubToken();
         stubFor(get(urlPathEqualTo(PERSONS_PATH))
                 .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(personsPage(2, 2, 0))));
 
@@ -219,7 +223,8 @@ class ComplianceClientTest {
             long total = allegro.settings().compliance().streamResponsiblePersons().count();
             assertEquals(2, total);
             verify(1, getRequestedFor(urlPathEqualTo(PERSONS_PATH))
-                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0))
+                    .withQueryParam(PARAM_LIMIT, equalTo(LIMIT_VALUE)));
             verify(0, getRequestedFor(urlPathEqualTo(PERSONS_PATH))
                     .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_1)));
         }
@@ -251,6 +256,8 @@ class ComplianceClientTest {
     void createResponsiblePerson_whenValidRequest_postsNestedBodyAndMaps(WireMockRuntimeInfo wmInfo) {
         stubToken();
         stubFor(post(urlEqualTo(PERSONS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withBody(PERSON_RESPONSE)));
 
@@ -307,6 +314,39 @@ class ComplianceClientTest {
         }
     }
 
+    @Test
+    void createResponsiblePerson_whenRateLimited_throwsRateLimitAndDoesNotRetryPost(WireMockRuntimeInfo wmInfo) {
+        stubToken();
+        stubFor(post(urlEqualTo(PERSONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_TOO_MANY_REQUESTS)
+                        .withHeader(TestHttpConstants.RETRY_AFTER_HEADER, RETRY_AFTER_SECONDS)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var compliance = allegro.settings().compliance();
+            ResponsiblePersonRequest request = samplePerson();
+
+            AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
+                    () -> compliance.createResponsiblePerson(request));
+            assertEquals(1L, failure.retryAfterSeconds());
+            verify(1, postRequestedFor(urlEqualTo(PERSONS_PATH)));
+        }
+    }
+
+    @Test
+    void createResponsiblePerson_whenServerError_throwsServerExceptionAndDoesNotRetryPost(WireMockRuntimeInfo wmInfo) {
+        stubToken();
+        stubFor(post(urlEqualTo(PERSONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var compliance = allegro.settings().compliance();
+            ResponsiblePersonRequest request = samplePerson();
+
+            assertThrows(AllegroServerException.class, () -> compliance.createResponsiblePerson(request));
+            verify(1, postRequestedFor(urlEqualTo(PERSONS_PATH)));
+        }
+    }
+
     // ---- responsible producers ----
 
     @Test
@@ -320,7 +360,10 @@ class ComplianceClientTest {
             List<ResponsibleProducer> producers = allegro.settings().compliance()
                     .streamResponsibleProducers().toList();
             assertEquals(2, producers.size());
+            assertEquals(PRODUCER_INTERNAL_NAME + " 0", producers.get(0).name());
             assertEquals(TRADE_NAME, producers.get(0).tradeName());
+            verify(1, getRequestedFor(urlPathEqualTo(PRODUCERS_PATH))
+                    .withQueryParam(PARAM_OFFSET, equalTo(OFFSET_PAGE_0)));
         }
     }
 
@@ -328,6 +371,8 @@ class ComplianceClientTest {
     void responsibleProducer_whenFound_mapsFullDefinition(WireMockRuntimeInfo wmInfo) {
         stubToken();
         stubFor(get(urlEqualTo(PRODUCER_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(PRODUCER_RESPONSE)));
 
