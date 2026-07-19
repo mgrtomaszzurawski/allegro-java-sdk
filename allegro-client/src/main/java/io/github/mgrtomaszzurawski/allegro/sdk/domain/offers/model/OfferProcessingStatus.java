@@ -15,8 +15,8 @@ import org.jspecify.annotations.Nullable;
  *
  * @param offerId     the offer the operation applies to, or {@code null} if omitted
  * @param operationId the operation id, or {@code null} if omitted
- * @param status      the processing status (Allegro's wire value, e.g. {@code IN_PROGRESS} /
- *                    {@code SUCCESS}), or {@code null} if omitted
+ * @param status      the processing status (Allegro's wire value: {@code PENDING} /
+ *                    {@code IN_PROGRESS} / {@code COMPLETED}), or {@code null} if omitted
  * @param startedAt   when processing started, or {@code null} if omitted
  * @since 0.4.0
  */
