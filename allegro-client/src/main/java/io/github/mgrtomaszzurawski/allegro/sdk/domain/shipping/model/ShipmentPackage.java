@@ -60,7 +60,7 @@ public record ShipmentPackage(
     /** Map the generated response DTO to the public record. */
     public static ShipmentPackage from(PackageDtoRaw raw) {
         return new ShipmentPackage(
-                PackageType.fromWire(raw.getType() == null ? null : raw.getType().name()),
+                PackageType.fromWire(raw.getType() == null ? null : raw.getType().getValue()),
                 dimension(raw.getLength()),
                 dimension(raw.getWidth()),
                 dimension(raw.getHeight()),

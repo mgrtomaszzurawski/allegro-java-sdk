@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CancelShipmentCommandStatusDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CreateShipmentCommandStatusDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.Error400Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShipmentCancelCommandDtoRaw;
@@ -21,7 +22,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMet
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.LabelRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Shipment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentRequest;
-import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -65,6 +67,15 @@ public final class ShippingImpl implements Shipping {
     private static final String ERR_CANCEL_FAILED =
             "Shipment cancellation command finished with a non-success status (%s)";
     private static final String ERR_NO_SHIPMENT_IDS = "At least one shipment id is required";
+    private static final String ERR_NO_SHIPMENT_ID = "shipmentId is required";
+    private static final String EMPTY = "";
+    /**
+     * Status code carried by the exception for an asynchronous command that
+     * reports a terminal {@code ERROR}: the poll response itself was HTTP 200, so
+     * there is no transport error status — the failure is the command's own
+     * result, and its detail travels in the parsed {@code errors[]}.
+     */
+    private static final int ASYNC_COMMAND_NO_HTTP_STATUS = 0;
 
     private final HttpRuntime runtime;
     private final HttpSupport http;
@@ -109,7 +120,7 @@ public final class ShippingImpl implements Shipping {
                 () -> pollCreate(commandId), ShippingImpl::createTerminal,
                 OP_CREATE_SHIPMENT, timeout);
         if (status.getStatus() != CreateShipmentCommandStatusDtoRaw.StatusEnum.SUCCESS) {
-            throw new AllegroException(ERR_CREATE_FAILED.formatted(status.getStatus()), null);
+            throw commandFailure(ERR_CREATE_FAILED.formatted(status.getStatus()), status.getErrors());
         }
         return getShipment(status.getShipmentId());
     }
@@ -122,6 +133,7 @@ public final class ShippingImpl implements Shipping {
 
     @Override
     public Shipment getShipment(String shipmentId) {
+        requireShipmentId(shipmentId);
         ShipmentDtoRaw raw = http.getAuthenticated(
                 ApiPaths.subPath(ApiPaths.SHIPMENTS, shipmentId), ShipmentDtoRaw.class,
                 OP_GET_SHIPMENT);
@@ -139,6 +151,7 @@ public final class ShippingImpl implements Shipping {
     }
 
     private void runCancel(String shipmentId, @Nullable Duration timeout) {
+        requireShipmentId(shipmentId);
         ShipmentCancelRequestDtoRaw input = new ShipmentCancelRequestDtoRaw();
         input.setShipmentId(shipmentId);
         ShipmentCancelCommandDtoRaw command = new ShipmentCancelCommandDtoRaw();
@@ -151,7 +164,7 @@ public final class ShippingImpl implements Shipping {
                 () -> pollCancel(commandId), ShippingImpl::cancelTerminal,
                 OP_CANCEL_SHIPMENT, timeout);
         if (status.getStatus() != CancelShipmentCommandStatusDtoRaw.StatusEnum.SUCCESS) {
-            throw new AllegroException(ERR_CANCEL_FAILED.formatted(status.getStatus()), null);
+            throw commandFailure(ERR_CANCEL_FAILED.formatted(status.getStatus()), status.getErrors());
         }
     }
 
@@ -204,6 +217,35 @@ public final class ShippingImpl implements Shipping {
         return timeout == null
                 ? commandPoller.await(fetchStatus, isTerminal, operationName)
                 : commandPoller.await(fetchStatus, isTerminal, operationName, timeout);
+    }
+
+    private static void requireShipmentId(String shipmentId) {
+        if (shipmentId == null || shipmentId.isBlank()) {
+            throw new IllegalArgumentException(ERR_NO_SHIPMENT_ID);
+        }
+    }
+
+    /**
+     * Build the exception for an asynchronous command that reached a terminal
+     * {@code ERROR}, carrying the command's own {@code errors[]} as typed field
+     * errors so the failure is actionable (remediation: fix the request).
+     */
+    private static AllegroBadRequestException commandFailure(String message,
+            @Nullable List<Error400Raw> errors) {
+        return new AllegroBadRequestException(
+                message, ASYNC_COMMAND_NO_HTTP_STATUS, null, mapFieldErrors(errors));
+    }
+
+    private static List<AllegroFieldError> mapFieldErrors(@Nullable List<Error400Raw> errors) {
+        if (errors == null) {
+            return List.of();
+        }
+        return errors.stream()
+                .map(error -> new AllegroFieldError(
+                        error.getCode() == null ? EMPTY : error.getCode(),
+                        error.getMessage() == null ? EMPTY : error.getMessage(),
+                        error.getUserMessage(), error.getPath(), error.getDetails()))
+                .toList();
     }
 
     /** A create command is terminal once it stops reporting {@code IN_PROGRESS}. */

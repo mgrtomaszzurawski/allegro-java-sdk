@@ -24,6 +24,8 @@ public record CashOnDelivery(
         @Nullable String ownerName,
         @Nullable String iban) {
 
+    private static final String REDACTED = "***";
+
     /** A fresh builder for a {@link CashOnDelivery}. */
     public static CashOnDeliveryBuilder builder() {
         return new CashOnDeliveryBuilder();
@@ -57,5 +59,20 @@ public record CashOnDelivery(
         raw.setOwnerName(ownerName);
         raw.setIban(iban);
         return raw;
+    }
+
+    /**
+     * Redacts the account owner and IBAN so an accidental log of this record never
+     * leaks them; the amount is kept for diagnostics.
+     */
+    @Override
+    public String toString() {
+        return "CashOnDelivery[amount=" + amount
+                + ", ownerName=" + redact(ownerName)
+                + ", iban=" + redact(iban) + ']';
+    }
+
+    private static @Nullable String redact(@Nullable String value) {
+        return value == null ? null : REDACTED;
     }
 }

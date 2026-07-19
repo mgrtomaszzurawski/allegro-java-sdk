@@ -28,6 +28,11 @@ public record LabelRequest(
         @Nullable Boolean cutLine,
         @Nullable LabelSummaryReport summaryReport) {
 
+    /** Canonical constructor: defensively copy the shipment-id list. */
+    public LabelRequest {
+        shipmentIds = List.copyOf(shipmentIds);
+    }
+
     /** A fresh builder for a {@link LabelRequest}. */
     public static LabelRequestBuilder builder() {
         return new LabelRequestBuilder();

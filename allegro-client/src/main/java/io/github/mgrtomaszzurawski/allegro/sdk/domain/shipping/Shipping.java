@@ -28,6 +28,9 @@ public interface Shipping {
      *
      * @param request the shipment to create
      * @return the created shipment
+     * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException
+     *     if the command finishes in a non-success state; its {@code errors()}
+     *     carry the command's typed error detail
      * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAsyncTimeoutException
      *     if the command does not finish within the default timeout
      */
@@ -56,6 +59,9 @@ public interface Shipping {
      * the cancel endpoint is asynchronous and is polled to a terminal state.
      *
      * @param shipmentId the shipment to cancel
+     * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException
+     *     if the command finishes in a non-success state; its {@code errors()}
+     *     carry the command's typed error detail
      * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAsyncTimeoutException
      *     if the command does not finish within the default timeout
      */

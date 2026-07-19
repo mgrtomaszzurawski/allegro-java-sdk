@@ -50,6 +50,11 @@ public record Shipment(
         LabelFormat labelFormat,
         @Nullable Boolean pickupAvailable) {
 
+    /** Canonical constructor: defensively copy the package list. */
+    public Shipment {
+        packages = List.copyOf(packages);
+    }
+
     /** Map the generated response DTO to the public record. */
     public static Shipment from(ShipmentDtoRaw raw) {
         return new Shipment(
@@ -64,7 +69,7 @@ public record Shipment(
                 raw.getCreatedDate(),
                 raw.getCanceledDate(),
                 raw.getCarrier(),
-                LabelFormat.fromWire(raw.getLabelFormat() == null ? null : raw.getLabelFormat().name()),
+                LabelFormat.fromWire(raw.getLabelFormat() == null ? null : raw.getLabelFormat().getValue()),
                 raw.getPickupAvailable());
     }
 

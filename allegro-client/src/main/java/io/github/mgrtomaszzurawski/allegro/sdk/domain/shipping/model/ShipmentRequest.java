@@ -38,6 +38,11 @@ public record ShipmentRequest(
         @Nullable CashOnDelivery cashOnDelivery,
         @Nullable LabelFormat labelFormat) {
 
+    /** Canonical constructor: defensively copy the package list. */
+    public ShipmentRequest {
+        packages = List.copyOf(packages);
+    }
+
     /** A fresh builder for a {@link ShipmentRequest}. */
     public static ShipmentRequestBuilder builder() {
         return new ShipmentRequestBuilder();

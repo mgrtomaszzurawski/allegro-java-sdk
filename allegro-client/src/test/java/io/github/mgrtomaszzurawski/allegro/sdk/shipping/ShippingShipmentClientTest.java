@@ -16,9 +16,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
@@ -35,23 +37,29 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PostalAddre
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Shipment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentPackage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentRequest;
-import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAsyncTimeoutException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
  * WireMock contract tests for the shipment-management operations on
  * {@code shipping()} — the async create/cancel commands (submit → poll →
- * resolve), the shipment read, and the binary label/protocol renders. Stubs pin
- * the auth header, method+path, request body and the {@code Accept} media type;
- * the async flow is proven by verifying the poll count.
+ * resolve), the shipment read, and the binary label/protocol renders. Every
+ * stub pins the {@code Authorization: Bearer} header and the method+path; writes
+ * also pin the request body and the {@code Accept} media type. The async flow is
+ * proven by verifying the poll count, and command failures assert the parsed
+ * {@code errors[]}.
  *
- * <p>The shared transport error-path table (401 replay, 404, 429, 5xx) is
- * exercised once for the shipping domain by
+ * <p>The shared transport error-path table (401 replay, 404, 429, 5xx over the
+ * JSON path) is exercised once for the shipping domain by
  * {@link ShippingPointsOfServiceClientTest}; this class adds the command-specific
- * failure paths (a command that ends in {@code ERROR}).
+ * failure paths (a command that ends in {@code ERROR}) and a server-error case on
+ * the distinct binary ({@code fetchBytes}) path.
  *
  * <p>Fixture provenance: {@code spec-derived} — the shipment-management write path
  * needs a real seeded order (WZA broker) to wire-verify; see
@@ -74,12 +82,31 @@ class ShippingShipmentClientTest {
     private static final String PROTOCOL_PATH = "/shipment-management/protocol";
 
     private static final String SHIPMENT_ID = "SHIP-1001";
-    private static final String CITY_SENDER = "Gdansk";
-    private static final String CITY_RECEIVER = "Warszawa";
+    private static final String CREDENTIALS_ID = "CRED-77";
+    private static final String WAYBILL = "WB-555";
+    private static final String RECEIVER_POINT = "POP-42";
+    private static final String INSURANCE_AMOUNT = "199.99";
+    private static final String IBAN = "PL61109010140000071219812874";
     private static final String CURRENCY = "PLN";
     private static final String OCTET_STREAM = "application/octet-stream";
     private static final String POLL_SCENARIO = "poll-create";
     private static final String STATE_DONE = "done";
+
+    private static final String SENDER_STREET = "Grunwaldzka 100";
+    private static final String SENDER_POSTAL = "80-244";
+    private static final String SENDER_CITY = "Gdansk";
+    private static final String SENDER_EMAIL = "sender@example.com";
+    private static final String SENDER_PHONE = "+48500100100";
+    private static final String RECEIVER_STREET = "Marszalkowska 1";
+    private static final String RECEIVER_POSTAL = "00-001";
+    private static final String RECEIVER_CITY = "Warszawa";
+    private static final String RECEIVER_EMAIL = "receiver@example.com";
+    private static final String RECEIVER_PHONE = "+48500200200";
+
+    private static final BigDecimal LENGTH_CM = new BigDecimal("30.0");
+    private static final BigDecimal WIDTH_CM = new BigDecimal("20.0");
+    private static final BigDecimal HEIGHT_CM = new BigDecimal("10.0");
+    private static final BigDecimal WEIGHT_KG = new BigDecimal("2.5");
 
     private static final byte[] LABEL_BYTES = {0x25, 0x50, 0x44, 0x46, 0x2D};
     private static final byte[] PROTOCOL_BYTES = {0x25, 0x50, 0x44, 0x46, 0x2E};
@@ -90,6 +117,7 @@ class ShippingShipmentClientTest {
     private static final String CREATE_ERROR = "shipping/shipment-create-status-error.json";
     private static final String CANCEL_ACCEPTED = "shipping/shipment-cancel-accepted.json";
     private static final String CANCEL_SUCCESS = "shipping/shipment-cancel-status-success.json";
+    private static final String CANCEL_ERROR = "shipping/shipment-cancel-status-error.json";
     private static final String SHIPMENT_FIXTURE = "shipping/shipment-get.json";
 
     private static final String TOKEN_RESPONSE = """
@@ -105,6 +133,12 @@ class ShippingShipmentClientTest {
                         .build());
     }
 
+    /** Pins the bearer token every stub in this class shares. */
+    private static MappingBuilder authed(MappingBuilder stub) {
+        return stub.withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN));
+    }
+
     private static void stubToken() {
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -112,25 +146,30 @@ class ShippingShipmentClientTest {
     }
 
     private static void stubShipmentGet() {
-        stubFor(get(urlEqualTo(SHIPMENT_PATH))
-                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
-                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+        stubFor(authed(get(urlEqualTo(SHIPMENT_PATH)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(SHIPMENT_FIXTURE)));
     }
 
+    private static void stubCreateAccepted() {
+        stubFor(authed(post(urlEqualTo(CREATE_PATH)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(CREATE_ACCEPTED)));
+    }
+
     private static ShipmentRequest sampleRequest() {
         return ShipmentRequest.builder()
+                .credentialsId(CREDENTIALS_ID)
                 .sender(PostalAddress.builder()
-                        .street("Grunwaldzka 100").postalCode("80-244").city(CITY_SENDER)
-                        .email("sender@example.com").phone("+48500100100").build())
+                        .street(SENDER_STREET).postalCode(SENDER_POSTAL).city(SENDER_CITY)
+                        .email(SENDER_EMAIL).phone(SENDER_PHONE).build())
                 .receiver(PostalAddress.builder()
-                        .street("Marszalkowska 1").postalCode("00-001").city(CITY_RECEIVER)
-                        .email("receiver@example.com").phone("+48500200200").build())
+                        .street(RECEIVER_STREET).postalCode(RECEIVER_POSTAL).city(RECEIVER_CITY)
+                        .email(RECEIVER_EMAIL).phone(RECEIVER_PHONE).build())
                 .packages(List.of(ShipmentPackage.builder()
                         .type(PackageType.PACKAGE)
-                        .lengthCm(new BigDecimal("30.0")).widthCm(new BigDecimal("20.0"))
-                        .heightCm(new BigDecimal("10.0")).weightKg(new BigDecimal("2.5"))
+                        .lengthCm(LENGTH_CM).widthCm(WIDTH_CM)
+                        .heightCm(HEIGHT_CM).weightKg(WEIGHT_KG)
                         .build()))
                 .labelFormat(LabelFormat.PDF)
                 .build();
@@ -140,16 +179,16 @@ class ShippingShipmentClientTest {
     void createShipment_whenCommandSucceeds_submitsPollsAndReadsShipment(WireMockRuntimeInfo wmInfo) {
         // given — submit accepted, poll resolves to SUCCESS, then the shipment is read back
         stubToken();
-        stubFor(post(urlEqualTo(CREATE_PATH))
+        stubFor(authed(post(urlEqualTo(CREATE_PATH)))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
-                .withRequestBody(matchingJsonPath("$.input.sender.city", equalTo(CITY_SENDER)))
-                .withRequestBody(matchingJsonPath("$.input.receiver.city", equalTo(CITY_RECEIVER)))
+                .withRequestBody(matchingJsonPath("$.input.sender.city", equalTo(SENDER_CITY)))
+                .withRequestBody(matchingJsonPath("$.input.receiver.city", equalTo(RECEIVER_CITY)))
                 .withRequestBody(matchingJsonPath("$.input.packages[0].type", equalTo("PACKAGE")))
                 .withRequestBody(matchingJsonPath("$.input.labelFormat", equalTo("PDF")))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CREATE_ACCEPTED)));
-        stubFor(get(urlEqualTo(CREATE_POLL_PATH))
+        stubFor(authed(get(urlEqualTo(CREATE_POLL_PATH)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CREATE_SUCCESS)));
         stubShipmentGet();
@@ -161,7 +200,7 @@ class ShippingShipmentClientTest {
 
             // then — the created shipment was read back and mapped
             assertEquals(SHIPMENT_ID, shipment.id());
-            assertEquals(CITY_SENDER, shipment.sender().city());
+            assertEquals(SENDER_CITY, shipment.sender().city());
             assertEquals(PackageType.PACKAGE, shipment.packages().get(0).type());
             verify(1, postRequestedFor(urlEqualTo(CREATE_PATH)));
         }
@@ -171,15 +210,13 @@ class ShippingShipmentClientTest {
     void createShipment_whenCommandStillRunning_pollsUntilTerminal(WireMockRuntimeInfo wmInfo) {
         // given — the first poll is IN_PROGRESS, the second SUCCESS
         stubToken();
-        stubFor(post(urlEqualTo(CREATE_PATH))
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBodyFile(CREATE_ACCEPTED)));
-        stubFor(get(urlEqualTo(CREATE_POLL_PATH)).inScenario(POLL_SCENARIO)
+        stubCreateAccepted();
+        stubFor(authed(get(urlEqualTo(CREATE_POLL_PATH))).inScenario(POLL_SCENARIO)
                 .whenScenarioStateIs(Scenario.STARTED)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CREATE_IN_PROGRESS))
                 .willSetStateTo(STATE_DONE));
-        stubFor(get(urlEqualTo(CREATE_POLL_PATH)).inScenario(POLL_SCENARIO)
+        stubFor(authed(get(urlEqualTo(CREATE_POLL_PATH))).inScenario(POLL_SCENARIO)
                 .whenScenarioStateIs(STATE_DONE)
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CREATE_SUCCESS)));
@@ -197,13 +234,53 @@ class ShippingShipmentClientTest {
     }
 
     @Test
-    void createShipment_whenCommandEndsInError_throwsAllegroException(WireMockRuntimeInfo wmInfo) {
-        // given — the command reaches a terminal ERROR status
+    void createShipment_whenTimeoutOverrideGiven_resolvesWithinBudget(WireMockRuntimeInfo wmInfo) {
+        // given — the overload with an explicit timeout resolves the same way
         stubToken();
-        stubFor(post(urlEqualTo(CREATE_PATH))
+        stubCreateAccepted();
+        stubFor(authed(get(urlEqualTo(CREATE_POLL_PATH)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
-                        .withBodyFile(CREATE_ACCEPTED)));
-        stubFor(get(urlEqualTo(CREATE_POLL_PATH))
+                        .withBodyFile(CREATE_SUCCESS)));
+        stubShipmentGet();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Shipment shipment =
+                    allegro.shipping().createShipment(sampleRequest(), Duration.ofSeconds(30));
+
+            // then
+            assertEquals(SHIPMENT_ID, shipment.id());
+        }
+    }
+
+    @Test
+    void createShipment_whenCommandNeverTerminal_throwsTimeout(WireMockRuntimeInfo wmInfo) {
+        // given — the poll never leaves IN_PROGRESS and the timeout budget is tiny
+        stubToken();
+        stubCreateAccepted();
+        stubFor(authed(get(urlEqualTo(CREATE_POLL_PATH)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(CREATE_IN_PROGRESS)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            ShipmentRequest request = sampleRequest();
+            var shipping = allegro.shipping();
+            Duration tinyBudget = Duration.ofMillis(1);
+
+            // then — the poller gives up with a timeout, no shipment read
+            assertThrows(AllegroAsyncTimeoutException.class,
+                    () -> shipping.createShipment(request, tinyBudget));
+            verify(0, getRequestedFor(urlEqualTo(SHIPMENT_PATH)));
+        }
+    }
+
+    @Test
+    void createShipment_whenCommandEndsInError_throwsBadRequestWithFieldErrors(WireMockRuntimeInfo wmInfo) {
+        // given — the command reaches a terminal ERROR carrying errors[]
+        stubToken();
+        stubCreateAccepted();
+        stubFor(authed(get(urlEqualTo(CREATE_POLL_PATH)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CREATE_ERROR)));
 
@@ -211,8 +288,11 @@ class ShippingShipmentClientTest {
             ShipmentRequest request = sampleRequest();
             var shipping = allegro.shipping();
 
-            // then — a non-success terminal status surfaces as an exception, no shipment read
-            assertThrows(AllegroException.class, () -> shipping.createShipment(request));
+            // then — the command's typed error detail is surfaced, no shipment read
+            AllegroBadRequestException failed = assertThrows(AllegroBadRequestException.class,
+                    () -> shipping.createShipment(request));
+            assertEquals("input.deliveryMethodId", failed.errors().get(0).path());
+            assertEquals("DeliveryMethodNotSupported", failed.errors().get(0).code());
             verify(0, getRequestedFor(urlEqualTo(SHIPMENT_PATH)));
         }
     }
@@ -229,17 +309,30 @@ class ShippingShipmentClientTest {
             Shipment shipment = allegro.shipping().getShipment(SHIPMENT_ID);
 
             // then — nested addresses, package, insurance and cash-on-delivery all map
-            assertEquals("CRED-77", shipment.credentialsId());
-            assertEquals(CITY_RECEIVER, shipment.receiver().city());
-            assertEquals("POP-42", shipment.receiver().point());
+            assertEquals(CREDENTIALS_ID, shipment.credentialsId());
+            assertEquals(RECEIVER_CITY, shipment.receiver().city());
+            assertEquals(RECEIVER_POINT, shipment.receiver().point());
             ShipmentPackage parcel = shipment.packages().get(0);
-            assertEquals(new BigDecimal("30.0"), parcel.lengthCm());
-            assertEquals(new BigDecimal("2.5"), parcel.weightKg());
-            assertEquals("WB-555", parcel.waybill());
-            assertEquals(Money.of("199.99", CURRENCY), shipment.insurance());
-            assertEquals("PL61109010140000071219812874", shipment.cashOnDelivery().iban());
+            assertEquals(LENGTH_CM, parcel.lengthCm());
+            assertEquals(WEIGHT_KG, parcel.weightKg());
+            assertEquals(WAYBILL, parcel.waybill());
+            assertEquals(Money.of(INSURANCE_AMOUNT, CURRENCY), shipment.insurance());
+            assertEquals(IBAN, shipment.cashOnDelivery().iban());
             assertEquals(LabelFormat.PDF, shipment.labelFormat());
             assertNull(shipment.canceledDate());
+        }
+    }
+
+    @Test
+    void getShipment_whenIdBlank_throwsBeforeAnyCall(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var shipping = allegro.shipping();
+
+            // then — the id guard fails fast without a network call
+            assertThrows(IllegalArgumentException.class, () -> shipping.getShipment(" "));
         }
     }
 
@@ -247,11 +340,11 @@ class ShippingShipmentClientTest {
     void cancelShipment_whenCommandSucceeds_submitsShipmentIdAndPolls(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken();
-        stubFor(post(urlEqualTo(CANCEL_PATH))
+        stubFor(authed(post(urlEqualTo(CANCEL_PATH)))
                 .withRequestBody(matchingJsonPath("$.input.shipmentId", equalTo(SHIPMENT_ID)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CANCEL_ACCEPTED)));
-        stubFor(get(urlEqualTo(CANCEL_POLL_PATH))
+        stubFor(authed(get(urlEqualTo(CANCEL_POLL_PATH)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(CANCEL_SUCCESS)));
 
@@ -267,10 +360,44 @@ class ShippingShipmentClientTest {
     }
 
     @Test
+    void cancelShipment_whenCommandEndsInError_throwsBadRequestWithFieldErrors(WireMockRuntimeInfo wmInfo) {
+        // given — the cancel command reaches a terminal ERROR carrying errors[]
+        stubToken();
+        stubFor(authed(post(urlEqualTo(CANCEL_PATH)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(CANCEL_ACCEPTED)));
+        stubFor(authed(get(urlEqualTo(CANCEL_POLL_PATH)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(CANCEL_ERROR)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var shipping = allegro.shipping();
+
+            // then
+            AllegroBadRequestException failed = assertThrows(AllegroBadRequestException.class,
+                    () -> shipping.cancelShipment(SHIPMENT_ID));
+            assertEquals("ShipmentAlreadyCanceled", failed.errors().get(0).code());
+        }
+    }
+
+    @Test
+    void cancelShipment_whenIdNull_throwsBeforeAnyCall(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var shipping = allegro.shipping();
+
+            // then
+            assertThrows(IllegalArgumentException.class, () -> shipping.cancelShipment(null));
+        }
+    }
+
+    @Test
     void labels_whenRequested_postsBodyWithOctetAcceptAndReturnsBytes(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken();
-        stubFor(post(urlEqualTo(LABEL_PATH))
+        stubFor(authed(post(urlEqualTo(LABEL_PATH)))
                 .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(OCTET_STREAM))
                 .withRequestBody(matchingJsonPath("$.shipmentIds[0]", equalTo(SHIPMENT_ID)))
                 .withRequestBody(matchingJsonPath("$.pageSize", equalTo("A4")))
@@ -293,10 +420,26 @@ class ShippingShipmentClientTest {
     }
 
     @Test
+    void labels_whenServerError_mapsToServerExceptionOnBinaryPath(WireMockRuntimeInfo wmInfo) {
+        // given — the binary (fetchBytes) path shares the transport error mapping
+        stubToken();
+        stubFor(authed(post(urlEqualTo(LABEL_PATH)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            LabelRequest request = LabelRequest.builder().shipmentIds(List.of(SHIPMENT_ID)).build();
+            var shipping = allegro.shipping();
+
+            // then
+            assertThrows(AllegroServerException.class, () -> shipping.labels(request));
+        }
+    }
+
+    @Test
     void protocol_whenGivenIds_postsIdsAndReturnsBytes(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken();
-        stubFor(post(urlEqualTo(PROTOCOL_PATH))
+        stubFor(authed(post(urlEqualTo(PROTOCOL_PATH)))
                 .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(OCTET_STREAM))
                 .withRequestBody(matchingJsonPath("$.shipmentIds[0]", equalTo(SHIPMENT_ID)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
@@ -325,5 +468,18 @@ class ShippingShipmentClientTest {
             assertThrows(IllegalArgumentException.class, shipping::protocol);
             verify(0, postRequestedFor(urlEqualTo(PROTOCOL_PATH)));
         }
+    }
+
+    @Test
+    void postalAddress_toString_redactsPersonalContactFields() {
+        // given — a mapped shipment carries the sender/receiver contact details
+        PostalAddress address = PostalAddress.builder()
+                .street(SENDER_STREET).postalCode(SENDER_POSTAL).city(SENDER_CITY)
+                .email(SENDER_EMAIL).phone(SENDER_PHONE).build();
+
+        // then — an accidental log never renders the e-mail or phone
+        String rendered = address.toString();
+        assertFalse(rendered.contains(SENDER_EMAIL));
+        assertFalse(rendered.contains(SENDER_PHONE));
     }
 }

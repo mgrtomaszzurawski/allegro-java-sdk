@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.shipping;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -178,6 +179,16 @@ class ShippingShipmentBuildersTest {
     void cashOnDeliveryBuilder_whenAmountMissing_throws() {
         assertMessage("CashOnDelivery.amount is required", assertThrows(IllegalStateException.class,
                 () -> CashOnDelivery.builder().ownerName("Seller").build()));
+    }
+
+    @Test
+    void cashOnDelivery_toString_redactsIban() {
+        CashOnDelivery built = CashOnDelivery.builder()
+                .amount(Money.of("250.00", CURRENCY)).ownerName("Seller Ltd")
+                .iban("PL61109010140000071219812874").build();
+        String rendered = built.toString();
+        assertFalse(rendered.contains("PL61109010140000071219812874"));
+        assertFalse(rendered.contains("Seller Ltd"));
     }
 
     // ---- ShipmentRequest ----

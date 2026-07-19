@@ -38,6 +38,8 @@ public record PostalAddress(
         String phone,
         @Nullable String point) {
 
+    private static final String REDACTED = "***";
+
     /** A fresh builder for a {@link PostalAddress}. */
     public static PostalAddressBuilder builder() {
         return new PostalAddressBuilder();
@@ -99,5 +101,27 @@ public record PostalAddress(
         raw.setPhone(phone);
         raw.setPoint(point);
         return raw;
+    }
+
+    /**
+     * Redacts the personal contact fields (name, e-mail, phone) so an accidental
+     * log of this record never leaks them; the locality fields are kept for
+     * diagnostics.
+     */
+    @Override
+    public String toString() {
+        return "PostalAddress[name=" + redact(name)
+                + ", company=" + company
+                + ", street=" + street
+                + ", postalCode=" + postalCode
+                + ", city=" + city
+                + ", state=" + state
+                + ", email=" + redact(email)
+                + ", phone=" + redact(phone)
+                + ", point=" + point + ']';
+    }
+
+    private static @Nullable String redact(@Nullable String value) {
+        return value == null ? null : REDACTED;
     }
 }
