@@ -208,6 +208,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   data in `toString()`. The company's deprecated single `taxId` string (superseded by `taxIds`), the
   delivery cancellation/package-count, guaranteed/dispatch time sub-windows, and invoice feature
   flags are intentionally not modelled. This completes the `Order` depth fill.
+- `RefundRequest` depth — partial refunds: `payments().refund(RefundRequest)` now accepts a partial
+  breakdown alongside a full refund — per line item (`RefundLineItem.byAmount`/`byQuantity`), per
+  deposit (`RefundDeposit`), per surcharge (`RefundSurcharge`), and the `delivery()`/`overpaid()`/
+  `additionalServices()` amounts (each `Money`), plus an optional `sellerComment()`. Component ids are
+  UUID-validated and each amount is required, fail-fast at construction. The refund body is now
+  serialized with the partial (NON_EMPTY) writer, so a full refund no longer emits the generated
+  DTO's pre-initialized empty component arrays (an empty `[]` would signal "refund these
+  components"). Builder round-trip + per-field validation tests and WireMock wire-body tests
+  (partial breakdown present; full refund omits the empty arrays). `docs/payments.md`.
 
 ### C — shipping
 
@@ -426,6 +435,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   core) and an unmodelled promotion status or offer-criterion type degrades to
   its `UNKNOWN` enum constant instead of failing the read, completing bucket G at
   17/17 ops.
+- Automatic pricing rule reads now deserialize the `configuration` `oneOf`
+  straight into the generated DTO via the shared `StrictOneOfModule` core,
+  dropping the hand-rolled `JsonNode` discrimination that worked around the
+  generator's structural-`oneOf` over-match. Rule reads are also forward-safe: a
+  rule strategy the SDK does not model degrades to the new read-only
+  `PricingRuleType.UNKNOWN` (rejected on create) instead of failing the listing
+  or fetch.
 
 ### H — campaigns
 
@@ -457,6 +473,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   `AlleDiscountSubmitResult`/`AlleDiscountWithdrawResult` and their status/type enums (plus the shared
   `ConditionViolation`), and the `SubmitOfferRequest`/`EligibleOffersFilter`/`SubmittedOffersFilter`
   builders.
+- Make every campaigns domain enum forward-compatible (core C3): an Allegro wire value this SDK
+  release does not model now degrades to a read-only `UNKNOWN` sentinel instead of throwing on the
+  read. Covers `BadgeStatus`, `BadgeApplicationStatus`, `BadgeOperationStatus`, `BadgeOperationType`,
+  `AlleDiscountCampaignType`, `AlleDiscountOfferStatus`, `AlleDiscountCommandStatus`,
+  `ParticipationStatus`, `SchedulePolicyType` and `SubsidyOfferStatus` (`CampaignType` already
+  degraded); `ParticipationStatus.UNKNOWN` is never emitted on a participation update, which only
+  writes `ALLOWED`/`DENIED`.
 
 ### I — fulfillment
 
@@ -481,7 +504,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   records (`AdvanceShipNotice`, `AsnItem`, `HandlingUnit`, `ReceivingState` tree), the `AsnRequest`
   / `SubmittedAsnUpdate` / `AsnFilter` builders, and open-set enums (`AsnStatus`, `ReceivingStage`,
   `ReceivedType`, `ReasonCode`, `SubmitStatus`) that degrade unknown wire values to `UNKNOWN`. The
-  polymorphic `shipping` declaration is a deferred follow-up.
+  polymorphic `shipping` declaration is deferred behind a Layer-1 generation defect (below).
+- Root-cause and pin (regression test) the Layer-1 defect that blocks the ASN `shipping`
+  declaration: the read DTO's `ShippingExtendedRaw` cannot deserialize the `COURIER_BY_SELLER` /
+  `OWN_TRANSPORT` / `THIRD_PARTY_DELIVERY` methods because their generated subtypes extend the
+  write base `ShippingRaw`, not the read base — so a real notice carrying them fails to read, and a
+  write cannot round-trip either. Only `ALREADY_IN_WAREHOUSE` reads; the write base is sound. The
+  fix (regenerate those subtypes under `ShippingExtendedRaw`) is a Layer-1 change; once it lands the
+  domain shipping model can be wired.
 - The forward-compatibility of the fulfillment open-set enums is now proven end-to-end: with the
   Layer-1 `enumUnknownDefaultCase` fallback in place, an unrecognized wire enum value degrades to
   the domain `UNKNOWN` instead of failing the response.

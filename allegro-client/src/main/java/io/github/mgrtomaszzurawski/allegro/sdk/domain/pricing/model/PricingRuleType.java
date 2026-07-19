@@ -25,5 +25,13 @@ public enum PricingRuleType {
     FOLLOW_BY_MARKET_MIN_PRICE,
 
     /** Follow the price of the current top offer for the product. */
-    FOLLOW_BY_TOP_OFFER_PRICE
+    FOLLOW_BY_TOP_OFFER_PRICE,
+
+    /**
+     * A rule strategy introduced by Allegro after this SDK release. Surfaced on
+     * reads so a new server-side rule type never breaks listing or fetching a
+     * rule; it is not a value the SDK can create, so passing it to a create or
+     * edit request is rejected.
+     */
+    UNKNOWN
 }
