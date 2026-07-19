@@ -421,6 +421,24 @@ above). The GPSR `responsibleProducer` (`type: ID/NAME` discriminator) and `mark
 serialization are WireMock-pinned; they reach the server only once a valid product lets the create
 pass the product lookup. Read-back of `productSet` stays deferred until that seed exists.
 
+### Image upload by URL works end-to-end on the upload host (verified 2026-07-19, sandbox)
+
+`offers().media().uploadImage(url)` (`POST /sale/images`) is a **full live write→read**: the SDK
+POSTs the source URL to the Allegro UPLOAD host (`upload.allegro.pl.allegrosandbox.pl`, derived
+from the API base by `HttpRuntime.uploadBaseUrl()` / `HttpCall.onUploadHost()`) and the server
+returns a hosted image, e.g.
+
+```
+location=https://a.allegroimg.allegrosandbox.pl/original/11d855/…   expiresAt=2026-07-20T04:34:19Z
+```
+
+So the upload-host routing and the `OfferImage` mapping (`location` + `expiresAt`) are confirmed
+against the live server — no seeded offer needed (an uploaded image is unattached and expires,
+per `expiresAt`, if unused). The binary-bytes variant (`uploadImage(bytes, ImageFormat)`) shares
+the same request path and is WireMock-pinned. The attachment flow
+(`createAttachment` → `uploadAttachment` → `getAttachment`) is WireMock-pinned; the declare is a
+plain API-base POST and the upload reuses the same upload-host machinery just proven for images.
+
 ## Fulfillment (bucket I)
 
 ### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)
