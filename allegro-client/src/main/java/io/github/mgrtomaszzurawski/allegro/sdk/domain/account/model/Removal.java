@@ -54,7 +54,13 @@ public record Removal(@Nullable String possibleTo, @Nullable RemovalRequest requ
             if (raw == null) {
                 return null;
             }
-            return raw == RemovalRequestRaw.SourceEnum.ADMIN ? ADMIN : SELLER;
+            return switch (raw) {
+                case SELLER -> SELLER;
+                case ADMIN -> ADMIN;
+                // An unmodelled future source (incl. the OpenAPI forward-compat
+                // sentinel) must NOT be mislabelled as SELLER — degrade to null.
+                default -> null;
+            };
         }
     }
 }

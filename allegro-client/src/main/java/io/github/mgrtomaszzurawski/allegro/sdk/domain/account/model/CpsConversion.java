@@ -8,12 +8,14 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionCommissionA
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionCommissionPublisherRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionCommissionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionMarketplaceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferSellerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionOfferUnitPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CpsConversionRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,6 +30,8 @@ import org.jspecify.annotations.Nullable;
  * @param marketplaceId marketplace the conversion belongs to, or {@code null}
  * @param offer the converted offer, or {@code null}
  * @param commission the commission breakdown, or {@code null}
+ * @param publisherUrlParameters the affiliate tracking parameters echoed back on
+ *     the publisher link, or {@code null} if none were reported
  *
  * @since 0.2.0
  */
@@ -39,11 +43,13 @@ public record CpsConversion(
         @Nullable Integer quantity,
         @Nullable String marketplaceId,
         @Nullable Offer offer,
-        @Nullable Commission commission) {
+        @Nullable Commission commission,
+        @Nullable Map<String, String> publisherUrlParameters) {
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
     public static CpsConversion from(CpsConversionRaw raw) {
         CpsConversionMarketplaceRaw marketplace = raw.getMarketplace();
+        Map<String, String> publisherUrlParameters = raw.getPublisherUrlParameters();
         return new CpsConversion(
                 raw.getId(),
                 ConversionStatus.from(raw.getStatus()),
@@ -52,7 +58,8 @@ public record CpsConversion(
                 raw.getQuantity(),
                 marketplace == null ? null : marketplace.getId(),
                 Offer.from(raw.getOffer()),
-                Commission.from(raw.getCommission()));
+                Commission.from(raw.getCommission()),
+                publisherUrlParameters == null ? null : Map.copyOf(publisherUrlParameters));
     }
 
     /**
@@ -60,12 +67,14 @@ public record CpsConversion(
      *
      * @param id offer id
      * @param name offer title, or {@code null}
+     * @param categoryId id of the offer's category, or {@code null}
      * @param unitPrice unit price, or {@code null}
      * @param sellerLogin the seller's login, or {@code null}
      */
     public record Offer(
             String id,
             @Nullable String name,
+            @Nullable String categoryId,
             @Nullable Money unitPrice,
             @Nullable String sellerLogin) {
 
@@ -73,11 +82,13 @@ public record CpsConversion(
             if (raw == null) {
                 return null;
             }
+            CpsConversionOfferCategoryRaw category = raw.getCategory();
             CpsConversionOfferUnitPriceRaw price = raw.getUnitPrice();
             CpsConversionOfferSellerRaw seller = raw.getSeller();
             return new Offer(
                     raw.getId(),
                     raw.getName(),
+                    category == null ? null : category.getId(),
                     price == null ? null : money(price.getAmount(), price.getCurrency()),
                     seller == null ? null : seller.getLogin());
         }
