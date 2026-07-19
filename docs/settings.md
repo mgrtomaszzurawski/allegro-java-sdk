@@ -125,6 +125,32 @@ afterSale.updateReturnPolicy(created.id(), ReturnPolicyUpdateRequest.builder()
 afterSale.deleteReturnPolicy(created.id());
 ```
 
+## Product compliance (GPSR)
+
+`settings().compliance()` maintains the two GPSR dictionaries a seller attaches to offers:
+responsible **persons** and responsible **producers**. Both support list (lazy, offset/limit)
+and create/update; producers additionally support a single-resource read. The nested wire
+`personalData`/`producerData` is flattened onto the record — `name` is the internal dictionary
+label, `personName`/`tradeName` the party's own name. A `ResponsiblePartyContact` requires at
+least an `email` or a `formUrl`.
+
+```java
+Compliance compliance = client.settings().compliance();
+
+ResponsiblePersonRequest request = ResponsiblePersonRequest.builder()
+        .name("Person responsible for batteries")   // required, internal label, max 50 chars
+        .personName("Responsible Person Sp. z o.o.") // max 200 chars
+        .address(new ResponsiblePartyAddress("PL", "Grunwaldzka 182", "60-166", "Poznań"))
+        .contact(new ResponsiblePartyContact("compliance@example.com", null, null))
+        .build();
+
+ResponsiblePerson created = compliance.createResponsiblePerson(request);
+compliance.streamResponsiblePersons().forEach(person -> System.out.println(person.name()));
+
+// Producers mirror the shape (tradeName instead of personName) and add a single read:
+ResponsibleProducer producer = compliance.responsibleProducer(producerId);
+```
+
 ## Errors
 
 All calls surface the SDK's remediation-grouped exceptions: `AllegroBadRequestException`

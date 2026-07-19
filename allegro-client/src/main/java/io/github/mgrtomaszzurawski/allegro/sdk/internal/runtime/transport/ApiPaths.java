@@ -417,6 +417,10 @@ public final class ApiPaths {
     /** Seller after-sale return-policy definitions. */
     public static final String AFTER_SALES_RETURN_POLICIES =
             "/after-sales-service-conditions/return-policies";
+    /** Product-compliance (GPSR) responsible persons dictionary. */
+    public static final String RESPONSIBLE_PERSONS = "/sale/responsible-persons";
+    /** Product-compliance (GPSR) responsible producers dictionary. */
+    public static final String RESPONSIBLE_PRODUCERS = "/sale/responsible-producers";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
