@@ -9,11 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StandardizedDescriptionRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItemType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DescriptionTest {
@@ -77,5 +79,53 @@ class DescriptionTest {
     @Test
     void from_whenNull_returnsNull() {
         assertNull(OfferDescription.from(null));
+    }
+
+    @Test
+    void section_whenMixedItems_roundTripsPreservingOrder() {
+        // given — a single section carrying a text then an image item (two-column layout)
+        OfferDescription original = OfferDescription.of(
+                DescriptionSection.of(DescriptionItem.text(TEXT_CONTENT), DescriptionItem.image(IMAGE_URL)));
+
+        // when
+        OfferDescription roundTripped = OfferDescription.from(original.toRaw());
+
+        // then — both items and their order survive the round trip
+        assertEquals(original, roundTripped);
+        List<DescriptionItem> items = roundTripped.sections().get(0).items();
+        assertEquals(DescriptionItemType.TEXT, items.get(0).type());
+        assertEquals(DescriptionItemType.IMAGE, items.get(1).type());
+    }
+
+    @Test
+    void from_whenSectionsNull_yieldsEmptyDescription() {
+        // given — a description whose sections list is absent
+        StandardizedDescriptionRaw raw = new StandardizedDescriptionRaw().sections(null);
+
+        // when
+        OfferDescription description = OfferDescription.from(raw);
+
+        // then — the null degrades to an empty section list, not an NPE
+        assertEquals(List.of(), description.sections());
+    }
+
+    @Test
+    void section_whenItemsNull_yieldsEmptySection() {
+        // given — a section whose items list is absent
+        DescriptionSection section = DescriptionSection.from(new DescriptionSectionRaw().items(null));
+
+        // then
+        assertEquals(List.of(), section.items());
+    }
+
+    @Test
+    void constructor_whenCrossContaminatedItem_throwsIllegalArgument() {
+        // then — the canonical constructor rejects items that mix a kind with the wrong field
+        assertThrows(IllegalArgumentException.class,
+                () -> new DescriptionItem(DescriptionItemType.TEXT, TEXT_CONTENT, IMAGE_URL));
+        assertThrows(IllegalArgumentException.class,
+                () -> new DescriptionItem(DescriptionItemType.IMAGE, TEXT_CONTENT, IMAGE_URL));
+        assertThrows(IllegalArgumentException.class,
+                () -> new DescriptionItem(DescriptionItemType.UNKNOWN, TEXT_CONTENT, null));
     }
 }

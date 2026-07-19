@@ -4,10 +4,12 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
-import org.jspecify.annotations.Nullable;
-
 /**
  * The kind of a description section item.
+ *
+ * <p>On the read side the kind is resolved from the deserialized polymorphic
+ * subtype (see {@link DescriptionItem#from}); an item kind Allegro adds after this
+ * release resolves to {@link #UNKNOWN}.
  *
  * @since 0.3.0
  */
@@ -24,15 +26,4 @@ public enum DescriptionItemType {
     static final String WIRE_TEXT = "TEXT";
     /** The wire discriminator for an image item. */
     static final String WIRE_IMAGE = "IMAGE";
-
-    /** Map the generated {@code type} discriminator, tolerating unknown future values. */
-    public static DescriptionItemType from(@Nullable String wire) {
-        if (WIRE_TEXT.equals(wire)) {
-            return TEXT;
-        }
-        if (WIRE_IMAGE.equals(wire)) {
-            return IMAGE;
-        }
-        return UNKNOWN;
-    }
 }

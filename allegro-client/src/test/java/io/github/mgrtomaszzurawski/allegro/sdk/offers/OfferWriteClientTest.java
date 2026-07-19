@@ -93,11 +93,15 @@ class OfferWriteClientTest {
     private static final String WARRANTY_JSON_PATH = "$.afterSalesServices.warranty.id";
 
     private static final String DESC_CONTENT = "<h1>Mechanical keyboard</h1>";
+    private static final String DESC_IMAGE_URL = "https://img.example/keyboard.jpg";
     private static final String CITY = "Warszawa";
     private static final String DESC_TYPE_JSON_PATH = "$.description.sections[0].items[0].type";
     private static final String DESC_CONTENT_JSON_PATH = "$.description.sections[0].items[0].content";
+    private static final String DESC_IMAGE_TYPE_JSON_PATH = "$.description.sections[1].items[0].type";
+    private static final String DESC_IMAGE_URL_JSON_PATH = "$.description.sections[1].items[0].url";
     private static final String LOCATION_CITY_JSON_PATH = "$.location.city";
     private static final String ITEM_TYPE_TEXT = "TEXT";
+    private static final String ITEM_TYPE_IMAGE = "IMAGE";
 
     private static final String STARTING_AMOUNT = "1.00";
     private static final String MINIMAL_AMOUNT = "150.00";
@@ -246,17 +250,21 @@ class OfferWriteClientTest {
                 .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
                 .availableStock(STOCK)
                 .description(OfferDescription.of(
-                        DescriptionSection.of(DescriptionItem.text(DESC_CONTENT))))
+                        DescriptionSection.of(DescriptionItem.text(DESC_CONTENT)),
+                        DescriptionSection.of(DescriptionItem.image(DESC_IMAGE_URL))))
                 .location(OfferLocation.builder().city(CITY).build())
                 .build();
 
         // when
         offers(wmInfo).create(request);
 
-        // then — the description item (typed TEXT with its content) and the location reach the body
+        // then — both item kinds reach the body with their discriminator (TEXT+content,
+        // IMAGE+url) and the location does too
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(DESC_TYPE_JSON_PATH, equalTo(ITEM_TYPE_TEXT)))
                 .withRequestBody(matchingJsonPath(DESC_CONTENT_JSON_PATH, equalTo(DESC_CONTENT)))
+                .withRequestBody(matchingJsonPath(DESC_IMAGE_TYPE_JSON_PATH, equalTo(ITEM_TYPE_IMAGE)))
+                .withRequestBody(matchingJsonPath(DESC_IMAGE_URL_JSON_PATH, equalTo(DESC_IMAGE_URL)))
                 .withRequestBody(matchingJsonPath(LOCATION_CITY_JSON_PATH, equalTo(CITY))));
     }
 

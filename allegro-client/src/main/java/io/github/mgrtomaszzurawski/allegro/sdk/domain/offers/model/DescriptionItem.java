@@ -32,6 +32,29 @@ public record DescriptionItem(
     private static final String ERR_URL = "url is required for an image item";
     private static final String ERR_NOT_WRITABLE =
             "a DescriptionItem of UNKNOWN type is read-only and cannot be sent";
+    private static final String ERR_TEXT_URL = "a text item must not carry a url";
+    private static final String ERR_IMAGE_CONTENT = "an image item must not carry content";
+    private static final String ERR_UNKNOWN_FIELDS = "an unknown item carries neither content nor a url";
+
+    /**
+     * Canonical constructor. Prefer the {@link #text(String)} / {@link #image(String)}
+     * factories; this guards the type&#8596;field invariant so no construction path can
+     * produce a cross-contaminated item (a text item with a url, an image item with
+     * content, or an unknown item with either). A text item may legitimately carry a
+     * {@code null} content on the read path when the server omits it, so that is allowed.
+     */
+    public DescriptionItem {
+        Objects.requireNonNull(type, "type");
+        if (type == DescriptionItemType.TEXT && url != null) {
+            throw new IllegalArgumentException(ERR_TEXT_URL);
+        }
+        if (type == DescriptionItemType.IMAGE && content != null) {
+            throw new IllegalArgumentException(ERR_IMAGE_CONTENT);
+        }
+        if (type == DescriptionItemType.UNKNOWN && (content != null || url != null)) {
+            throw new IllegalArgumentException(ERR_UNKNOWN_FIELDS);
+        }
+    }
 
     /** A formatted-text item carrying the given HTML {@code content}. */
     public static DescriptionItem text(String content) {
