@@ -14,7 +14,9 @@ import org.jspecify.annotations.Nullable;
  *
  * @param categoryId the id of the category that supports a compatibility list
  * @param name the category's display name
- * @param itemsType what the list's items describe (e.g. the vehicle domain)
+ * @param itemsType what the list's items describe (e.g. the vehicle domain such
+ *     as {@code CAR} or {@code BICYCLE}), or {@code null} when the category does
+ *     not declare one
  * @param inputType how the list's items are supplied — by product {@code ID} or
  *     free {@code TEXT}
  * @param validationRules the bounds Allegro places on the list (size, and — for
@@ -26,7 +28,7 @@ import org.jspecify.annotations.Nullable;
 public record CompatibleCategory(
         String categoryId,
         String name,
-        String itemsType,
+        @Nullable String itemsType,
         CompatibilityInputType inputType,
         @Nullable CompatibilityValidationRules validationRules) {
 
