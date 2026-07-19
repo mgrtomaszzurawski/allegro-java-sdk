@@ -410,6 +410,21 @@ confirming the `AlleDiscountCampaign` / `AlleDiscountCampaignType` mapping. Ever
 showed the seller as not enrolled, so `streamEligibleOffers`/`streamSubmittedOffers` returned empty
 without error — the write→read command cycles still need an enrolled campaign (risk R5).
 
+### Shipment-management (WZA) write path not sandbox-verified yet (2026-07-19, bucket C)
+
+`createShipment` / `cancelShipment` / `labels` / `protocol`
+(`/shipment-management/*`) drive the "Wysyłam z Allegro" carrier broker, which
+needs a **real order** with a carrier-eligible delivery method. A sandbox order
+must be hand-seeded from a clean/residential IP — buyer buy-now is DataDome
+CAPTCHA-blocked from this datacenter IP (see the Web UI anti-bot entry). Until an
+order is seeded, the create/label/protocol write path is **WireMock-pinned**
+(fixtures marked `spec-derived`), not live-verified; the async submit→poll→resolve
+plumbing it shares is the same the delivery-settings PUT proved live (PR-2b). The
+`shipment` demo probe reads a shipment back and renders its label/protocol once a
+`-Ddemo.shipmentId` is supplied. Seller + buyer tokens re-verified LIVE 2026-07-19
+(refresh → 200, seller `/me` → 200; sandbox does not invalidate a refresh token
+on rotation).
+
 ## From external sources (to verify on first contact)
 
 - **Sandbox seller accounts may require team-side activation** before the first offer
