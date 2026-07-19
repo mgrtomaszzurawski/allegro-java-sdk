@@ -52,16 +52,27 @@ is present on children / absent on roots. The SDK's `Category` record therefore 
 `restrictions.{minLength,maxLength,allowedNumberOfValues}`. Live probe: category `1520`
 ("Budownictwo i Akcesoria") returned 7 parameters, the first ("Stan") a required dictionary with
 5 values. The SDK flattens all four onto one `CategoryParameter` record (`CategoryParameterType`
-+ nullable `ParameterRestrictions` + a `DictionaryValue` list). NOTE: the Layer-1 parameter DTO
-declares no Jackson `defaultImpl`, so an unrecognised future `type` currently fails
-deserialization (surfaced as `AllegroServerException`) rather than degrading to
-`CategoryParameterType.OTHER`; delivering that degradation is a core follow-up (generator
-`defaultImpl` / mapper `FAIL_ON_INVALID_SUBTYPE`).
++ nullable `ParameterRestrictions` + a `DictionaryValue` list). An unrecognised future `type`
+degrades to `CategoryParameterType.OTHER` (core `UnknownSubtypeToBaseHandler`, C4) rather than
+failing the read.
 
 `GET /sale/matching-categories?name=` returns `matchingCategories[]`, each a category node whose
 `parent` nests recursively up to the root (`parent` absent on a root match). Live probe:
 `name=iphone` returned 10 matches, the top being `353` "Etui i pokrowce" with a parent chain.
 Both endpoints succeed with an app-only client-credentials token (no user context, no scope).
+
+### Compatibility-supported categories always carry `validationRules` (verified 2026-07-19, sandbox)
+
+`GET /sale/compatibility-list/supported-categories` (`compatibility().supportedCategories()`)
+succeeds with an app-only client-credentials token despite the spec tagging it `sale:offers:read`
+— it is global reference data, not user-scoped. Live probe: 65 categories (54 `inputType:ID`,
+11 `inputType:TEXT`). EVERY category carried a `validationRules` block (the spec marks it
+optional), so it is not free-text-only as the field names suggest: `maxRows` caps the list size
+for both input types (2000 across the sample), while `maxCharactersPerLine` was `null` for every
+`ID` category and `100` for every `TEXT` category. `itemsType` is a free-form domain string
+(`CAR`, `BICYCLE`, `PHONE`, `LAPTOP`, `TRACTOR`, …) — modelled as `String`, not an enum. The SDK
+maps each to a `CompatibleCategory` with `CompatibilityInputType` (`ID`/`TEXT`, else `UNKNOWN`)
+and a nullable `CompatibilityValidationRules`.
 
 ## Shipping & delivery (bucket C)
 

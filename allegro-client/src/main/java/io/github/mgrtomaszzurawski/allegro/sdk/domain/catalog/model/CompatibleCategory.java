@@ -17,8 +17,9 @@ import org.jspecify.annotations.Nullable;
  * @param itemsType what the list's items describe (e.g. the vehicle domain)
  * @param inputType how the list's items are supplied — by product {@code ID} or
  *     free {@code TEXT}
- * @param validationRules the bounds on a free-text list, or {@code null} when
- *     the category carries none (typically for {@link CompatibilityInputType#ID})
+ * @param validationRules the bounds Allegro places on the list (size, and — for
+ *     free text — characters per row), or {@code null} when the category carries
+ *     no rules block
  *
  * @since 0.2.0
  */

@@ -8,14 +8,17 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListSupport
 import org.jspecify.annotations.Nullable;
 
 /**
- * Bounds Allegro places on a {@link CompatibleCategory}'s free-text
- * compatibility list — meaningful only when the category's
- * {@link CompatibilityInputType} is {@link CompatibilityInputType#TEXT}.
+ * Bounds Allegro places on a {@link CompatibleCategory}'s compatibility list.
  *
- * @param maxRows the maximum number of text rows the list may hold, or
+ * <p>{@code maxRows} caps the list size for either input type; {@code
+ * maxCharactersPerLine} bounds a free-text row and is {@code null} for an
+ * {@link CompatibilityInputType#ID} category, whose items are picked rather than
+ * typed.
+ *
+ * @param maxRows the maximum number of entries the list may hold, or
  *     {@code null} when unbounded
- * @param maxCharactersPerLine the maximum characters allowed per row, or
- *     {@code null} when unbounded
+ * @param maxCharactersPerLine the maximum characters allowed per free-text row,
+ *     or {@code null} when the category is not free-text (or is unbounded)
  *
  * @since 0.2.0
  */

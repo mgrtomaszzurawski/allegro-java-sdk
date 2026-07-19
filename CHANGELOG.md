@@ -328,9 +328,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   (`GET /sale/compatibility-list/supported-categories`), as immutable
   `CompatibleCategory` records. Each carries how its items are supplied
   (`CompatibilityInputType.ID`/`TEXT`, an unmodelled type degrading to `UNKNOWN`)
-  and, for a free-text list, its `CompatibilityValidationRules` bounds. Adds the
-  `catalog-compatibility` demo scenario. First slice of `compatibility()`; the
-  suggestion and compatible-product reads follow.
+  and its `CompatibilityValidationRules` bounds (list size, plus per-row
+  characters for free-text lists). Adds the `catalog-compatibility` demo scenario.
+  First slice of `compatibility()`; the suggestion and compatible-product reads
+  follow.
 
 ### F — offers-extras
 

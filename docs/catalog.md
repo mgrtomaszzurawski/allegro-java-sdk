@@ -153,18 +153,20 @@ Compatibility compatibility = client.catalog().compatibility();
 for (CompatibleCategory category : compatibility.supportedCategories()) {
     System.out.println(category.categoryId() + "  " + category.name()
             + "  input=" + category.inputType());
-    if (category.inputType() == CompatibilityInputType.TEXT
-            && category.validationRules() != null) {
-        System.out.println("    up to " + category.validationRules().maxRows() + " rows, "
-                + category.validationRules().maxCharactersPerLine() + " chars each");
+    if (category.validationRules() != null) {
+        System.out.println("    up to " + category.validationRules().maxRows() + " entries"
+                + (category.validationRules().maxCharactersPerLine() != null
+                        ? ", " + category.validationRules().maxCharactersPerLine() + " chars/row"
+                        : ""));
     }
 }
 ```
 
 `inputType` tells you how the list's items are supplied: `ID` (chosen from Allegro's
-compatible-products database) or `TEXT` (free text, bounded by `validationRules`); an input type
-this release does not model yet reads as `UNKNOWN`. `validationRules` is `null` for an `ID`
-category (its items are picked, not typed).
+compatible-products database) or `TEXT` (free text); an input type this release does not model
+yet reads as `UNKNOWN`. `validationRules` caps the list size (`maxRows`) for either input type;
+`maxCharactersPerLine` bounds a free-text row and is `null` for an `ID` category, whose items are
+picked rather than typed.
 
 ## Verifying against the sandbox
 

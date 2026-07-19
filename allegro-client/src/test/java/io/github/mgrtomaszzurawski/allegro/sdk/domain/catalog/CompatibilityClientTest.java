@@ -63,16 +63,19 @@ class CompatibilityClientTest {
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
             """;
-    // Spec-derived; the shape is wire-verifiable through the catalog-compatibility demo.
-    // Three categories exercise the whole mapping: an ID category (no rules), a TEXT
-    // category with validation rules, and a category whose inputType is outside the two
-    // modelled values (must degrade to UNKNOWN, not fail the read).
+    // Wire-verified 2026-07-19 via a client-credentials probe of the sandbox
+    // (65 categories: 54 ID + 11 TEXT; every category carried validationRules;
+    // maxCharactersPerLine was null for ID inputType and 100 for TEXT). Three
+    // categories exercise the whole mapping: an ID category (maxRows set,
+    // maxCharactersPerLine null — the live ID shape), a TEXT category (both bounds
+    // set), and a synthetic category whose inputType is outside the two modelled
+    // values (must degrade to UNKNOWN, not fail the read).
     private static final String SUPPORTED_CATEGORIES = """
             {"supportedCategories":[
-              {"categoryId":"257","name":"Czesci samochodowe","itemsType":"VEHICLE",
-               "inputType":"ID"},
-              {"categoryId":"258","name":"Opony i felgi","itemsType":"VEHICLE",
-               "inputType":"TEXT","validationRules":{"maxRows":10,"maxCharactersPerLine":80}},
+              {"categoryId":"620","name":"Czesci samochodowe","itemsType":"CAR",
+               "inputType":"ID","validationRules":{"maxRows":2000,"maxCharactersPerLine":null}},
+              {"categoryId":"258","name":"Opony i felgi","itemsType":"CAR",
+               "inputType":"TEXT","validationRules":{"maxRows":2000,"maxCharactersPerLine":100}},
               {"categoryId":"259","name":"Nowy rodzaj","itemsType":"OTHER",
                "inputType":"HOLOGRAM"}]}
             """;
@@ -87,10 +90,10 @@ class CompatibilityClientTest {
             """;
     private static final String BUSY = "{\"errors\":[]}";
 
-    private static final String CATEGORY_ID_ID_TYPE = "257";
+    private static final String CATEGORY_ID_ID_TYPE = "620";
     private static final String CATEGORY_ID_TEXT_TYPE = "258";
-    private static final int EXPECTED_MAX_ROWS = 10;
-    private static final int EXPECTED_MAX_CHARS_PER_LINE = 80;
+    private static final int EXPECTED_MAX_ROWS = 2000;
+    private static final int EXPECTED_MAX_CHARS_PER_LINE = 100;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -141,10 +144,11 @@ class CompatibilityClientTest {
             CompatibleCategory byId = categories.get(0);
             assertEquals(CATEGORY_ID_ID_TYPE, byId.categoryId());
             assertEquals("Czesci samochodowe", byId.name());
-            assertEquals("VEHICLE", byId.itemsType());
+            assertEquals("CAR", byId.itemsType());
             assertEquals(CompatibilityInputType.ID, byId.inputType());
-            // an ID category carries no free-text bounds
-            assertNull(byId.validationRules());
+            // an ID category caps the list size but has no per-line text bound
+            assertEquals(Integer.valueOf(EXPECTED_MAX_ROWS), byId.validationRules().maxRows());
+            assertNull(byId.validationRules().maxCharactersPerLine());
 
             CompatibleCategory byText = categories.get(1);
             assertEquals(CATEGORY_ID_TEXT_TYPE, byText.categoryId());
@@ -153,7 +157,8 @@ class CompatibilityClientTest {
             assertEquals(Integer.valueOf(EXPECTED_MAX_CHARS_PER_LINE),
                     byText.validationRules().maxCharactersPerLine());
 
-            // an unmodelled inputType degrades to UNKNOWN rather than failing the read
+            // an unmodelled inputType degrades to UNKNOWN rather than failing the read;
+            // this category also omits validationRules entirely (absent block -> null)
             CompatibleCategory unknown = categories.get(2);
             assertEquals(CompatibilityInputType.UNKNOWN, unknown.inputType());
             assertNull(unknown.validationRules());
