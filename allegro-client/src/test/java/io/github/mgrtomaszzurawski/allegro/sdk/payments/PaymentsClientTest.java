@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -26,9 +27,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.PaymentOperationFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.RefundDeposit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.RefundFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.RefundLineItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.RefundRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.RefundSurcharge;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.PaymentOperation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.PaymentRefund;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.RefundReason;
@@ -72,6 +77,15 @@ class PaymentsClientTest {
     private static final String ORDER_ID = "a8f6c3e2-1111-2222-3333-444455556666";
     private static final String COMMAND_ID = "b1c2d3e4-1111-2222-3333-444455556666";
     private static final String REFUND_ID = "c1d2e3f4-1111-2222-3333-444455556666";
+    private static final String LINE_ITEM_ID = "d4e5f6a7-1111-2222-3333-444455556666";
+    private static final String SURCHARGE_ID = "e5f6a7b8-1111-2222-3333-444455556666";
+    private static final String CURRENCY = "PLN";
+    private static final String LINE_ITEM_AMOUNT = "19.99";
+    private static final String DELIVERY_AMOUNT = "9.90";
+    private static final String DEPOSIT_AMOUNT = "1.00";
+    private static final String SURCHARGE_AMOUNT = "4.00";
+    private static final String SELLER_COMMENT = "One item out of stock";
+    private static final String LINE_ITEM_TYPE_AMOUNT = "AMOUNT";
     private static final String REFUND_STATUS_NEW = "NEW";
 
     private static final long RETRY_AFTER_SECONDS = 30L;
@@ -323,6 +337,75 @@ class PaymentsClientTest {
                     .withRequestBody(matchingJsonPath("$.commandId", equalTo(COMMAND_ID)))
                     .withRequestBody(matchingJsonPath("$.reason",
                             equalTo(RefundReason.COMPLAINT.name()))));
+        }
+    }
+
+    @Test
+    void refund_whenPartialComponentsSet_postsBreakdownOnWire(WireMockRuntimeInfo wmInfo) {
+        // given — a partial refund with a line item, deposit, surcharge, delivery, comment
+        stubToken();
+        stubFor(post(urlPathEqualTo(REFUNDS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(REFUND_BODY)));
+        RefundRequest request = RefundRequest.builder()
+                .paymentId(PAYMENT_ID).orderId(ORDER_ID)
+                .commandId(COMMAND_ID).reason(RefundReason.PRODUCT_NOT_AVAILABLE)
+                .lineItem(RefundLineItem.byAmount(LINE_ITEM_ID, Money.of(LINE_ITEM_AMOUNT, CURRENCY)))
+                .deposit(RefundDeposit.of(LINE_ITEM_ID, Money.of(DEPOSIT_AMOUNT, CURRENCY)))
+                .surcharge(RefundSurcharge.of(SURCHARGE_ID, Money.of(SURCHARGE_AMOUNT, CURRENCY)))
+                .delivery(Money.of(DELIVERY_AMOUNT, CURRENCY))
+                .sellerComment(SELLER_COMMENT)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.payments().refund(request);
+
+            // then — every partial component reaches the wire in its typed shape
+            verify(1, postRequestedFor(urlPathEqualTo(REFUNDS_PATH))
+                    .withRequestBody(matchingJsonPath("$.lineItems[0].id", equalTo(LINE_ITEM_ID)))
+                    .withRequestBody(matchingJsonPath("$.lineItems[0].type",
+                            equalTo(LINE_ITEM_TYPE_AMOUNT)))
+                    .withRequestBody(matchingJsonPath("$.lineItems[0].value.amount",
+                            equalTo(LINE_ITEM_AMOUNT)))
+                    .withRequestBody(matchingJsonPath("$.lineItems[0].value.currency",
+                            equalTo(CURRENCY)))
+                    .withRequestBody(matchingJsonPath("$.deposits[0].lineItemId",
+                            equalTo(LINE_ITEM_ID)))
+                    .withRequestBody(matchingJsonPath("$.deposits[0].totalValue.amount",
+                            equalTo(DEPOSIT_AMOUNT)))
+                    .withRequestBody(matchingJsonPath("$.surcharges[0].id", equalTo(SURCHARGE_ID)))
+                    .withRequestBody(matchingJsonPath("$.surcharges[0].value.amount",
+                            equalTo(SURCHARGE_AMOUNT)))
+                    .withRequestBody(matchingJsonPath("$.delivery.value.amount",
+                            equalTo(DELIVERY_AMOUNT)))
+                    .withRequestBody(matchingJsonPath("$.sellerComment", equalTo(SELLER_COMMENT))));
+        }
+    }
+
+    @Test
+    void refund_whenFullRefund_omitsEmptyComponentArrays(WireMockRuntimeInfo wmInfo) {
+        // given — only the required fields
+        stubToken();
+        stubFor(post(urlPathEqualTo(REFUNDS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(REFUND_BODY)));
+        RefundRequest request = RefundRequest.builder()
+                .paymentId(PAYMENT_ID).orderId(ORDER_ID)
+                .commandId(COMMAND_ID).reason(RefundReason.REFUND)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.payments().refund(request);
+
+            // then — the pre-initialized empty collections are not serialized (an empty
+            // [] would signal "refund these components"), yet the required fields remain
+            verify(1, postRequestedFor(urlPathEqualTo(REFUNDS_PATH))
+                    .withRequestBody(matchingJsonPath("$.payment.id", equalTo(PAYMENT_ID)))
+                    .withRequestBody(notMatching(".*\"lineItems\".*"))
+                    .withRequestBody(notMatching(".*\"deposits\".*"))
+                    .withRequestBody(notMatching(".*\"surcharges\".*")));
         }
     }
 

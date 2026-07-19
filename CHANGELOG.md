@@ -199,6 +199,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   data in `toString()`. The company's deprecated single `taxId` string (superseded by `taxIds`), the
   delivery cancellation/package-count, guaranteed/dispatch time sub-windows, and invoice feature
   flags are intentionally not modelled. This completes the `Order` depth fill.
+- `RefundRequest` depth — partial refunds: `payments().refund(RefundRequest)` now accepts a partial
+  breakdown alongside a full refund — per line item (`RefundLineItem.byAmount`/`byQuantity`), per
+  deposit (`RefundDeposit`), per surcharge (`RefundSurcharge`), and the `delivery()`/`overpaid()`/
+  `additionalServices()` amounts (each `Money`), plus an optional `sellerComment()`. Component ids are
+  UUID-validated and each amount is required, fail-fast at construction. The refund body is now
+  serialized with the partial (NON_EMPTY) writer, so a full refund no longer emits the generated
+  DTO's pre-initialized empty component arrays (an empty `[]` would signal "refund these
+  components"). Builder round-trip + per-field validation tests and WireMock wire-body tests
+  (partial breakdown present; full refund omits the empty arrays). `docs/payments.md`.
 
 ### C — shipping
 
@@ -506,6 +515,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `IssueRight`, `IssueStatus`, `ChatAuthorRole`), request enums (`IssueMessageType`,
   `ClaimStatus`), fail-fast `IssueFilter`/`IssueMessageRequest`/`ClaimStatusChange`/
   `IssueAttachmentDeclaration` builders, and a `disputes` demo scenario.
+- Forward-compatibility (C3) coverage: full-stack WireMock tests prove that a wire enum value
+  this SDK version predates degrades end-to-end to `UNKNOWN` instead of failing deserialization —
+  disputes `IssueStatus` and `ChatAuthorRole`, messaging `MessageType`, `MessageStatus`, and
+  `AttachmentStatus`.
 
 ### K — sale-settings
 
