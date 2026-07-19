@@ -111,6 +111,18 @@ class DisputesClientTest {
               "userMessage":"Nie znaleziono","path":null}]}
             """;
     private static final String BUSY_RESPONSE = "{\"errors\":[]}";
+    // forward-compat (C3): a wire enum value this SDK version predates must degrade to UNKNOWN,
+    // not fail deserialization (Layer-1 enumUnknownDefaultCase → the mappers' `default -> UNKNOWN`).
+    private static final String FUTURE_WIRE_STATUS = "FUTURE_DISPUTE_STATUS";
+    private static final String FUTURE_WIRE_ROLE = "FUTURE_AUTHOR_ROLE";
+    private static final String UNKNOWN_STATUS_ISSUE_RESPONSE = """
+            {"id":"%s","type":"CLAIM","right":"COMPLAINT",
+             "currentState":{"status":"%s"}}
+            """.formatted(ISSUE_ID, FUTURE_WIRE_STATUS);
+    private static final String UNKNOWN_ROLE_CHAT_RESPONSE = """
+            {"chat":[{"id":"chat-1","text":"hello",
+              "author":{"login":"someone","role":"%s"}}]}
+            """.formatted(FUTURE_WIRE_ROLE);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -271,6 +283,43 @@ class DisputesClientTest {
             assertEquals(IssueStatus.CLAIM_SUBMITTED, issue.state().status());
             assertTrue(issue.state().returnRequired());
             verify(1, getRequestedFor(urlEqualTo(ISSUE_PATH)));
+        }
+    }
+
+    // ---- forward compatibility (C3): unknown wire enum values degrade to UNKNOWN ----
+
+    @Test
+    void get_whenStatusWireValueUnknown_mapsStateStatusToUnknown(WireMockRuntimeInfo wmInfo) {
+        // given — the server introduces a dispute status this SDK version predates
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(ISSUE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_STATUS_ISSUE_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — deserialization must not throw on the unrecognized enum value
+            Issue issue = allegro.disputes().get(ISSUE_ID);
+
+            // then — the unknown wire value degrades to UNKNOWN end-to-end
+            assertEquals(IssueStatus.UNKNOWN, issue.state().status());
+        }
+    }
+
+    @Test
+    void streamChat_whenAuthorRoleWireValueUnknown_mapsRoleToUnknown(WireMockRuntimeInfo wmInfo) {
+        // given — a chat author role introduced after this SDK version
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CHAT_PATH)).withQueryParam(OFFSET_PARAM, equalTo("0"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_ROLE_CHAT_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<IssueChatEntry> chat = allegro.disputes().streamChat(ISSUE_ID).toList();
+
+            // then — an unrecognized author role degrades to UNKNOWN, not a failure
+            assertEquals(1, chat.size());
+            assertEquals(ChatAuthorRole.UNKNOWN, chat.get(0).author().role());
         }
     }
 
