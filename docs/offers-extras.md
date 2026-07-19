@@ -217,14 +217,19 @@ use `sale:offers:*` and need a **user (seller) access token**.
 
 A flexible bundle is made of slots, each offering the buyer a choice of offers,
 sold together at a whole-bundle or per-slot discount. Reach them via
-`client.offers().flexibleBundles()`. This SDK version covers reading and deleting
-them (creating/updating the nested slot/offer/discount definition is a planned
-follow-up):
+`client.offers().flexibleBundles()` — read, create, update, and delete:
 
 ```java
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.FlexibleBundles;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleOfferRef;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.builder.FlexibleBundleSlotRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.MarketplaceDiscount;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.WholeBundleDiscount;
+import java.util.List;
 
 FlexibleBundles flexible = client.offers().flexibleBundles();
 
@@ -235,8 +240,31 @@ for (FlexibleBundleSummary summary : flexible.streamBundles().toList()) {
 FlexibleBundle bundle = flexible.get(bundleId);
 bundle.slots().forEach(slot ->
         System.out.println("slot " + slot.order() + ": " + slot.offers().size() + " offer(s)"));
-flexible.delete(bundleId);
+
+// Create a two-slot bundle with a whole-bundle discount
+FlexibleBundle created = flexible.create(FlexibleBundleRequest.builder()
+        .slot(FlexibleBundleSlotRequest.builder()
+                .order(0).entryPoint(true).requiredQuantity(1)
+                .offer(FlexibleBundleOfferRef.of(phoneOfferId, false))
+                .build())
+        .slot(FlexibleBundleSlotRequest.builder()
+                .order(1).requiredQuantity(1)
+                .offer(FlexibleBundleOfferRef.of(caseOfferId, false))
+                .build())
+        .discount(FlexibleBundleDiscount.wholeBundle(
+                new WholeBundleDiscount(2, List.of(new MarketplaceDiscount("allegro-pl", 10)))))
+        .build());
+
+// Update replaces the whole bundle (build a new FlexibleBundleRequest); delete removes it
+flexible.update(created.id(), updatedRequest);
+flexible.delete(created.id());
 ```
+
+`create` and `update` take a `FlexibleBundleRequest` (at least one
+`FlexibleBundleSlotRequest`, each with at least one `FlexibleBundleOfferRef`, and
+an optional discount) and return the full `FlexibleBundle` — including the
+per-marketplace availability Allegro computes for each offer. `update` is a
+replace (`PUT`): the request defines the bundle's complete new state.
 
 `streamBundles()` is a lazy **cursor** stream of summaries (identity + discount +
 one representative offer id per slot); `get(bundleId)` returns the full bundle

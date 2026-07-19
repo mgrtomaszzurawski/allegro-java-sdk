@@ -114,6 +114,68 @@ client.fulfillment().addTaxId("PL1234567890");
 client.fulfillment().updateTaxId("PL9876543210");
 ```
 
+## Advance Ship Notices
+
+An Advance Ship Notice (ASN) declares a shipment of goods into the warehouse. Reach the
+lifecycle through `fulfillment().advanceShipNotices()`.
+
+### Stream and read
+
+`streamNotices()` is a lazy stream (pages fetched on demand); filter it by lifecycle status.
+`get(id)` reads a single notice and captures the server's `ETag` as `version()` — you need
+that token to update the notice.
+
+```java
+AdvanceShipNotices asn = client.fulfillment().advanceShipNotices();
+
+try (Stream<AdvanceShipNotice> drafts = asn.streamNotices(
+        AsnFilter.builder().addStatus(AsnStatus.DRAFT).build())) {
+    drafts.forEach(notice -> System.out.println(notice.displayNumber()));
+}
+
+AdvanceShipNotice notice = asn.get("2f1e...-asn-uuid");
+```
+
+### Create, update and submit
+
+`create(...)` returns the draft with its `version()`. Updates guard against a concurrent change
+with that version as an `If-Match` token — pass the `version()` from the notice you just read or
+created. `submit(...)` sends the draft to the warehouse and blocks until the async submit command
+reaches a terminal `SubmitStatus`; treat `FAILED` as an unsuccessful submission.
+
+```java
+AdvanceShipNotice draft = asn.create(AsnRequest.builder()
+        .addItem("product-uuid", 12)
+        .handlingUnit(new HandlingUnit("BOX", BigDecimal.valueOf(2), "ONE_FULFILMENT"))
+        .build());
+
+AdvanceShipNotice updated = asn.update(draft.id(), AsnRequest.builder()
+        .addItem("product-uuid", 15)
+        .build(), draft.version());
+
+SubmitStatus outcome = asn.submit(draft.id());          // or submit(id, Duration.ofMinutes(2))
+if (outcome == SubmitStatus.FAILED) {
+    // the warehouse rejected the notice
+}
+```
+
+Once submitted, amend the notice with `updateSubmitted(id, SubmittedAsnUpdate, version)`, `cancel(id)`
+it, or (for a draft) `delete(id)` it.
+
+### Labels and receiving state
+
+`labels(id)` downloads the printable labels as PDF bytes; `receivingState(id)` reports how far the
+warehouse has got unpacking the goods.
+
+```java
+byte[] pdf = asn.labels(notice.id());
+ReceivingState state = asn.receivingState(notice.id());   // stage(), content() per product
+```
+
+> The notice's polymorphic `shipping` declaration (the `COURIER_BY_SELLER` / `OWN_TRANSPORT` /
+> `THIRD_PARTY_DELIVERY` variants, each with its own courier / carrier / arrival details) is a
+> deferred follow-up and is not yet part of the read model or the write builders.
+
 ## Errors
 
 | Situation | Exception |

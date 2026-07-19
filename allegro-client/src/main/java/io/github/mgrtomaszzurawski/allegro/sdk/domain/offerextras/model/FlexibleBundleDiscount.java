@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.FlexibleBundleDiscountDTORaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.FlexibleBundleSlotsDiscountDTORaw;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,8 +29,35 @@ public record FlexibleBundleDiscount(
         @Nullable WholeBundleDiscount wholeBundle,
         List<SlotDiscount> slotDiscounts) {
 
+    private static final String ERR_WHOLE_BUNDLE_NULL = "wholeBundle must not be null";
+    private static final String ERR_SLOT_DISCOUNTS_NULL = "slotDiscounts must not be null";
+
     public FlexibleBundleDiscount {
         slotDiscounts = List.copyOf(slotDiscounts);
+    }
+
+    /**
+     * A whole-bundle discount, applied once across the bundle. Use this when
+     * creating or updating a flexible bundle.
+     *
+     * @param wholeBundle the whole-bundle discount configuration
+     * @return a {@link FlexibleBundleDiscountType#WHOLE_BUNDLE_DISCOUNT} discount
+     */
+    public static FlexibleBundleDiscount wholeBundle(WholeBundleDiscount wholeBundle) {
+        Objects.requireNonNull(wholeBundle, ERR_WHOLE_BUNDLE_NULL);
+        return new FlexibleBundleDiscount(FlexibleBundleDiscountType.WHOLE_BUNDLE_DISCOUNT, wholeBundle, List.of());
+    }
+
+    /**
+     * A per-slot discount, configured separately for each slot. Use this when
+     * creating or updating a flexible bundle.
+     *
+     * @param slotDiscounts the per-slot discounts
+     * @return a {@link FlexibleBundleDiscountType#SLOT_DISCOUNT} discount
+     */
+    public static FlexibleBundleDiscount perSlot(List<SlotDiscount> slotDiscounts) {
+        Objects.requireNonNull(slotDiscounts, ERR_SLOT_DISCOUNTS_NULL);
+        return new FlexibleBundleDiscount(FlexibleBundleDiscountType.SLOT_DISCOUNT, null, slotDiscounts);
     }
 
     /** Map the generated Layer-1 discount DTO to the public record. */

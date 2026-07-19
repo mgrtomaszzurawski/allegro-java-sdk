@@ -31,6 +31,14 @@ import java.util.stream.Stream;
 public interface Fulfillment {
 
     /**
+     * The Advance Ship Notice lifecycle — declaring, submitting, tracking and
+     * receiving shipments into the warehouse.
+     *
+     * @return the advance-ship-notices sub-facade
+     */
+    AdvanceShipNotices advanceShipNotices();
+
+    /**
      * The seller's active preference for how removable goods leave the
      * warehouse.
      *

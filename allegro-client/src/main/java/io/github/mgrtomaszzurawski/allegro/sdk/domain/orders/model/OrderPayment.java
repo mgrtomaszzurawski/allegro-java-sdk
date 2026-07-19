@@ -5,7 +5,6 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CheckoutFormPaymentReferenceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -50,15 +49,7 @@ public record OrderPayment(
                 PaymentType.from(raw.getType()),
                 raw.getProvider() == null ? null : PaymentProvider.from(raw.getProvider()),
                 raw.getFinishedAt(),
-                money(raw.getPaidAmount()),
+                Prices.money(raw.getPaidAmount()),
                 raw.getFeatures());
-    }
-
-    /** Money from a price leaf, or {@code null} when the leaf or its parts are absent. */
-    private static @Nullable Money money(@Nullable PriceRaw price) {
-        if (price == null || price.getAmount() == null || price.getCurrency() == null) {
-            return null;
-        }
-        return Money.of(price.getAmount(), price.getCurrency());
     }
 }

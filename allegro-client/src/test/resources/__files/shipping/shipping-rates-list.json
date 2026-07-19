@@ -1,0 +1,16 @@
+{
+  "shippingRates": [
+    {
+      "id": "rate-set-1",
+      "name": "Domestic rates",
+      "features": { "managedByAllegro": false, "isFulfillment": false },
+      "marketplaces": [ { "id": "allegro-pl" } ]
+    },
+    {
+      "id": "rate-set-2",
+      "name": "Allegro managed",
+      "features": { "managedByAllegro": true, "isFulfillment": true },
+      "marketplaces": []
+    }
+  ]
+}

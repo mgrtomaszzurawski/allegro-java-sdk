@@ -79,11 +79,14 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
         SCENARIOS.put(OfferTagsDemo.SCENARIO, OfferTagsDemo::run);
         SCENARIOS.put(OfferExtrasDemo.SCENARIO, OfferExtrasDemo::run);
+        SCENARIOS.put(FlexibleBundleWriteDemo.SCENARIO, FlexibleBundleWriteDemo::run);
         SCENARIOS.put(SCENARIO_CAMPAIGNS, CampaignsDemo::run);
         SCENARIOS.put(SCENARIO_POS_ROUNDTRIP, PointsOfServiceDemo::run);
         SCENARIOS.put(FulfillmentDemo.SCENARIO, FulfillmentDemo::run);
         SCENARIOS.put(SCENARIO_CONTACTS, ContactsDemo::run);
         SCENARIOS.put(DeliveryMethodsDemo.SCENARIO, DeliveryMethodsDemo::run);
+        SCENARIOS.put(DeliverySettingsDemo.SCENARIO, DeliverySettingsDemo::run);
+        SCENARIOS.put(ShippingRatesDemo.SCENARIO, ShippingRatesDemo::run);
         SCENARIOS.put(MessagingDemo.SCENARIO, MessagingDemo::run);
         SCENARIOS.put(DisputesDemo.SCENARIO, DisputesDemo::run);
         SCENARIOS.put(SCENARIO_SETTINGS_WARRANTY, SettingsWarrantyDemo::run);
