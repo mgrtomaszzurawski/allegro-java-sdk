@@ -32,9 +32,9 @@ public interface Compatibility {
      * Suggests the compatibility list for an offer or a product — the same hint the
      * sell form offers when classifying a car part.
      *
-     * @param request the target: exactly one of an offer id or a product id
+     * @param request the target, built via {@link CompatibilitySuggestionRequest}
+     *     (which validates the offer-xor-product invariant fail-fast at build time)
      * @return the suggested list (manual or product-based)
-     * @throws IllegalStateException if the request targets neither or both
      */
     CompatibilityList suggestionsFor(CompatibilitySuggestionRequest request);
 }
