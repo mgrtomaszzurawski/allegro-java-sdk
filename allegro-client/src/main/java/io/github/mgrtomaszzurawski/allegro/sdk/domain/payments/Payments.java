@@ -37,10 +37,12 @@ public interface Payments {
     Stream<PaymentRefund> streamRefunds(RefundFilter filter);
 
     /**
-     * Initiate a full refund of a payment.
+     * Initiate a refund of a payment — the whole payment, or, when the request
+     * carries line-item/deposit/surcharge/delivery/overpaid/additional-services
+     * components, only those parts (a partial refund).
      *
      * @param request the refund request (payment id, order id, idempotency command
-     *     id and reason)
+     *     id and reason, plus any partial-refund components)
      * @return the initiated refund, including the id and status Allegro assigned it
      */
     PaymentRefund refund(RefundRequest request);

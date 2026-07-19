@@ -120,9 +120,13 @@ public final class PaymentsImpl implements Payments {
 
     @Override
     public PaymentRefund refund(RefundRequest request) {
-        return PaymentRefund.from(http.postJsonAuthenticated(
-                ApiPaths.PAYMENT_REFUNDS,
-                PaymentsRequestFactory.initializeRefund(request),
-                RefundDetailsRaw.class, OP_REFUND));
+        // Partial serialization (NON_EMPTY): the generated request DTO pre-initializes
+        // lineItems/deposits/surcharges to empty lists — a full refund must not emit
+        // them (an empty [] would signal "refund these components"), and a partial
+        // refund sends only the components actually set.
+        return PaymentRefund.from(http.request(OP_REFUND)
+                .post(ApiPaths.PAYMENT_REFUNDS)
+                .jsonBodyPartial(PaymentsRequestFactory.initializeRefund(request))
+                .fetch(RefundDetailsRaw.class));
     }
 }
