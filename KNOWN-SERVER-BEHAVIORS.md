@@ -457,6 +457,15 @@ target is the server-provided `Location` URL, the coverage tool cannot resolve
 `uploadOfferAttachmentUsingPUT` statically — it is allow-listed there as reached-via-upload-URL
 and verified by this live run + the WireMock suite.
 
+### Offer events feed reachable; sandbox seller has none (verified 2026-07-19, sandbox)
+
+`offers().streamEvents(...)` (`GET /sale/offer-events`) is reachable and authenticates on the
+sandbox seller, returning an empty feed (`streamEvents: first 0 event(s)`) — the empty-response
+shape deserializes and the lazy stream ends cleanly. The polymorphic event-subtype mapping
+(offerId extracted per subtype) is WireMock-pinned: the sandbox seller has no offer activity to
+exercise it live. `operationStatus(offerId, operationId)` needs a live async operation id (an
+async create/edit that returns one) to verify and stays WireMock-pinned until a seed exists.
+
 ## Fulfillment (bucket I)
 
 ### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)

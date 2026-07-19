@@ -51,6 +51,7 @@ offers.getFields(offerId, OfferPart...)           // GET   /sale/product-offers/
 offers.deleteDraft(offerId)                       // DELETE /sale/offers/{offerId}
 offers.streamOffers(OfferFilter)                  // GET   /sale/offers                     Stream<OfferSummary>
 offers.streamEvents(OfferEventFilter)             // GET   /sale/offer-events               Stream<OfferEvent>
+offers.operationStatus(offerId, operationId)      // GET   /sale/product-offers/{offerId}/operations/{operationId}
 offers.smartClassification(offerId)               // GET   /sale/offers/{offerId}/smart
 offers.streamUnfilledParameters()                 // GET   /sale/offers/unfilled-parameters Stream<…>
 offers.changeBuyNowPrice(offerId, newPrice)       // PUT   /offers/{offerId}/change-price-commands/{commandId} (sync)

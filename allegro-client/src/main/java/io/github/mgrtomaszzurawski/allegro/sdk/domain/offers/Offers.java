@@ -12,8 +12,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslati
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
@@ -84,6 +87,25 @@ public interface Offers {
      * @return a lazy stream of offer summaries
      */
     Stream<OfferSummary> streamOffers(OfferFilter filter);
+
+    /**
+     * A lazy stream of events about the seller's offers (activated, ended, price/stock
+     * changed, …), newest resumable by event id. Filter by type with the given filter.
+     *
+     * @param filter which event types to include (use {@link OfferEventFilter#all()} for all)
+     * @return a lazy stream of offer events
+     */
+    Stream<OfferEvent> streamEvents(OfferEventFilter filter);
+
+    /**
+     * The processing status of an asynchronous offer operation (the {@code operationId} an
+     * async create/edit returns) — whether the background processing has finished.
+     *
+     * @param offerId     the offer the operation applies to
+     * @param operationId the operation id to check
+     * @return the processing status
+     */
+    OfferProcessingStatus operationStatus(String offerId, String operationId);
 
     /**
      * The Allegro Smart! classification report for one offer — whether it

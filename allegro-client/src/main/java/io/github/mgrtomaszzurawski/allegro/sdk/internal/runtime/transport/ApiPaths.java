@@ -65,6 +65,9 @@ public final class ApiPaths {
     public static final String SALE_IMAGES = "/sale/images";
     /** Offer attachments collection ({@code /sale/offer-attachments}); POST to declare. */
     public static final String OFFER_ATTACHMENTS = "/sale/offer-attachments";
+    /** Seller offer-events feed ({@code /sale/offer-events}); cursor-paged by {@code from}. */
+    public static final String SALE_OFFER_EVENTS = "/sale/offer-events";
+    private static final String OPERATIONS_SEGMENT = "operations";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
@@ -94,6 +97,11 @@ public final class ApiPaths {
     /** A single offer attachment ({@code /sale/offer-attachments/{attachmentId}}); GET, or PUT to upload. */
     public static String offerAttachment(String attachmentId) {
         return subPath(OFFER_ATTACHMENTS, attachmentId);
+    }
+
+    /** Processing status of an async offer operation ({@code /sale/product-offers/{offerId}/operations/{operationId}}). */
+    public static String offerOperation(String offerId, String operationId) {
+        return subPath(SALE_PRODUCT_OFFERS, offerId, OPERATIONS_SEGMENT, operationId);
     }
 
     /** Batch publish/unpublish command ({@code /sale/offer-publication-commands/{commandId}}). */

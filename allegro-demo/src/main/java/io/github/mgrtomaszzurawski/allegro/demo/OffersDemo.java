@@ -10,12 +10,14 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCred
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferMedia;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
@@ -54,6 +56,7 @@ final class OffersDemo {
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String UPLOAD_IMAGE_URL_PROPERTY = "demo.uploadImageUrl";
     private static final String DECLARE_ATTACHMENT_PROPERTY = "demo.declareAttachment";
+    private static final String STREAM_EVENTS_PROPERTY = "demo.streamEvents";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
             "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
@@ -92,6 +95,8 @@ final class OffersDemo {
                 uploadImage(client, uploadImageUrl);
             } else if (declareAttachment != null) {
                 attachmentFlow(client, declareAttachment);
+            } else if (System.getProperty(STREAM_EVENTS_PROPERTY) != null) {
+                streamEvents(client);
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -171,6 +176,16 @@ final class OffersDemo {
             System.out.println("uploadImage rejected — " + e.errors().size() + " error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - code=" + fieldError.code()
                     + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    private static void streamEvents(AllegroClient client) {
+        List<OfferEvent> events = client.offers().streamEvents(OfferEventFilter.all())
+                .limit(STREAM_LIMIT).toList();
+        System.out.println("streamEvents: first " + events.size() + " event(s)");
+        for (OfferEvent event : events) {
+            System.out.println("  id=" + event.id() + ", type=" + event.type()
+                    + ", offerId=" + event.offerId() + ", occurredAt=" + event.occurredAt());
         }
     }
 
