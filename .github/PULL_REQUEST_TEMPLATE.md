@@ -29,10 +29,9 @@ Required sections: Summary, Bucket & scope, Test plan.
 - [ ] fixtures the changed mapping relies on carry provenance — no
       `spec-derived: not yet wire-verified` marks remain on them
 - [ ] LIVE sandbox write→read ran green against the sandbox on THIS code —
-      REQUIRED for EVERY wire-touching PR, not just bucket-final (TESTING.md §2;
-      run via `bin/with-sandbox-lock.sh ./gradlew :allegro-demo:run
-      -Pdemo.scenario=<bucket>`); note new KNOWN-SERVER-BEHAVIORS entries.
-      Sandbox unreachable = STOP and report, do NOT merge on WireMock alone.
+      REQUIRED for EVERY wire-touching PR, not just bucket-final (TESTING.md §2);
+      note new KNOWN-SERVER-BEHAVIORS entries. Sandbox unreachable = STOP and
+      report, do NOT merge on WireMock alone.
 - [ ] Sonar pass green at PR-ready
 -->
 
