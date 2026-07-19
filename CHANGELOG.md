@@ -176,6 +176,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   `ResponsibleProducerRef` (GPSR responsible producer — `byId` / `byName`, the `oneOf`
   discriminator written for you). This is the product-reference form; defining a new product
   inline, `responsiblePerson`, `safetyInformation` details, and `deposits` are not modelled yet.
+- Media (`offers().media()`, 4 ops): upload offer images and document attachments. `uploadImage(bytes,
+  ImageFormat)` / `uploadImage(url)` (`POST /sale/images` on the upload host) returns an `OfferImage`
+  with the hosted URL to use in an offer's image list; `createAttachment(AttachmentDeclaration)`
+  (`POST /sale/offer-attachments`) declares a document (kind + file name), `uploadAttachment(id, bytes)`
+  (`PUT`) uploads the file, and `getAttachment(id)` reads it. New `OfferImage` / `OfferAttachment`
+  records, `AttachmentDeclaration`, and `ImageFormat` / `AttachmentType` (forward-compat `UNKNOWN`)
+  enums. Core: `HttpRuntime.uploadBaseUrl()` (derived from the API base) + `HttpCall.onUploadHost()`
+  route the binary media endpoints to Allegro's `upload.*` host.
 
 ### B — orders-payments
 

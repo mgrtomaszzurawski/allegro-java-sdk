@@ -20,6 +20,17 @@ public interface HttpRuntime {
     /** REST API base URL for the configured environment, no trailing slash. */
     String baseUrl();
 
+    /**
+     * Upload host base URL for the binary media endpoints ({@code POST /sale/images},
+     * the {@code PUT} attachment upload) — Allegro serves those from {@code upload.*}
+     * rather than {@code api.*}. Derived from {@link #baseUrl()} by default (so a
+     * WireMock test host, which is neither, is used unchanged and still receives the
+     * request); the real environments map {@code //api.} to {@code //upload.}.
+     */
+    default String uploadBaseUrl() {
+        return baseUrl().replaceFirst("//api\\.", "//upload.");
+    }
+
     /** Retry executor for HTTP calls. */
     RetryHandler retryHandler();
 
