@@ -468,3 +468,11 @@ sections. Empty subsections are dropped by the release engineer when folding
   when the availability range is not `DISABLED` (live-verified — the server rejects an enabled
   policy without options). Documented in `docs/settings.md`; `settings-return-policy`
   write→read→update→delete demo scenario.
+- `settings().compliance()` product-compliance (GPSR) sub-facade: responsible **persons**
+  (`streamResponsiblePersons()`, `createResponsiblePerson(...)`, `updateResponsiblePerson(...)`)
+  and responsible **producers** (`streamResponsibleProducers()`, `responsibleProducer(id)`,
+  `createResponsibleProducer(...)`, `updateResponsibleProducer(...)`). Immutable
+  `ResponsiblePerson` / `ResponsibleProducer` records over shared `ResponsiblePartyAddress`
+  and `ResponsiblePartyContact` value types (a contact requires an `email` or `formUrl`), with
+  fail-fast request builders. Lazy offset/limit paging (`limit` ≤ 1000). Documented in
+  `docs/settings.md`; `settings-compliance` write→read demo scenario (green on the sandbox).

@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.AfterSaleConditions;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.Compliance;
 
 /**
  * Seller sale settings — reached via {@code AllegroClient.settings()}.
@@ -13,7 +14,6 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.AfterSa
  * after-sale service conditions, additional services, product-compliance
  * responsible parties, size tables and tax settings. Each is a nested
  * sub-facade; the bucket ships them incrementally per the task-division plan.
- * This starter slice exposes {@link #afterSale()} warranties.
  *
  * @since 0.2.0
  */
@@ -26,4 +26,11 @@ public interface SaleSettings {
      * @return the after-sale conditions sub-facade
      */
     AfterSaleConditions afterSale();
+
+    /**
+     * Product-compliance (GPSR) responsible persons and producers.
+     *
+     * @return the compliance sub-facade
+     */
+    Compliance compliance();
 }

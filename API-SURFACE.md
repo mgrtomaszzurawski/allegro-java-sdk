@@ -422,10 +422,10 @@ additional.deleteTranslation(groupId, language)   // DELETE …/translations/{la
 
 // Product compliance (GPSR)
 Compliance compliance = settings.compliance();
-compliance.responsiblePersons()                   // GET  /sale/responsible-persons
+compliance.streamResponsiblePersons()             // GET  /sale/responsible-persons (lazy Stream)
 compliance.createResponsiblePerson(Request)       // POST /sale/responsible-persons
 compliance.updateResponsiblePerson(id, Request)   // PUT  /sale/responsible-persons/{id}
-compliance.responsibleProducers() / .producer(id) // GET  /sale/responsible-producers[/{id}]
+compliance.streamResponsibleProducers() / .responsibleProducer(id) // GET /sale/responsible-producers[/{id}]
 compliance.createResponsibleProducer(Request)     // POST /sale/responsible-producers
 compliance.updateResponsibleProducer(id, Request) // PUT  /sale/responsible-producers/{id}
 
