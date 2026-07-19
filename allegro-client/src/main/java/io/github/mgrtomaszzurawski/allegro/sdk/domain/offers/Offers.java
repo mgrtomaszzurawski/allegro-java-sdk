@@ -116,6 +116,13 @@ public interface Offers {
      */
     PromoOptions promoOptions();
 
+    /**
+     * Offer media — uploading offer images and document attachments.
+     *
+     * @return the media sub-facade
+     */
+    OfferMedia media();
+
     // [append point: offers sub-facades] Bucket A appends its own sub-facade
     // accessors here (batch(), promoOptions(), media()); bucket F appends its
     // sub-accessors (tags(), translations(), bundles(), flexibleBundles(),

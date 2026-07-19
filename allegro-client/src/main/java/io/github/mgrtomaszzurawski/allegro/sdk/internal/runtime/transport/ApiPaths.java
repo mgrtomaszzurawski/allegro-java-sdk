@@ -61,6 +61,10 @@ public final class ApiPaths {
     /** Promotion packages available to the seller ({@code /sale/offer-promotion-packages}). */
     public static final String OFFER_PROMOTION_PACKAGES = "/sale/offer-promotion-packages";
     private static final String PROMO_OPTIONS_SEGMENT = "promo-options";
+    /** Offer image upload ({@code /sale/images}); on the upload host — POST binary or a URL. */
+    public static final String SALE_IMAGES = "/sale/images";
+    /** Offer attachments collection ({@code /sale/offer-attachments}); POST to declare. */
+    public static final String OFFER_ATTACHMENTS = "/sale/offer-attachments";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
@@ -85,6 +89,11 @@ public final class ApiPaths {
     /** Promotion packages applied to one offer ({@code /sale/offers/{offerId}/promo-options}). */
     public static String offerPromoOptions(String offerId) {
         return subPath(SALE_OFFERS, offerId, PROMO_OPTIONS_SEGMENT);
+    }
+
+    /** A single offer attachment ({@code /sale/offer-attachments/{attachmentId}}); GET, or PUT to upload. */
+    public static String offerAttachment(String attachmentId) {
+        return subPath(OFFER_ATTACHMENTS, attachmentId);
     }
 
     /** Batch publish/unpublish command ({@code /sale/offer-publication-commands/{commandId}}). */

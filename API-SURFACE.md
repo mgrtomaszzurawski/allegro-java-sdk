@@ -78,7 +78,7 @@ promo.modifyBatch(BatchPromoOptionsRequest)       // PUT  /sale/offers/promo-opt
 OfferMedia media = offers.media();
 media.uploadImage(bytes | url)                    // POST /sale/images
 media.createAttachment(AttachmentDeclaration)     // POST /sale/offer-attachments
-media.uploadAttachment(attachmentId, bytes)       // PUT  /sale/offer-attachments/{attachmentId}
+media.uploadAttachment(declared, bytes, contentType) // PUT to the declaration's one-time Location URL
 media.getAttachment(attachmentId)                 // GET  /sale/offer-attachments/{attachmentId}
 ```
 

@@ -421,6 +421,42 @@ above). The GPSR `responsibleProducer` (`type: ID/NAME` discriminator) and `mark
 serialization are WireMock-pinned; they reach the server only once a valid product lets the create
 pass the product lookup. Read-back of `productSet` stays deferred until that seed exists.
 
+### Image upload by URL works end-to-end on the upload host (verified 2026-07-19, sandbox)
+
+`offers().media().uploadImage(url)` (`POST /sale/images`) is a **full live write→read**: the SDK
+POSTs the source URL to the Allegro UPLOAD host (`upload.allegro.pl.allegrosandbox.pl`, derived
+from the API base by `HttpRuntime.uploadBaseUrl()` / `HttpCall.onUploadHost()`) and the server
+returns a hosted image, e.g.
+
+```
+location=https://a.allegroimg.allegrosandbox.pl/original/11d855/…   expiresAt=2026-07-20T04:34:19Z
+```
+
+So the upload-host routing and the `OfferImage` mapping (`location` + `expiresAt`) are confirmed
+against the live server — no seeded offer needed (an uploaded image is unattached and expires,
+per `expiresAt`, if unused). The binary-bytes variant (`uploadImage(bytes, ImageFormat)`) shares
+the same request path and is WireMock-pinned.
+
+### Attachment declare → upload → read is a full live round-trip (verified 2026-07-19, sandbox)
+
+The whole `offers().media()` attachment flow round-trips live:
+
+```
+createAttachment  id=8386927e-…  uploadUrl=https://upload.allegro.pl.allegrosandbox.pl/sale/offer-attachments/8386927e-…
+uploadAttachment  fileUrl=https://storage.googleapis.com/allegrosandbox-offer-attachments/c825…
+getAttachment     id=8386927e-…  type=USER_MANUAL  fileName=sdk-test-manual.pdf  fileUrl=https://storage.googleapis.com/…
+```
+
+Confirmed behaviours: (1) `POST /sale/offer-attachments` returns the **one-time upload URL in the
+`Location` header** (`upload.*/sale/offer-attachments/{id}`) — the SDK captures it (`fetchLocation`)
+and `uploadAttachment` PUTs the bytes to exactly that URL via `putAbsolute`, never composing it,
+per Allegro's docs. (2) The uploaded file is hosted on Google Cloud Storage
+(`storage.googleapis.com/allegrosandbox-offer-attachments/…`), not an Allegro host. (3)
+`getAttachment` reads the full mapping back (id / type / fileName / fileUrl). Because the upload
+target is the server-provided `Location` URL, the coverage tool cannot resolve
+`uploadOfferAttachmentUsingPUT` statically — it is allow-listed there as reached-via-upload-URL
+and verified by this live run + the WireMock suite.
+
 ## Fulfillment (bucket I)
 
 ### `/fulfillment/*` returns 403 for a seller not enrolled in One Fulfillment (verified 2026-07-18, sandbox)

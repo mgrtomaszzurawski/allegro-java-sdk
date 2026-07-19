@@ -319,6 +319,34 @@ The SDK issues Allegro's price-change command and returns once the change is acc
 rejected price surfaces as an `AllegroBadRequestException` carrying the field-level error
 (e.g. `input.buyNowPrice` below the offer's minimum).
 
+## Images and attachments
+
+`client.offers().media()` uploads the images and document attachments an offer references.
+An image is one step and yields a hosted URL to put in a `CreateOfferRequest`'s image list:
+
+```java
+OfferMedia media = client.offers().media();
+
+OfferImage image = media.uploadImage(jpegBytes, ImageFormat.JPEG);  // or media.uploadImage(sourceUrl)
+String hostedUrl = image.location();                                // use in CreateOfferRequest.imageUrls
+```
+
+An attachment (a manual, energy label, competition rules, …) is two steps — declare it, then
+upload the file bytes to the returned id:
+
+```java
+OfferAttachment declared = media.createAttachment(
+        AttachmentDeclaration.of(AttachmentType.USER_MANUAL, "manual.pdf"));
+OfferAttachment uploaded = media.uploadAttachment(declared, pdfBytes, "application/pdf");
+String fileUrl = uploaded.fileUrl();                                // hosted once the upload completes
+```
+
+Pass the whole `declared` attachment (not just its id) to `uploadAttachment` — it carries the
+one-time upload URL Allegro returned, which the SDK PUTs the bytes to (the URL is single-use and
+its format may change, so it is never composed by hand). `media.getAttachment(id)` reads an
+attachment back. An attachment kind Allegro adds after this SDK release reads back as
+`AttachmentType.UNKNOWN`.
+
 ## Errors
 
 | Situation | Exception |
