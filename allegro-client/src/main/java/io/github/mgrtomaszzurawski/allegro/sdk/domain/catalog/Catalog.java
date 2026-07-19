@@ -11,8 +11,8 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
  * its parameters, the product database, and vehicle/part compatibility lists.
  * It is what an offer is classified and described against.
  *
- * <p>Bucket E (catalog-products): {@link #categories()} and {@link #products()}
- * ship; {@code compatibility()} follows in the same bucket per the task-division
+ * <p>Bucket E (catalog-products): {@link #categories()}, {@link #products()},
+ * and {@link #compatibility()} ship in the same bucket per the task-division
  * plan.
  *
  * @since 0.2.0
@@ -32,4 +32,12 @@ public interface Catalog {
      * @return the products sub-facade
      */
     CatalogProducts products();
+
+    /**
+     * Vehicle/part compatibility lists — the reference data for the fitment
+     * lists some categories let an offer carry.
+     *
+     * @return the compatibility sub-facade
+     */
+    Compatibility compatibility();
 }

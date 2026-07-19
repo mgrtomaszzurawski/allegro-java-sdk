@@ -5,9 +5,9 @@ parameters, the product database, and vehicle/part compatibility lists. It is wh
 classified and described against. All of it is public data, so an app-only **client-credentials**
 token is enough — no user login required.
 
-> **Status:** the `catalog().categories()` sub-facade ships — tree navigation, per-category
-> parameters, and name-based suggestions; `products()` and `compatibility()` follow in the same
-> bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
+> **Status:** the `catalog().categories()` and `catalog().products()` sub-facades ship, along
+> with the first `catalog().compatibility()` read; the remaining compatibility reads follow in the
+> same bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
 
 ## Categories
 
@@ -141,6 +141,31 @@ its `unit`, and — by type — either the numeric/text `restrictions` or the se
 `dictionary` values. It shares those value types with `CategoryParameter` but omits the two
 components that apply only to an offer's parameters (`requiredForProduct`, display options).
 
+## Compatibility
+
+Some categories — car parts and accessories — let an offer carry a **compatibility list**: the
+set of vehicles or products the item fits. Before building such a list, learn which categories
+support one, and how each expects its items:
+
+```java
+Compatibility compatibility = client.catalog().compatibility();
+
+for (CompatibleCategory category : compatibility.supportedCategories()) {
+    System.out.println(category.categoryId() + "  " + category.name()
+            + "  input=" + category.inputType());
+    if (category.inputType() == CompatibilityInputType.TEXT
+            && category.validationRules() != null) {
+        System.out.println("    up to " + category.validationRules().maxRows() + " rows, "
+                + category.validationRules().maxCharactersPerLine() + " chars each");
+    }
+}
+```
+
+`inputType` tells you how the list's items are supplied: `ID` (chosen from Allegro's
+compatible-products database) or `TEXT` (free text, bounded by `validationRules`); an input type
+this release does not model yet reads as `UNKNOWN`. `validationRules` is `null` for an `ID`
+category (its items are picked, not typed).
+
 ## Verifying against the sandbox
 
 The read-only demo scenario navigates the live category tree and confirms the mapped fields
@@ -148,5 +173,6 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 
 ```bash
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-categories
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products      -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility -Pdemo.account=seller
 ```

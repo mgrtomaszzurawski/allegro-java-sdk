@@ -323,6 +323,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   display `CategoryParameterOptions`). An unmodelled parameter type degrades to
   `CategoryParameterType.OTHER` (core `UnknownSubtypeToBaseHandler`). The
   `catalog-products` demo lists a searched product's category schema.
+- `catalog().compatibility()` sub-facade with `supportedCategories()` — the
+  categories in which an offer may carry a vehicle/part compatibility list
+  (`GET /sale/compatibility-list/supported-categories`), as immutable
+  `CompatibleCategory` records. Each carries how its items are supplied
+  (`CompatibilityInputType.ID`/`TEXT`, an unmodelled type degrading to `UNKNOWN`)
+  and, for a free-text list, its `CompatibilityValidationRules` bounds. Adds the
+  `catalog-compatibility` demo scenario. First slice of `compatibility()`; the
+  suggestion and compatible-product reads follow.
 
 ### F — offers-extras
 
