@@ -8,9 +8,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.AllegroClient;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferMedia;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -19,6 +23,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePr
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -48,6 +53,14 @@ final class OffersDemo {
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String UPLOAD_IMAGE_URL_PROPERTY = "demo.uploadImageUrl";
+    private static final String DECLARE_ATTACHMENT_PROPERTY = "demo.declareAttachment";
+    /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
+    private static final String MINIMAL_PDF =
+            "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+            + "2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+            + "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n"
+            + "trailer<</Root 1 0 R>>\n%%EOF\n";
+    private static final String PDF_CONTENT_TYPE = "application/pdf";
     private static final int DEFAULT_PRODUCT_QUANTITY = 1;
     private static final String CURRENCY_PLN = "PLN";
     private static final String OFFER_ID_SEPARATOR = ",";
@@ -74,8 +87,11 @@ final class OffersDemo {
             String publishIds = System.getProperty(PUBLISH_IDS_PROPERTY);
             String createName = System.getProperty(CREATE_NAME_PROPERTY);
             String uploadImageUrl = System.getProperty(UPLOAD_IMAGE_URL_PROPERTY);
+            String declareAttachment = System.getProperty(DECLARE_ATTACHMENT_PROPERTY);
             if (uploadImageUrl != null) {
                 uploadImage(client, uploadImageUrl);
+            } else if (declareAttachment != null) {
+                attachmentFlow(client, declareAttachment);
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -155,6 +171,26 @@ final class OffersDemo {
             System.out.println("uploadImage rejected — " + e.errors().size() + " error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - code=" + fieldError.code()
                     + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    private static void attachmentFlow(AllegroClient client, String fileName) {
+        OfferMedia media = client.offers().media();
+        try {
+            OfferAttachment declared = media.createAttachment(
+                    AttachmentDeclaration.of(AttachmentType.USER_MANUAL, fileName));
+            System.out.println("createAttachment: id=" + declared.id()
+                    + ", uploadUrl=" + declared.uploadUrl());
+            OfferAttachment uploaded = media.uploadAttachment(declared,
+                    MINIMAL_PDF.getBytes(StandardCharsets.UTF_8), PDF_CONTENT_TYPE);
+            System.out.println("uploadAttachment: fileUrl=" + uploaded.fileUrl());
+            OfferAttachment read = media.getAttachment(declared.id());
+            System.out.println("getAttachment: id=" + read.id() + ", type=" + read.type()
+                    + ", fileName=" + read.fileName() + ", fileUrl=" + read.fileUrl());
+        } catch (AllegroBadRequestException e) {
+            System.out.println("attachment flow rejected — " + e.errors().size() + " error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
         }
     }
 

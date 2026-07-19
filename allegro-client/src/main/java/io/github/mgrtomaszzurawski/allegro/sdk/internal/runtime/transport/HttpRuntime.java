@@ -28,7 +28,7 @@ public interface HttpRuntime {
      * request); the real environments map {@code //api.} to {@code //upload.}.
      */
     default String uploadBaseUrl() {
-        return baseUrl().replaceFirst("//api\\.", "//upload.");
+        return UploadHost.from(baseUrl());
     }
 
     /** Retry executor for HTTP calls. */

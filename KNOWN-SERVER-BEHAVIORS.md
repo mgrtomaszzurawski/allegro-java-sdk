@@ -435,9 +435,27 @@ location=https://a.allegroimg.allegrosandbox.pl/original/11d855/…   expiresAt=
 So the upload-host routing and the `OfferImage` mapping (`location` + `expiresAt`) are confirmed
 against the live server — no seeded offer needed (an uploaded image is unattached and expires,
 per `expiresAt`, if unused). The binary-bytes variant (`uploadImage(bytes, ImageFormat)`) shares
-the same request path and is WireMock-pinned. The attachment flow
-(`createAttachment` → `uploadAttachment` → `getAttachment`) is WireMock-pinned; the declare is a
-plain API-base POST and the upload reuses the same upload-host machinery just proven for images.
+the same request path and is WireMock-pinned.
+
+### Attachment declare → upload → read is a full live round-trip (verified 2026-07-19, sandbox)
+
+The whole `offers().media()` attachment flow round-trips live:
+
+```
+createAttachment  id=8386927e-…  uploadUrl=https://upload.allegro.pl.allegrosandbox.pl/sale/offer-attachments/8386927e-…
+uploadAttachment  fileUrl=https://storage.googleapis.com/allegrosandbox-offer-attachments/c825…
+getAttachment     id=8386927e-…  type=USER_MANUAL  fileName=sdk-test-manual.pdf  fileUrl=https://storage.googleapis.com/…
+```
+
+Confirmed behaviours: (1) `POST /sale/offer-attachments` returns the **one-time upload URL in the
+`Location` header** (`upload.*/sale/offer-attachments/{id}`) — the SDK captures it (`fetchLocation`)
+and `uploadAttachment` PUTs the bytes to exactly that URL via `putAbsolute`, never composing it,
+per Allegro's docs. (2) The uploaded file is hosted on Google Cloud Storage
+(`storage.googleapis.com/allegrosandbox-offer-attachments/…`), not an Allegro host. (3)
+`getAttachment` reads the full mapping back (id / type / fileName / fileUrl). Because the upload
+target is the server-provided `Location` URL, the coverage tool cannot resolve
+`uploadOfferAttachmentUsingPUT` statically — it is allow-listed there as reached-via-upload-URL
+and verified by this live run + the WireMock suite.
 
 ## Fulfillment (bucket I)
 

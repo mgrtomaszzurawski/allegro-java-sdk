@@ -34,7 +34,6 @@ class OfferMediaModelTest {
         assertEquals("image/jpeg", ImageFormat.JPEG.mediaType());
         assertEquals("image/png", ImageFormat.PNG.mediaType());
         assertEquals("image/webp", ImageFormat.WEBP.mediaType());
-        assertEquals("image/gif", ImageFormat.GIF.mediaType());
     }
 
     @Test

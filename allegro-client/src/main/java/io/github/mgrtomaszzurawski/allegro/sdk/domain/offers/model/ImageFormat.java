@@ -17,9 +17,7 @@ public enum ImageFormat {
     /** PNG image ({@code image/png}). */
     PNG("image/png"),
     /** WebP image ({@code image/webp}). */
-    WEBP("image/webp"),
-    /** GIF image ({@code image/gif}). */
-    GIF("image/gif");
+    WEBP("image/webp");
 
     private final String mediaType;
 

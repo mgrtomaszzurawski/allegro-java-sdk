@@ -153,42 +153,59 @@ class OfferMediaClientTest {
     }
 
     @Test
-    void createAttachment_declaresTypeAndFileName(WireMockRuntimeInfo wmInfo) {
-        // given
+    void createAttachment_declaresTypeAndCapturesUploadUrlFromLocation(WireMockRuntimeInfo wmInfo) {
+        // given — the declaration returns the one-time upload URL in the Location header
+        String uploadUrl = wmInfo.getHttpBaseUrl() + ATTACHMENT_PATH;
         stubFor(post(urlEqualTo(ATTACHMENTS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
                         .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, TestHttpConstants.VND_ALLEGRO_V1)
+                        .withHeader("Location", uploadUrl)
                         .withBody(ATTACHMENT_DECLARED)));
 
         // when
         OfferAttachment attachment = media(wmInfo)
                 .createAttachment(AttachmentDeclaration.of(AttachmentType.USER_MANUAL, FILE_NAME));
 
-        // then — the declaration carries the type + file name; the id comes back to upload to
+        // then — the declaration carries the type + file name; the Location becomes the upload URL
         verify(1, postRequestedFor(urlEqualTo(ATTACHMENTS_PATH))
                 .withRequestBody(matchingJsonPath(TYPE_JSON_PATH, equalTo("USER_MANUAL")))
                 .withRequestBody(matchingJsonPath(FILE_NAME_JSON_PATH, equalTo(FILE_NAME))));
         assertEquals(ATTACHMENT_ID, attachment.id());
         assertEquals(AttachmentType.USER_MANUAL, attachment.type());
         assertEquals(FILE_NAME, attachment.fileName());
+        assertEquals(uploadUrl, attachment.uploadUrl());
     }
 
     @Test
-    void uploadAttachment_putsBytesToTheAttachmentId(WireMockRuntimeInfo wmInfo) {
-        // given
+    void uploadAttachment_putsBytesToTheDeclaredUploadUrl(WireMockRuntimeInfo wmInfo) {
+        // given — a declared attachment carrying the one-time upload URL (as createAttachment returns it)
+        String uploadUrl = wmInfo.getHttpBaseUrl() + ATTACHMENT_PATH;
+        OfferAttachment declared = new OfferAttachment(
+                ATTACHMENT_ID, AttachmentType.USER_MANUAL, FILE_NAME, null, uploadUrl);
         stubFor(put(urlEqualTo(ATTACHMENT_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, TestHttpConstants.VND_ALLEGRO_V1)
                         .withBody(ATTACHMENT_RESPONSE)));
 
-        // when
-        OfferAttachment attachment = media(wmInfo).uploadAttachment(ATTACHMENT_ID, PDF_BYTES);
+        // when — upload to exactly the declared URL, with the caller's content type
+        OfferAttachment uploaded = media(wmInfo).uploadAttachment(declared, PDF_BYTES, CONTENT_TYPE_PDF);
 
-        // then — the file bytes go up as application/pdf; the hosted URL comes back
+        // then
         verify(1, putRequestedFor(urlEqualTo(ATTACHMENT_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(CONTENT_TYPE_PDF))
                 .withRequestBody(binaryEqualTo(PDF_BYTES)));
-        assertEquals(FILE_URL, attachment.fileUrl());
+        assertEquals(FILE_URL, uploaded.fileUrl());
+    }
+
+    @Test
+    void uploadAttachment_whenNotDeclared_throws(WireMockRuntimeInfo wmInfo) {
+        // given — an attachment with no upload URL (e.g. read back, not freshly declared)
+        OfferAttachment readBack = new OfferAttachment(
+                ATTACHMENT_ID, AttachmentType.USER_MANUAL, FILE_NAME, FILE_URL, null);
+
+        // then — uploadAttachment needs the declared attachment that carries the upload URL
+        assertThrows(IllegalArgumentException.class,
+                () -> media(wmInfo).uploadAttachment(readBack, PDF_BYTES, CONTENT_TYPE_PDF));
     }
 
     @Test

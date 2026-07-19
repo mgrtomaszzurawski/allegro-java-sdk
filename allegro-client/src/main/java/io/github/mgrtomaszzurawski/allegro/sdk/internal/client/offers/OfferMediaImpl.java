@@ -15,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Located;
 
 /**
  * Endpoint wrapper behind the {@link OfferMedia} facade. The image upload and the
@@ -30,8 +31,8 @@ public final class OfferMediaImpl implements OfferMedia {
     private static final String OP_CREATE_ATTACHMENT = "create offer attachment";
     private static final String OP_UPLOAD_ATTACHMENT = "upload offer attachment";
     private static final String OP_GET_ATTACHMENT = "get offer attachment";
-    /** Offer attachments are documents; the upload endpoint takes them as {@code application/pdf}. */
-    private static final String ATTACHMENT_CONTENT_TYPE = "application/pdf";
+    private static final String ERR_NOT_DECLARED =
+            "uploadAttachment needs the attachment returned by createAttachment (it carries the upload URL)";
 
     private final HttpSupport http;
 
@@ -59,18 +60,25 @@ public final class OfferMediaImpl implements OfferMedia {
 
     @Override
     public OfferAttachment createAttachment(AttachmentDeclaration declaration) {
-        return OfferAttachment.from(http.request(OP_CREATE_ATTACHMENT)
+        // The declaration's response carries the one-time upload URL in its Location header;
+        // capture it so uploadAttachment PUTs to exactly that address (Allegro's docs forbid
+        // composing it — the URL is single-use and its format may change).
+        Located<OfferAttachmentRaw> located = http.request(OP_CREATE_ATTACHMENT)
                 .post(ApiPaths.OFFER_ATTACHMENTS)
                 .jsonBody(declaration.toRaw())
-                .fetch(OfferAttachmentRaw.class));
+                .fetchLocation(OfferAttachmentRaw.class);
+        return OfferAttachment.from(located.value(), located.location());
     }
 
     @Override
-    public OfferAttachment uploadAttachment(String attachmentId, byte[] bytes) {
+    public OfferAttachment uploadAttachment(OfferAttachment declared, byte[] bytes, String contentType) {
+        String uploadUrl = declared.uploadUrl();
+        if (uploadUrl == null) {
+            throw new IllegalArgumentException(ERR_NOT_DECLARED);
+        }
         return OfferAttachment.from(http.request(OP_UPLOAD_ATTACHMENT)
-                .put(ApiPaths.offerAttachment(attachmentId))
-                .onUploadHost()
-                .binaryBody(bytes, ATTACHMENT_CONTENT_TYPE)
+                .putAbsolute(uploadUrl)
+                .binaryBody(bytes, contentType)
                 .fetch(OfferAttachmentRaw.class));
     }
 

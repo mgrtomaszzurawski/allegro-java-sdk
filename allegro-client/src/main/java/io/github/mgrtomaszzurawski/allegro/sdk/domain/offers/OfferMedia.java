@@ -27,11 +27,16 @@ public interface OfferMedia {
     /** Upload an image by URL (Allegro fetches it); returns the hosted image URL. */
     OfferImage uploadImage(String imageUrl);
 
-    /** Declare an offer attachment (kind + file name); returns it with an id to upload to. */
+    /** Declare an offer attachment (kind + file name); returns it with the one-time upload URL. */
     OfferAttachment createAttachment(AttachmentDeclaration declaration);
 
-    /** Upload the file {@code bytes} for a declared attachment; returns it with the hosted URL. */
-    OfferAttachment uploadAttachment(String attachmentId, byte[] bytes);
+    /**
+     * Upload the file {@code bytes} (of {@code contentType}, e.g. {@code application/pdf} or
+     * {@code image/png}) for a {@code declared} attachment — the one returned by
+     * {@link #createAttachment}, which carries the one-time upload URL. Returns it with the
+     * hosted file URL.
+     */
+    OfferAttachment uploadAttachment(OfferAttachment declared, byte[] bytes, String contentType);
 
     /** Read a declared offer attachment by id. */
     OfferAttachment getAttachment(String attachmentId);

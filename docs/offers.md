@@ -337,13 +337,15 @@ upload the file bytes to the returned id:
 ```java
 OfferAttachment declared = media.createAttachment(
         AttachmentDeclaration.of(AttachmentType.USER_MANUAL, "manual.pdf"));
-OfferAttachment uploaded = media.uploadAttachment(declared.id(), pdfBytes);
+OfferAttachment uploaded = media.uploadAttachment(declared, pdfBytes, "application/pdf");
 String fileUrl = uploaded.fileUrl();                                // hosted once the upload completes
 ```
 
-`media.getAttachment(id)` reads an attachment back. An attachment kind Allegro adds after this
-SDK release reads back as `AttachmentType.UNKNOWN`. Images and the attachment upload go to
-Allegro's upload host transparently.
+Pass the whole `declared` attachment (not just its id) to `uploadAttachment` — it carries the
+one-time upload URL Allegro returned, which the SDK PUTs the bytes to (the URL is single-use and
+its format may change, so it is never composed by hand). `media.getAttachment(id)` reads an
+attachment back. An attachment kind Allegro adds after this SDK release reads back as
+`AttachmentType.UNKNOWN`.
 
 ## Errors
 
