@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2026 Tomasz Zurawski
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
+
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Where a label summary report is placed relative to the printed labels.
+ *
+ * <p>Fail-soft on read (an unmodelled server value maps to {@link #UNKNOWN}) and
+ * strict on write ({@link #UNKNOWN} cannot be serialized).
+ *
+ * @since 0.4.0
+ */
+public enum LabelSummaryPlacement {
+
+    /** A single summary printed after the last label (spec value {@code LAST}). */
+    LAST,
+
+    /** A summary printed after every label (spec value {@code EVERY}). */
+    EVERY,
+
+    /** A value returned by the server that this SDK release does not model. */
+    UNKNOWN;
+
+    private static final String ERR_UNKNOWN =
+            "UNKNOWN is a read-only sentinel and cannot be sent to Allegro";
+
+    /**
+     * Wire representation to send to Allegro.
+     *
+     * @throws IllegalStateException if called on {@link #UNKNOWN}, which never
+     *     originates from consumer input on a write path
+     */
+    public String wireValue() {
+        if (this == UNKNOWN) {
+            throw new IllegalStateException(ERR_UNKNOWN);
+        }
+        return name();
+    }
+
+    /** Map a wire value to the enum, falling back to {@link #UNKNOWN}. */
+    public static LabelSummaryPlacement fromWire(@Nullable String raw) {
+        if (raw == null) {
+            return UNKNOWN;
+        }
+        try {
+            return valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            return UNKNOWN;
+        }
+    }
+}

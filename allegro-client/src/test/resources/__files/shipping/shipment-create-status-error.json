@@ -1,0 +1,12 @@
+{
+  "commandId": "CMD-CREATE-1",
+  "status": "ERROR",
+  "errors": [
+    {
+      "code": "DeliveryMethodNotSupported",
+      "message": "the delivery method does not support this shipment",
+      "userMessage": "Wybrana metoda dostawy nie obsluguje tej przesylki",
+      "path": "input.deliveryMethodId"
+    }
+  ]
+}

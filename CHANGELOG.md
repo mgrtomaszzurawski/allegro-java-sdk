@@ -253,6 +253,17 @@ sections. Empty subsections are dropped by the release engineer when folding
   server value maps to `PaymentPolicy.UNKNOWN` instead of failing the whole read
   (forward-compat, matching the bucket's other read enums after the core
   `enumUnknownDefaultCase` change).
+- Carrier shipment management ("Wysyłam z Allegro"): `createShipment(ShipmentRequest)`
+  and `cancelShipment(shipmentId)` (asynchronous command endpoints wrapped
+  sync-default via the core `CommandPoller`, each with an optional
+  `Duration timeout` overload), `getShipment(shipmentId)`, and
+  `labels(LabelRequest)` / `protocol(shipmentIds…)` returning the rendered
+  documents as `byte[]`. Models: `Shipment`, `ShipmentRequest`, `PostalAddress`,
+  `ShipmentPackage` (centimetre/kilogram dimensions), `CashOnDelivery`,
+  `LabelRequest` and `LabelSummaryReport`, with fluent builders and the
+  read-soft/write-strict `LabelFormat`, `PackageType`, `LabelPageSize`,
+  `LabelSummaryPlacement` and `LabelSummaryField` enums. The spec-deprecated
+  `deliveryMethodId` is not exposed (use `credentialsId` and delivery proposals).
 
 ### D — account-meta
 
