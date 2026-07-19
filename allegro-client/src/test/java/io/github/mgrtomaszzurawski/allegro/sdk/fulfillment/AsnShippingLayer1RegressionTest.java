@@ -6,7 +6,6 @@ package io.github.mgrtomaszzurawski.allegro.sdk.fulfillment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,7 +62,6 @@ class AsnShippingLayer1RegressionTest {
     private static final String METHOD_COURIER = "COURIER_BY_SELLER";
     private static final String METHOD_OWN_TRANSPORT = "OWN_TRANSPORT";
     private static final String METHOD_THIRD_PARTY = "THIRD_PARTY_DELIVERY";
-    private static final String NOT_SUBTYPE_MARKER = "not subtype";
     private static final String COUNTRY_PL = "PL";
 
     private static final String COURIER_JSON =
@@ -79,7 +77,12 @@ class AsnShippingLayer1RegressionTest {
             "{\"method\":\"ALREADY_IN_WAREHOUSE\","
             + "\"estimatedTimeOfArrival\":\"2020-08-26T12:50:04Z\",\"countryCode\":\"PL\"}";
 
-    /** The SDK's response ObjectMapper configuration, including the core forward-compat handler. */
+    /**
+     * The SDK's response ObjectMapper configuration, including the core forward-compat handler.
+     * Kept module-for-module in step with {@code AllegroClient}'s inline mapper; there is no
+     * extractable factory to share (that would be a frozen-core change owned by the build/core
+     * agent), so this mirror must be updated if that configuration changes.
+     */
     private ObjectMapper sdkMapper() {
         return new ObjectMapper()
                 .registerModule(new JavaTimeModule())
@@ -101,11 +104,13 @@ class AsnShippingLayer1RegressionTest {
         };
         ObjectMapper mapper = sdkMapper();
 
-        // when / then: the generated subtype is not a ShippingExtendedRaw, so read fails fast
+        // when / then: the generated subtype is not a ShippingExtendedRaw, so read fails fast.
+        // Anchor the assertion to structure (the unresolved type id + the base type), not to
+        // Jackson's message wording — a message reword must NOT masquerade as "Layer-1 fixed".
         InvalidTypeIdException failure = assertThrows(InvalidTypeIdException.class,
                 () -> mapper.readValue(json, ShippingExtendedRaw.class));
-        assertTrue(failure.getMessage().contains(NOT_SUBTYPE_MARKER),
-                () -> "expected a not-subtype resolution failure but got: " + failure.getMessage());
+        assertEquals(method, failure.getTypeId());
+        assertEquals(ShippingExtendedRaw.class, failure.getBaseType().getRawClass());
     }
 
     @Test
