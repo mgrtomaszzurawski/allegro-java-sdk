@@ -74,6 +74,31 @@ for both input types (2000 across the sample), while `maxCharactersPerLine` was 
 maps each to a `CompatibleCategory` with `CompatibilityInputType` (`ID`/`TEXT`, else `UNKNOWN`)
 and a nullable `CompatibilityValidationRules`.
 
+### Compatibility suggestions: generated subtypes share no base; app-only reachable (verified 2026-07-19, sandbox — request side only)
+
+`GET /sale/compatibility-list-suggestions` (`compatibility().suggestionsFor(...)`) returns a
+polymorphic body discriminated by `type` (`MANUAL` / `PRODUCT_BASED`). The OpenAPI generator
+produced an ASYMMETRIC hierarchy: `CompatibilityListProductBasedRaw extends CompatibilityListRaw`
+but `CompatibilityListManualRaw` does NOT — so deserializing the base fails for `MANUAL`
+(`InvalidTypeIdException: CompatibilityListManualRaw not subtype of CompatibilityListRaw`,
+reproduced in a unit probe). The SDK therefore tree-fetches the response and resolves the concrete
+subtype by its `type` discriminator. A `MANUAL` list's items are a discriminated `oneOf`
+(`ID`/`TEXT`) that the strict-oneOf module (C5) cannot disambiguate structurally — an `ID` item's
+only distinguishing field (`id`) is `required` but not enforced at deserialization, so a `TEXT`
+payload also matches `IdItemRaw` → "2 candidates match". Items are likewise resolved from the tree
+by their own `type` discriminator. This is a C5 gap for DISCRIMINATED oneOfs (it ignores the
+registered discriminator and matches by shape); logged as a core follow-up — see the bucket-E
+plan. Unknown list/item types degrade to `UNKNOWN`.
+
+Auth: like the supported-categories read, the endpoint is reachable with an app-only
+client-credentials token — a probe with a non-existent `product.id` returned `404`
+`ProductNotFoundException` (the standard `errors[]` envelope), NOT `401`/`403`. **Pending live
+verification:** a real `200` `MANUAL`/`PRODUCT_BASED` body has NOT yet been read back, because
+finding a valid product/offer id requires `/sale/products` or `/offers/listing`, both of which are
+`403` under client-credentials (need `sale:offers:read`), and the shared seller device token was
+live-rejected on 2026-07-19 (rotation/expiry — needs an `auth-bootstrap` re-consent). The WireMock
+fixtures remain `spec-derived` until that read-back lands.
+
 ## Shipping & delivery (bucket C)
 
 ### `GET /sale/delivery-methods` works with an app-only token (verified 2026-07-18, sandbox)

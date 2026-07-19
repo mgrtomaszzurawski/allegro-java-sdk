@@ -384,6 +384,18 @@ sections. Empty subsections are dropped by the release engineer when folding
   characters for free-text lists). Adds the `catalog-compatibility` demo scenario.
   First slice of `compatibility()`; the suggestion and compatible-product reads
   follow.
+- `catalog().compatibility().suggestionsFor(...)` — the suggested compatibility
+  list for exactly one of an offer or a product
+  (`GET /sale/compatibility-list-suggestions`), as an immutable
+  `CompatibilityList` (`MANUAL` with seller-supplied items, or `PRODUCT_BASED`
+  with the derived list id; an unmodelled list type degrades to `UNKNOWN`). Each
+  `CompatibilityItem` maps its `ID`/`TEXT` kind, id, label and `additionalInfo`.
+  Requests are built via `CompatibilitySuggestionRequest`, which enforces the
+  offer-xor-product guard fail-fast. Adds the
+  `catalog-compatibility-suggestions` demo scenario. Because the generated
+  `MANUAL`/`PRODUCT_BASED` subtypes share no common base and the item `oneOf` is
+  discriminated, the response is resolved from the tree by its `type`
+  discriminator (see `KNOWN-SERVER-BEHAVIORS.md`).
 
 ### F — offers-extras
 
