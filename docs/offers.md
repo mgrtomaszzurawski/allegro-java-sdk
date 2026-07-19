@@ -307,7 +307,17 @@ if (applied.basePackage() != null) {
 ```
 
 `availablePackages()` lists what can be applied (base + extra packages); `forOffer(offerId)`
-shows what an offer currently has, with each package's validity window.
+shows what an offer currently has, with each package's validity window. `forAllOffers()` streams
+that across every offer, and `modify(...)` applies changes to one offer:
+
+```java
+client.offers().promoOptions().forAllOffers()                 // Stream<OfferPromoOptions>
+        .forEach(promo -> System.out.println(promo.offerId() + ": base=" + promo.basePackage()));
+
+client.offers().promoOptions().modify("13579", List.of(
+        PromoOptionModification.change(PromoPackageType.BASE, "pkg-1"),   // set/change the base package
+        PromoOptionModification.removeNow(PromoPackageType.EXTRA, "pkg-2")));
+```
 
 ## Change the Buy Now price
 
