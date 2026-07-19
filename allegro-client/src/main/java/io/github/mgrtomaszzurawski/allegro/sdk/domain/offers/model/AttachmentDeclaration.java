@@ -11,7 +11,8 @@ import java.util.Objects;
 /**
  * A declaration of an offer attachment to create: the document {@link #type() kind}
  * and the {@link #fileName() file name}. Pass it to {@code media().createAttachment(...)},
- * then upload the file bytes with {@code media().uploadAttachment(id, bytes)}.
+ * then upload the file bytes with {@code media().uploadAttachment(declared, bytes, contentType)}
+ * (the returned attachment carries the one-time upload URL).
  *
  * @param type     the document kind (required; not {@link AttachmentType#UNKNOWN})
  * @param fileName the file name to declare (required)
