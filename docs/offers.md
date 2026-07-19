@@ -347,6 +347,23 @@ its format may change, so it is never composed by hand). `media.getAttachment(id
 attachment back. An attachment kind Allegro adds after this SDK release reads back as
 `AttachmentType.UNKNOWN`.
 
+## Offer events and operation status
+
+`client.offers().streamEvents(...)` is a lazy, resumable feed of what happened to your offers —
+activations, endings, price and stock changes, bids. Each `OfferEvent` carries its `type`, when it
+`occurredAt`, and the affected `offerId`:
+
+```java
+client.offers().streamEvents(OfferEventFilter.all())          // or .ofType("OFFER_PRICE_CHANGED")
+        .limit(50)
+        .forEach(event -> System.out.println(event.type() + " on offer " + event.offerId()));
+```
+
+The stream pages by event id under the hood; take what you need with `limit(...)`. A create or edit
+that Allegro processes asynchronously returns an operation id — poll it with
+`client.offers().operationStatus(offerId, operationId)` to get an `OfferProcessingStatus`
+(`PENDING` / `IN_PROGRESS` / `COMPLETED`).
+
 ## Errors
 
 | Situation | Exception |

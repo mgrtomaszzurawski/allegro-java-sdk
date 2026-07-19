@@ -11,6 +11,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferStatusResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerOfferBaseEventRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerOfferEventsResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
@@ -27,8 +30,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.PromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
@@ -64,6 +70,8 @@ public final class OffersImpl implements Offers {
     private static final String OP_SMART = "get offer Smart classification";
     private static final String OP_UNFILLED = "stream offers with unfilled parameters";
     private static final String OP_RATING = "get offer rating";
+    private static final String OP_EVENTS = "stream offer events";
+    private static final String OP_OPERATION_STATUS = "get offer operation status";
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
@@ -75,6 +83,8 @@ public final class OffersImpl implements Offers {
     private static final String QUERY_PRICE_TO = "sellingMode.price.amount.lte";
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
+    private static final String QUERY_FROM = "from";
+    private static final String QUERY_TYPE = "type";
 
     private final HttpSupport http;
     private final OfferBatch batch;
@@ -204,6 +214,37 @@ public final class OffersImpl implements Offers {
                 : offers.stream().map(UnfilledParameters::from).toList();
         boolean hasMore = items.size() == PAGE_SIZE;
         return new PagedSpliterator.Page<>(items, hasMore);
+    }
+
+    @Override
+    public Stream<OfferEvent> streamEvents(OfferEventFilter filter) {
+        return PagedSpliterator.cursorStream(cursor -> fetchEventPage(filter, cursor));
+    }
+
+    private PagedSpliterator.CursorPage<OfferEvent> fetchEventPage(OfferEventFilter filter,
+            @Nullable String from) {
+        Query query = Query.create()
+                .add(QUERY_FROM, from)
+                .add(QUERY_LIMIT, PAGE_SIZE)
+                .add(QUERY_TYPE, filter.type());
+        SellerOfferEventsResponseRaw response = http.request(OP_EVENTS)
+                .get(ApiPaths.SALE_OFFER_EVENTS)
+                .query(query)
+                .fetch(SellerOfferEventsResponseRaw.class);
+        List<SellerOfferBaseEventRaw> events = response.getOfferEvents();
+        List<OfferEvent> items = events == null
+                ? List.of()
+                : events.stream().map(OfferEvent::from).toList();
+        // A full page means there may be more; advance the cursor to the last event id.
+        String nextCursor = items.size() == PAGE_SIZE ? items.get(items.size() - 1).id() : null;
+        return new PagedSpliterator.CursorPage<>(items, nextCursor);
+    }
+
+    @Override
+    public OfferProcessingStatus operationStatus(String offerId, String operationId) {
+        return OfferProcessingStatus.from(http.getAuthenticated(
+                ApiPaths.offerOperation(offerId, operationId),
+                SaleProductOfferStatusResponseRaw.class, OP_OPERATION_STATUS));
     }
 
     @Override

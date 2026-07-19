@@ -176,6 +176,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   `ResponsibleProducerRef` (GPSR responsible producer — `byId` / `byName`, the `oneOf`
   discriminator written for you). This is the product-reference form; defining a new product
   inline, `responsiblePerson`, `safetyInformation` details, and `deposits` are not modelled yet.
+- Offer metadata reads (2 ops): `offers().streamEvents(OfferEventFilter)` — a lazy, cursor-paged
+  `Stream<OfferEvent>` of events about the seller's offers (`GET /sale/offer-events`; each event
+  carries its type, time, and the affected `offerId`, extracted across the polymorphic event
+  subtypes, with an unknown type degrading to a `null` offerId rather than failing the stream); and
+  `offers().operationStatus(offerId, operationId)` — the processing status of an async offer
+  operation (`GET /sale/product-offers/{offerId}/operations/{operationId}`) as an
+  `OfferProcessingStatus`. (The `GET …/parts` partial-offer read is a separate follow-up — it needs
+  its own partial-offer response mapping.)
 - Media (`offers().media()`, 4 ops): upload offer images and document attachments. `uploadImage(bytes,
   ImageFormat)` / `uploadImage(url)` (`POST /sale/images` on the upload host) returns an `OfferImage`
   with the hosted URL to use in an offer's image list; `createAttachment(AttachmentDeclaration)`
