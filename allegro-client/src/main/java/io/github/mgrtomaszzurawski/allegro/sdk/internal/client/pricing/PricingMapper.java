@@ -89,8 +89,8 @@ final class PricingMapper {
 
     private static PricingRuleType typeFrom(@Nullable AutomaticPricingRuleTypeRaw raw) {
         if (raw == null) {
-            // The generator's fromValue yields null (not the sentinel constant)
-            // for a wire value it does not model; surface it as UNKNOWN.
+            // Defensive: `type` is spec-required, but a value absent from the
+            // payload still degrades to UNKNOWN rather than NPEing the switch.
             return PricingRuleType.UNKNOWN;
         }
         return switch (raw) {
@@ -98,6 +98,8 @@ final class PricingMapper {
             case FOLLOW_BY_ALLEGRO_MIN_PRICE -> PricingRuleType.FOLLOW_BY_ALLEGRO_MIN_PRICE;
             case FOLLOW_BY_MARKET_MIN_PRICE -> PricingRuleType.FOLLOW_BY_MARKET_MIN_PRICE;
             case FOLLOW_BY_TOP_OFFER_PRICE -> PricingRuleType.FOLLOW_BY_TOP_OFFER_PRICE;
+            // A wire value this release does not model deserializes to the
+            // generator's UNKNOWN_DEFAULT_OPEN_API sentinel; surface it as UNKNOWN.
             case UNKNOWN_DEFAULT_OPEN_API -> PricingRuleType.UNKNOWN;
         };
     }

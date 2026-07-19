@@ -111,7 +111,8 @@ class PricingAutomationClientTest {
              "updatedAt":"2026-07-17T10:15:30Z"}
             """;
     // forward-compat: a rule strategy this SDK release does not model (the generated
-    // type enum yields no constant for it) must degrade to UNKNOWN, not fail the read.
+    // type enum maps it to its UNKNOWN_DEFAULT_OPEN_API sentinel) must degrade to
+    // PricingRuleType.UNKNOWN, not fail the read.
     private static final String UNKNOWN_TYPE_RULE_RESPONSE = """
             {"id":"%s","type":"PRICE_MATCH_FUTURE","name":"%s","default":false,
              "updatedAt":"2026-07-17T10:15:30Z",
