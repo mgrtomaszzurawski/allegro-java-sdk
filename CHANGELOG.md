@@ -426,6 +426,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   core) and an unmodelled promotion status or offer-criterion type degrades to
   its `UNKNOWN` enum constant instead of failing the read, completing bucket G at
   17/17 ops.
+- Automatic pricing rule reads now deserialize the `configuration` `oneOf`
+  straight into the generated DTO via the shared `StrictOneOfModule` core,
+  dropping the hand-rolled `JsonNode` discrimination that worked around the
+  generator's structural-`oneOf` over-match. Rule reads are also forward-safe: a
+  rule strategy the SDK does not model degrades to the new read-only
+  `PricingRuleType.UNKNOWN` (rejected on create) instead of failing the listing
+  or fetch.
 
 ### H — campaigns
 
