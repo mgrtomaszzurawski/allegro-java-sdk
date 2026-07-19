@@ -162,3 +162,27 @@ clients), Sonar (0 bugs / 0 vulns / no new smells on touched files), and release
 if Sonar or the sandbox is unreachable at PR-ready, STOP and report instead of merging.
 Surviving PIT mutants in the token manager, retry handler, or error parser are treated as
 missing tests, not as noise.
+
+### Completeness is an OPERATION-level fact — measured against the spec, not self-reported
+
+A bucket is not "done" because its facade methods compile and their WireMock tests are green.
+Done means every spec operation the bucket owns is **reachable through the public API AND
+exercised by a passing test**. Count against the 267-operation spec, not your facade-method
+tally — two facade methods over one endpoint (`roots()`/`childrenOf()` on `/sale/categories`)
+are ONE operation, not two.
+
+Before you claim a bucket complete, at PR-ready, and in every session report, run the op-level
+coverage tool and read your real numbers (agent-infra, shared volume — not shipped with the SDK):
+
+```bash
+/workspace/shared/bin/endpoint-coverage.sh --show absent --bucket <letter>
+```
+
+It classifies every operation you own as **OK** (a call site reaches it and a passing test drives
+that request), **UNTESTED** (wired but no test exercises the request), or **ABSENT** (no call site
+reaches it). It is a REFLECTION aid, **not a merge blocker** — but "I finished, it's great" while
+the report says 19/40 is a false claim. State the ratio honestly (`A: 19/40 ops, 21 ABSENT —
+media/attachments/batch/promo-options remain`), never a bare "done". Caveat: it measures endpoint
+reachability, NOT field-depth within a request/response body — a fully-wired op with half its
+fields mapped still reads OK, so field-level completeness (e.g. `CreateOfferRequest`) is tracked
+separately. Details + limitations: `/workspace/shared/tools/endpoint-coverage/README.md`.
