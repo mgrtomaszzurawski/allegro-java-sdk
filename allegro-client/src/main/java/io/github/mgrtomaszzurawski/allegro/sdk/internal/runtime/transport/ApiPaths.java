@@ -172,6 +172,9 @@ public final class ApiPaths {
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
     /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
     public static final String PRODUCTS = "/sale/products";
+    /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
+    public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
+            "/sale/compatibility-list/supported-categories";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
