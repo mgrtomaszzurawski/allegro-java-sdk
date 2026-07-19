@@ -13,6 +13,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import java.io.IOException;
@@ -41,6 +43,10 @@ final class OffersDemo {
     private static final String CREATE_CATEGORY_PROPERTY = "demo.createCategory";
     private static final String CREATE_PRICE_PROPERTY = "demo.createPrice";
     private static final String CREATE_STOCK_PROPERTY = "demo.createStock";
+    private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
+    private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
+    private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
+    private static final int DEFAULT_PRODUCT_QUANTITY = 1;
     private static final String CURRENCY_PLN = "PLN";
     private static final String OFFER_ID_SEPARATOR = ",";
     private static final int STREAM_LIMIT = 10;
@@ -99,16 +105,35 @@ final class OffersDemo {
     }
 
     private static void createOffer(AllegroClient client, String name) {
-        CreateOfferRequest request = CreateOfferRequest.builder()
+        CreateOfferRequest.Builder builder = CreateOfferRequest.builder()
                 .name(name)
                 .categoryId(System.getProperty(CREATE_CATEGORY_PROPERTY))
                 .buyNowPrice(Money.of(System.getProperty(CREATE_PRICE_PROPERTY), CURRENCY_PLN))
-                .availableStock(Integer.parseInt(System.getProperty(CREATE_STOCK_PROPERTY)))
-                .build();
+                .availableStock(Integer.parseInt(System.getProperty(CREATE_STOCK_PROPERTY)));
+        // With -Pdemo.createProductId the create carries a productSet (product binding +
+        // optional GPSR producer): a productized-category create through the SDK, so the
+        // server exercises the productSet wire mapping. Any business-rule rejection still
+        // proves the productSet deserialized (a shape/JsonMapping 400 would not).
+        String productId = System.getProperty(CREATE_PRODUCT_ID_PROPERTY);
+        if (productId != null) {
+            String quantityValue = System.getProperty(CREATE_QUANTITY_PROPERTY);
+            int quantity = quantityValue == null
+                    ? DEFAULT_PRODUCT_QUANTITY : Integer.parseInt(quantityValue);
+            ProductSetElement element = ProductSetElement.of(productId, quantity);
+            String producerId = System.getProperty(CREATE_PRODUCER_ID_PROPERTY);
+            if (producerId != null) {
+                element = element.withResponsibleProducer(ResponsibleProducerRef.byId(producerId))
+                        .withMarketedBeforeGpsrObligation(false);
+            }
+            builder.addProductSetElement(element);
+            System.out.println("create: sending productSet product=" + productId
+                    + " quantity=" + quantity + (producerId == null ? "" : " producer=" + producerId));
+        }
+        CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
-                    + ", name=" + created.name());
+                    + ", name=" + created.name() + ", productSet=" + created.productSet().size());
         } catch (AllegroBadRequestException e) {
             System.out.println("create rejected — " + e.errors().size() + " field error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
