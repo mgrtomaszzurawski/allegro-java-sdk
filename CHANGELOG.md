@@ -472,7 +472,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   records (`AdvanceShipNotice`, `AsnItem`, `HandlingUnit`, `ReceivingState` tree), the `AsnRequest`
   / `SubmittedAsnUpdate` / `AsnFilter` builders, and open-set enums (`AsnStatus`, `ReceivingStage`,
   `ReceivedType`, `ReasonCode`, `SubmitStatus`) that degrade unknown wire values to `UNKNOWN`. The
-  polymorphic `shipping` declaration is a deferred follow-up.
+  polymorphic `shipping` declaration is deferred behind a Layer-1 generation defect (below).
+- Root-cause and pin (regression test) the Layer-1 defect that blocks the ASN `shipping`
+  declaration: the read DTO's `ShippingExtendedRaw` cannot deserialize the `COURIER_BY_SELLER` /
+  `OWN_TRANSPORT` / `THIRD_PARTY_DELIVERY` methods because their generated subtypes extend the
+  write base `ShippingRaw`, not the read base — so a real notice carrying them fails to read, and a
+  write cannot round-trip either. Only `ALREADY_IN_WAREHOUSE` reads; the write base is sound. The
+  fix (regenerate those subtypes under `ShippingExtendedRaw`) is a Layer-1 change; once it lands the
+  domain shipping model can be wired.
 - The forward-compatibility of the fulfillment open-set enums is now proven end-to-end: with the
   Layer-1 `enumUnknownDefaultCase` fallback in place, an unrecognized wire enum value degrades to
   the domain `UNKNOWN` instead of failing the response.
