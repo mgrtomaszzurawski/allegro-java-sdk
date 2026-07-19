@@ -57,6 +57,7 @@ final class OffersDemo {
     private static final String UPLOAD_IMAGE_URL_PROPERTY = "demo.uploadImageUrl";
     private static final String DECLARE_ATTACHMENT_PROPERTY = "demo.declareAttachment";
     private static final String STREAM_EVENTS_PROPERTY = "demo.streamEvents";
+    private static final String PROMO_OPTIONS_PROPERTY = "demo.promoOptions";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
             "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
@@ -97,6 +98,8 @@ final class OffersDemo {
                 attachmentFlow(client, declareAttachment);
             } else if (System.getProperty(STREAM_EVENTS_PROPERTY) != null) {
                 streamEvents(client);
+            } else if (System.getProperty(PROMO_OPTIONS_PROPERTY) != null) {
+                promoOptions(client);
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -177,6 +180,14 @@ final class OffersDemo {
             e.errors().forEach(fieldError -> System.out.println("  - code=" + fieldError.code()
                     + " userMessage=" + fieldError.userMessage()));
         }
+    }
+
+    private static void promoOptions(AllegroClient client) {
+        var promos = client.offers().promoOptions().forAllOffers().limit(STREAM_LIMIT).toList();
+        System.out.println("promoOptions.forAllOffers: first " + promos.size() + " offer(s)");
+        promos.forEach(promo -> System.out.println("  offerId=" + promo.offerId()
+                + ", base=" + (promo.basePackage() == null ? "(none)" : promo.basePackage().id())
+                + ", extras=" + promo.extraPackages().size()));
     }
 
     private static void streamEvents(AllegroClient client) {

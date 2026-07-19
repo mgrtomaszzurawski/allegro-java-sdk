@@ -176,6 +176,15 @@ sections. Empty subsections are dropped by the release engineer when folding
   `ResponsibleProducerRef` (GPSR responsible producer — `byId` / `byName`, the `oneOf`
   discriminator written for you). This is the product-reference form; defining a new product
   inline, `responsiblePerson`, `safetyInformation` details, and `deposits` are not modelled yet.
+- Promo options (2 ops): `offers().promoOptions().forAllOffers()` — a lazy `Stream<OfferPromoOptions>`
+  of the promotion packages applied across all the seller's offers (`GET /sale/offers/promo-options`,
+  offset/limit paged); and `promoOptions().modify(offerId, List<PromoOptionModification>)` — apply
+  promotion-package changes to one offer (`POST /sale/offers/{offerId}/promo-options-modification`),
+  each change built with `PromoOptionModification.change(...)` / `.removeNow(...)` /
+  `.removeAtEndOfCycle(...)` over a `PromoPackageType` (BASE/EXTRA). (The batch
+  `promo-options-commands` command — `modifyBatch` — is a follow-up: its `PromoGeneralReport`
+  has no `completedAt`, so it needs its own async-completion handling distinct from the offer-batch
+  command machinery.)
 - Offer metadata reads (2 ops): `offers().streamEvents(OfferEventFilter)` — a lazy, cursor-paged
   `Stream<OfferEvent>` of events about the seller's offers (`GET /sale/offer-events`; each event
   carries its type, time, and the affected `offerId`, extracted across the polymorphic event
