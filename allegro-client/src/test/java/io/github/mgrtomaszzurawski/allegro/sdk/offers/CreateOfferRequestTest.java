@@ -38,6 +38,9 @@ class CreateOfferRequestTest {
     private static final String PARAM_FREE_ID = "11324";
     private static final String PARAM_FREE_VALUE = "Cherry MX";
     private static final int EXPECTED_PARAM_COUNT = 2;
+    private static final String EXTERNAL_ID = "SKU-12345";
+    private static final String LANGUAGE = "pl-PL";
+    private static final String SIZE_TABLE_ID = "size-table-1";
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -250,5 +253,28 @@ class CreateOfferRequestTest {
 
         // then
         assertTrue(request.parameters().isEmpty());
+    }
+
+    @Test
+    void build_whenOfferRefsSet_exposesThem() {
+        // when — the external id, listing language and size-table id are set
+        CreateOfferRequest request = validBuilder()
+                .externalId(EXTERNAL_ID).language(LANGUAGE).sizeTableId(SIZE_TABLE_ID).build();
+
+        // then
+        assertEquals(EXTERNAL_ID, request.externalId());
+        assertEquals(LANGUAGE, request.language());
+        assertEquals(SIZE_TABLE_ID, request.sizeTableId());
+    }
+
+    @Test
+    void build_whenOfferRefsNotSet_leavesThemNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.externalId());
+        assertNull(request.language());
+        assertNull(request.sizeTableId());
     }
 }

@@ -229,6 +229,26 @@ for (OfferParameter parameter : offer.parameters()) {
 A read parameter can be fed straight back into a create: `toRaw()` sends only the value ids of a
 dictionary parameter (the labels are read-only — echoing them back is rejected by Allegro).
 
+### External id, language and size table
+
+An offer can also carry the seller's own **external identifier** (your system's SKU/id for the
+offer), the **listing language** (BCP-47 code, e.g. `"pl-PL"`, defaults to the account language),
+and the id of a **size table** to attach. All three are optional and read back on `offers().get(offerId)`:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Mechanical keyboard")
+        .categoryId("257")
+        .buyNowPrice(Money.of("199.99", "PLN"))
+        .availableStock(10)
+        .externalId("SKU-12345")
+        .language("pl-PL")
+        .sizeTableId("size-table-1")
+        .build();
+```
+
+On the read side they surface as `offer.externalId()`, `offer.language()` and `offer.sizeTableId()`.
+
 ## Edit an offer
 
 `edit` is a **partial** update — only the fields you set are changed; everything else keeps its

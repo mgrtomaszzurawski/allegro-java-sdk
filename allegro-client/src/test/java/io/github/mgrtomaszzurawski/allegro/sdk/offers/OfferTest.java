@@ -15,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.LocationRaw;
@@ -28,6 +29,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicat
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StandardizedDescriptionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
@@ -77,6 +79,9 @@ class OfferTest {
     private static final String PARAM_RANGE_FROM = "10";
     private static final String PARAM_RANGE_TO = "20";
     private static final int EXPECTED_PARAM_COUNT = 2;
+    private static final String EXTERNAL_ID = "SKU-12345";
+    private static final String LANGUAGE = "pl-PL";
+    private static final String SIZE_TABLE_ID = "size-table-1";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -140,6 +145,28 @@ class OfferTest {
         assertNull(offer.description());
         assertNull(offer.location());
         assertEquals(List.of(), offer.parameters());
+        assertNull(offer.externalId());
+        assertNull(offer.language());
+        assertNull(offer.sizeTableId());
+    }
+
+    @Test
+    void from_whenOfferRefsPresent_mapsExternalIdLanguageAndSizeTable() {
+        // given — a payload carrying the seller external id, listing language and a size table
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .external(new ExternalIdRaw().id(EXTERNAL_ID))
+                .language(LANGUAGE)
+                .sizeTable(new SizeTableRaw().id(SIZE_TABLE_ID));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — each reference is unwrapped onto the flat consumer field
+        assertEquals(EXTERNAL_ID, offer.externalId());
+        assertEquals(LANGUAGE, offer.language());
+        assertEquals(SIZE_TABLE_ID, offer.sizeTableId());
     }
 
     @Test

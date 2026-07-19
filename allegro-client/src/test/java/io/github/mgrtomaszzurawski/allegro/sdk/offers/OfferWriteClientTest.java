@@ -121,6 +121,13 @@ class OfferWriteClientTest {
     private static final String PARAM_RANGE_ID = "12345";
     private static final String PARAM_RANGE_FROM = "10";
     private static final String PARAM_RANGE_TO = "20";
+
+    private static final String EXTERNAL_ID = "SKU-12345";
+    private static final String LANGUAGE = "pl-PL";
+    private static final String SIZE_TABLE_ID = "size-table-1";
+    private static final String EXTERNAL_ID_JSON_PATH = "$.external.id";
+    private static final String LANGUAGE_JSON_PATH = "$.language";
+    private static final String SIZE_TABLE_ID_JSON_PATH = "$.sizeTable.id";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -379,6 +386,29 @@ class OfferWriteClientTest {
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(PARAM_ID_JSON_PATH, equalTo(PARAM_FREE_ID)))
                 .withRequestBody(matchingJsonPath(PARAM_FREE_VALUE_JSON_PATH, equalTo(PARAM_FREE_VALUE))));
+    }
+
+    @Test
+    void create_whenOfferRefsSet_serializesExternalLanguageAndSizeTable(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying the seller external id, listing language and a size table
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .externalId(EXTERNAL_ID).language(LANGUAGE).sizeTableId(SIZE_TABLE_ID)
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the external id and size-table id are wrapped as {id:...} objects and the
+        // language is a plain scalar
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(EXTERNAL_ID_JSON_PATH, equalTo(EXTERNAL_ID)))
+                .withRequestBody(matchingJsonPath(LANGUAGE_JSON_PATH, equalTo(LANGUAGE)))
+                .withRequestBody(matchingJsonPath(SIZE_TABLE_ID_JSON_PATH, equalTo(SIZE_TABLE_ID))));
     }
 
     @Test
