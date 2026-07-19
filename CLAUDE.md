@@ -194,6 +194,24 @@ interleaves web actions with SDK calls and assertions. Full Chromium under Xvfb 
 (headless is blocked); logins MUST reuse a saved `storageState` (login once — a fresh login per
 run from a datacenter IP trips DataDome's hard IP block). Design: `ARCHITECTURE.md` §10.6.
 
+### Live-verification review gate (BINDING — every agent's `/review`)
+
+`/review` MUST spawn every repo-local reviewer under `.github/review/review-*.md` as an extra
+reviewer, alongside the global java/quality/security/secrets/tests/api ones. (The global
+`/review` skill lives on a read-only image, so this repo-driven rule — not a skill edit — is what
+reaches every cell.) This repo ships **`.github/review/review-allegro-live.md`**, the live-sandbox
+write→read gate:
+
+- A **wire-touching** PR (changes under `sdk/domain/**/{model,builder}`, `sdk/internal/client/**`,
+  or `src/test/resources/__files/**`) is **NOT merge-ready on green WireMock alone.** WireMock is
+  contract-*assertion*, not contract-*discovery* — the author writes both the stub and the
+  assertion, so green mocks cannot prove the wire mapping is what Allegro actually returns.
+- It needs a **live sandbox write→read THROUGH the SDK on the code under review** — run via
+  `bin/with-sandbox-lock.sh` (the cross-agent sandbox lock), or evidenced in the PR by a dated
+  demo run + a `KNOWN-SERVER-BEHAVIORS.md` delta + fixtures that are no longer `spec-derived`.
+- Missing live proof → **CRITICAL**. Sandbox/token/lock unavailable is a **BLOCK, not a pass**
+  (fail-closed; `TESTING.md` §2: sandbox unreachable → STOP and report instead of merging).
+
 ## Allegro API facts the code relies on
 
 - Environments: prod `https://api.allegro.pl`, sandbox `https://api.allegro.pl.allegrosandbox.pl`

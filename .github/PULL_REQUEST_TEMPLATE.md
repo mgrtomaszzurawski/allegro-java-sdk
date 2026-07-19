@@ -26,11 +26,13 @@ Required sections: Summary, Bucket & scope, Test plan.
 - [ ] WireMock tests follow TESTING.md: contract-pinning stubs, verify(N)
       on writes/retries, mandatory error-path table covered for the facade
 - [ ] per-builder round-trips + per-required-field failure tests
-- [ ] fixtures carry provenance (no unreviewed `spec-derived` marks in a
-      bucket-final PR)
-- [ ] demo scenario for this bucket ran green against the sandbox
-      (`./gradlew :allegro-demo:run -Pdemo.scenario=<bucket>`) — REQUIRED
-      for bucket-final PRs; note new KNOWN-SERVER-BEHAVIORS entries
+- [ ] fixtures the changed mapping relies on carry provenance — no
+      `spec-derived: not yet wire-verified` marks remain on them
+- [ ] LIVE sandbox write→read ran green against the sandbox on THIS code —
+      REQUIRED for EVERY wire-touching PR, not just bucket-final (TESTING.md §2;
+      run via `bin/with-sandbox-lock.sh ./gradlew :allegro-demo:run
+      -Pdemo.scenario=<bucket>`); note new KNOWN-SERVER-BEHAVIORS entries.
+      Sandbox unreachable = STOP and report, do NOT merge on WireMock alone.
 - [ ] Sonar pass green at PR-ready
 -->
 
