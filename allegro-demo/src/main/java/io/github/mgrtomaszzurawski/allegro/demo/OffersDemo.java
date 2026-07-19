@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
@@ -46,6 +47,7 @@ final class OffersDemo {
     private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
+    private static final String UPLOAD_IMAGE_URL_PROPERTY = "demo.uploadImageUrl";
     private static final int DEFAULT_PRODUCT_QUANTITY = 1;
     private static final String CURRENCY_PLN = "PLN";
     private static final String OFFER_ID_SEPARATOR = ",";
@@ -71,7 +73,10 @@ final class OffersDemo {
             String offerId = System.getProperty(OFFER_ID_PROPERTY);
             String publishIds = System.getProperty(PUBLISH_IDS_PROPERTY);
             String createName = System.getProperty(CREATE_NAME_PROPERTY);
-            if (createName != null) {
+            String uploadImageUrl = System.getProperty(UPLOAD_IMAGE_URL_PROPERTY);
+            if (uploadImageUrl != null) {
+                uploadImage(client, uploadImageUrl);
+            } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
                 publishBatch(client, publishIds);
@@ -138,6 +143,18 @@ final class OffersDemo {
             System.out.println("create rejected — " + e.errors().size() + " field error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
                     + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    private static void uploadImage(AllegroClient client, String imageUrl) {
+        try {
+            OfferImage image = client.offers().media().uploadImage(imageUrl);
+            System.out.println("uploadImage: location=" + image.location()
+                    + ", expiresAt=" + image.expiresAt());
+        } catch (AllegroBadRequestException e) {
+            System.out.println("uploadImage rejected — " + e.errors().size() + " error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - code=" + fieldError.code()
+                    + " userMessage=" + fieldError.userMessage()));
         }
     }
 
