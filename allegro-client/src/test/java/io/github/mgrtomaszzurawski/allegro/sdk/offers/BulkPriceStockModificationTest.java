@@ -100,7 +100,7 @@ class BulkPriceStockModificationTest {
     }
 
     @Test
-    void accessors_exposeBuiltData() {
+    void accessors_whenPriceAndStockBuilt_exposeBuiltData() {
         // given — a modification with a fixed price and a gain stock
         BulkPriceStockModification modification = BulkPriceStockModification.forOffer(OFFER_ID)
                 .price(MARKETPLACE_PL, PriceChange.fixed(Money.of(AMOUNT, CURRENCY_PLN)))

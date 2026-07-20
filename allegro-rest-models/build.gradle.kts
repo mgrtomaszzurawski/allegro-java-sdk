@@ -105,21 +105,21 @@ val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
                 subtypes = listOf("StockModificationFixed", "StockModificationGain"),
             ),
         )
-        for (fix in fixes) {
-            if (schemas.has(fix.parentName)) {
+        for (fixEntry in fixes) {
+            if (schemas.has(fixEntry.parentName)) {
                 continue // already normalized (idempotent across incremental runs)
             }
-            val parentRef = schemaRefPrefix + fix.parentName
-            val owner = schemas.get(fix.owner) as ObjectNode
+            val parentRef = schemaRefPrefix + fixEntry.parentName
+            val owner = schemas.get(fixEntry.owner) as ObjectNode
             val ownerProps = owner.get("properties") as ObjectNode
-            val inline = ownerProps.get(fix.property) as ObjectNode
+            val inline = ownerProps.get(fixEntry.property) as ObjectNode
 
             // 1. Promote the inline object (keeps its discriminator + mapping) to a named component.
-            schemas.set<JsonNode>(fix.parentName, inline.deepCopy())
+            schemas.set<JsonNode>(fixEntry.parentName, inline.deepCopy())
             // 2. Replace the inline with a $ref to that component.
-            ownerProps.set<JsonNode>(fix.property, mapper.createObjectNode().put("\$ref", parentRef))
+            ownerProps.set<JsonNode>(fixEntry.property, mapper.createObjectNode().put("\$ref", parentRef))
             // 3. Wrap each mapped subtype so it allOf-references the parent (Java inheritance).
-            for (subName in fix.subtypes) {
+            for (subName in fixEntry.subtypes) {
                 val original = schemas.get(subName) as ObjectNode
                 val wrapped = mapper.createObjectNode()
                 val allOf = wrapped.putArray("allOf")
@@ -127,7 +127,7 @@ val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
                 allOf.add(original.deepCopy())
                 schemas.set<JsonNode>(subName, wrapped)
             }
-            logger.lifecycle("patchOpenApiSpec: linked ${fix.subtypes} under ${fix.parentName}")
+            logger.lifecycle("patchOpenApiSpec: linked ${fixEntry.subtypes} under ${fixEntry.parentName}")
         }
 
         target.get().asFile.also { it.parentFile.mkdirs() }

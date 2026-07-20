@@ -63,7 +63,7 @@ batch.changePrices(BatchPriceChangeRequest)       // PUT  /sale/offer-price-chan
 batch.changeQuantities(BatchQuantityChangeRequest)// PUT  /sale/offer-quantity-change-commands/{id}     (sync)
 batch.publish(offerIds...)                        // PUT  /sale/offer-publication-commands/{id}         (sync)
 batch.unpublish(offerIds...)                      // PUT  /sale/offer-publication-commands/{id}         (sync)
-batch.modifyPricesAndStock(BulkModificationRequest) // POST /sale/offer-bulk-modification-commands      (sync, beta)
+batch.modifyPricesAndStock(List<BulkPriceStockModification>) // POST /sale/offer-bulk-modification-commands  (sync, beta)
 batch.applyPricingRules(BatchPricingRulesRequest) // POST /sale/offer-price-automation-commands         (sync)
 // (each returns BatchReport with per-offer task results — GET …-commands/{id} + /tasks consumed internally)
 

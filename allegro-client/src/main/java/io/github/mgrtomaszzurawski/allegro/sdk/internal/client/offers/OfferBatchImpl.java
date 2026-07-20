@@ -118,15 +118,15 @@ public final class OfferBatchImpl implements OfferBatch {
 
     @Override
     public PriceStockBatchReport modifyPricesAndStock(List<BulkPriceStockModification> modifications) {
-        String commandId = UUID.randomUUID().toString();
+        UUID commandId = UUID.randomUUID();
         // Each modification may change a price, a stock, or both; Allegro requires
         // one change kind per wire element, so flat-map to the split elements.
         OfferBulkChangeCommandRaw body = new OfferBulkChangeCommandRaw()
-                .commandId(UUID.fromString(commandId))
+                .commandId(commandId)
                 .modifications(modifications.stream()
                         .flatMap(modification -> BulkOfferModificationMapper
                                 .toWireElements(modification).stream()).toList());
-        return submitPostAndAwait(commandId, body);
+        return submitPostAndAwait(commandId.toString(), body);
     }
 
     private BatchReport publication(List<String> offerIds,
