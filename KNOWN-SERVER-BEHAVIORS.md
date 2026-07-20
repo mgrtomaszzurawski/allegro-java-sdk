@@ -331,6 +331,21 @@ only the parts the request set. A title-only update now sends `{"title":{…}}`;
 gone regardless of server semantics. **Still to confirm on the sandbox** (needs a live offer): that
 the server does treat an omitted part as "no change" (expected) and accepts a subset PATCH.
 
+## Offers — batch (bucket A)
+
+### Bulk price/stock: each modification element carries exactly one of `prices` or `stock` (verified 2026-07-20, sandbox)
+
+`POST /sale/offer-bulk-modification-commands` rejects a `modifications[]` element that carries
+BOTH `prices` and `stock`: `400`, `code=INVALID_SINGLE_ELEMENT_IN_MODIFICATION`,
+`path=modifications[0]`, userMessage *"Enter exactly one element: 'stock' or 'prices'."* The
+generated DTO (`OfferBulkModification`) models both on one element and the spec does not flag the
+constraint, so a WireMock-only test would ship the wrong wire shape (green but wrong). To change
+both the price and the stock of one offer, send TWO elements with the same `offerId` — one with
+`prices`, one with `stock`. The SDK hides this: `batch().modifyPricesAndStock` takes an offer's
+price and stock together on one `BulkPriceStockModification` and splits them into the two wire
+elements (`toWireElements()`). Live-caught via the negative probe (a bogus offer id: the element
+shape is validated at submit, before offer existence is checked).
+
 ## Offers — create (bucket A)
 
 ### `POST /sale/product-offers` rejects `language: null` — send only set fields (verified 2026-07-18, sandbox)

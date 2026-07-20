@@ -15,13 +15,16 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for the {@link BulkPriceStockModification} builder: fail-fast
- * validation and the discriminator/value each change kind serializes to. The
- * concrete change type is emitted by the request DTO's discriminator, so the
- * tests assert on the serialized JSON tree rather than the builder internals.
+ * validation and the wire element(s) each change kind serializes to. Allegro
+ * requires one change kind (price or stock) per {@code modifications[]} element,
+ * so an offer that changes both is split into two elements; the concrete change
+ * type is emitted by the request DTO's discriminator. The tests assert on the
+ * serialized JSON tree rather than the builder internals.
  */
 class BulkPriceStockModificationTest {
 
@@ -36,8 +39,9 @@ class BulkPriceStockModificationTest {
     private static final String PERCENT = "-10.50%";
     private static final int STOCK_VALUE = 7;
 
-    private static JsonNode toTree(BulkPriceStockModification modification) {
-        return MAPPER.valueToTree(modification.toRaw());
+    private static List<JsonNode> elements(BulkPriceStockModification modification) {
+        return modification.toWireElements().stream()
+                .map(element -> (JsonNode) MAPPER.valueToTree(element)).toList();
     }
 
     @Test
@@ -57,28 +61,34 @@ class BulkPriceStockModificationTest {
     }
 
     @Test
-    void toRaw_whenFixedPriceAndFixedStock_emitsDiscriminatorsAndValues() {
-        // given — a fixed marketplace price and a fixed stock
+    void toWireElements_whenFixedPriceAndFixedStock_splitsIntoTwoSingleKindElements() {
+        // given — a fixed marketplace price and a fixed stock on one offer
         BulkPriceStockModification modification = BulkPriceStockModification.forOffer(OFFER_ID)
                 .price(MARKETPLACE_PL, PriceChange.fixed(Money.of(AMOUNT, CURRENCY_PLN)))
                 .stock(StockChange.fixed(STOCK_VALUE))
                 .build();
 
         // when
-        JsonNode tree = toTree(modification);
+        List<JsonNode> elements = elements(modification);
 
-        // then — each change carries its discriminator and value
-        JsonNode price = tree.at("/prices/" + MARKETPLACE_PL);
-        assertEquals("FIXED", price.get("changeType").asText());
-        assertEquals(AMOUNT, price.at("/value/amount").asText());
-        assertEquals(CURRENCY_PLN, price.at("/value/currency").asText());
-        assertEquals("FIXED", tree.at("/stock/changeType").asText());
-        assertEquals(STOCK_VALUE, tree.at("/stock/value").asInt());
-        assertEquals(OFFER_ID, tree.get("offerId").asText());
+        // then — two elements, same offer, each carrying exactly one change kind
+        assertEquals(2, elements.size());
+        JsonNode priceElement = elements.get(0);
+        assertEquals(OFFER_ID, priceElement.get("offerId").asText());
+        assertEquals("FIXED", priceElement.at("/prices/" + MARKETPLACE_PL + "/changeType").asText());
+        assertEquals(AMOUNT, priceElement.at("/prices/" + MARKETPLACE_PL + "/value/amount").asText());
+        assertEquals(CURRENCY_PLN,
+                priceElement.at("/prices/" + MARKETPLACE_PL + "/value/currency").asText());
+        assertTrue(priceElement.at("/stock").isMissingNode());
+        JsonNode stockElement = elements.get(1);
+        assertEquals(OFFER_ID, stockElement.get("offerId").asText());
+        assertEquals("FIXED", stockElement.at("/stock/changeType").asText());
+        assertEquals(STOCK_VALUE, stockElement.at("/stock/value").asInt());
+        assertTrue(stockElement.at("/prices").isMissingNode());
     }
 
     @Test
-    void toRaw_whenPercentagePriceAndGainStock_emitsPercentageAndGain() {
+    void toWireElements_whenPercentagePriceAndGainStock_emitsPercentageAndGain() {
         // given — a percentage price adjustment and a stock gain
         BulkPriceStockModification modification = BulkPriceStockModification.forOffer(OFFER_ID)
                 .price(MARKETPLACE_PL, PriceChange.percentage(PERCENT))
@@ -86,30 +96,48 @@ class BulkPriceStockModificationTest {
                 .build();
 
         // when
-        JsonNode tree = toTree(modification);
+        List<JsonNode> elements = elements(modification);
 
-        // then — PERCENTAGE carries the percent string, GAIN carries the delta
-        JsonNode price = tree.at("/prices/" + MARKETPLACE_PL);
-        assertEquals("PERCENTAGE", price.get("changeType").asText());
-        assertEquals(PERCENT, price.get("percentage").asText());
-        assertTrue(price.at("/value").isMissingNode());
-        assertEquals("GAIN", tree.at("/stock/changeType").asText());
-        assertEquals(STOCK_VALUE, tree.at("/stock/value").asInt());
+        // then — PERCENTAGE carries the percent string (no value), GAIN carries the delta
+        assertEquals(2, elements.size());
+        JsonNode priceElement = elements.get(0);
+        assertEquals("PERCENTAGE", priceElement.at("/prices/" + MARKETPLACE_PL + "/changeType").asText());
+        assertEquals(PERCENT, priceElement.at("/prices/" + MARKETPLACE_PL + "/percentage").asText());
+        assertTrue(priceElement.at("/prices/" + MARKETPLACE_PL + "/value").isMissingNode());
+        assertEquals("GAIN", elements.get(1).at("/stock/changeType").asText());
+        assertEquals(STOCK_VALUE, elements.get(1).at("/stock/value").asInt());
     }
 
     @Test
-    void toRaw_whenPriceOnly_omitsStock() {
+    void toWireElements_whenPriceOnly_singlePriceElement() {
         // given — only a gain price change, no stock
         BulkPriceStockModification modification = BulkPriceStockModification.forOffer(OFFER_ID)
                 .price(MARKETPLACE_PL, PriceChange.gain(Money.of(AMOUNT, CURRENCY_PLN)))
                 .build();
 
         // when
-        JsonNode tree = toTree(modification);
+        List<JsonNode> elements = elements(modification);
 
-        // then — the stock branch is absent, the price is a GAIN
-        assertTrue(tree.at("/stock").isMissingNode());
-        assertEquals("GAIN", tree.at("/prices/" + MARKETPLACE_PL + "/changeType").asText());
+        // then — one element, a GAIN price, no stock branch
+        assertEquals(1, elements.size());
+        assertEquals("GAIN", elements.get(0).at("/prices/" + MARKETPLACE_PL + "/changeType").asText());
+        assertTrue(elements.get(0).at("/stock").isMissingNode());
+    }
+
+    @Test
+    void toWireElements_whenStockOnly_singleStockElement() {
+        // given — only a fixed stock change, no price
+        BulkPriceStockModification modification = BulkPriceStockModification.forOffer(OFFER_ID)
+                .stock(StockChange.fixed(STOCK_VALUE))
+                .build();
+
+        // when
+        List<JsonNode> elements = elements(modification);
+
+        // then — one element, a FIXED stock, no prices branch
+        assertEquals(1, elements.size());
+        assertEquals("FIXED", elements.get(0).at("/stock/changeType").asText());
+        assertTrue(elements.get(0).at("/prices").isMissingNode());
     }
 
     @Test

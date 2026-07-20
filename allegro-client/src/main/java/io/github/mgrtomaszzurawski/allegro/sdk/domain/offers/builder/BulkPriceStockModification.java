@@ -14,7 +14,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockModificationFixedRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockModificationGainRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -53,18 +55,24 @@ public final class BulkPriceStockModification {
         return new Builder(offerId);
     }
 
-    /** The generated request DTO for this offer's modification. */
-    public OfferBulkModificationRaw toRaw() {
-        OfferBulkModificationRaw raw = new OfferBulkModificationRaw().offerId(offerId);
+    /**
+     * The generated request element(s) for this offer's modification. Allegro
+     * requires each {@code modifications[]} entry to carry <em>exactly one</em> of
+     * {@code prices} or {@code stock} (live-verified: a combined element is
+     * rejected with {@code INVALID_SINGLE_ELEMENT_IN_MODIFICATION}), so an offer
+     * that changes both is emitted as two entries with the same {@code offerId}.
+     */
+    public List<OfferBulkModificationRaw> toWireElements() {
+        List<OfferBulkModificationRaw> elements = new ArrayList<>();
         if (!prices.isEmpty()) {
             Map<String, MarketplacePriceModificationRaw> rawPrices = new LinkedHashMap<>();
             prices.forEach((marketplace, change) -> rawPrices.put(marketplace, change.toRaw()));
-            raw.prices(rawPrices);
+            elements.add(new OfferBulkModificationRaw().offerId(offerId).prices(rawPrices));
         }
         if (stock != null) {
-            raw.stock(stock.toRaw());
+            elements.add(new OfferBulkModificationRaw().offerId(offerId).stock(stock.toRaw()));
         }
-        return raw;
+        return elements;
     }
 
     /** Fluent builder; validates fail-fast on {@link #build()}. */

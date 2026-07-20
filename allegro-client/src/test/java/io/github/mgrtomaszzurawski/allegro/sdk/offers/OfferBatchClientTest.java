@@ -98,13 +98,17 @@ class OfferBatchClientTest {
     private static final String FIELD_PRICE = "PRICE";
     private static final String FIELD_STOCK = "STOCK";
     private static final String COMMAND_ID_JSON_PATH = "$.commandId";
+    // Allegro rejects a modification element carrying both prices and stock
+    // (INVALID_SINGLE_ELEMENT_IN_MODIFICATION), so an offer changing both is split
+    // into two elements with the same offerId — prices at [0], stock at [1].
     private static final String MOD_OFFER_ID_JSON_PATH = "$.modifications[0].offerId";
+    private static final String MOD_SECOND_OFFER_ID_JSON_PATH = "$.modifications[1].offerId";
     private static final String MOD_PRICE_TYPE_JSON_PATH =
             "$.modifications[0].prices['" + MARKETPLACE_PL + "'].changeType";
     private static final String MOD_PRICE_AMOUNT_JSON_PATH =
             "$.modifications[0].prices['" + MARKETPLACE_PL + "'].value.amount";
-    private static final String MOD_STOCK_TYPE_JSON_PATH = "$.modifications[0].stock.changeType";
-    private static final String MOD_STOCK_VALUE_JSON_PATH = "$.modifications[0].stock.value";
+    private static final String MOD_STOCK_TYPE_JSON_PATH = "$.modifications[1].stock.changeType";
+    private static final String MOD_STOCK_VALUE_JSON_PATH = "$.modifications[1].stock.value";
     private static final String SUBJECT_TASKS =
             "{\"tasks\":[{\"subject\":{\"offerId\":\"" + OFFER_ONE + "\",\"field\":\"" + FIELD_PRICE
                     + "\"},\"status\":\"SUCCESS\"},{\"subject\":{\"offerId\":\"" + OFFER_ONE
@@ -342,12 +346,15 @@ class OfferBatchClientTest {
         PriceStockBatchReport report = batchClient(wmInfo)
                 .modifyPricesAndStock(List.of(modification));
 
-        // then — a beta POST to the collection carries the command id, price and stock
+        // then — a beta POST carries the command id and TWO elements for the same
+        // offer: a price element and a separate stock element (Allegro rejects a
+        // combined element, so the SDK splits them)
         verify(1, postRequestedFor(urlPathEqualTo(BULK_COMMAND_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
                         equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
                 .withRequestBody(matchingJsonPath(COMMAND_ID_JSON_PATH))
                 .withRequestBody(matchingJsonPath(MOD_OFFER_ID_JSON_PATH, equalTo(OFFER_ONE)))
+                .withRequestBody(matchingJsonPath(MOD_SECOND_OFFER_ID_JSON_PATH, equalTo(OFFER_ONE)))
                 .withRequestBody(matchingJsonPath(MOD_PRICE_TYPE_JSON_PATH, equalTo(CHANGE_TYPE_FIXED)))
                 .withRequestBody(matchingJsonPath(MOD_PRICE_AMOUNT_JSON_PATH, equalTo(NEW_PRICE)))
                 .withRequestBody(matchingJsonPath(MOD_STOCK_TYPE_JSON_PATH, equalTo(CHANGE_TYPE_FIXED)))
