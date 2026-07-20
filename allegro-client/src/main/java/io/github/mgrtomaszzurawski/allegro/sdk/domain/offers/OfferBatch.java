@@ -5,7 +5,9 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import java.util.List;
 
 /**
@@ -51,4 +53,17 @@ public interface OfferBatch {
      * @return the command report once every offer has been processed
      */
     BatchReport changeQuantities(List<String> offerIds, int quantity);
+
+    /**
+     * Apply per-offer Buy Now price and/or stock changes in one command, mixing
+     * FIXED / GAIN / PERCENTAGE adjustments across marketplaces. Unlike
+     * {@link #changePrices} and {@link #changeQuantities} (which set one fixed
+     * value across the given offers), each {@link BulkPriceStockModification}
+     * targets a single offer with its own price map and stock change.
+     *
+     * @param modifications one entry per offer to change (each with at least a
+     *     price or a stock change)
+     * @return the command report once every modification has been processed
+     */
+    PriceStockBatchReport modifyPricesAndStock(List<BulkPriceStockModification> modifications);
 }
