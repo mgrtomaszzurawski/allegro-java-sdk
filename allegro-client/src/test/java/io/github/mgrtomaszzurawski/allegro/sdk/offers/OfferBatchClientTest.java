@@ -81,6 +81,13 @@ class OfferBatchClientTest {
     private static final String EMPTY_TASKS = "{\"tasks\":[]}";
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"unknown offer\",\"path\":\"offerCriteria\"}]}";
+    // Provenance: the real error shape live-observed for this endpoint (KNOWN-SERVER-BEHAVIORS
+    // §Offers — batch) — a combined element is rejected on modifications[0].
+    private static final String BULK_MODIFY_ERROR_PATH = "modifications[0]";
+    private static final String BULK_MODIFY_ERROR_CODE = "INVALID_SINGLE_ELEMENT_IN_MODIFICATION";
+    private static final String BULK_BAD_REQUEST_BODY =
+            "{\"errors\":[{\"code\":\"" + BULK_MODIFY_ERROR_CODE + "\",\"message\":\"Enter exactly "
+                    + "one element: 'stock' or 'prices'.\",\"path\":\"" + BULK_MODIFY_ERROR_PATH + "\"}]}";
 
     private static final String POLL_SCENARIO = "poll";
     private static final String STATE_COMPLETED = "completed";
@@ -421,12 +428,13 @@ class OfferBatchClientTest {
             WireMockRuntimeInfo wmInfo) {
         // given — the command submission itself is rejected
         stubFor(post(urlPathEqualTo(BULK_COMMAND_PATH)).willReturn(
-                aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST).withBody(BAD_REQUEST_BODY)));
+                aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST).withBody(BULK_BAD_REQUEST_BODY)));
 
-        // then — the typed field error surfaces and no polling happens
+        // then — the typed field error surfaces (real path/code) and no polling happens
         AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
                 () -> batchClient(wmInfo).modifyPricesAndStock(List.of(priceOnlyModification())));
-        assertEquals("offerCriteria", failure.errors().get(0).path());
+        assertEquals(BULK_MODIFY_ERROR_PATH, failure.errors().get(0).path());
+        assertEquals(BULK_MODIFY_ERROR_CODE, failure.errors().get(0).code());
         verify(0, getRequestedFor(urlPathMatching(BULK_STATUS_PATH)));
     }
 

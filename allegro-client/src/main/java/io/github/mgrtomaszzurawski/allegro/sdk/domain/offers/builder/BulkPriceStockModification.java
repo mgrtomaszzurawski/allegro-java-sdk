@@ -4,21 +4,11 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.MarketplacePriceModificationFixedRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.MarketplacePriceModificationGainRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.MarketplacePriceModificationPercentageRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.MarketplacePriceModificationRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.OfferBulkModificationRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.OfferBulkModificationStockRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.StockModificationFixedRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.StockModificationGainRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * One offer's price and/or stock change in a bulk modification — the unit passed
@@ -28,7 +18,10 @@ import java.util.Objects;
  * {@code "allegro-cz"}, …) with at most one change per marketplace.
  *
  * <p>Each change is FIXED (set to a value), GAIN (add to / subtract from the
- * current value) or, for price only, PERCENTAGE (adjust by a percent).
+ * current value) or, for price only, PERCENTAGE (adjust by a percent). The
+ * mapping to the wire — including splitting an offer that changes both a price
+ * and the stock into the two elements Allegro requires — is the SDK's job; this
+ * type only carries the consumer's intent.
  *
  * @since 0.5.0
  */
@@ -42,7 +35,7 @@ public final class BulkPriceStockModification {
 
     private final String offerId;
     private final Map<String, PriceChange> prices;
-    private final StockChange stock;
+    private final @Nullable StockChange stock;
 
     private BulkPriceStockModification(Builder builder) {
         this.offerId = builder.offerId;
@@ -55,24 +48,19 @@ public final class BulkPriceStockModification {
         return new Builder(offerId);
     }
 
-    /**
-     * The generated request element(s) for this offer's modification. Allegro
-     * requires each {@code modifications[]} entry to carry <em>exactly one</em> of
-     * {@code prices} or {@code stock} (live-verified: a combined element is
-     * rejected with {@code INVALID_SINGLE_ELEMENT_IN_MODIFICATION}), so an offer
-     * that changes both is emitted as two entries with the same {@code offerId}.
-     */
-    public List<OfferBulkModificationRaw> toWireElements() {
-        List<OfferBulkModificationRaw> elements = new ArrayList<>();
-        if (!prices.isEmpty()) {
-            Map<String, MarketplacePriceModificationRaw> rawPrices = new LinkedHashMap<>();
-            prices.forEach((marketplace, change) -> rawPrices.put(marketplace, change.toRaw()));
-            elements.add(new OfferBulkModificationRaw().offerId(offerId).prices(rawPrices));
-        }
-        if (stock != null) {
-            elements.add(new OfferBulkModificationRaw().offerId(offerId).stock(stock.toRaw()));
-        }
-        return elements;
+    /** The offer this modification targets. */
+    public String offerId() {
+        return offerId;
+    }
+
+    /** The per-marketplace price changes (marketplace id → change); empty if none. */
+    public Map<String, PriceChange> prices() {
+        return prices;
+    }
+
+    /** The stock change, or {@code null} if this modification leaves the stock unchanged. */
+    public @Nullable StockChange stock() {
+        return stock;
     }
 
     /** Fluent builder; validates fail-fast on {@link #build()}. */
@@ -80,7 +68,7 @@ public final class BulkPriceStockModification {
 
         private final String offerId;
         private final Map<String, PriceChange> prices = new LinkedHashMap<>();
-        private StockChange stock;
+        private @Nullable StockChange stock;
 
         private Builder(String offerId) {
             this.offerId = requireText(offerId, ERR_OFFER_ID);
@@ -118,21 +106,28 @@ public final class BulkPriceStockModification {
     /**
      * A Buy Now price change for one marketplace — set the price ({@link #fixed}),
      * add/subtract an amount ({@link #gain}), or adjust by a percent
-     * ({@link #percentage}). The concrete change type is emitted on the wire from
-     * the request DTO's discriminator.
+     * ({@link #percentage}). {@link #kind()} disambiguates the three.
      */
     public static final class PriceChange {
 
-        private enum Kind { FIXED, GAIN, PERCENTAGE }
+        /** Which kind of price change this is. */
+        public enum Kind {
+            /** Set the Buy Now price to a fixed amount. */
+            FIXED,
+            /** Add an amount to (or subtract from) the current price. */
+            GAIN,
+            /** Adjust the current price by a percent. */
+            PERCENTAGE
+        }
 
         private static final String ERR_AMOUNT = "amount must not be null";
         private static final String ERR_PERCENTAGE = "percentage must not be null or blank";
 
         private final Kind kind;
-        private final Money amount;
-        private final String percentage;
+        private final @Nullable Money amount;
+        private final @Nullable String percentage;
 
-        private PriceChange(Kind kind, Money amount, String percentage) {
+        private PriceChange(Kind kind, @Nullable Money amount, @Nullable String percentage) {
             this.kind = kind;
             this.amount = amount;
             this.percentage = percentage;
@@ -159,27 +154,37 @@ public final class BulkPriceStockModification {
             return new PriceChange(Kind.PERCENTAGE, null, percentage);
         }
 
-        private MarketplacePriceModificationRaw toRaw() {
-            return switch (kind) {
-                case FIXED -> new MarketplacePriceModificationFixedRaw().value(price(amount));
-                case GAIN -> new MarketplacePriceModificationGainRaw().value(price(amount));
-                case PERCENTAGE -> new MarketplacePriceModificationPercentageRaw().percentage(percentage);
-            };
+        /** Which kind of change this is. */
+        public Kind kind() {
+            return kind;
         }
 
-        private static PriceRaw price(Money money) {
-            return new PriceRaw().amount(money.amount()).currency(money.currency());
+        /** The amount for a {@link Kind#FIXED}/{@link Kind#GAIN} change; {@code null} for PERCENTAGE. */
+        public @Nullable Money amount() {
+            return amount;
+        }
+
+        /** The percent string for a {@link Kind#PERCENTAGE} change; {@code null} otherwise. */
+        public @Nullable String percentage() {
+            return percentage;
         }
     }
 
     /**
      * A stock change — set the stock ({@link #fixed}) or add/subtract a value
-     * ({@link #gain}). The concrete change type is emitted from the request DTO's
-     * discriminator.
+     * ({@link #gain}). {@link #kind()} disambiguates the two.
      */
     public static final class StockChange {
 
-        private enum Kind { FIXED, GAIN }
+        /** Which kind of stock change this is. */
+        public enum Kind {
+            /** Set the available stock to a fixed value. */
+            FIXED,
+            /** Add a value to (or subtract from) the current stock. */
+            GAIN
+        }
+
+        private static final String ERR_FIXED_POSITIVE = "fixed stock must be positive";
 
         private final Kind kind;
         private final int value;
@@ -191,6 +196,9 @@ public final class BulkPriceStockModification {
 
         /** Set the available stock to {@code value} (must be positive). */
         public static StockChange fixed(int value) {
+            if (value <= 0) {
+                throw new IllegalArgumentException(ERR_FIXED_POSITIVE);
+            }
             return new StockChange(Kind.FIXED, value);
         }
 
@@ -199,10 +207,14 @@ public final class BulkPriceStockModification {
             return new StockChange(Kind.GAIN, value);
         }
 
-        private OfferBulkModificationStockRaw toRaw() {
-            return kind == Kind.FIXED
-                    ? new StockModificationFixedRaw().value(value)
-                    : new StockModificationGainRaw().value(value);
+        /** Which kind of change this is. */
+        public Kind kind() {
+            return kind;
+        }
+
+        /** The stock value: the new stock for FIXED, the delta for GAIN. */
+        public int value() {
+            return value;
         }
     }
 }

@@ -24,6 +24,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceSt
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockTaskResult;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.BulkOfferModificationMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -123,7 +124,8 @@ public final class OfferBatchImpl implements OfferBatch {
         OfferBulkChangeCommandRaw body = new OfferBulkChangeCommandRaw()
                 .commandId(UUID.fromString(commandId))
                 .modifications(modifications.stream()
-                        .flatMap(modification -> modification.toWireElements().stream()).toList());
+                        .flatMap(modification -> BulkOfferModificationMapper
+                                .toWireElements(modification).stream()).toList());
         return submitPostAndAwait(commandId, body);
     }
 

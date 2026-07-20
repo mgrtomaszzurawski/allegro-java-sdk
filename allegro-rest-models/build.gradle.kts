@@ -9,6 +9,11 @@
 // in allegro-client, so the generator's api-client/supporting files are not
 // produced — nothing here but data-transfer types.
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import com.vanniktech.maven.publish.JavaLibrary
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SonatypeHost
@@ -83,13 +88,12 @@ val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
     inputs.file(source)
     outputs.file(target)
     doLast {
-        val mapper = com.fasterxml.jackson.databind.ObjectMapper(
-            com.fasterxml.jackson.dataformat.yaml.YAMLFactory()
-                .enable(com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature.MINIMIZE_QUOTES)
+        val schemaRefPrefix = "#/components/schemas/"
+        val mapper = ObjectMapper(
+            YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
         )
-        val root = mapper.readTree(source.asFile) as com.fasterxml.jackson.databind.node.ObjectNode
-        val schemas = root.path("components").path("schemas")
-                as com.fasterxml.jackson.databind.node.ObjectNode
+        val root = mapper.readTree(source.asFile) as ObjectNode
+        val schemas = root.path("components").path("schemas") as ObjectNode
 
         // Data-driven: (owning schema, inline object property, promoted component,
         // discriminator-mapped subtypes) — one entry per discriminator-only schema.
@@ -105,23 +109,23 @@ val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
             if (schemas.has(fix.parentName)) {
                 continue // already normalized (idempotent across incremental runs)
             }
-            val owner = schemas.get(fix.owner) as com.fasterxml.jackson.databind.node.ObjectNode
-            val ownerProps = owner.get("properties") as com.fasterxml.jackson.databind.node.ObjectNode
-            val inline = ownerProps.get(fix.property) as com.fasterxml.jackson.databind.node.ObjectNode
+            val parentRef = schemaRefPrefix + fix.parentName
+            val owner = schemas.get(fix.owner) as ObjectNode
+            val ownerProps = owner.get("properties") as ObjectNode
+            val inline = ownerProps.get(fix.property) as ObjectNode
 
             // 1. Promote the inline object (keeps its discriminator + mapping) to a named component.
-            schemas.set<com.fasterxml.jackson.databind.JsonNode>(fix.parentName, inline.deepCopy())
+            schemas.set<JsonNode>(fix.parentName, inline.deepCopy())
             // 2. Replace the inline with a $ref to that component.
-            val ref = mapper.createObjectNode().put("\$ref", "#/components/schemas/${fix.parentName}")
-            ownerProps.set<com.fasterxml.jackson.databind.JsonNode>(fix.property, ref)
+            ownerProps.set<JsonNode>(fix.property, mapper.createObjectNode().put("\$ref", parentRef))
             // 3. Wrap each mapped subtype so it allOf-references the parent (Java inheritance).
             for (subName in fix.subtypes) {
-                val original = schemas.get(subName) as com.fasterxml.jackson.databind.node.ObjectNode
+                val original = schemas.get(subName) as ObjectNode
                 val wrapped = mapper.createObjectNode()
                 val allOf = wrapped.putArray("allOf")
-                allOf.add(mapper.createObjectNode().put("\$ref", "#/components/schemas/${fix.parentName}"))
+                allOf.add(mapper.createObjectNode().put("\$ref", parentRef))
                 allOf.add(original.deepCopy())
-                schemas.set<com.fasterxml.jackson.databind.JsonNode>(subName, wrapped)
+                schemas.set<JsonNode>(subName, wrapped)
             }
             logger.lifecycle("patchOpenApiSpec: linked ${fix.subtypes} under ${fix.parentName}")
         }
