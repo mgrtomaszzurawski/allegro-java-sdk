@@ -84,13 +84,14 @@ public interface OfferBatch {
     BatchReport applyPricingRules(BatchPricingRulesRequest request);
 
     /**
-     * Apply offer-settings changes to the request's offers in one command — the
-     * listing duration (a fixed length or unlimited) and/or the dispatch time.
-     * Unlike {@link #changePrices}/{@link #changeQuantities} (which set a single
-     * value across offers), the changes are described by a
-     * {@link BatchModificationRequest}, which requires at least one field to change.
+     * Apply an offer-settings change to the request's offers in one command — the
+     * listing duration (a fixed length or unlimited) or the dispatch time. Unlike
+     * {@link #changePrices}/{@link #changeQuantities} (which set a single value
+     * across offers), the change is described by a {@link BatchModificationRequest},
+     * which requires exactly one field to change (Allegro rejects a command whose
+     * modification carries more than one element).
      *
-     * @param modification the offers and the field changes to apply
+     * @param modification the offers and the single field change to apply
      * @return the command report once every offer has been processed
      */
     BatchReport modify(BatchModificationRequest modification);

@@ -140,13 +140,13 @@ public final class OfferBatchImpl implements OfferBatch {
     @Override
     public BatchReport modify(BatchModificationRequest modification) {
         String commandId = UUID.randomUUID().toString();
+        String commandPath = ApiPaths.offerModificationCommand(commandId);
         OfferChangeCommandRaw body = OfferModificationMapper.toRaw(modification);
         // Partial body: the generated Modification carries ten optional sub-objects,
-        // all null but the ones set here; a full serialization would send them as
+        // all null but the one set here; a full serialization would send them as
         // null and reset those aspects server-side (KNOWN-SERVER-BEHAVIORS — create).
-        http.request(OP_MODIFY).put(ApiPaths.offerModificationCommand(commandId))
-                .jsonBodyPartial(body).send();
-        return awaitAndGather(ApiPaths.offerModificationCommand(commandId),
+        http.request(OP_MODIFY).put(commandPath).jsonBodyPartial(body).send();
+        return awaitAndGather(commandPath,
                 ApiPaths.offerModificationCommandTasks(commandId), OP_MODIFY);
     }
 

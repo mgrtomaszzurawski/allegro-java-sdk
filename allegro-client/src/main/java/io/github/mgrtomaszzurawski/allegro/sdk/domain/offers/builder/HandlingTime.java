@@ -7,9 +7,10 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 /**
  * How long after a purchase the seller hands the parcel to the carrier — the
  * dispatch (handling) time Allegro accepts for a bulk modification. The wire
- * offers each value in two equivalent ISO 8601 spellings (an hours form and a
+ * offers most values in two equivalent ISO 8601 spellings (an hours form and a
  * days form); the SDK exposes one clean set, so {@link #DAYS_2} maps to the
- * wire's {@code P2D}/{@code PT48H}.
+ * wire's {@code P2D}/{@code PT48H} (a few, like {@link #IMMEDIATE} and
+ * {@link #DAY_1}, have a single wire form).
  *
  * @since 0.5.0
  */
