@@ -331,6 +331,19 @@ only the parts the request set. A title-only update now sends `{"title":{…}}`;
 gone regardless of server semantics. **Still to confirm on the sandbox** (needs a live offer): that
 the server does treat an omitted part as "no change" (expected) and accepts a subset PATCH.
 
+## Offers — read (bucket A)
+
+### Partial-offer `parts` read takes the `include` array as a repeated query parameter (verified 2026-07-21, sandbox)
+
+`GET /sale/product-offers/{offerId}/parts` requires an `include` array (values `stock`, `price`). The
+SDK sends it as a repeated parameter — `?include=stock&include=price` — via `Query.addAll`. Live-probed
+with `getFields`: a request for a non-owned offer returns `404` (mapped to `AllegroNotFoundException`),
+NOT a `400 unsupported part name` — so the repeated-`include` query shape is accepted and the server
+proceeds to the offer lookup. The `200` response mapping (`PartialOffer.from` over
+`SalePartialProductOfferResponse`: `stock.available`, `sellingMode.price`, `additionalMarketplaces`) is
+spec-derived + WireMock-pinned; a live `200` read-back is gated on a seeded owned offer (Phase 1.0
+prereq, same as the batch commands — the sandbox seller has 0 offers).
+
 ## Offers — batch (bucket A)
 
 ### Bulk price/stock: each modification element carries exactly one of `prices` or `stock` (verified 2026-07-20, sandbox)
