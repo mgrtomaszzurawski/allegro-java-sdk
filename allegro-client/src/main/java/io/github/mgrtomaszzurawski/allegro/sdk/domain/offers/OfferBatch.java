@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
@@ -81,4 +82,16 @@ public interface OfferBatch {
      * @return the command report once every offer has been processed
      */
     BatchReport applyPricingRules(BatchPricingRulesRequest request);
+
+    /**
+     * Apply offer-settings changes to the request's offers in one command — the
+     * listing duration (a fixed length or unlimited) and/or the dispatch time.
+     * Unlike {@link #changePrices}/{@link #changeQuantities} (which set a single
+     * value across offers), the changes are described by a
+     * {@link BatchModificationRequest}, which requires at least one field to change.
+     *
+     * @param modification the offers and the field changes to apply
+     * @return the command report once every offer has been processed
+     */
+    BatchReport modify(BatchModificationRequest modification);
 }

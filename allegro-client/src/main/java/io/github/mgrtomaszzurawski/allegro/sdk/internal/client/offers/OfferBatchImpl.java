@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CommandTaskRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GeneralReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferAutomaticPricingCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferBulkChangeCommandRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferChangeCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCriteriumRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferPriceChangeCommandRaw;
@@ -21,12 +22,14 @@ import io.github.mgrtomaszzurawski.allegro.client.model.QuantityModificationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TaskReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockTaskResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.BulkOfferModificationMapper;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.OfferModificationMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.PricingRulesMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
@@ -57,6 +60,7 @@ public final class OfferBatchImpl implements OfferBatch {
     private static final String OP_TASKS = "read batch command tasks";
     private static final String OP_MODIFY_PRICES_STOCK = "modify offer prices and stock";
     private static final String OP_APPLY_PRICING_RULES = "apply offer pricing rules";
+    private static final String OP_MODIFY = "modify offers";
 
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
@@ -134,6 +138,19 @@ public final class OfferBatchImpl implements OfferBatch {
     }
 
     @Override
+    public BatchReport modify(BatchModificationRequest modification) {
+        String commandId = UUID.randomUUID().toString();
+        OfferChangeCommandRaw body = OfferModificationMapper.toRaw(modification);
+        // Partial body: the generated Modification carries ten optional sub-objects,
+        // all null but the ones set here; a full serialization would send them as
+        // null and reset those aspects server-side (KNOWN-SERVER-BEHAVIORS — create).
+        http.request(OP_MODIFY).put(ApiPaths.offerModificationCommand(commandId))
+                .jsonBodyPartial(body).send();
+        return awaitAndGather(ApiPaths.offerModificationCommand(commandId),
+                ApiPaths.offerModificationCommandTasks(commandId), OP_MODIFY);
+    }
+
+    @Override
     public BatchReport applyPricingRules(BatchPricingRulesRequest request) {
         UUID commandId = UUID.randomUUID();
         OfferAutomaticPricingCommandRaw body = PricingRulesMapper.toRaw(commandId, request);
@@ -165,9 +182,18 @@ public final class OfferBatchImpl implements OfferBatch {
     private BatchReport submitAndAwait(String commandPath, String tasksPath, Object body,
             String operationName) {
         http.request(operationName).put(commandPath).jsonBody(body).send();
-        // The command runs asynchronously; wait until Allegro stamps completedAt.
+        return awaitAndGather(commandPath, tasksPath, operationName);
+    }
+
+    /**
+     * Poll a submitted command until Allegro stamps {@code completedAt}, then
+     * gather every per-offer task page into the terminal {@link BatchReport}.
+     * Shared by every submit variant (PUT full/partial, POST-to-collection); only
+     * the submit call differs.
+     */
+    private BatchReport awaitAndGather(String statusPath, String tasksPath, String operationName) {
         GeneralReportRaw report = poller.await(
-                () -> http.getAuthenticated(commandPath, GeneralReportRaw.class, OP_POLL),
+                () -> http.getAuthenticated(statusPath, GeneralReportRaw.class, OP_POLL),
                 terminal -> terminal.getCompletedAt() != null,
                 operationName);
         return BatchReport.from(report, gatherTasks(tasksPath));
@@ -186,11 +212,7 @@ public final class OfferBatchImpl implements OfferBatch {
     private BatchReport submitCollectionAndAwait(String collectionPath, String statusPath,
             String tasksPath, Object body, String operationName) {
         http.request(operationName).post(collectionPath).jsonBodyPartial(body).send();
-        GeneralReportRaw report = poller.await(
-                () -> http.getAuthenticated(statusPath, GeneralReportRaw.class, OP_POLL),
-                terminal -> terminal.getCompletedAt() != null,
-                operationName);
-        return BatchReport.from(report, gatherTasks(tasksPath));
+        return awaitAndGather(statusPath, tasksPath, operationName);
     }
 
     /** Consume every task page (bounded by the offers submitted) into one list. */

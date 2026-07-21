@@ -28,8 +28,11 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
@@ -137,6 +140,14 @@ class OfferBatchClientTest {
     private static final String SET_RANGE_MIN_JSON_PATH =
             "$.modification.set[0].configuration.priceRange.minPrice.amount";
     private static final String REMOVE_MARKETPLACE_JSON_PATH = "$.modification.remove[0].marketplace.id";
+
+    private static final String MODIFY_COMMAND_PATH = "/sale/offer-modification-commands/" + UUID_PATTERN;
+    private static final String MODIFY_TASKS_PATH = MODIFY_COMMAND_PATH + "/tasks";
+    private static final String DURATION_JSON_PATH = "$.modification.publication.duration";
+    private static final String HANDLING_TIME_JSON_PATH = "$.modification.delivery.handlingTime";
+    private static final String DISCOUNTS_JSON_PATH = "$.modification.discounts";
+    private static final String DURATION_P30D = "P30D";
+    private static final String HANDLING_TIME_P2D = "P2D";
 
     private static OfferBatchImpl batchClient(WireMockRuntimeInfo wmInfo) {
         ObjectMapper mapper = new ObjectMapper()
@@ -564,6 +575,47 @@ class OfferBatchClientTest {
                 () -> batchClient(wmInfo).applyPricingRules(assignWithRangeRequest()));
         assertEquals("offerCriteria", failure.errors().get(0).path());
         verify(0, getRequestedFor(urlPathMatching(AUTOMATION_STATUS_PATH)));
+    }
+
+    @Test
+    void modify_whenCommandCompletes_putsPartialModificationWithCriteria(WireMockRuntimeInfo wmInfo) {
+        // given — a command already complete when first polled
+        stubCompletedCommandAt(MODIFY_COMMAND_PATH, MODIFY_TASKS_PATH);
+
+        // when — set a fixed listing duration and a handling time on one offer
+        BatchReport report = batchClient(wmInfo).modify(
+                BatchModificationRequest.forOffers(List.of(OFFER_ONE))
+                        .listingDuration(OfferDuration.DAYS_30)
+                        .handlingTime(HandlingTime.DAYS_2)
+                        .build());
+
+        // then — a public.v1 PUT carries the publication + delivery changes and the
+        // offers as a CONTAINS_OFFERS criterion...
+        verify(1, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(matchingJsonPath(DURATION_JSON_PATH, equalTo(DURATION_P30D)))
+                .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH, equalTo(HANDLING_TIME_P2D)))
+                .withRequestBody(matchingJsonPath(TYPE_JSON_PATH, equalTo("CONTAINS_OFFERS")))
+                .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE))));
+        // ...and the unset Modification sub-objects are omitted (partial body)
+        verify(0, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(DISCOUNTS_JSON_PATH)));
+        assertEquals(2, report.total());
+        assertEquals(2, report.tasks().size());
+    }
+
+    @Test
+    void modify_whenSubmitRejected_throwsBadRequestAndSkipsPolling(WireMockRuntimeInfo wmInfo) {
+        // given — the command submission itself is rejected
+        stubFor(put(urlPathMatching(MODIFY_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST).withBody(BAD_REQUEST_BODY)));
+
+        // then — the typed field error surfaces and no polling happens
+        AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
+                () -> batchClient(wmInfo).modify(BatchModificationRequest.forOffers(List.of(OFFER_ONE))
+                        .unlimitedListing().build()));
+        assertEquals("offerCriteria", failure.errors().get(0).path());
+        verify(0, getRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH)));
     }
 
     private static BatchPricingRulesRequest assignWithRangeRequest() {

@@ -156,6 +156,28 @@ client.offers().batch().applyPricingRules(
 once per marketplace to assign the rule on several; call `fromMarketplace` once per marketplace to
 remove.
 
+## Change offer settings in bulk
+
+`batch().modify(...)` applies offer-settings changes to many offers in one command. The first
+supported fields are the **listing duration** (a fixed `OfferDuration` or unlimited) and the
+**dispatch time** (`HandlingTime`); at least one change is required, and a fixed duration and an
+unlimited listing are mutually exclusive. It returns the same terminal `BatchReport`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
+
+BatchReport report = client.offers().batch().modify(
+        BatchModificationRequest.forOffers(List.of("13579", "24680"))
+                .listingDuration(OfferDuration.DAYS_30)   // or .unlimitedListing()
+                .handlingTime(HandlingTime.DAYS_2)
+                .build());
+```
+
+`OfferDuration`/`HandlingTime` name one clean set of durations (e.g. `DAYS_30`, `IMMEDIATE`); the
+wire's redundant hour/day spellings for the same duration are hidden.
+
 ## Create an offer
 
 ```java
