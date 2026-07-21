@@ -4,7 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPromoOptionsRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoOptionModification;
 import java.util.List;
@@ -48,4 +50,17 @@ public interface PromoOptions {
      * @param changes the changes to apply (at least one)
      */
     void modify(String offerId, List<PromoOptionModification> changes);
+
+    /**
+     * Set the base and/or extra promotion packages on many offers in one command,
+     * timed now or at the end of the current cycle. The SDK submits the command,
+     * waits for it to finish, and gathers the per-offer results into a
+     * {@link BatchReport}; the asynchronous command/poll/task-paging mechanics are
+     * fully internal.
+     *
+     * @param request the offers and the package change, built with
+     *     {@link BatchPromoOptionsRequest}
+     * @return the command report once every offer has been processed
+     */
+    BatchReport modifyBatch(BatchPromoOptionsRequest request);
 }
