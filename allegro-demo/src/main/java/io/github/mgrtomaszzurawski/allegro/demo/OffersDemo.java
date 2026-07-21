@@ -22,6 +22,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTim
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
@@ -31,6 +32,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
@@ -39,6 +41,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestExcept
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -87,6 +90,9 @@ final class OffersDemo {
     private static final String PROMO_BATCH_BASE_PACKAGE_PROPERTY = "demo.promoBatchBasePackage";
     private static final String PROMO_BATCH_EXTRA_PACKAGE_PROPERTY = "demo.promoBatchExtraPackage";
     private static final String PROMO_BATCH_TIMING_PROPERTY = "demo.promoBatchTiming";
+    private static final String PARTS_OFFER_ID_PROPERTY = "demo.partsOfferId";
+    private static final String PARTS_INCLUDE_PROPERTY = "demo.partsInclude";
+    private static final String DEFAULT_PARTS = "STOCK,PRICE";
     private static final String DEFAULT_MARKETPLACE = "allegro-pl";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
@@ -138,6 +144,8 @@ final class OffersDemo {
                 modifyOffers(client, System.getProperty(MODIFY_OFFER_IDS_PROPERTY));
             } else if (System.getProperty(PROMO_BATCH_OFFER_IDS_PROPERTY) != null) {
                 modifyPromoBatch(client, System.getProperty(PROMO_BATCH_OFFER_IDS_PROPERTY));
+            } else if (System.getProperty(PARTS_OFFER_ID_PROPERTY) != null) {
+                getOfferParts(client, System.getProperty(PARTS_OFFER_ID_PROPERTY));
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -331,6 +339,26 @@ final class OffersDemo {
             System.out.println("applyPricingRules rejected — " + e.errors().size() + " error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
                     + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    /**
+     * Partial-offer read: {@code getFields(offerId, OfferPart...)} retrieves only the
+     * requested parts ({@code -Pdemo.partsInclude=STOCK,PRICE}, default both) — faster
+     * and lighter than the full offer read.
+     */
+    private static void getOfferParts(AllegroClient client, String offerId) {
+        OfferPart[] parts = Arrays.stream(
+                        System.getProperty(PARTS_INCLUDE_PROPERTY, DEFAULT_PARTS).split(OFFER_ID_SEPARATOR))
+                .map(String::trim).map(OfferPart::valueOf).toArray(OfferPart[]::new);
+        try {
+            PartialOffer partial = client.offers().getFields(offerId, parts);
+            String price = partial.price() == null ? "(not requested)"
+                    : partial.price().amount() + " " + partial.price().currency();
+            System.out.println("getFields: id=" + partial.id() + ", stock=" + partial.availableStock()
+                    + ", price=" + price + ", marketplacePrices=" + partial.marketplacePrices());
+        } catch (AllegroNotFoundException e) {
+            System.out.println("getFields: offer " + offerId + " not found");
         }
     }
 

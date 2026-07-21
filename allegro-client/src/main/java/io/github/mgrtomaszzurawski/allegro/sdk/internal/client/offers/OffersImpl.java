@@ -10,6 +10,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SalePartialProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferStatusResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellerOfferBaseEventRaw;
@@ -30,6 +31,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.PromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
@@ -37,6 +39,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.FlexibleBundlesImpl;
@@ -50,6 +53,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
@@ -72,6 +76,7 @@ public final class OffersImpl implements Offers {
     private static final String OP_RATING = "get offer rating";
     private static final String OP_EVENTS = "stream offer events";
     private static final String OP_OPERATION_STATUS = "get offer operation status";
+    private static final String OP_GET_FIELDS = "get offer parts";
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
@@ -85,6 +90,11 @@ public final class OffersImpl implements Offers {
     private static final String QUERY_LIMIT = "limit";
     private static final String QUERY_FROM = "from";
     private static final String QUERY_TYPE = "type";
+    private static final String QUERY_INCLUDE = "include";
+    private static final String PART_STOCK = "stock";
+    private static final String PART_PRICE = "price";
+    private static final String ERR_NO_PARTS = "at least one offer part is required";
+    private static final String ERR_OFFER_ID = "offerId must not be null";
 
     private final HttpSupport http;
     private final OfferBatch batch;
@@ -116,6 +126,26 @@ public final class OffersImpl implements Offers {
     public Offer get(String offerId) {
         return Offer.from(http.getAuthenticated(
                 ApiPaths.productOffer(offerId), SaleProductOfferResponseV1Raw.class, OP_GET));
+    }
+
+    @Override
+    public PartialOffer getFields(String offerId, OfferPart... parts) {
+        Objects.requireNonNull(offerId, ERR_OFFER_ID);
+        if (parts == null || parts.length == 0) {
+            throw new IllegalArgumentException(ERR_NO_PARTS);
+        }
+        Query query = Query.create();
+        for (OfferPart part : parts) {
+            query.add(QUERY_INCLUDE, wirePart(part));
+        }
+        return PartialOffer.from(http.request(OP_GET_FIELDS)
+                .get(ApiPaths.productOfferParts(offerId))
+                .query(query)
+                .fetch(SalePartialProductOfferResponseRaw.class));
+    }
+
+    private static String wirePart(OfferPart part) {
+        return part == OfferPart.STOCK ? PART_STOCK : PART_PRICE;
     }
 
     @Override

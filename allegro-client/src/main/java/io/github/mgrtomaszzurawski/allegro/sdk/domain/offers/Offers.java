@@ -14,10 +14,12 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import java.util.stream.Stream;
@@ -43,6 +45,18 @@ public interface Offers {
      * @return the offer
      */
     Offer get(String offerId);
+
+    /**
+     * Selected parts of a single product-offer — a faster, lighter read than
+     * {@link #get(String)} that returns only the requested {@link OfferPart parts}
+     * (the available stock and/or the per-marketplace price). At least one part is
+     * required.
+     *
+     * @param offerId the offer identifier
+     * @param parts   the parts to retrieve (at least one)
+     * @return the requested parts of the offer
+     */
+    PartialOffer getFields(String offerId, OfferPart... parts);
 
     /**
      * Change an offer's Buy Now price. The SDK issues the price-change command

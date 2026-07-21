@@ -25,6 +25,23 @@ try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment
 `null` when the offer has no tracked quantity. Amounts use the shared `Money` type
 (`sdk.core.Money`) — the exact server decimal string plus its ISO-4217 currency.
 
+### Read only selected parts
+
+When you need just the stock or the price, `getFields(...)` is a faster, lighter read than the full
+`get(...)`. Request one or more `OfferPart`s; the returned `PartialOffer` populates only those.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
+
+PartialOffer parts = client.offers().getFields("13579", OfferPart.STOCK, OfferPart.PRICE);
+System.out.println("stock=" + parts.availableStock() + ", price=" + parts.price());
+parts.marketplacePrices().forEach((marketplace, price) ->
+        System.out.println(marketplace + ": " + price.amount() + " " + price.currency()));
+```
+
+A part you did not request is `null` (`availableStock`/`price`) or empty (`marketplacePrices`); at
+least one part is required.
+
 ## List your offers
 
 `streamOffers` returns a **lazy** `Stream<OfferSummary>`: pages are fetched from Allegro only
