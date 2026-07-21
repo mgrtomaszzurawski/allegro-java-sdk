@@ -1,0 +1,347 @@
+{
+  "__provenance": "sandbox-captured 2026-07-21: real GET /sale/product-offers/7781898446 (seller TestBoxSDK), the [A-seed] offer. Wire-accurate; note warnings:[] (spec types it as an object) which requires ArrayForObjectHandler.",
+  "name": "[A-seed] Nauka duza ksiazka dla malych dzieci",
+  "productSet": [
+    {
+      "product": {
+        "id": "76a2e547-cf6a-49ac-b7b7-690b80d5b2ce",
+        "publication": {
+          "status": "LISTED"
+        },
+        "parameters": [
+          {
+            "id": "223545",
+            "name": "Tytuł",
+            "values": [
+              "Nauka duża książka dla małych dzieci"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "223489",
+            "name": "Autor",
+            "values": [
+              "Kathleen Weidner Zoehfeld"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "223541",
+            "name": "Wydawnictwo",
+            "values": [
+              "Świat Książki"
+            ],
+            "valuesIds": [
+              "223541_303637"
+            ],
+            "rangeValue": null
+          },
+          {
+            "id": "75",
+            "name": "Okładka",
+            "values": [
+              "twarda"
+            ],
+            "valuesIds": [
+              "75_2"
+            ],
+            "rangeValue": null
+          },
+          {
+            "id": "249857",
+            "name": "Nośnik",
+            "values": [
+              "książka papierowa"
+            ],
+            "valuesIds": [
+              "249857_1769440"
+            ],
+            "rangeValue": null
+          },
+          {
+            "id": "2868",
+            "name": "Język publikacji",
+            "values": [
+              "polski"
+            ],
+            "valuesIds": [
+              "2868_1"
+            ],
+            "rangeValue": null
+          },
+          {
+            "id": "223493",
+            "name": "Liczba stron",
+            "values": [
+              "128"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "74",
+            "name": "Rok wydania",
+            "values": [
+              "2020"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "223329",
+            "name": "Wysokość produktu",
+            "values": [
+              "27"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "223333",
+            "name": "Szerokość produktu",
+            "values": [
+              "26"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "249493",
+            "name": "Gatunek",
+            "values": [
+              "Pozostałe"
+            ],
+            "valuesIds": [
+              "249493_1645911"
+            ],
+            "rangeValue": null
+          },
+          {
+            "id": "250792",
+            "name": "Kod taryfy celnej",
+            "values": [
+              "49030000"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          },
+          {
+            "id": "245669",
+            "name": "ISBN",
+            "values": [
+              "9788327489180"
+            ],
+            "valuesIds": null,
+            "rangeValue": null
+          }
+        ],
+        "isAiCoCreated": true
+      },
+      "quantity": {
+        "value": 1
+      },
+      "responsiblePerson": null,
+      "responsibleProducer": {
+        "id": "85d562be-2415-4687-8d38-16590d50725a"
+      },
+      "safetyInformation": {
+        "description": "List of book safety warnings based on the requirements of General Product Safety Regulation (EU) 2023/988 (GPSR):\n\n1. Risk of cuts:\na) Check the book for sharp edges or staples that can cause cuts. b) Beware of hard paper covers that may have sharp corners. 2. Fire hazard:\na) Keep books away from heat and fire sources. b) Avoid storing books in areas exposed to direct sunlight to prevent ignition. 3. Health Hazard:\na) Long-term reading can lead to eye strain, headaches, and concentration problems. b) Provide adequate lighting when reading to reduce eye strain. c) Take regular breaks while reading to rest your eyes and relax your muscles. 4. Mental health risks:\na) Books in certain categories may contain content that is controversial or inconsistent with your beliefs. Before reading, read the opinions of other readers. b) Intense entry into the world of fantasy, science fiction or horror can lead to detachment from reality and problems with distinguishing between fiction and the real world. c) The content of some books (violence, cruelty, drastic scenes) can negatively affect emotional health, cause stress, anxiety, and even depression. 5. Threat to children:\na) Young children can put books in their mouths, which can lead to choking or swallowing of small elements. b) Supervise children while reading books and make sure they don’t put them in their mouths. c) The content contained in the books may be inappropriate for children and young people due to their subject matter (violence, erotica, etc. ). Always check the age markings and adjust the reading to your child’s age and maturity. 6. Keeping books in good condition:\na) Store books in a dry and clean place to prevent mold growth and moisture damage. b) Avoid storing books in places exposed to extreme temperatures and humidity. c) Clean your books regularly from dust and dirt to maintain their appearance and durability. 7. Sources of information:\na) Check the reliability of the information contained in the book, especially if you use it for educational or professional purposes. b) Pay attention to the publication date, as knowledge in some areas quickly becomes obsolete. c) When using the links or web resources provided in the book, be careful and apply web security policies. 8. Copyright:\na) Comply with the copyright of the content provided in the book.",
+        "type": "TEXT"
+      },
+      "marketedBeforeGPSRObligation": false,
+      "deposits": []
+    }
+  ],
+  "parameters": [
+    {
+      "id": "11323",
+      "name": "Stan",
+      "values": [
+        "Nowy"
+      ],
+      "valuesIds": [
+        "11323_1"
+      ],
+      "rangeValue": null
+    }
+  ],
+  "images": [
+    "https://a.allegroimg.allegrosandbox.pl/original/1198b9/a42bd37f4359990238611fcbcc07"
+  ],
+  "afterSalesServices": {
+    "impliedWarranty": {
+      "id": "7ea232fd-ebde-458f-aeaa-7316502fc16b"
+    },
+    "returnPolicy": {
+      "id": "ca36b384-61de-48ca-b296-a0abe1f41930"
+    },
+    "warranty": {
+      "id": "71a6d25f-5175-4b51-bd67-db38f82b33a7"
+    }
+  },
+  "payments": {
+    "invoice": "VAT"
+  },
+  "sellingMode": {
+    "format": "BUY_NOW",
+    "price": {
+      "amount": "29.99",
+      "currency": "PLN"
+    },
+    "startingPrice": null,
+    "minimalPrice": null
+  },
+  "stock": {
+    "available": 5,
+    "unit": "UNIT"
+  },
+  "location": {
+    "countryCode": "PL",
+    "province": "MAZOWIECKIE",
+    "city": "Warszawa",
+    "postCode": "00-001"
+  },
+  "delivery": {
+    "shippingRates": {
+      "id": "2479b9fb-b52a-409d-b4d0-1aeb80b79368"
+    },
+    "handlingTime": "PT24H",
+    "additionalInfo": null,
+    "shipmentDate": null
+  },
+  "description": {
+    "sections": [
+      {
+        "items": [
+          {
+            "type": "TEXT",
+            "content": "<h1>Nauka duża książka dla małych dzieci</h1>"
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "type": "TEXT",
+            "content": "<h2>Kathleen Weidner Zoehfeld</h2>"
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "type": "TEXT",
+            "content": "<ul> <li>Rok wydania: <b>2020</b></li> <li>Rodzaj okładki: <b>Twarda</b></li> <li>Autor: <b>Kathleen Weidner Zoehfeld </b></li> <li>ISBN: <b>9788327489180</b></li> <li>Wymiar: <b> 26cm x 27cm </b></li> <li>Nr wydania: <b>-</b></li> <li>Seria: <b>-</b></li> <li>Ilość stron: <b>128</b></li> <li>Waga: <b>0.9 kg</b></li> <li>Indeks: <b>-</b></li> <li>TIN: <b>T03474562</b></li> <li><b>Obwoluta/Oprawa: </b>zabrudzona, porysowana, ze śladami zgięć <b>Brzegi stron: </b>zakurzone</li> </ul>"
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "type": "TEXT",
+            "content": "<p>Objaśnienie do stanu: <b>Jak nowa</b></p> <p>Książki wizualnie nie odbiegają od książek nowych. Mogą być delikatnie zakurzone, posiadać pojedyncze ryski na okładce. Bez wad fizycznych.</p>"
+          }
+        ]
+      }
+    ]
+  },
+  "external": null,
+  "category": {
+    "id": "66781"
+  },
+  "taxSettings": null,
+  "sizeTable": null,
+  "discounts": {
+    "wholesalePriceList": null
+  },
+  "contact": null,
+  "fundraisingCampaign": null,
+  "messageToSellerSettings": {
+    "mode": "OPTIONAL"
+  },
+  "attachments": [],
+  "b2b": null,
+  "additionalServices": null,
+  "compatibilityList": null,
+  "additionalMarketplaces": {
+    "allegro-business-pl": {
+      "sellingMode": {
+        "price": {
+          "amount": "29.99",
+          "currency": "PLN"
+        }
+      },
+      "publication": {
+        "state": "REFUSED",
+        "refusalReasons": [
+          {
+            "code": "VQR012_OFFER_HAS_NO_TAX_RATE_FOR_MARKETPLACE",
+            "userMessage": "no VAT rate",
+            "parameters": {}
+          }
+        ]
+      }
+    },
+    "allegro-sk": {
+      "sellingMode": null,
+      "publication": {
+        "state": "NOT_REQUESTED",
+        "refusalReasons": []
+      }
+    },
+    "allegro-cz": {
+      "sellingMode": null,
+      "publication": {
+        "state": "NOT_REQUESTED",
+        "refusalReasons": []
+      }
+    },
+    "allegro-hu": {
+      "sellingMode": null,
+      "publication": {
+        "state": "NOT_REQUESTED",
+        "refusalReasons": []
+      }
+    },
+    "allegro-business-cz": {
+      "sellingMode": null,
+      "publication": {
+        "state": "NOT_REQUESTED",
+        "refusalReasons": []
+      }
+    }
+  },
+  "warnings": [],
+  "aiCoCreatedContent": {
+    "images": []
+  },
+  "id": "7781898446",
+  "language": "pl-PL",
+  "publication": {
+    "status": "ACTIVE",
+    "duration": null,
+    "endedBy": null,
+    "endingAt": null,
+    "startingAt": null,
+    "republish": false,
+    "marketplaces": {
+      "base": {
+        "id": "allegro-pl"
+      },
+      "additional": [
+        {
+          "id": "allegro-business-pl"
+        }
+      ]
+    }
+  },
+  "validation": {
+    "errors": [],
+    "warnings": [],
+    "validatedAt": "2026-07-21T20:08:17.152Z"
+  },
+  "createdAt": "2026-07-21T20:08:17.000Z",
+  "updatedAt": "2026-07-21T20:10:28.094Z"
+}

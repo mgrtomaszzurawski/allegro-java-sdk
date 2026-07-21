@@ -35,8 +35,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ArrayForObjectHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.UnknownSubtypeToBaseHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -51,6 +54,9 @@ class OffersClientTest {
     private static final String CHANGE_PRICE_PATH_PATTERN =
             "/offers/" + OFFER_ID + "/change-price-commands/[0-9a-fA-F-]{36}";
     private static final String OFFER_FIXTURE = "offers/product-offer.json";
+    private static final String LIVE_OFFER_ID = "7781898446";
+    private static final String LIVE_GET_PATH = "/sale/product-offers/" + LIVE_OFFER_ID;
+    private static final String LIVE_OFFER_FIXTURE = "offers/product-offer-live.json";
     private static final String NEW_AMOUNT = "149.50";
     private static final String CURRENCY_PLN = "PLN";
     private static final String PARTS_BOTH_URL =
@@ -75,10 +81,15 @@ class OffersClientTest {
                     + "\"path\":\"input.buyNowPrice\"}]}";
 
     private static OffersImpl offers(WireMockRuntimeInfo wmInfo) {
+        // Mirror the production AllegroClient mapper (modules + tolerance handlers) so a
+        // wire-accurate fixture exercises the same deserialization path the SDK uses live.
         ObjectMapper mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .registerModule(new org.openapitools.jackson.nullable.JsonNullableModule())
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                .registerModule(new StrictOneOfModule())
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .addHandler(new UnknownSubtypeToBaseHandler())
+                .addHandler(new ArrayForObjectHandler());
         RetryHandler retryHandler = new RetryHandler(HttpClient.newHttpClient(),
                 RetryPolicy.builder().enabled(false).build());
         HttpRuntime runtime = new HttpRuntime() {
@@ -133,6 +144,30 @@ class OffersClientTest {
         assertEquals(OfferStatus.ACTIVE, offer.status());
         assertEquals(Money.of("199.99", CURRENCY_PLN), offer.buyNowPrice());
         assertEquals(7, offer.availableStock());
+    }
+
+    @Test
+    void get_whenRealSandboxOfferWithArrayWarnings_deserializesThroughSdk(WireMockRuntimeInfo wmInfo) {
+        // given — the wire-accurate sandbox capture whose `warnings` is [] (the spec types it
+        // as an object); without ArrayForObjectHandler this read throws MismatchedInputException
+        // and fails the whole offer. Regression guard for the live-found deserialization bug.
+        stubFor(get(urlEqualTo(LIVE_GET_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBodyFile(LIVE_OFFER_FIXTURE)));
+
+        // when — the real offer reads through the SDK without failing
+        Offer offer = offers(wmInfo).get(LIVE_OFFER_ID);
+
+        // then — core fields map from the real payload
+        assertEquals(LIVE_OFFER_ID, offer.id());
+        assertEquals("[A-seed] Nauka duza ksiazka dla malych dzieci", offer.name());
+        assertEquals("66781", offer.categoryId());
+        assertEquals(OfferFormat.BUY_NOW, offer.format());
+        assertEquals(OfferStatus.ACTIVE, offer.status());
+        assertEquals(Money.of("29.99", CURRENCY_PLN), offer.buyNowPrice());
+        assertEquals(5, offer.availableStock());
     }
 
     @Test
