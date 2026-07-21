@@ -133,6 +133,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   one price or stock change; the body is written partial so unset branches are omitted. Task pages are
   read from the JSON tree (the spec's price/stock task `oneOf` is a discriminator-less union of two
   identical shapes that the generated union deserializer cannot resolve — both map to one result).
+- Batch pricing rules: `batch().applyPricingRules(BatchPricingRulesRequest)` assigns an
+  automatic-pricing rule to — or removes it from — many offers on one or more marketplaces in one
+  command (`POST /sale/offer-price-automation-commands`), polled to a terminal `BatchReport`. The
+  `BatchPricingRulesRequest` builder is fail-fast with two mutually exclusive modes
+  (`assignRules(offerIds).onMarketplace(marketplace, ruleId[, PriceRange])` /
+  `removeRules(offerIds).fromMarketplace(marketplace)`), mirroring the wire's `oneOf`; an assignment
+  may carry an optional `PriceRange` bound and the body is written partial so an unset configuration
+  is omitted.
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.

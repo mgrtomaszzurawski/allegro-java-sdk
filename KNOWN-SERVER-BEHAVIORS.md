@@ -346,6 +346,19 @@ price and stock together on one `BulkPriceStockModification` and splits them int
 elements (`toWireElements()`). Live-caught via the negative probe (a bogus offer id: the element
 shape is validated at submit, before offer existence is checked).
 
+### Automatic-pricing command: a non-owned offer FAILS per-offer, not at submit (verified 2026-07-21, sandbox)
+
+`POST /sale/offer-price-automation-commands` accepts a well-formed `OfferAutomaticPricingCommand`
+(both the `set` and `remove` `oneOf` branches, including a `set` element's optional
+`configuration.priceRange`) and returns a command that runs asynchronously; an offer the caller
+does not own does NOT 400 at submit — the command completes and the offer surfaces as a per-offer
+task with `status=FAIL`. So the whole submit → poll (`completedAt`) → tasks path is exercised by a
+probe against a bogus offer id, which proves the request body deserialized server-side (a shape
+error would 400 at submit, before any command id is issued). `batch().applyPricingRules` was
+live-verified this way for both branches; a happy-path state-change (assign a real rule, then read
+the offer's assignment back) still needs a seeded sellable offer + a real rule id — the same
+Phase 1.0 seed prerequisite as bulk price/stock.
+
 ## Offers — create (bucket A)
 
 ### `POST /sale/product-offers` rejects `language: null` — send only set fields (verified 2026-07-18, sandbox)

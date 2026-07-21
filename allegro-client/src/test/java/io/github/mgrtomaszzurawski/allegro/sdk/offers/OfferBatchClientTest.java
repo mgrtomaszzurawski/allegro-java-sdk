@@ -28,6 +28,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
@@ -120,6 +121,22 @@ class OfferBatchClientTest {
             "{\"tasks\":[{\"subject\":{\"offerId\":\"" + OFFER_ONE + "\",\"field\":\"" + FIELD_PRICE
                     + "\"},\"status\":\"SUCCESS\"},{\"subject\":{\"offerId\":\"" + OFFER_ONE
                     + "\",\"field\":\"" + FIELD_STOCK + "\"},\"status\":\"SUCCESS\"}]}";
+
+    private static final String AUTOMATION_COMMAND_PATH = "/sale/offer-price-automation-commands";
+    private static final String AUTOMATION_STATUS_PATH = AUTOMATION_COMMAND_PATH + "/" + UUID_PATTERN;
+    private static final String AUTOMATION_TASKS_PATH = AUTOMATION_STATUS_PATH + "/tasks";
+    private static final String RULE_ID = "641c73feaef0a8281a3d11f8";
+    private static final String MIN_PRICE = "10.00";
+    private static final String MAX_PRICE = "500.00";
+    private static final String CURRENCY_BASIS_MARKETPLACE = "MARKETPLACE_CURRENCY";
+    private static final String ID_JSON_PATH = "$.id";
+    private static final String SET_MARKETPLACE_JSON_PATH = "$.modification.set[0].marketplace.id";
+    private static final String SET_RULE_JSON_PATH = "$.modification.set[0].rule.id";
+    private static final String SET_RANGE_TYPE_JSON_PATH =
+            "$.modification.set[0].configuration.priceRange.type";
+    private static final String SET_RANGE_MIN_JSON_PATH =
+            "$.modification.set[0].configuration.priceRange.minPrice.amount";
+    private static final String REMOVE_MARKETPLACE_JSON_PATH = "$.modification.remove[0].marketplace.id";
 
     private static OfferBatchImpl batchClient(WireMockRuntimeInfo wmInfo) {
         ObjectMapper mapper = new ObjectMapper()
@@ -436,6 +453,125 @@ class OfferBatchClientTest {
         assertEquals(BULK_MODIFY_ERROR_PATH, failure.errors().get(0).path());
         assertEquals(BULK_MODIFY_ERROR_CODE, failure.errors().get(0).code());
         verify(0, getRequestedFor(urlPathMatching(BULK_STATUS_PATH)));
+    }
+
+    @Test
+    void applyPricingRules_whenAssignCompletes_postsSetModificationWithCriteria(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the POSTed command is already complete when first polled
+        stubFor(post(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(AUTOMATION_STATUS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(AUTOMATION_TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TWO_TASKS)));
+
+        // when — assign a rule (bounded by a price range) on one marketplace to one offer
+        BatchReport report = batchClient(wmInfo).applyPricingRules(assignWithRangeRequest());
+
+        // then — a public.v1 POST carries the command id, the SET branch with the
+        // marketplace/rule/price-range, and the offers as a CONTAINS_OFFERS criterion
+        verify(1, postRequestedFor(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .withRequestBody(matchingJsonPath(ID_JSON_PATH))
+                .withRequestBody(matchingJsonPath(SET_MARKETPLACE_JSON_PATH, equalTo(MARKETPLACE_PL)))
+                .withRequestBody(matchingJsonPath(SET_RULE_JSON_PATH, equalTo(RULE_ID)))
+                .withRequestBody(matchingJsonPath(SET_RANGE_TYPE_JSON_PATH, equalTo(CURRENCY_BASIS_MARKETPLACE)))
+                .withRequestBody(matchingJsonPath(SET_RANGE_MIN_JSON_PATH, equalTo(MIN_PRICE)))
+                .withRequestBody(matchingJsonPath(TYPE_JSON_PATH, equalTo("CONTAINS_OFFERS")))
+                .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE))));
+        // and the terminal report is mapped
+        assertEquals(2, report.total());
+        assertEquals(2, report.tasks().size());
+        assertEquals(OFFER_ONE, report.tasks().get(0).offerId());
+    }
+
+    @Test
+    void applyPricingRules_whenAssignWithoutRange_omitsConfiguration(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(post(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(AUTOMATION_STATUS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(AUTOMATION_TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(EMPTY_TASKS)));
+
+        // when — a config-less assignment
+        batchClient(wmInfo).applyPricingRules(BatchPricingRulesRequest.assignRules(List.of(OFFER_ONE))
+                .onMarketplace(MARKETPLACE_PL, RULE_ID).build());
+
+        // then — the assignment is submitted...
+        verify(1, postRequestedFor(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(SET_RULE_JSON_PATH, equalTo(RULE_ID))));
+        // ...and the optional configuration is OMITTED, not sent as null (partial body):
+        // no submitted request carries a configuration node
+        verify(0, postRequestedFor(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath("$.modification.set[0].configuration")));
+    }
+
+    @Test
+    void applyPricingRules_whenRemove_postsRemoveModification(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubFor(post(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(AUTOMATION_STATUS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(AUTOMATION_TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TWO_TASKS)));
+
+        // when — remove the rules on one marketplace from one offer
+        batchClient(wmInfo).applyPricingRules(BatchPricingRulesRequest.removeRules(List.of(OFFER_ONE))
+                .fromMarketplace(MARKETPLACE_PL).build());
+
+        // then — the REMOVE branch is submitted with the marketplace id
+        verify(1, postRequestedFor(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(REMOVE_MARKETPLACE_JSON_PATH, equalTo(MARKETPLACE_PL)))
+                .withRequestBody(matchingJsonPath(TYPE_JSON_PATH, equalTo("CONTAINS_OFFERS"))));
+    }
+
+    @Test
+    void applyPricingRules_whenCommandPending_pollsUntilTerminal(WireMockRuntimeInfo wmInfo) {
+        // given — the first status poll is pending, the second is complete
+        stubFor(post(urlPathEqualTo(AUTOMATION_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(AUTOMATION_STATUS_PATH)).inScenario(POLL_SCENARIO)
+                .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PENDING_REPORT))
+                .willSetStateTo(STATE_COMPLETED));
+        stubFor(get(urlPathMatching(AUTOMATION_STATUS_PATH)).inScenario(POLL_SCENARIO)
+                .whenScenarioStateIs(STATE_COMPLETED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(AUTOMATION_TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TWO_TASKS)));
+
+        // when
+        BatchReport report = batchClient(wmInfo).applyPricingRules(assignWithRangeRequest());
+
+        // then — the command was polled twice before completing
+        assertEquals(2, report.total());
+        verify(2, getRequestedFor(urlPathMatching(AUTOMATION_STATUS_PATH)));
+    }
+
+    @Test
+    void applyPricingRules_whenSubmitRejected_throwsBadRequestAndSkipsPolling(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the command submission itself is rejected
+        stubFor(post(urlPathEqualTo(AUTOMATION_COMMAND_PATH)).willReturn(
+                aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST).withBody(BAD_REQUEST_BODY)));
+
+        // then — the typed field error surfaces and no polling happens
+        AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
+                () -> batchClient(wmInfo).applyPricingRules(assignWithRangeRequest()));
+        assertEquals("offerCriteria", failure.errors().get(0).path());
+        verify(0, getRequestedFor(urlPathMatching(AUTOMATION_STATUS_PATH)));
+    }
+
+    private static BatchPricingRulesRequest assignWithRangeRequest() {
+        return BatchPricingRulesRequest.assignRules(List.of(OFFER_ONE))
+                .onMarketplace(MARKETPLACE_PL, RULE_ID, BatchPricingRulesRequest.PriceRange.of(
+                        BatchPricingRulesRequest.PriceRange.CurrencyBasis.MARKETPLACE_CURRENCY,
+                        Money.of(MIN_PRICE, CURRENCY_PLN), Money.of(MAX_PRICE, CURRENCY_PLN)))
+                .build();
     }
 
     private static BulkPriceStockModification priceOnlyModification() {

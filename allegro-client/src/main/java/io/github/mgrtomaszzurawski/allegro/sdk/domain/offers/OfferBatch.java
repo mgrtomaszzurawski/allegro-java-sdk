@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
@@ -66,4 +67,18 @@ public interface OfferBatch {
      * @return the command report once every modification has been processed
      */
     PriceStockBatchReport modifyPricesAndStock(List<BulkPriceStockModification> modifications);
+
+    /**
+     * Assign or remove automatic-pricing rules on the request's offers in one
+     * command. An automatic-pricing rule recalculates an offer's Buy Now price to
+     * follow the market (e.g. the lowest Allegro price); this command attaches such
+     * a rule to — or removes it from — the given offers on one or more
+     * marketplaces. Defining the rules themselves is a separate concern (the
+     * pricing facade); this only applies existing rules to offers in bulk.
+     *
+     * @param request the offers and the per-marketplace rule assignments or
+     *     removals, built with {@link BatchPricingRulesRequest}
+     * @return the command report once every offer has been processed
+     */
+    BatchReport applyPricingRules(BatchPricingRulesRequest request);
 }
