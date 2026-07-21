@@ -9,9 +9,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,7 +28,9 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OfferBatchImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
@@ -76,6 +81,13 @@ class OfferBatchClientTest {
     private static final String EMPTY_TASKS = "{\"tasks\":[]}";
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"unknown offer\",\"path\":\"offerCriteria\"}]}";
+    // Provenance: the real error shape live-observed for this endpoint (KNOWN-SERVER-BEHAVIORS
+    // §Offers — batch) — a combined element is rejected on modifications[0].
+    private static final String BULK_MODIFY_ERROR_PATH = "modifications[0]";
+    private static final String BULK_MODIFY_ERROR_CODE = "INVALID_SINGLE_ELEMENT_IN_MODIFICATION";
+    private static final String BULK_BAD_REQUEST_BODY =
+            "{\"errors\":[{\"code\":\"" + BULK_MODIFY_ERROR_CODE + "\",\"message\":\"Enter exactly "
+                    + "one element: 'stock' or 'prices'.\",\"path\":\"" + BULK_MODIFY_ERROR_PATH + "\"}]}";
 
     private static final String POLL_SCENARIO = "poll";
     private static final String STATE_COMPLETED = "completed";
@@ -83,6 +95,31 @@ class OfferBatchClientTest {
     private static final String OFFERS_JSON_PATH = "$.offerCriteria[0].offers[0].id";
     private static final String OFFERS_SECOND_JSON_PATH = "$.offerCriteria[0].offers[1].id";
     private static final String TYPE_JSON_PATH = "$.offerCriteria[0].type";
+
+    private static final String BULK_COMMAND_PATH = "/sale/offer-bulk-modification-commands";
+    private static final String BULK_STATUS_PATH = BULK_COMMAND_PATH + "/" + UUID_PATTERN;
+    private static final String BULK_TASKS_PATH = BULK_STATUS_PATH + "/tasks";
+    private static final String MARKETPLACE_PL = "allegro-pl";
+    private static final int STOCK_VALUE = 5;
+    private static final String CHANGE_TYPE_FIXED = "FIXED";
+    private static final String FIELD_PRICE = "PRICE";
+    private static final String FIELD_STOCK = "STOCK";
+    private static final String COMMAND_ID_JSON_PATH = "$.commandId";
+    // Allegro rejects a modification element carrying both prices and stock
+    // (INVALID_SINGLE_ELEMENT_IN_MODIFICATION), so an offer changing both is split
+    // into two elements with the same offerId — prices at [0], stock at [1].
+    private static final String MOD_OFFER_ID_JSON_PATH = "$.modifications[0].offerId";
+    private static final String MOD_SECOND_OFFER_ID_JSON_PATH = "$.modifications[1].offerId";
+    private static final String MOD_PRICE_TYPE_JSON_PATH =
+            "$.modifications[0].prices['" + MARKETPLACE_PL + "'].changeType";
+    private static final String MOD_PRICE_AMOUNT_JSON_PATH =
+            "$.modifications[0].prices['" + MARKETPLACE_PL + "'].value.amount";
+    private static final String MOD_STOCK_TYPE_JSON_PATH = "$.modifications[1].stock.changeType";
+    private static final String MOD_STOCK_VALUE_JSON_PATH = "$.modifications[1].stock.value";
+    private static final String SUBJECT_TASKS =
+            "{\"tasks\":[{\"subject\":{\"offerId\":\"" + OFFER_ONE + "\",\"field\":\"" + FIELD_PRICE
+                    + "\"},\"status\":\"SUCCESS\"},{\"subject\":{\"offerId\":\"" + OFFER_ONE
+                    + "\",\"field\":\"" + FIELD_STOCK + "\"},\"status\":\"SUCCESS\"}]}";
 
     private static OfferBatchImpl batchClient(WireMockRuntimeInfo wmInfo) {
         ObjectMapper mapper = new ObjectMapper()
@@ -294,5 +331,129 @@ class OfferBatchClientTest {
                 () -> batchClient(wmInfo).publish(List.of(OFFER_ONE)));
         assertEquals("offerCriteria", failure.errors().get(0).path());
         verify(0, getRequestedFor(urlPathMatching(COMMAND_PATH)));
+    }
+
+    @Test
+    void modifyPricesAndStock_whenCommandCompletes_postsBetaCommandWithPriceAndStock(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the POSTed command is already complete when first polled
+        stubFor(post(urlPathEqualTo(BULK_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(BULK_STATUS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(BULK_TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(SUBJECT_TASKS)));
+
+        // when — one offer gets a fixed marketplace price and a fixed stock
+        BulkPriceStockModification modification = BulkPriceStockModification.forOffer(OFFER_ONE)
+                .price(MARKETPLACE_PL, BulkPriceStockModification.PriceChange.fixed(
+                        Money.of(NEW_PRICE, CURRENCY_PLN)))
+                .stock(BulkPriceStockModification.StockChange.fixed(STOCK_VALUE))
+                .build();
+        PriceStockBatchReport report = batchClient(wmInfo)
+                .modifyPricesAndStock(List.of(modification));
+
+        // then — a beta POST carries the command id and TWO elements for the same
+        // offer: a price element and a separate stock element (Allegro rejects a
+        // combined element, so the SDK splits them)
+        verify(1, postRequestedFor(urlPathEqualTo(BULK_COMMAND_PATH))
+                .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER,
+                        equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1))
+                .withRequestBody(matchingJsonPath(COMMAND_ID_JSON_PATH))
+                .withRequestBody(matchingJsonPath(MOD_OFFER_ID_JSON_PATH, equalTo(OFFER_ONE)))
+                .withRequestBody(matchingJsonPath(MOD_SECOND_OFFER_ID_JSON_PATH, equalTo(OFFER_ONE)))
+                .withRequestBody(matchingJsonPath(MOD_PRICE_TYPE_JSON_PATH, equalTo(CHANGE_TYPE_FIXED)))
+                .withRequestBody(matchingJsonPath(MOD_PRICE_AMOUNT_JSON_PATH, equalTo(NEW_PRICE)))
+                .withRequestBody(matchingJsonPath(MOD_STOCK_TYPE_JSON_PATH, equalTo(CHANGE_TYPE_FIXED)))
+                .withRequestBody(matchingJsonPath(MOD_STOCK_VALUE_JSON_PATH,
+                        equalTo(String.valueOf(STOCK_VALUE)))));
+        // and the terminal report carries the per-field task subjects
+        assertEquals(2, report.total());
+        assertEquals(2, report.tasks().size());
+        assertEquals(OFFER_ONE, report.tasks().get(0).offerId());
+        assertEquals(FIELD_PRICE, report.tasks().get(0).field());
+        assertEquals(FIELD_STOCK, report.tasks().get(1).field());
+    }
+
+    @Test
+    void modifyPricesAndStock_whenCommandPending_pollsUntilTerminal(WireMockRuntimeInfo wmInfo) {
+        // given — the first status poll is pending, the second is complete
+        stubFor(post(urlPathEqualTo(BULK_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(BULK_STATUS_PATH)).inScenario(POLL_SCENARIO)
+                .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PENDING_REPORT))
+                .willSetStateTo(STATE_COMPLETED));
+        stubFor(get(urlPathMatching(BULK_STATUS_PATH)).inScenario(POLL_SCENARIO)
+                .whenScenarioStateIs(STATE_COMPLETED)
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(BULK_TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(SUBJECT_TASKS)));
+
+        // when
+        PriceStockBatchReport report = batchClient(wmInfo)
+                .modifyPricesAndStock(List.of(priceOnlyModification()));
+
+        // then — the command was polled twice before completing
+        assertEquals(2, report.total());
+        verify(2, getRequestedFor(urlPathMatching(BULK_STATUS_PATH)));
+    }
+
+    @Test
+    void modifyPricesAndStock_whenTasksPaged_gathersEveryPageWithSubject(WireMockRuntimeInfo wmInfo) {
+        // given — the task report spans two pages
+        stubFor(post(urlPathEqualTo(BULK_COMMAND_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)));
+        stubFor(get(urlPathMatching(BULK_STATUS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COMPLETED_REPORT)));
+        stubFor(get(urlPathMatching(BULK_TASKS_PATH)).withQueryParam("offset", equalTo("0"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(subjectTasksPage(TASKS_PAGE_SIZE))));
+        stubFor(get(urlPathMatching(BULK_TASKS_PATH)).withQueryParam("offset", equalTo("100"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(subjectTasksPage(SECOND_TASKS_PAGE))));
+
+        // when
+        PriceStockBatchReport report = batchClient(wmInfo)
+                .modifyPricesAndStock(List.of(priceOnlyModification()));
+
+        // then — every task across both pages is gathered, subjects mapped
+        assertEquals(TOTAL_TASKS, report.tasks().size());
+        assertEquals(FIELD_PRICE, report.tasks().get(0).field());
+        verify(1, getRequestedFor(urlPathMatching(BULK_TASKS_PATH)).withQueryParam("offset", equalTo("100")));
+    }
+
+    @Test
+    void modifyPricesAndStock_whenSubmitRejected_throwsBadRequestAndSkipsPolling(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the command submission itself is rejected
+        stubFor(post(urlPathEqualTo(BULK_COMMAND_PATH)).willReturn(
+                aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST).withBody(BULK_BAD_REQUEST_BODY)));
+
+        // then — the typed field error surfaces (real path/code) and no polling happens
+        AllegroBadRequestException failure = assertThrows(AllegroBadRequestException.class,
+                () -> batchClient(wmInfo).modifyPricesAndStock(List.of(priceOnlyModification())));
+        assertEquals(BULK_MODIFY_ERROR_PATH, failure.errors().get(0).path());
+        assertEquals(BULK_MODIFY_ERROR_CODE, failure.errors().get(0).code());
+        verify(0, getRequestedFor(urlPathMatching(BULK_STATUS_PATH)));
+    }
+
+    private static BulkPriceStockModification priceOnlyModification() {
+        return BulkPriceStockModification.forOffer(OFFER_ONE)
+                .price(MARKETPLACE_PL, BulkPriceStockModification.PriceChange.gain(
+                        Money.of(NEW_PRICE, CURRENCY_PLN)))
+                .build();
+    }
+
+    private static String subjectTasksPage(int size) {
+        StringBuilder body = new StringBuilder("{\"tasks\":[");
+        for (int index = 0; index < size; index++) {
+            if (index > 0) {
+                body.append(',');
+            }
+            body.append("{\"subject\":{\"offerId\":\"").append(index).append("\",\"field\":\"")
+                    .append(FIELD_PRICE).append("\"},\"status\":\"SUCCESS\"}");
+        }
+        return body.append("]}").toString();
     }
 }

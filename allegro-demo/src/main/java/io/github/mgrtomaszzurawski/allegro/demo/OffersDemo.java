@@ -9,6 +9,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferMedia;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
@@ -20,10 +23,12 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -58,6 +63,10 @@ final class OffersDemo {
     private static final String DECLARE_ATTACHMENT_PROPERTY = "demo.declareAttachment";
     private static final String STREAM_EVENTS_PROPERTY = "demo.streamEvents";
     private static final String PROMO_OPTIONS_PROPERTY = "demo.promoOptions";
+    private static final String BULK_MODIFY_OFFER_ID_PROPERTY = "demo.bulkModifyOfferId";
+    private static final String BULK_PRICE_PROPERTY = "demo.bulkPrice";
+    private static final String BULK_STOCK_PROPERTY = "demo.bulkStock";
+    private static final String DEFAULT_MARKETPLACE = "allegro-pl";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
             "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
@@ -100,6 +109,8 @@ final class OffersDemo {
                 streamEvents(client);
             } else if (System.getProperty(PROMO_OPTIONS_PROPERTY) != null) {
                 promoOptions(client);
+            } else if (System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY) != null) {
+                bulkModify(client, System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY));
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -225,6 +236,55 @@ final class OffersDemo {
         BatchReport report = client.offers().batch().publish(offerIds);
         System.out.println("batch publish: " + report.success() + "/" + report.total()
                 + " ok, " + report.failed() + " failed");
+    }
+
+    /**
+     * Write→read of the bulk price/stock command: read the offer, submit a
+     * {@code modifyPricesAndStock} (a fixed marketplace price and/or fixed stock
+     * on {@code -Pdemo.bulkPrice}/{@code -Pdemo.bulkStock}), then read it back and
+     * show the new price/stock so the round-trip is confirmed through the SDK.
+     */
+    private static void bulkModify(AllegroClient client, String offerId) {
+        printOfferPriceStockIfPresent("before", client, offerId);
+        BulkPriceStockModification.Builder builder = BulkPriceStockModification.forOffer(offerId);
+        String price = System.getProperty(BULK_PRICE_PROPERTY);
+        if (price != null) {
+            builder.price(DEFAULT_MARKETPLACE, PriceChange.fixed(Money.of(price, CURRENCY_PLN)));
+        }
+        String stock = System.getProperty(BULK_STOCK_PROPERTY);
+        if (stock != null) {
+            builder.stock(StockChange.fixed(Integer.parseInt(stock)));
+        }
+        try {
+            PriceStockBatchReport report = client.offers().batch()
+                    .modifyPricesAndStock(List.of(builder.build()));
+            System.out.println("modifyPricesAndStock: " + report.success() + "/" + report.total()
+                    + " ok, " + report.failed() + " failed");
+            report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
+                    + ", field=" + task.field() + ", status=" + task.status()
+                    + (task.message() == null ? "" : ", message=" + task.message())));
+            printOfferPriceStockIfPresent("read-back", client, offerId);
+        } catch (AllegroBadRequestException e) {
+            System.out.println("modifyPricesAndStock rejected — " + e.errors().size() + " error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    private static void printOfferPriceStockIfPresent(String phase, AllegroClient client, String offerId) {
+        try {
+            printOfferPriceStock(phase, client.offers().get(offerId));
+        } catch (AllegroNotFoundException e) {
+            System.out.println(phase + ": offer " + offerId
+                    + " not found (probing the command wire shape only)");
+        }
+    }
+
+    private static void printOfferPriceStock(String phase, Offer offer) {
+        String price = offer.buyNowPrice() == null ? "(no Buy Now price)"
+                : offer.buyNowPrice().amount() + " " + offer.buyNowPrice().currency();
+        System.out.println(phase + ": id=" + offer.id() + ", buyNow=" + price
+                + ", stock=" + offer.availableStock());
     }
 
     private static void printSmart(AllegroClient client, String offerId) {

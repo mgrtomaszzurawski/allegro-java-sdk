@@ -96,6 +96,33 @@ client.offers().batch().changeQuantities(List.of("13579", "24680"), 50);
 `changePrices` sets a fixed Buy Now price on every listed offer; `changeQuantities` sets their
 available stock. Both return the same terminal `BatchReport`.
 
+For mixed, per-offer changes — a different price on each marketplace, a relative adjustment, or a
+price and a stock change together — use `modifyPricesAndStock`. Each `BulkPriceStockModification`
+targets one offer and needs at least one price or stock change; a price change is `fixed` (set),
+`gain` (add/subtract an amount) or `percentage`, a stock change is `fixed` or `gain`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
+
+PriceStockBatchReport report = client.offers().batch().modifyPricesAndStock(List.of(
+        BulkPriceStockModification.forOffer("13579")
+                .price("allegro-pl", PriceChange.fixed(Money.of("129.00", "PLN")))
+                .price("allegro-cz", PriceChange.percentage("-5%"))
+                .stock(StockChange.fixed(50))
+                .build(),
+        BulkPriceStockModification.forOffer("24680")
+                .stock(StockChange.gain(-3))
+                .build()));
+
+System.out.println(report.success() + "/" + report.total() + " changes applied");
+```
+
+It returns a `PriceStockBatchReport` — the same `total`/`success`/`failed` counts plus a
+`PriceStockTaskResult` per changed field (its `offerId`, the `field` it touched, `status`, and a
+`message` on failure).
+
 ## Create an offer
 
 ```java

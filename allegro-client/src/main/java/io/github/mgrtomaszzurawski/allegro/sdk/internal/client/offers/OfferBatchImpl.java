@@ -4,8 +4,10 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.client.model.CommandTaskRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GeneralReportRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferBulkChangeCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCriteriumRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferPriceChangeCommandRaw;
@@ -18,7 +20,11 @@ import io.github.mgrtomaszzurawski.allegro.client.model.QuantityModificationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TaskReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockTaskResult;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.BulkOfferModificationMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -27,6 +33,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Endpoint wrapper behind the {@link OfferBatch} facade. Each command is a
@@ -45,10 +52,23 @@ public final class OfferBatchImpl implements OfferBatch {
     private static final String OP_CHANGE_QUANTITIES = "change offer quantities";
     private static final String OP_POLL = "await batch command";
     private static final String OP_TASKS = "read batch command tasks";
+    private static final String OP_MODIFY_PRICES_STOCK = "modify offer prices and stock";
 
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
     private static final int TASKS_PAGE_SIZE = 100;
+
+    // Bulk price/stock task JSON keys. The tasks endpoint returns a oneOf of two
+    // structurally identical subjects (price vs stock) with no discriminator, so
+    // the generated union deserializer over-matches (both branches match →
+    // "2 classes match, expected 1"). Both branches carry the same shape, so the
+    // tasks page is read from the JSON tree into one unified result instead.
+    private static final String JSON_TASKS = "tasks";
+    private static final String JSON_SUBJECT = "subject";
+    private static final String JSON_OFFER_ID = "offerId";
+    private static final String JSON_FIELD = "field";
+    private static final String JSON_STATUS = "status";
+    private static final String JSON_MESSAGE = "message";
 
     private final HttpSupport http;
     private final CommandPoller poller;
@@ -94,6 +114,19 @@ public final class OfferBatchImpl implements OfferBatch {
                         .changeType(QuantityModificationRaw.ChangeTypeEnum.FIXED).value(quantity));
         return submitAndAwait(ApiPaths.offerQuantityChangeCommand(commandId),
                 ApiPaths.offerQuantityChangeCommandTasks(commandId), body, OP_CHANGE_QUANTITIES);
+    }
+
+    @Override
+    public PriceStockBatchReport modifyPricesAndStock(List<BulkPriceStockModification> modifications) {
+        UUID commandId = UUID.randomUUID();
+        // Each modification may change a price, a stock, or both; Allegro requires
+        // one change kind per wire element, so flat-map to the split elements.
+        OfferBulkChangeCommandRaw body = new OfferBulkChangeCommandRaw()
+                .commandId(commandId)
+                .modifications(modifications.stream()
+                        .flatMap(modification -> BulkOfferModificationMapper
+                                .toWireElements(modification).stream()).toList());
+        return submitPostAndAwait(commandId.toString(), body);
     }
 
     private BatchReport publication(List<String> offerIds,
@@ -145,5 +178,66 @@ public final class OfferBatchImpl implements OfferBatch {
             offset += TASKS_PAGE_SIZE;
         }
         return gathered;
+    }
+
+    /**
+     * Submit the bulk price/stock command (POST to the collection with the
+     * client-generated id in the BODY, beta media type), poll it to completion,
+     * and gather its per-field tasks. Distinct from {@link #submitAndAwait}: those
+     * commands PUT a client-id'd resource; this one POSTs the collection.
+     */
+    private PriceStockBatchReport submitPostAndAwait(String commandId, OfferBulkChangeCommandRaw body) {
+        // Partial (NON_EMPTY) body: a modification sets a price map, a stock, or
+        // both, so unset optional branches must be OMITTED, never sent as
+        // null/{} (which the generated DTO pre-initializes and would reset).
+        http.request(OP_MODIFY_PRICES_STOCK)
+                .post(ApiPaths.SALE_OFFER_BULK_MODIFICATION_COMMANDS)
+                .acceptBeta().betaJsonBodyPartial(body).send();
+        String statusPath = ApiPaths.offerBulkModificationCommand(commandId);
+        GeneralReportRaw report = poller.await(
+                () -> http.request(OP_POLL).get(statusPath).acceptBeta().fetch(GeneralReportRaw.class),
+                terminal -> terminal.getCompletedAt() != null,
+                OP_MODIFY_PRICES_STOCK);
+        return PriceStockBatchReport.from(report,
+                gatherSubjectTasks(ApiPaths.offerBulkModificationCommandTasks(commandId)));
+    }
+
+    /**
+     * Consume every task page of a bulk price/stock command into one list. Read
+     * from the JSON tree (see the JSON key constants above): the generated union
+     * type for these tasks over-matches its two identical branches and fails to
+     * deserialize, and both branches carry the same offer/field/status shape.
+     */
+    private List<PriceStockTaskResult> gatherSubjectTasks(String tasksPath) {
+        List<PriceStockTaskResult> gathered = new ArrayList<>();
+        int offset = 0;
+        while (true) {
+            JsonNode page = http.request(OP_TASKS)
+                    .get(tasksPath)
+                    .acceptBeta()
+                    .query(Query.create().add(QUERY_OFFSET, offset).add(QUERY_LIMIT, TASKS_PAGE_SIZE))
+                    .fetch(JsonNode.class);
+            JsonNode tasks = page.path(JSON_TASKS);
+            if (!tasks.isArray() || tasks.isEmpty()) {
+                break;
+            }
+            for (JsonNode task : tasks) {
+                JsonNode subject = task.path(JSON_SUBJECT);
+                gathered.add(new PriceStockTaskResult(
+                        textOrNull(subject.get(JSON_OFFER_ID)),
+                        textOrNull(subject.get(JSON_FIELD)),
+                        textOrNull(task.get(JSON_STATUS)),
+                        textOrNull(task.get(JSON_MESSAGE))));
+            }
+            if (tasks.size() < TASKS_PAGE_SIZE) {
+                break;
+            }
+            offset += TASKS_PAGE_SIZE;
+        }
+        return gathered;
+    }
+
+    private static @Nullable String textOrNull(@Nullable JsonNode node) {
+        return node == null || node.isNull() ? null : node.asText();
     }
 }

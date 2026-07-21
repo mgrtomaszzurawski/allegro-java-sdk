@@ -17,6 +17,12 @@ sections. Empty subsections are dropped by the release engineer when folding
 
 - Gradle reactor scaffold; Layer-1 `*Raw` DTO generation from the vendored
   official OpenAPI spec (267 operations).
+- Generation-time spec normalization (`patchOpenApiSpec`, runs on a `build/` copy
+  — the vendored spec is never edited): re-parents discriminator subtypes that the
+  spec links by mapping only, not `allOf`, so the generator emits proper Java
+  inheritance. First case: `OfferBulkModification.stock` — its `FIXED`/`GAIN`
+  subtypes now extend the base, so a bulk stock `value` is settable through the
+  typed DTO. Data-driven, ready to cover the analogous ASN read-base defect.
 - OAuth2 lifecycle (client-credentials / authorization-code / device grants,
   proactive refresh, rotation, single-flight, 401 replay); transport with
   vendor media types, equal-jitter retry, typed `errors[]` mapping; lazy
@@ -119,6 +125,14 @@ sections. Empty subsections are dropped by the release engineer when folding
 - Batch price/quantity: `batch().changePrices(offerIds, Money)` sets a fixed Buy Now price and
   `batch().changeQuantities(offerIds, quantity)` sets available stock across many offers — same
   submit→poll→gather `BatchReport` flow, on the price-change and quantity-change command endpoints.
+- Batch price+stock (beta): `batch().modifyPricesAndStock(List<BulkPriceStockModification>)` applies
+  per-offer, per-marketplace Buy Now price changes and/or a stock change in one command
+  (`FIXED`/`GAIN`/`PERCENTAGE` for price, `FIXED`/`GAIN` for stock) — a POST-to-collection command
+  (client id in the body, beta media type) polled to a terminal `PriceStockBatchReport` of per-field
+  `PriceStockTaskResult`s. Each `BulkPriceStockModification` is a fail-fast builder requiring at least
+  one price or stock change; the body is written partial so unset branches are omitted. Task pages are
+  read from the JSON tree (the spec's price/stock task `oneOf` is a discriminator-less union of two
+  identical shapes that the generated union deserializer cannot resolve — both map to one result).
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.
