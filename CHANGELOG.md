@@ -156,6 +156,10 @@ sections. Empty subsections are dropped by the release engineer when folding
   `completedAt`, so completion is detected from the task count (`success + failed >= total`). The
   fail-fast builder requires a base or at least one extra package; the body is written partial so
   omitting the extra packages preserves the offers' existing extras.
+- Partial-offer read: `offers().getFields(offerId, OfferPart...)` retrieves only the requested parts
+  (`STOCK` and/or `PRICE`) via `GET /sale/product-offers/{offerId}/parts?include=…` — a faster,
+  lighter read than the full `get(offerId)`. Returns an immutable `PartialOffer` (available stock,
+  base-marketplace price, and per-marketplace prices); at least one part is required.
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.

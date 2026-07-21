@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
@@ -26,9 +27,11 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -50,6 +53,21 @@ class OffersClientTest {
     private static final String OFFER_FIXTURE = "offers/product-offer.json";
     private static final String NEW_AMOUNT = "149.50";
     private static final String CURRENCY_PLN = "PLN";
+    private static final String PARTS_BOTH_URL =
+            "/sale/product-offers/" + OFFER_ID + "/parts?include=stock&include=price";
+    private static final String PARTS_STOCK_URL =
+            "/sale/product-offers/" + OFFER_ID + "/parts?include=stock";
+    private static final String PARTS_PATH_PATTERN = "/sale/product-offers/" + OFFER_ID + "/parts";
+    private static final String MARKETPLACE_CZ = "allegro-cz";
+    private static final int PARTIAL_STOCK = 42;
+    private static final String PARTIAL_PRICE = "129.00";
+    private static final String PARTIAL_BOTH_BODY =
+            "{\"id\":\"" + OFFER_ID + "\",\"stock\":{\"available\":" + PARTIAL_STOCK + "},"
+                    + "\"sellingMode\":{\"price\":{\"amount\":\"" + PARTIAL_PRICE + "\",\"currency\":\"PLN\"}},"
+                    + "\"additionalMarketplaces\":{\"" + MARKETPLACE_CZ
+                    + "\":{\"sellingMode\":{\"price\":{\"amount\":\"3200.00\",\"currency\":\"CZK\"}}}}}";
+    private static final String PARTIAL_STOCK_BODY =
+            "{\"id\":\"" + OFFER_ID + "\",\"stock\":{\"available\":" + PARTIAL_STOCK + "}}";
     private static final String NOT_FOUND_BODY =
             "{\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"offer not found\"}]}";
     private static final String BAD_REQUEST_BODY =
@@ -176,5 +194,57 @@ class OffersClientTest {
         assertEquals(OfferFormat.AUCTION, offer.format());
         assertNull(offer.buyNowPrice());
         assertNull(offer.availableStock());
+    }
+
+    @Test
+    void getFields_whenBothParts_requestsBothIncludesAndMapsResponse(WireMockRuntimeInfo wmInfo) {
+        // given — a parts response carrying stock, base price and a marketplace price
+        stubFor(get(urlEqualTo(PARTS_BOTH_URL))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PARTIAL_BOTH_BODY)));
+
+        // when — request both the stock and the price parts
+        PartialOffer partial = offers(wmInfo).getFields(OFFER_ID, OfferPart.STOCK, OfferPart.PRICE);
+
+        // then — the include array is sent as one repeated parameter per part...
+        verify(1, getRequestedFor(urlEqualTo(PARTS_BOTH_URL)));
+        // ...and every requested part is mapped
+        assertEquals(OFFER_ID, partial.id());
+        assertEquals(PARTIAL_STOCK, partial.availableStock());
+        assertEquals(PARTIAL_PRICE, partial.price().amount());
+        assertEquals("3200.00", partial.marketplacePrices().get(MARKETPLACE_CZ).amount());
+    }
+
+    @Test
+    void getFields_whenStockOnly_requestsOnlyStockInclude(WireMockRuntimeInfo wmInfo) {
+        // given — a stock-only parts response
+        stubFor(get(urlEqualTo(PARTS_STOCK_URL))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PARTIAL_STOCK_BODY)));
+
+        // when — request only the stock part
+        PartialOffer partial = offers(wmInfo).getFields(OFFER_ID, OfferPart.STOCK);
+
+        // then — only include=stock is sent, and only the stock is populated
+        verify(1, getRequestedFor(urlEqualTo(PARTS_STOCK_URL)));
+        assertEquals(PARTIAL_STOCK, partial.availableStock());
+        assertNull(partial.price());
+        assertNull(partial.marketplacePrices().get(MARKETPLACE_CZ));
+    }
+
+    @Test
+    void getFields_whenNoParts_throwsWithoutCallingServer(WireMockRuntimeInfo wmInfo) {
+        // when/then — at least one part is required, and no request is made
+        assertThrows(IllegalArgumentException.class, () -> offers(wmInfo).getFields(OFFER_ID));
+        verify(0, getRequestedFor(urlPathMatching(PARTS_PATH_PATTERN)));
+    }
+
+    @Test
+    void getFields_whenOfferMissing_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given — the parts read is rejected as not found
+        stubFor(get(urlPathMatching(PARTS_PATH_PATTERN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND).withBody(NOT_FOUND_BODY)));
+
+        // then
+        assertThrows(AllegroNotFoundException.class,
+                () -> offers(wmInfo).getFields(OFFER_ID, OfferPart.STOCK));
     }
 }

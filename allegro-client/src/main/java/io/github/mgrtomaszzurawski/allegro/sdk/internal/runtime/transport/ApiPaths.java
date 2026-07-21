@@ -46,6 +46,7 @@ public final class ApiPaths {
     // ---- offers (bucket A) ----
     /** Product-offers collection ({@code /sale/product-offers}); POST to create. */
     public static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
+    private static final String PARTS_SEGMENT = "parts";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
@@ -81,6 +82,11 @@ public final class ApiPaths {
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
         return subPath(SALE_PRODUCT_OFFERS, offerId);
+    }
+
+    /** Selected parts of a product-offer ({@code /sale/product-offers/{offerId}/parts}); {@code include} query. */
+    public static String productOfferParts(String offerId) {
+        return subPath(SALE_PRODUCT_OFFERS, offerId, PARTS_SEGMENT);
     }
 
     /** A single offer as a draft resource ({@code /sale/offers/{offerId}}); DELETE to remove a draft. */
