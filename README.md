@@ -4,6 +4,13 @@ A typed, hand-crafted Java client library for the [Allegro REST API](https://dev
 
 > **Status: preview (`0.1.0-preview`).** Under active development. The public API is not yet stable.
 
+> **Unofficial and unaffiliated.** This is an independent, community-built SDK. It is **not** an
+> official Allegro product and is **not affiliated with, endorsed, sponsored, or supported by
+> Allegro**. "Allegro" is a trademark of Allegro.pl sp. z o.o.; the name is used here solely to
+> identify the third-party REST API this library targets (nominative use). The
+> software is provided "as is" under AGPL-3.0-only, without warranty of any kind. You are responsible
+> for using it in accordance with [Allegro's API terms and conditions](https://developer.allegro.pl/about).
+
 ## About
 
 This SDK provides a premium, strongly-typed surface over Allegro's REST API: a single
