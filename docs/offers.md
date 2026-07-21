@@ -158,19 +158,26 @@ remove.
 
 ## Change offer settings in bulk
 
-`batch().modify(...)` applies offer-settings changes to many offers in one command. The first
-supported fields are the **listing duration** (a fixed `OfferDuration` or unlimited) and the
-**dispatch time** (`HandlingTime`); at least one change is required, and a fixed duration and an
-unlimited listing are mutually exclusive. It returns the same terminal `BatchReport`.
+`batch().modify(...)` applies an offer-settings change to many offers in one command. The first
+supported settings are the **listing duration** (a fixed `OfferDuration` or unlimited) and the
+**dispatch time** (`HandlingTime`). A command changes **exactly one** setting — Allegro rejects a
+command whose modification carries more than one element — so to change two settings submit two
+commands. It returns the same terminal `BatchReport`.
 
 ```java
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 
+// Set a 30-day listing duration on two offers.
 BatchReport report = client.offers().batch().modify(
         BatchModificationRequest.forOffers(List.of("13579", "24680"))
                 .listingDuration(OfferDuration.DAYS_30)   // or .unlimitedListing()
+                .build());
+
+// A separate command changes the dispatch time.
+client.offers().batch().modify(
+        BatchModificationRequest.forOffers(List.of("13579", "24680"))
                 .handlingTime(HandlingTime.DAYS_2)
                 .build());
 ```

@@ -578,30 +578,47 @@ class OfferBatchClientTest {
     }
 
     @Test
-    void modify_whenCommandCompletes_putsPartialModificationWithCriteria(WireMockRuntimeInfo wmInfo) {
+    void modify_whenCommandCompletes_putsSingleElementModificationWithCriteria(WireMockRuntimeInfo wmInfo) {
         // given — a command already complete when first polled
         stubCompletedCommandAt(MODIFY_COMMAND_PATH, MODIFY_TASKS_PATH);
 
-        // when — set a fixed listing duration and a handling time on one offer
+        // when — set a fixed listing duration (the single change) on one offer
         BatchReport report = batchClient(wmInfo).modify(
                 BatchModificationRequest.forOffers(List.of(OFFER_ONE))
                         .listingDuration(OfferDuration.DAYS_30)
-                        .handlingTime(HandlingTime.DAYS_2)
                         .build());
 
-        // then — a public.v1 PUT carries the publication + delivery changes and the
-        // offers as a CONTAINS_OFFERS criterion...
+        // then — a public.v1 PUT carries the publication change and the offers as a
+        // CONTAINS_OFFERS criterion...
         verify(1, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
                 .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(matchingJsonPath(DURATION_JSON_PATH, equalTo(DURATION_P30D)))
-                .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH, equalTo(HANDLING_TIME_P2D)))
                 .withRequestBody(matchingJsonPath(TYPE_JSON_PATH, equalTo("CONTAINS_OFFERS")))
                 .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE))));
-        // ...and the unset Modification sub-objects are omitted (partial body)
+        // ...and the unset Modification sub-objects are omitted (partial body, and the
+        // server requires exactly one element per command)
+        verify(0, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH)));
         verify(0, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
                 .withRequestBody(matchingJsonPath(DISCOUNTS_JSON_PATH)));
         assertEquals(2, report.total());
         assertEquals(2, report.tasks().size());
+    }
+
+    @Test
+    void modify_whenHandlingTimeCommandCompletes_putsDeliveryElement(WireMockRuntimeInfo wmInfo) {
+        // given — a command already complete when first polled
+        stubCompletedCommandAt(MODIFY_COMMAND_PATH, MODIFY_TASKS_PATH);
+
+        // when — set a handling time (the single change) on one offer
+        batchClient(wmInfo).modify(BatchModificationRequest.forOffers(List.of(OFFER_ONE))
+                .handlingTime(HandlingTime.DAYS_2).build());
+
+        // then — the PUT carries the delivery change and no publication element
+        verify(1, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(HANDLING_TIME_JSON_PATH, equalTo(HANDLING_TIME_P2D))));
+        verify(0, putRequestedFor(urlPathMatching(MODIFY_COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(DURATION_JSON_PATH)));
     }
 
     @Test

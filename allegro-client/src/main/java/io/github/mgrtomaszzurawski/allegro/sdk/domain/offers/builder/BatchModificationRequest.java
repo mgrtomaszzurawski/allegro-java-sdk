@@ -10,16 +10,18 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A batch offer-settings change — the request passed to
- * {@code offers().batch().modify(...)}. It applies one or more of the supported
- * field changes to every target offer (up to {@value #MAX_OFFERS}) in one
- * command: the listing duration (a fixed {@link OfferDuration} or unlimited) and
- * the {@link HandlingTime dispatch time}. At least one change is required.
+ * {@code offers().batch().modify(...)}. It applies <em>exactly one</em> supported
+ * field change to every target offer (up to {@value #MAX_OFFERS}) in one command:
+ * the listing duration (a fixed {@link OfferDuration} or unlimited) or the
+ * {@link HandlingTime dispatch time}. Exactly one is required — Allegro rejects a
+ * command whose modification carries more than one element (live-verified:
+ * {@code VALIDATION_ERROR}, <em>"modification should contain exactly 1 element"</em>),
+ * so to change two aspects submit two commands.
  *
- * <p>The listing duration is either a fixed length or unlimited — never both
- * (the wire accepts only one). This is the first slice of Allegro's broad offer
- * modification command; the id-based assignments (responsible person/producer,
- * wholesale price list) will follow separately, since their unassign semantics
- * need the wire's explicit-null, which this command's partial body omits.
+ * <p>This is the first slice of Allegro's broad offer modification command; the
+ * id-based assignments (responsible person/producer, wholesale price list) will
+ * follow separately, since their unassign semantics need the wire's explicit-null,
+ * which this command's partial body omits.
  *
  * @since 0.5.0
  */
@@ -33,9 +35,9 @@ public final class BatchModificationRequest {
     private static final String ERR_OFFER_ID = "offer id must not be null or blank";
     private static final String ERR_DURATION = "listing duration must not be null";
     private static final String ERR_HANDLING_TIME = "handling time must not be null";
-    private static final String ERR_DURATION_CONFLICT =
-            "a listing duration and an unlimited listing are mutually exclusive";
-    private static final String ERR_NO_CHANGE = "a modification must change at least one field";
+    private static final String ERR_SINGLE_CHANGE =
+            "a modification changes exactly one field — Allegro rejects a command with more than one";
+    private static final String ERR_NO_CHANGE = "a modification must change exactly one field";
 
     private final List<String> offerIds;
     private final @Nullable OfferDuration listingDuration;
@@ -86,36 +88,40 @@ public final class BatchModificationRequest {
             this.offerIds = validatedOfferIds(offerIds);
         }
 
-        /** Set a fixed listing duration (mutually exclusive with {@link #unlimitedListing()}). */
+        /** Set a fixed listing duration (the request's single change). */
         public Builder listingDuration(OfferDuration duration) {
-            if (unlimitedListing) {
-                throw new IllegalStateException(ERR_DURATION_CONFLICT);
-            }
+            requireNoChangeYet();
             this.listingDuration = Objects.requireNonNull(duration, ERR_DURATION);
             return this;
         }
 
-        /** Make the listing unlimited (mutually exclusive with {@link #listingDuration(OfferDuration)}). */
+        /** Make the listing unlimited (the request's single change). */
         public Builder unlimitedListing() {
-            if (listingDuration != null) {
-                throw new IllegalStateException(ERR_DURATION_CONFLICT);
-            }
+            requireNoChangeYet();
             this.unlimitedListing = true;
             return this;
         }
 
-        /** Set the dispatch (handling) time. */
+        /** Set the dispatch (handling) time (the request's single change). */
         public Builder handlingTime(HandlingTime dispatchTime) {
+            requireNoChangeYet();
             this.handlingTime = Objects.requireNonNull(dispatchTime, ERR_HANDLING_TIME);
             return this;
         }
 
-        /** Build, requiring at least one field change. */
+        /** Build, requiring exactly one field change. */
         public BatchModificationRequest build() {
             if (listingDuration == null && !unlimitedListing && handlingTime == null) {
                 throw new IllegalStateException(ERR_NO_CHANGE);
             }
             return new BatchModificationRequest(this);
+        }
+
+        /** Guard the single-change rule: a second change is rejected fail-fast. */
+        private void requireNoChangeYet() {
+            if (listingDuration != null || unlimitedListing || handlingTime != null) {
+                throw new IllegalStateException(ERR_SINGLE_CHANGE);
+            }
         }
 
         private static List<String> validatedOfferIds(List<String> offerIds) {

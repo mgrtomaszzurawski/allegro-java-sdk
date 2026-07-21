@@ -327,28 +327,26 @@ final class OffersDemo {
     }
 
     /**
-     * Submit the offer-modification command: set a listing duration (fixed
-     * {@code -Pdemo.modifyDuration=DAYS_30} or {@code -Pdemo.modifyUnlimited}) and/or
-     * a dispatch time ({@code -Pdemo.modifyHandlingTime=DAYS_2}) on the given offers.
-     * The SDK submits, polls to a terminal state and gathers the per-offer tasks, so
-     * the printed report proves the whole command wire path.
+     * Submit the offer-modification command: set EXACTLY ONE setting on the given
+     * offers — an unlimited listing ({@code -Pdemo.modifyUnlimited}), a fixed listing
+     * duration ({@code -Pdemo.modifyDuration=DAYS_30}) or a dispatch time
+     * ({@code -Pdemo.modifyHandlingTime=DAYS_2}), in that precedence (Allegro rejects a
+     * command with more than one element). The SDK submits, polls to a terminal state
+     * and gathers the per-offer tasks, so the printed report proves the command wire path.
      */
     private static void modifyOffers(AllegroClient client, String csvOfferIds) {
         List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(offerIds);
+        String duration = System.getProperty(MODIFY_DURATION_PROPERTY);
+        String handlingTime = System.getProperty(MODIFY_HANDLING_TIME_PROPERTY);
         if (System.getProperty(MODIFY_UNLIMITED_PROPERTY) != null) {
             builder.unlimitedListing();
-        } else {
-            String duration = System.getProperty(MODIFY_DURATION_PROPERTY);
-            if (duration != null) {
-                builder.listingDuration(OfferDuration.valueOf(duration));
-            }
-        }
-        String handlingTime = System.getProperty(MODIFY_HANDLING_TIME_PROPERTY);
-        if (handlingTime != null) {
+        } else if (duration != null) {
+            builder.listingDuration(OfferDuration.valueOf(duration));
+        } else if (handlingTime != null) {
             builder.handlingTime(HandlingTime.valueOf(handlingTime));
         }
-        System.out.println("modify: applying settings to " + offerIds.size() + " offer(s)");
+        System.out.println("modify: applying a setting to " + offerIds.size() + " offer(s)");
         try {
             BatchReport report = client.offers().batch().modify(builder.build());
             System.out.println("modify: " + report.success() + "/" + report.total()

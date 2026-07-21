@@ -125,18 +125,15 @@ class OfferModificationMapperTest {
     }
 
     @Test
-    void toRaw_whenDurationAndHandlingTime_emitsBothSubObjects() {
-        // given — a duration and a handling time together
-        BatchModificationRequest request = forOne()
-                .listingDuration(OfferDuration.DAYS_30)
-                .handlingTime(HandlingTime.DAYS_2)
-                .build();
+    void toRaw_whenHandlingTimeOnly_omitsPublication() {
+        // given — only a handling time change
+        BatchModificationRequest request = forOne().handlingTime(HandlingTime.DAYS_2).build();
 
         // when
         JsonNode tree = tree(request);
 
-        // then — both publication and delivery are present
-        assertEquals("P30D", tree.at(DURATION_PATH).asText());
+        // then — delivery is present and publication is absent (single-element command)
         assertEquals("P2D", tree.at(HANDLING_TIME_PATH).asText());
+        assertTrue(tree.at("/modification/publication").isMissingNode());
     }
 }

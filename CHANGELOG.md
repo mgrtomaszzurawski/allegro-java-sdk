@@ -141,13 +141,14 @@ sections. Empty subsections are dropped by the release engineer when folding
   `removeRules(offerIds).fromMarketplace(marketplace)`), mirroring the wire's `oneOf`; an assignment
   may carry an optional `PriceRange` bound and the body is written partial so an unset configuration
   is omitted.
-- Batch offer settings: `batch().modify(BatchModificationRequest)` applies offer-settings changes to
+- Batch offer settings: `batch().modify(BatchModificationRequest)` applies an offer-settings change to
   many offers in one command (`PUT /sale/offer-modification-commands/{id}`), polled to a terminal
   `BatchReport`. First slice covers the listing duration (a fixed `OfferDuration` or `unlimitedListing()`)
-  and the dispatch `HandlingTime`; the request builder is fail-fast (duration and unlimited are mutually
-  exclusive; at least one change required) and the body is written partial so the many unset
-  `Modification` sub-objects are omitted rather than sent as null. `OfferDuration`/`HandlingTime` expose
-  one clean set of ISO-8601 durations (the wire's redundant hour/day spellings are hidden).
+  and the dispatch `HandlingTime`; the request builder is fail-fast and requires **exactly one** change
+  (live-verified: Allegro rejects a modification with more than one element), and the body is written
+  partial so the many unset `Modification` sub-objects are omitted rather than sent as null.
+  `OfferDuration`/`HandlingTime` expose one clean set of ISO-8601 durations (the wire's redundant
+  hour/day spellings are hidden).
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.

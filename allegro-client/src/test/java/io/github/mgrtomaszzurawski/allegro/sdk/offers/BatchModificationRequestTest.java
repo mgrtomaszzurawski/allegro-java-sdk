@@ -74,22 +74,32 @@ class BatchModificationRequestTest {
 
     @Test
     void unlimitedListing_whenDurationAlreadySet_throws() {
-        // given — a fixed listing duration is set
+        // given — a fixed listing duration is set (the single change)
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID))
                 .listingDuration(OfferDuration.DAYS_7);
 
-        // when/then — asking for unlimited too is rejected (mutually exclusive)
+        // when/then — a second change is rejected (exactly one per command)
         assertThrows(IllegalStateException.class, builder::unlimitedListing);
     }
 
     @Test
     void listingDuration_whenUnlimitedAlreadySet_throws() {
-        // given — an unlimited listing is set
+        // given — an unlimited listing is set (the single change)
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID))
                 .unlimitedListing();
 
-        // when/then — setting a fixed duration too is rejected (mutually exclusive)
+        // when/then — a second change is rejected (exactly one per command)
         assertThrows(IllegalStateException.class, () -> builder.listingDuration(OfferDuration.DAYS_7));
+    }
+
+    @Test
+    void handlingTime_whenDurationAlreadySet_throws() {
+        // given — a fixed listing duration is set (the single change)
+        BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID))
+                .listingDuration(OfferDuration.DAYS_7);
+
+        // when/then — adding a handling time change too is rejected (exactly one per command)
+        assertThrows(IllegalStateException.class, () -> builder.handlingTime(HandlingTime.DAYS_2));
     }
 
     @Test
@@ -102,18 +112,30 @@ class BatchModificationRequestTest {
     }
 
     @Test
-    void build_whenDurationAndHandlingTimeSet_exposesBuiltData() {
-        // given — a fixed duration and a handling time
+    void build_whenDurationOnly_exposesBuiltData() {
+        // given — a fixed listing duration (the single change)
         BatchModificationRequest request = BatchModificationRequest.forOffers(List.of(OFFER_ID))
                 .listingDuration(OfferDuration.DAYS_30)
-                .handlingTime(HandlingTime.DAYS_2)
                 .build();
 
         // then — the accessors read the built intent back
         assertEquals(List.of(OFFER_ID), request.offerIds());
         assertEquals(OfferDuration.DAYS_30, request.listingDuration());
         assertFalse(request.unlimitedListing());
+        assertNull(request.handlingTime());
+    }
+
+    @Test
+    void build_whenHandlingTimeOnly_exposesBuiltData() {
+        // given — a handling time (the single change)
+        BatchModificationRequest request = BatchModificationRequest.forOffers(List.of(OFFER_ID))
+                .handlingTime(HandlingTime.DAYS_2)
+                .build();
+
+        // then — the handling time is read back, no duration change
         assertEquals(HandlingTime.DAYS_2, request.handlingTime());
+        assertNull(request.listingDuration());
+        assertFalse(request.unlimitedListing());
     }
 
     @Test
