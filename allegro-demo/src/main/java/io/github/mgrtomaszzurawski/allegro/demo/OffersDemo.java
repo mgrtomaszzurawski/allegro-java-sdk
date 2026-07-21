@@ -9,6 +9,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferMedia;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange.CurrencyBasis;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
@@ -66,6 +69,11 @@ final class OffersDemo {
     private static final String BULK_MODIFY_OFFER_ID_PROPERTY = "demo.bulkModifyOfferId";
     private static final String BULK_PRICE_PROPERTY = "demo.bulkPrice";
     private static final String BULK_STOCK_PROPERTY = "demo.bulkStock";
+    private static final String PRICING_RULE_OFFER_IDS_PROPERTY = "demo.pricingRuleOfferIds";
+    private static final String PRICING_RULE_ID_PROPERTY = "demo.pricingRuleId";
+    private static final String PRICING_RULE_MARKETPLACE_PROPERTY = "demo.pricingRuleMarketplace";
+    private static final String PRICING_RULE_MIN_PRICE_PROPERTY = "demo.pricingRuleMinPrice";
+    private static final String PRICING_RULE_MAX_PRICE_PROPERTY = "demo.pricingRuleMaxPrice";
     private static final String DEFAULT_MARKETPLACE = "allegro-pl";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
@@ -111,6 +119,8 @@ final class OffersDemo {
                 promoOptions(client);
             } else if (System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY) != null) {
                 bulkModify(client, System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY));
+            } else if (System.getProperty(PRICING_RULE_OFFER_IDS_PROPERTY) != null) {
+                applyPricingRules(client, System.getProperty(PRICING_RULE_OFFER_IDS_PROPERTY));
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -269,6 +279,56 @@ final class OffersDemo {
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
                     + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
         }
+    }
+
+    /**
+     * Submit the automatic-pricing command: assign a rule (with an optional price
+     * range) to the given offers on a marketplace, or — with no
+     * {@code -Pdemo.pricingRuleId} — remove the rules on that marketplace. The SDK
+     * submits, polls to a terminal state and gathers the per-offer tasks, so the
+     * printed report proves the whole command wire path; a typed rejection still
+     * proves the request body deserialized server-side.
+     */
+    private static void applyPricingRules(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        String marketplace = System.getProperty(PRICING_RULE_MARKETPLACE_PROPERTY, DEFAULT_MARKETPLACE);
+        String ruleId = System.getProperty(PRICING_RULE_ID_PROPERTY);
+        BatchPricingRulesRequest request;
+        if (ruleId == null) {
+            request = BatchPricingRulesRequest.removeRules(offerIds).fromMarketplace(marketplace).build();
+            System.out.println("applyPricingRules: removing rules on " + marketplace
+                    + " from " + offerIds.size() + " offer(s)");
+        } else {
+            request = assignRuleRequest(offerIds, marketplace, ruleId);
+            System.out.println("applyPricingRules: assigning rule " + ruleId + " on " + marketplace
+                    + " to " + offerIds.size() + " offer(s)");
+        }
+        try {
+            BatchReport report = client.offers().batch().applyPricingRules(request);
+            System.out.println("applyPricingRules: " + report.success() + "/" + report.total()
+                    + " ok, " + report.failed() + " failed");
+            report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
+                    + ", status=" + task.status()
+                    + (task.message() == null ? "" : ", message=" + task.message())));
+        } catch (AllegroBadRequestException e) {
+            System.out.println("applyPricingRules rejected — " + e.errors().size() + " error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    private static BatchPricingRulesRequest assignRuleRequest(List<String> offerIds,
+            String marketplace, String ruleId) {
+        BatchPricingRulesRequest.AssignBuilder assign = BatchPricingRulesRequest.assignRules(offerIds);
+        String minPrice = System.getProperty(PRICING_RULE_MIN_PRICE_PROPERTY);
+        String maxPrice = System.getProperty(PRICING_RULE_MAX_PRICE_PROPERTY);
+        if (minPrice != null && maxPrice != null) {
+            assign.onMarketplace(marketplace, ruleId, PriceRange.of(CurrencyBasis.MARKETPLACE_CURRENCY,
+                    Money.of(minPrice, CURRENCY_PLN), Money.of(maxPrice, CURRENCY_PLN)));
+        } else {
+            assign.onMarketplace(marketplace, ruleId);
+        }
+        return assign.build();
     }
 
     private static void printOfferPriceStockIfPresent(String phase, AllegroClient client, String offerId) {

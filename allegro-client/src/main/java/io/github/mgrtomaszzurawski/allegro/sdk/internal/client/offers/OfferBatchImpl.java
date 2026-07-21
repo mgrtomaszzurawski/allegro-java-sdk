@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.github.mgrtomaszzurawski.allegro.client.model.CommandTaskRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GeneralReportRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferAutomaticPricingCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferBulkChangeCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCriteriumRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
@@ -20,11 +21,13 @@ import io.github.mgrtomaszzurawski.allegro.client.model.QuantityModificationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TaskReportRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockTaskResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.BulkOfferModificationMapper;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.PricingRulesMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
@@ -53,6 +56,7 @@ public final class OfferBatchImpl implements OfferBatch {
     private static final String OP_POLL = "await batch command";
     private static final String OP_TASKS = "read batch command tasks";
     private static final String OP_MODIFY_PRICES_STOCK = "modify offer prices and stock";
+    private static final String OP_APPLY_PRICING_RULES = "apply offer pricing rules";
 
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
@@ -129,6 +133,17 @@ public final class OfferBatchImpl implements OfferBatch {
         return submitPostAndAwait(commandId.toString(), body);
     }
 
+    @Override
+    public BatchReport applyPricingRules(BatchPricingRulesRequest request) {
+        UUID commandId = UUID.randomUUID();
+        OfferAutomaticPricingCommandRaw body = PricingRulesMapper.toRaw(commandId, request);
+        return submitCollectionAndAwait(
+                ApiPaths.SALE_OFFER_PRICE_AUTOMATION_COMMANDS,
+                ApiPaths.offerPriceAutomationCommand(commandId.toString()),
+                ApiPaths.offerPriceAutomationCommandTasks(commandId.toString()),
+                body, OP_APPLY_PRICING_RULES);
+    }
+
     private BatchReport publication(List<String> offerIds,
             PublicationModificationRaw.ActionEnum action, String operationName) {
         String commandId = UUID.randomUUID().toString();
@@ -153,6 +168,26 @@ public final class OfferBatchImpl implements OfferBatch {
         // The command runs asynchronously; wait until Allegro stamps completedAt.
         GeneralReportRaw report = poller.await(
                 () -> http.getAuthenticated(commandPath, GeneralReportRaw.class, OP_POLL),
+                terminal -> terminal.getCompletedAt() != null,
+                operationName);
+        return BatchReport.from(report, gatherTasks(tasksPath));
+    }
+
+    /**
+     * Submit a command by POSTing to its collection with the client-generated id
+     * in the BODY (public media type), poll it to completion, and gather its
+     * per-offer tasks. Distinct from {@link #submitAndAwait} (which PUTs a
+     * client-id'd resource) and {@link #submitPostAndAwait} (bulk price/stock,
+     * which uses the beta media type and reads tree-shaped tasks): this is the
+     * plain-{@code public.v1} POST-to-collection variant. The body is serialized
+     * partially so an unset optional field (e.g. a rule's price-range
+     * configuration) is omitted rather than sent as {@code null}.
+     */
+    private BatchReport submitCollectionAndAwait(String collectionPath, String statusPath,
+            String tasksPath, Object body, String operationName) {
+        http.request(operationName).post(collectionPath).jsonBodyPartial(body).send();
+        GeneralReportRaw report = poller.await(
+                () -> http.getAuthenticated(statusPath, GeneralReportRaw.class, OP_POLL),
                 terminal -> terminal.getCompletedAt() != null,
                 operationName);
         return BatchReport.from(report, gatherTasks(tasksPath));

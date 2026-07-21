@@ -123,6 +123,39 @@ It returns a `PriceStockBatchReport` — the same `total`/`success`/`failed` cou
 `PriceStockTaskResult` per changed field (its `offerId`, the `field` it touched, `status`, and a
 `message` on failure).
 
+## Apply automatic-pricing rules in bulk
+
+An automatic-pricing rule keeps an offer's Buy Now price in step with the market (for example,
+following the lowest Allegro price). `batch().applyPricingRules(...)` attaches such a rule to — or
+removes it from — many offers at once on one or more marketplaces; defining the rules themselves
+lives on the pricing facade. The request has two mutually exclusive modes: **assign** a rule, or
+**remove** the rules. An assignment may carry an optional `PriceRange` bounding the price the rule
+may set. It returns the same terminal `BatchReport`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange.CurrencyBasis;
+
+// Assign a rule on allegro-pl, bounded between 10 and 500 PLN, to two offers.
+BatchReport assigned = client.offers().batch().applyPricingRules(
+        BatchPricingRulesRequest.assignRules(List.of("13579", "24680"))
+                .onMarketplace("allegro-pl", "641c73feaef0a8281a3d11f8", PriceRange.of(
+                        CurrencyBasis.MARKETPLACE_CURRENCY,
+                        Money.of("10.00", "PLN"), Money.of("500.00", "PLN")))
+                .build());
+
+// Remove the rules on allegro-pl from one offer.
+client.offers().batch().applyPricingRules(
+        BatchPricingRulesRequest.removeRules(List.of("13579"))
+                .fromMarketplace("allegro-pl")
+                .build());
+```
+
+`onMarketplace` has an overload without the `PriceRange` when the rule needs no bound. Call it
+once per marketplace to assign the rule on several; call `fromMarketplace` once per marketplace to
+remove.
+
 ## Create an offer
 
 ```java

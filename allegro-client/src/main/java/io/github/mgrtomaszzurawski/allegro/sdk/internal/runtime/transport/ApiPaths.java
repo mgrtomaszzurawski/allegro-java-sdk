@@ -54,6 +54,8 @@ public final class ApiPaths {
     private static final String SALE_OFFER_QUANTITY_CHANGE_COMMANDS = "/sale/offer-quantity-change-commands";
     /** Bulk price-and-stock modification commands ({@code /sale/offer-bulk-modification-commands}); POST to submit (beta). */
     public static final String SALE_OFFER_BULK_MODIFICATION_COMMANDS = "/sale/offer-bulk-modification-commands";
+    /** Automatic-pricing-rules modification commands ({@code /sale/offer-price-automation-commands}); POST to submit. */
+    public static final String SALE_OFFER_PRICE_AUTOMATION_COMMANDS = "/sale/offer-price-automation-commands";
     private static final String TASKS_SEGMENT = "tasks";
 
     /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
@@ -152,6 +154,16 @@ public final class ApiPaths {
     /** Per-field tasks of a bulk price/stock command ({@code …/{commandId}/tasks}). */
     public static String offerBulkModificationCommandTasks(String commandId) {
         return subPath(SALE_OFFER_BULK_MODIFICATION_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Automatic-pricing command status ({@code /sale/offer-price-automation-commands/{commandId}}). */
+    public static String offerPriceAutomationCommand(String commandId) {
+        return subPath(SALE_OFFER_PRICE_AUTOMATION_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of an automatic-pricing command ({@code …/{commandId}/tasks}). */
+    public static String offerPriceAutomationCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_PRICE_AUTOMATION_COMMANDS, commandId, TASKS_SEGMENT);
     }
 
     // ---- orders (bucket B) ----
