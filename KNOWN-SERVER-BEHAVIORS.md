@@ -371,6 +371,18 @@ A single-element command IS accepted: it submits, runs asynchronously, and repor
 not a submit 400, so the body deserialized). The SDK's `batch().modify` therefore requires exactly
 one change per `BatchModificationRequest`; to change two settings, submit two commands.
 
+### Promo-options command completes without `completedAt` — poll the task count (verified 2026-07-21, sandbox)
+
+`PUT /sale/offers/promo-options-commands/{commandId}` returns a `PromoGeneralReport` that — unlike
+every other batch command — has **no `completedAt`**; it carries only `id` + `taskCount`
+(`total`/`success`/`failed`). The SDK detects completion when `success + failed >= total` (see
+`PromoBatchMapper.isComplete`). Live-verified: a command for a non-owned offer submits, the count
+reaches `total=1, failed=1` (terminal), and the tasks endpoint returns a `PromoModificationTask`
+with `status=ERROR` and an `errors[]` entry whose `message` is *"This offer does not exist."* — the
+SDK maps that first error message onto the `BatchReport` task. The body deserialized server-side (no
+submit 400), confirming the command shape (offerCriteria + modification.basePackage +
+modificationTime).
+
 ## Offers — create (bucket A)
 
 ### `POST /sale/product-offers` rejects `language: null` — send only set fields (verified 2026-07-18, sandbox)
