@@ -120,7 +120,7 @@ class PromoBatchMapperTest {
     }
 
     @Test
-    void toReport_mapsCountsAndPerOfferTasks() {
+    void toReport_whenSummaryAndTasks_mapsCountsAndPerOfferTasks() {
         // given — a terminal summary and two tasks (one DONE, one ERROR with a message)
         PromoGeneralReportRaw report = new PromoGeneralReportRaw()
                 .id("cmd-1")

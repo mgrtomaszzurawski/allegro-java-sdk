@@ -335,14 +335,6 @@ final class OffersDemo {
     }
 
     /**
-     * Submit the offer-modification command: set EXACTLY ONE setting on the given
-     * offers — an unlimited listing ({@code -Pdemo.modifyUnlimited}), a fixed listing
-     * duration ({@code -Pdemo.modifyDuration=DAYS_30}) or a dispatch time
-     * ({@code -Pdemo.modifyHandlingTime=DAYS_2}), in that precedence (Allegro rejects a
-     * command with more than one element). The SDK submits, polls to a terminal state
-     * and gathers the per-offer tasks, so the printed report proves the command wire path.
-     */
-    /**
      * Submit the batch promotion-package command: set a base package
      * ({@code -Pdemo.promoBatchBasePackage=emphasized1d}) and/or an extra package
      * ({@code -Pdemo.promoBatchExtraPackage=bold30d}), timed with
@@ -380,6 +372,14 @@ final class OffersDemo {
         }
     }
 
+    /**
+     * Submit the offer-modification command: set EXACTLY ONE setting on the given
+     * offers — an unlimited listing ({@code -Pdemo.modifyUnlimited}), a fixed listing
+     * duration ({@code -Pdemo.modifyDuration=DAYS_30}) or a dispatch time
+     * ({@code -Pdemo.modifyHandlingTime=DAYS_2}), in that precedence (Allegro rejects a
+     * command with more than one element). The SDK submits, polls to a terminal state
+     * and gathers the per-offer tasks, so the printed report proves the command wire path.
+     */
     private static void modifyOffers(AllegroClient client, String csvOfferIds) {
         List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(offerIds);

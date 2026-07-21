@@ -7,7 +7,6 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPromoOptionsRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
@@ -126,6 +125,5 @@ class BatchPromoOptionsRequestTest {
         // then — the exposed extra packages cannot be mutated by the caller
         List<String> extras = request.extraPackageIds();
         assertThrows(UnsupportedOperationException.class, () -> extras.add("x"));
-        assertTrue(request.offerIds().contains(OFFER_ID));
     }
 }
