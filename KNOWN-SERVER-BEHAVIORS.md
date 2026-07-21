@@ -336,7 +336,7 @@ the server does treat an omitted part as "no change" (expected) and accepts a su
 ### Partial-offer `parts` read takes the `include` array as a repeated query parameter (verified 2026-07-21, sandbox)
 
 `GET /sale/product-offers/{offerId}/parts` requires an `include` array (values `stock`, `price`). The
-SDK sends it as a repeated parameter — `?include=stock&include=price` — via `Query.addAll`. Live-probed
+SDK sends it as a repeated parameter — `?include=stock&include=price` — one `Query.add` per part. Live-probed
 with `getFields`: a request for a non-owned offer returns `404` (mapped to `AllegroNotFoundException`),
 NOT a `400 unsupported part name` — so the repeated-`include` query shape is accepted and the server
 proceeds to the offer lookup. The `200` response mapping (`PartialOffer.from` over

@@ -110,7 +110,7 @@ class PartialOfferTest {
     }
 
     @Test
-    void marketplacePrices_isImmutable() {
+    void marketplacePrices_whenReadFromRecord_isImmutable() {
         // given — a mapped partial offer
         PartialOffer partial = PartialOffer.from(new SalePartialProductOfferResponseRaw().id(OFFER_ID)
                 .stock(new SalePartialProductOfferResponseStockRaw().available(STOCK)));

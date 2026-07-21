@@ -94,6 +94,7 @@ public final class OffersImpl implements Offers {
     private static final String PART_STOCK = "stock";
     private static final String PART_PRICE = "price";
     private static final String ERR_NO_PARTS = "at least one offer part is required";
+    private static final String ERR_OFFER_ID = "offerId must not be null";
 
     private final HttpSupport http;
     private final OfferBatch batch;
@@ -129,7 +130,7 @@ public final class OffersImpl implements Offers {
 
     @Override
     public PartialOffer getFields(String offerId, OfferPart... parts) {
-        Objects.requireNonNull(offerId, OP_GET_FIELDS);
+        Objects.requireNonNull(offerId, ERR_OFFER_ID);
         if (parts == null || parts.length == 0) {
             throw new IllegalArgumentException(ERR_NO_PARTS);
         }
