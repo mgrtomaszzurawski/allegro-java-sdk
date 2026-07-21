@@ -359,6 +359,18 @@ live-verified this way for both branches; a happy-path state-change (assign a re
 the offer's assignment back) still needs a seeded sellable offer + a real rule id — the same
 Phase 1.0 seed prerequisite as bulk price/stock.
 
+### Offer-modification command: the modification carries exactly one element (verified 2026-07-21, sandbox)
+
+`PUT /sale/offer-modification-commands/{commandId}` rejects a `modification` that carries more than
+one of its sub-objects (e.g. both `publication` and `delivery`): `400`, `code=VALIDATION_ERROR`,
+`path=modification`, userMessage *"modification should contain exactly 1 element"*. The generated
+`Modification` DTO models ten optional sub-objects on one object and the spec does not flag the
+constraint, so a WireMock-only test would ship the wrong shape (green but wrong — live-caught here).
+A single-element command IS accepted: it submits, runs asynchronously, and reports a per-offer task
+(a non-owned offer surfaces as `status=FAIL`, e.g. `message=EXCEPTION_WHILE_DURATION_LIMIT_UPDATE` —
+not a submit 400, so the body deserialized). The SDK's `batch().modify` therefore requires exactly
+one change per `BatchModificationRequest`; to change two settings, submit two commands.
+
 ## Offers — create (bucket A)
 
 ### `POST /sale/product-offers` rejects `language: null` — send only set fields (verified 2026-07-18, sandbox)

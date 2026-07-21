@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.DeviceCodeCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferMedia;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange.CurrencyBasis;
@@ -16,6 +17,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceSt
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
@@ -74,6 +77,10 @@ final class OffersDemo {
     private static final String PRICING_RULE_MARKETPLACE_PROPERTY = "demo.pricingRuleMarketplace";
     private static final String PRICING_RULE_MIN_PRICE_PROPERTY = "demo.pricingRuleMinPrice";
     private static final String PRICING_RULE_MAX_PRICE_PROPERTY = "demo.pricingRuleMaxPrice";
+    private static final String MODIFY_OFFER_IDS_PROPERTY = "demo.modifyOfferIds";
+    private static final String MODIFY_DURATION_PROPERTY = "demo.modifyDuration";
+    private static final String MODIFY_UNLIMITED_PROPERTY = "demo.modifyUnlimited";
+    private static final String MODIFY_HANDLING_TIME_PROPERTY = "demo.modifyHandlingTime";
     private static final String DEFAULT_MARKETPLACE = "allegro-pl";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
@@ -121,6 +128,8 @@ final class OffersDemo {
                 bulkModify(client, System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY));
             } else if (System.getProperty(PRICING_RULE_OFFER_IDS_PROPERTY) != null) {
                 applyPricingRules(client, System.getProperty(PRICING_RULE_OFFER_IDS_PROPERTY));
+            } else if (System.getProperty(MODIFY_OFFER_IDS_PROPERTY) != null) {
+                modifyOffers(client, System.getProperty(MODIFY_OFFER_IDS_PROPERTY));
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -312,6 +321,41 @@ final class OffersDemo {
                     + (task.message() == null ? "" : ", message=" + task.message())));
         } catch (AllegroBadRequestException e) {
             System.out.println("applyPricingRules rejected — " + e.errors().size() + " error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    /**
+     * Submit the offer-modification command: set EXACTLY ONE setting on the given
+     * offers — an unlimited listing ({@code -Pdemo.modifyUnlimited}), a fixed listing
+     * duration ({@code -Pdemo.modifyDuration=DAYS_30}) or a dispatch time
+     * ({@code -Pdemo.modifyHandlingTime=DAYS_2}), in that precedence (Allegro rejects a
+     * command with more than one element). The SDK submits, polls to a terminal state
+     * and gathers the per-offer tasks, so the printed report proves the command wire path.
+     */
+    private static void modifyOffers(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(offerIds);
+        String duration = System.getProperty(MODIFY_DURATION_PROPERTY);
+        String handlingTime = System.getProperty(MODIFY_HANDLING_TIME_PROPERTY);
+        if (System.getProperty(MODIFY_UNLIMITED_PROPERTY) != null) {
+            builder.unlimitedListing();
+        } else if (duration != null) {
+            builder.listingDuration(OfferDuration.valueOf(duration));
+        } else if (handlingTime != null) {
+            builder.handlingTime(HandlingTime.valueOf(handlingTime));
+        }
+        System.out.println("modify: applying a setting to " + offerIds.size() + " offer(s)");
+        try {
+            BatchReport report = client.offers().batch().modify(builder.build());
+            System.out.println("modify: " + report.success() + "/" + report.total()
+                    + " ok, " + report.failed() + " failed");
+            report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
+                    + ", status=" + task.status()
+                    + (task.message() == null ? "" : ", message=" + task.message())));
+        } catch (AllegroBadRequestException e) {
+            System.out.println("modify rejected — " + e.errors().size() + " error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
                     + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
         }
