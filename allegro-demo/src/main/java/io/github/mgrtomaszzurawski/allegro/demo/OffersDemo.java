@@ -30,7 +30,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
@@ -70,6 +73,15 @@ final class OffersDemo {
     private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
+    private static final String CREATE_SHIPPING_RATES_ID_PROPERTY = "demo.createShippingRatesId";
+    private static final String CREATE_PROVINCE_PROPERTY = "demo.createProvince";
+    private static final String CREATE_CITY_PROPERTY = "demo.createCity";
+    private static final String CREATE_POST_CODE_PROPERTY = "demo.createPostCode";
+    private static final String CREATE_COUNTRY_CODE_PROPERTY = "demo.createCountryCode";
+    private static final String CREATE_IMPLIED_WARRANTY_ID_PROPERTY = "demo.createImpliedWarrantyId";
+    private static final String CREATE_RETURN_POLICY_ID_PROPERTY = "demo.createReturnPolicyId";
+    private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
+    private static final String DEFAULT_COUNTRY_CODE = "PL";
     private static final String UPLOAD_IMAGE_URL_PROPERTY = "demo.uploadImageUrl";
     private static final String DECLARE_ATTACHMENT_PROPERTY = "demo.declareAttachment";
     private static final String STREAM_EVENTS_PROPERTY = "demo.streamEvents";
@@ -203,6 +215,32 @@ final class OffersDemo {
             builder.addProductSetElement(element);
             System.out.println("create: sending productSet product=" + productId
                     + " quantity=" + quantity + (producerId == null ? "" : " producer=" + producerId));
+        }
+        // Optional prerequisites a productized category needs to be created ACTIVE: a normal
+        // (non-fulfillment) shipping rate, a ship-from location, and after-sales conditions.
+        // Supplied via -Pdemo.create* so the SDK create path exercises the full wire mapping.
+        String shippingRatesId = System.getProperty(CREATE_SHIPPING_RATES_ID_PROPERTY);
+        if (shippingRatesId != null) {
+            builder.delivery(OfferDelivery.builder().shippingRatesId(shippingRatesId).build());
+        }
+        String province = System.getProperty(CREATE_PROVINCE_PROPERTY);
+        if (province != null) {
+            builder.location(OfferLocation.builder()
+                    .countryCode(System.getProperty(CREATE_COUNTRY_CODE_PROPERTY, DEFAULT_COUNTRY_CODE))
+                    .province(province)
+                    .city(System.getProperty(CREATE_CITY_PROPERTY))
+                    .postCode(System.getProperty(CREATE_POST_CODE_PROPERTY))
+                    .build());
+        }
+        String impliedWarrantyId = System.getProperty(CREATE_IMPLIED_WARRANTY_ID_PROPERTY);
+        String returnPolicyId = System.getProperty(CREATE_RETURN_POLICY_ID_PROPERTY);
+        String warrantyId = System.getProperty(CREATE_WARRANTY_ID_PROPERTY);
+        if (impliedWarrantyId != null || returnPolicyId != null || warrantyId != null) {
+            builder.afterSalesServices(AfterSalesServices.builder()
+                    .impliedWarrantyId(impliedWarrantyId)
+                    .returnPolicyId(returnPolicyId)
+                    .warrantyId(warrantyId)
+                    .build());
         }
         CreateOfferRequest request = builder.build();
         try {
