@@ -54,6 +54,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.auth.OAuth2Token
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.AllegroHttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ArrayForObjectHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.UnknownSubtypeToBaseHandler;
 import java.net.http.HttpClient;
@@ -143,7 +144,11 @@ public final class AllegroClient implements AutoCloseable {
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 // Unknown polymorphic subtype -> deserialize as the base so a domain
                 // mapper can degrade it (forward compatibility); see the handler.
-                .addHandler(new UnknownSubtypeToBaseHandler());
+                .addHandler(new UnknownSubtypeToBaseHandler())
+                // A field the spec types as an object but the server returns as an array
+                // (e.g. offer `warnings`) -> take first element / null instead of failing
+                // the whole response (spec/runtime drift); see the handler.
+                .addHandler(new ArrayForObjectHandler());
         this.tokenManager = new OAuth2TokenManager(credentials, config.oauthBaseUrl(),
                 httpClient, objectMapper, config.readTimeout());
         HttpRuntime runtime = new AllegroHttpRuntime(
