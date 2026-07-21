@@ -36,8 +36,6 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 
 ## Documentation
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — design, layers, auth lifecycle
-- [`API-SURFACE.md`](API-SURFACE.md) — the full navigable method layout
 - [`docs/offers.md`](docs/offers.md) — offers: read an offer, change the Buy Now price
 - [`docs/orders.md`](docs/orders.md) — orders: listing, events, seller status, tracking, dictionaries
 - [`docs/payments.md`](docs/payments.md) — payment operations, refunded payments, refund initiation
@@ -85,7 +83,7 @@ Errors are typed by remediation (`AllegroBadRequestException` with field-level
 server error carries `traceId()` for Allegro support tickets. Retry with
 equal-jitter backoff and lazy `Stream` pagination are on by default. SLF4J
 debug channels (`…allegro.request` / `.auth` / `.retry`) trace every step the
-SDK takes — see [`ARCHITECTURE.md`](ARCHITECTURE.md) §11.
+SDK takes.
 
 ## Requirements
 
