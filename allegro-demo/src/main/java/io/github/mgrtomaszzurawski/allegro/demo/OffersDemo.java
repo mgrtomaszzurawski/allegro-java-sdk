@@ -13,6 +13,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModifi
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange.CurrencyBasis;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPromoOptionsRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
@@ -21,6 +22,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTim
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
@@ -81,6 +83,10 @@ final class OffersDemo {
     private static final String MODIFY_DURATION_PROPERTY = "demo.modifyDuration";
     private static final String MODIFY_UNLIMITED_PROPERTY = "demo.modifyUnlimited";
     private static final String MODIFY_HANDLING_TIME_PROPERTY = "demo.modifyHandlingTime";
+    private static final String PROMO_BATCH_OFFER_IDS_PROPERTY = "demo.promoBatchOfferIds";
+    private static final String PROMO_BATCH_BASE_PACKAGE_PROPERTY = "demo.promoBatchBasePackage";
+    private static final String PROMO_BATCH_EXTRA_PACKAGE_PROPERTY = "demo.promoBatchExtraPackage";
+    private static final String PROMO_BATCH_TIMING_PROPERTY = "demo.promoBatchTiming";
     private static final String DEFAULT_MARKETPLACE = "allegro-pl";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
     private static final String MINIMAL_PDF =
@@ -130,6 +136,8 @@ final class OffersDemo {
                 applyPricingRules(client, System.getProperty(PRICING_RULE_OFFER_IDS_PROPERTY));
             } else if (System.getProperty(MODIFY_OFFER_IDS_PROPERTY) != null) {
                 modifyOffers(client, System.getProperty(MODIFY_OFFER_IDS_PROPERTY));
+            } else if (System.getProperty(PROMO_BATCH_OFFER_IDS_PROPERTY) != null) {
+                modifyPromoBatch(client, System.getProperty(PROMO_BATCH_OFFER_IDS_PROPERTY));
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -334,6 +342,44 @@ final class OffersDemo {
      * command with more than one element). The SDK submits, polls to a terminal state
      * and gathers the per-offer tasks, so the printed report proves the command wire path.
      */
+    /**
+     * Submit the batch promotion-package command: set a base package
+     * ({@code -Pdemo.promoBatchBasePackage=emphasized1d}) and/or an extra package
+     * ({@code -Pdemo.promoBatchExtraPackage=bold30d}), timed with
+     * {@code -Pdemo.promoBatchTiming=NOW|END_OF_CYCLE}. The SDK submits, polls to a
+     * terminal state (on task count — there is no completedAt) and gathers the
+     * per-offer tasks, so the printed report proves the whole command wire path.
+     */
+    private static void modifyPromoBatch(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        BatchPromoOptionsRequest.Builder builder = BatchPromoOptionsRequest.forOffers(offerIds);
+        String basePackage = System.getProperty(PROMO_BATCH_BASE_PACKAGE_PROPERTY);
+        if (basePackage != null) {
+            builder.basePackage(basePackage);
+        }
+        String extraPackage = System.getProperty(PROMO_BATCH_EXTRA_PACKAGE_PROPERTY);
+        if (extraPackage != null) {
+            builder.addExtraPackage(extraPackage);
+        }
+        String timing = System.getProperty(PROMO_BATCH_TIMING_PROPERTY);
+        if (timing != null) {
+            builder.timing(PromoModificationTiming.valueOf(timing));
+        }
+        System.out.println("promoBatch: applying packages to " + offerIds.size() + " offer(s)");
+        try {
+            BatchReport report = client.offers().promoOptions().modifyBatch(builder.build());
+            System.out.println("promoBatch: " + report.success() + "/" + report.total()
+                    + " ok, " + report.failed() + " failed");
+            report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
+                    + ", status=" + task.status()
+                    + (task.message() == null ? "" : ", message=" + task.message())));
+        } catch (AllegroBadRequestException e) {
+            System.out.println("promoBatch rejected — " + e.errors().size() + " error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
     private static void modifyOffers(AllegroClient client, String csvOfferIds) {
         List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(offerIds);

@@ -149,6 +149,13 @@ sections. Empty subsections are dropped by the release engineer when folding
   partial so the many unset `Modification` sub-objects are omitted rather than sent as null.
   `OfferDuration`/`HandlingTime` expose one clean set of ISO-8601 durations (the wire's redundant
   hour/day spellings are hidden).
+- Batch promotion packages: `promoOptions().modifyBatch(BatchPromoOptionsRequest)` sets the base
+  and/or extra promotion packages on many offers in one command
+  (`PUT /sale/offers/promo-options-commands/{id}`), optionally timed `NOW`/`END_OF_CYCLE`, polled to a
+  terminal `BatchReport`. Unlike the other batch commands its `PromoGeneralReport` has no
+  `completedAt`, so completion is detected from the task count (`success + failed >= total`). The
+  fail-fast builder requires a base or at least one extra package; the body is written partial so
+  omitting the extra packages preserves the offers' existing extras.
 - `streamUnfilledParameters()` — a lazy `Stream<UnfilledParameters>` over the seller's offers that
   are still missing category parameters (offset/limit paging), each carrying the offer id, its
   category, and the missing parameter ids.

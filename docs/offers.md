@@ -408,6 +408,23 @@ client.offers().promoOptions().modify("13579", List.of(
         PromoOptionModification.removeNow(PromoPackageType.EXTRA, "pkg-2")));
 ```
 
+To set packages across **many** offers at once, `modifyBatch(...)` runs a command (submit → poll →
+gather) and returns a terminal `BatchReport`. Give a base package and/or extra packages (available
+ids come from `availablePackages()`); omitting the extra packages preserves whatever the offers
+already have. Choose when it takes effect with `PromoModificationTiming`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPromoOptionsRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
+
+BatchReport report = client.offers().promoOptions().modifyBatch(
+        BatchPromoOptionsRequest.forOffers(List.of("13579", "24680"))
+                .basePackage("emphasized1d")
+                .addExtraPackage("bold30d")
+                .timing(PromoModificationTiming.END_OF_CYCLE)
+                .build());
+```
+
 ## Change the Buy Now price
 
 ```java

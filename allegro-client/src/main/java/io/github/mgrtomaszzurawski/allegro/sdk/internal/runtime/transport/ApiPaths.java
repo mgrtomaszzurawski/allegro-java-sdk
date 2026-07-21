@@ -69,6 +69,7 @@ public final class ApiPaths {
     private static final String PROMO_OPTIONS_MODIFICATION_SEGMENT = "promo-options-modification";
     /** Seller-wide offer promotion packages ({@code /sale/offers/promo-options}); offset/limit paged. */
     public static final String SALE_OFFERS_PROMO_OPTIONS = "/sale/offers/promo-options";
+    private static final String SALE_OFFERS_PROMO_OPTIONS_COMMANDS = "/sale/offers/promo-options-commands";
     /** Offer image upload ({@code /sale/images}); on the upload host — POST binary or a URL. */
     public static final String SALE_IMAGES = "/sale/images";
     /** Offer attachments collection ({@code /sale/offer-attachments}); POST to declare. */
@@ -105,6 +106,16 @@ public final class ApiPaths {
     /** Apply a promo-options change to one offer ({@code /sale/offers/{offerId}/promo-options-modification}). */
     public static String offerPromoOptionsModification(String offerId) {
         return subPath(SALE_OFFERS, offerId, PROMO_OPTIONS_MODIFICATION_SEGMENT);
+    }
+
+    /** Batch promo-options command ({@code /sale/offers/promo-options-commands/{commandId}}). */
+    public static String offerPromoOptionsCommand(String commandId) {
+        return subPath(SALE_OFFERS_PROMO_OPTIONS_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a promo-options command ({@code …/{commandId}/tasks}). */
+    public static String offerPromoOptionsCommandTasks(String commandId) {
+        return subPath(SALE_OFFERS_PROMO_OPTIONS_COMMANDS, commandId, TASKS_SEGMENT);
     }
 
     /** A single offer attachment ({@code /sale/offer-attachments/{attachmentId}}); GET, or PUT to upload. */
