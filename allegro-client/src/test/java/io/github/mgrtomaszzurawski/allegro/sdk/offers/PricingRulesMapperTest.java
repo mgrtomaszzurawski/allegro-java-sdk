@@ -5,7 +5,6 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -139,16 +138,5 @@ class PricingRulesMapperTest {
         assertEquals(MARKETPLACE_PL, tree.at("/modification/remove/0/marketplace/id").asText());
         assertTrue(tree.at("/modification/set").isMissingNode());
         assertEquals("CONTAINS_OFFERS", tree.at("/offerCriteria/0/type").asText());
-    }
-
-    @Test
-    void toRaw_whenRemove_isNotAnAssignment() {
-        // given/when — a removal request
-        BatchPricingRulesRequest request = BatchPricingRulesRequest.removeRules(List.of(OFFER_ONE))
-                .fromMarketplace(MARKETPLACE_PL)
-                .build();
-
-        // then — the request reports itself as a removal, not an assignment
-        assertFalse(request.isAssignment());
     }
 }

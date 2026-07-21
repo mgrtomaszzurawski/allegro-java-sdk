@@ -182,9 +182,18 @@ public final class BatchPricingRulesRequest {
 
     /**
      * A price-range bound for an assigned rule — the minimum and maximum price the
-     * rule may set, and the currency the bounds are expressed in.
+     * rule may set, and the currency the bounds are expressed in. Build via
+     * {@link #of} (fail-fast on a null field).
+     *
+     * @param currencyBasis which currency the bounds are expressed in
+     * @param minPrice      the minimum price the rule may set
+     * @param maxPrice      the maximum price the rule may set
      */
-    public static final class PriceRange {
+    public record PriceRange(CurrencyBasis currencyBasis, Money minPrice, Money maxPrice) {
+
+        private static final String ERR_BASIS = "currency basis must not be null";
+        private static final String ERR_MIN_PRICE = "min price must not be null";
+        private static final String ERR_MAX_PRICE = "max price must not be null";
 
         /** Which currency the {@link PriceRange} bounds are expressed in. */
         public enum CurrencyBasis {
@@ -194,40 +203,15 @@ public final class BatchPricingRulesRequest {
             MARKETPLACE_CURRENCY
         }
 
-        private static final String ERR_BASIS = "currency basis must not be null";
-        private static final String ERR_MIN_PRICE = "min price must not be null";
-        private static final String ERR_MAX_PRICE = "max price must not be null";
-
-        private final CurrencyBasis currencyBasis;
-        private final Money minPrice;
-        private final Money maxPrice;
-
-        private PriceRange(CurrencyBasis currencyBasis, Money minPrice, Money maxPrice) {
-            this.currencyBasis = currencyBasis;
-            this.minPrice = minPrice;
-            this.maxPrice = maxPrice;
+        public PriceRange {
+            Objects.requireNonNull(currencyBasis, ERR_BASIS);
+            Objects.requireNonNull(minPrice, ERR_MIN_PRICE);
+            Objects.requireNonNull(maxPrice, ERR_MAX_PRICE);
         }
 
         /** A price range bounding the rule between {@code minPrice} and {@code maxPrice}. */
         public static PriceRange of(CurrencyBasis currencyBasis, Money minPrice, Money maxPrice) {
-            return new PriceRange(Objects.requireNonNull(currencyBasis, ERR_BASIS),
-                    Objects.requireNonNull(minPrice, ERR_MIN_PRICE),
-                    Objects.requireNonNull(maxPrice, ERR_MAX_PRICE));
-        }
-
-        /** Which currency the bounds are expressed in. */
-        public CurrencyBasis currencyBasis() {
-            return currencyBasis;
-        }
-
-        /** The minimum price the rule may set. */
-        public Money minPrice() {
-            return minPrice;
-        }
-
-        /** The maximum price the rule may set. */
-        public Money maxPrice() {
-            return maxPrice;
+            return new PriceRange(currencyBasis, minPrice, maxPrice);
         }
     }
 }
