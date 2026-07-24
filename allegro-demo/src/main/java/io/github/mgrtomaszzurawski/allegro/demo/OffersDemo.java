@@ -29,6 +29,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentTyp
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
@@ -38,6 +41,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
@@ -104,6 +108,19 @@ final class OffersDemo {
     private static final String PROMO_BATCH_TIMING_PROPERTY = "demo.promoBatchTiming";
     private static final String PARTS_OFFER_ID_PROPERTY = "demo.partsOfferId";
     private static final String PARTS_INCLUDE_PROPERTY = "demo.partsInclude";
+    private static final String QUANTITY_OFFER_IDS_PROPERTY = "demo.quantityOfferIds";
+    private static final String QUANTITY_VALUE_PROPERTY = "demo.quantityValue";
+    private static final String UNPUBLISH_IDS_PROPERTY = "demo.unpublishIds";
+    private static final String UNFILLED_PARAMS_PROPERTY = "demo.unfilledParams";
+    private static final String EDIT_OFFER_ID_PROPERTY = "demo.editOfferId";
+    private static final String EDIT_NAME_PROPERTY = "demo.editName";
+    private static final String EDIT_PRICE_PROPERTY = "demo.editPrice";
+    private static final String EDIT_STOCK_PROPERTY = "demo.editStock";
+    private static final String CHANGE_PRICES_OFFER_IDS_PROPERTY = "demo.changePricesOfferIds";
+    private static final String CHANGE_PRICES_VALUE_PROPERTY = "demo.changePricesValue";
+    private static final String AVAILABLE_PACKAGES_PROPERTY = "demo.availablePackages";
+    private static final String PROMO_FOR_OFFER_ID_PROPERTY = "demo.promoForOfferId";
+    private static final String DELETE_DRAFT_OFFER_ID_PROPERTY = "demo.deleteDraftOfferId";
     private static final String DEFAULT_PARTS = "STOCK,PRICE";
     private static final String DEFAULT_MARKETPLACE = "allegro-pl";
     /** A minimal well-formed PDF, so the attachment upload leg is exercised through the SDK. */
@@ -158,6 +175,22 @@ final class OffersDemo {
                 modifyPromoBatch(client, System.getProperty(PROMO_BATCH_OFFER_IDS_PROPERTY));
             } else if (System.getProperty(PARTS_OFFER_ID_PROPERTY) != null) {
                 getOfferParts(client, System.getProperty(PARTS_OFFER_ID_PROPERTY));
+            } else if (System.getProperty(EDIT_OFFER_ID_PROPERTY) != null) {
+                editOffer(client, System.getProperty(EDIT_OFFER_ID_PROPERTY));
+            } else if (System.getProperty(CHANGE_PRICES_OFFER_IDS_PROPERTY) != null) {
+                changePricesBatch(client, System.getProperty(CHANGE_PRICES_OFFER_IDS_PROPERTY));
+            } else if (System.getProperty(AVAILABLE_PACKAGES_PROPERTY) != null) {
+                availablePackages(client);
+            } else if (System.getProperty(PROMO_FOR_OFFER_ID_PROPERTY) != null) {
+                promoForOffer(client, System.getProperty(PROMO_FOR_OFFER_ID_PROPERTY));
+            } else if (System.getProperty(DELETE_DRAFT_OFFER_ID_PROPERTY) != null) {
+                deleteDraft(client, System.getProperty(DELETE_DRAFT_OFFER_ID_PROPERTY));
+            } else if (System.getProperty(QUANTITY_OFFER_IDS_PROPERTY) != null) {
+                changeQuantities(client, System.getProperty(QUANTITY_OFFER_IDS_PROPERTY));
+            } else if (System.getProperty(UNPUBLISH_IDS_PROPERTY) != null) {
+                unpublishBatch(client, System.getProperty(UNPUBLISH_IDS_PROPERTY));
+            } else if (System.getProperty(UNFILLED_PARAMS_PROPERTY) != null) {
+                streamUnfilled(client);
             } else if (createName != null) {
                 createOffer(client, createName);
             } else if (publishIds != null) {
@@ -282,6 +315,83 @@ final class OffersDemo {
             System.out.println("  id=" + event.id() + ", type=" + event.type()
                     + ", offerId=" + event.offerId() + ", occurredAt=" + event.occurredAt());
         }
+    }
+
+    private static void changeQuantities(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        int quantity = Integer.parseInt(System.getProperty(QUANTITY_VALUE_PROPERTY));
+        BatchReport report = client.offers().batch().changeQuantities(offerIds, quantity);
+        System.out.println("batch changeQuantities to " + quantity + ": " + report.success()
+                + "/" + report.total() + " ok, " + report.failed() + " failed");
+        report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
+                + ", status=" + task.status()));
+    }
+
+    private static void unpublishBatch(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        BatchReport report = client.offers().batch().unpublish(offerIds);
+        System.out.println("batch unpublish: " + report.success() + "/" + report.total()
+                + " ok, " + report.failed() + " failed");
+    }
+
+    private static void streamUnfilled(AllegroClient client) {
+        List<UnfilledParameters> unfilled = client.offers().streamUnfilledParameters()
+                .limit(STREAM_LIMIT).toList();
+        System.out.println("streamUnfilledParameters: first " + unfilled.size() + " offer(s)");
+        unfilled.forEach(entry -> System.out.println("  " + entry));
+    }
+
+    private static void editOffer(AllegroClient client, String offerId) {
+        EditOfferRequest.Builder builder = EditOfferRequest.builder();
+        String newName = System.getProperty(EDIT_NAME_PROPERTY);
+        if (newName != null) {
+            builder.name(newName);
+        }
+        String newPrice = System.getProperty(EDIT_PRICE_PROPERTY);
+        if (newPrice != null) {
+            builder.buyNowPrice(Money.of(newPrice, CURRENCY_PLN));
+        }
+        // The server requires the stock module in a product-offer PATCH even when only the
+        // price/name changes (RequiredModulesEnabled), so allow the demo to carry it.
+        String newStock = System.getProperty(EDIT_STOCK_PROPERTY);
+        if (newStock != null) {
+            builder.availableStock(Integer.valueOf(newStock));
+        }
+        try {
+            Offer edited = client.offers().edit(offerId, builder.build());
+            System.out.println("edit: id=" + edited.id() + ", name=" + edited.name()
+                    + ", buyNow=" + edited.buyNowPrice());
+        } catch (AllegroBadRequestException e) {
+            System.out.println("edit rejected — " + e.errors().size() + " field error(s):");
+            e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
+                    + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    private static void changePricesBatch(AllegroClient client, String csvOfferIds) {
+        List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
+        Money price = Money.of(System.getProperty(CHANGE_PRICES_VALUE_PROPERTY), CURRENCY_PLN);
+        BatchReport report = client.offers().batch().changePrices(offerIds, price);
+        System.out.println("batch changePrices to " + price.amount() + " " + price.currency() + ": "
+                + report.success() + "/" + report.total() + " ok, " + report.failed() + " failed");
+    }
+
+    private static void availablePackages(AllegroClient client) {
+        AvailablePromotionPackages packages = client.offers().promoOptions().availablePackages();
+        System.out.println("availablePackages: base=" + packages.basePackages().size()
+                + ", extra=" + packages.extraPackages().size());
+    }
+
+    private static void promoForOffer(AllegroClient client, String offerId) {
+        OfferPromoOptions promo = client.offers().promoOptions().forOffer(offerId);
+        System.out.println("forOffer " + offerId + ": base="
+                + (promo.basePackage() == null ? "(none)" : promo.basePackage().id())
+                + ", extras=" + promo.extraPackages().size());
+    }
+
+    private static void deleteDraft(AllegroClient client, String offerId) {
+        client.offers().deleteDraft(offerId);
+        System.out.println("deleteDraft: " + offerId + " deleted");
     }
 
     private static void attachmentFlow(AllegroClient client, String fileName) {
