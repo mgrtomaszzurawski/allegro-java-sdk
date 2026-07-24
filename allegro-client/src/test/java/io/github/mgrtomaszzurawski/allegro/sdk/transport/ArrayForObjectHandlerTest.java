@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ArrayForObjectHandler;
@@ -51,8 +52,9 @@ class ArrayForObjectHandlerTest {
     void deserialize_whenObjectFieldIsArrayWithoutHandler_fails() {
         // given — the lenient mapper without the array-for-object handler
         ObjectMapper lenient = lenientMapper();
-        // when / then — the array where an object is expected fails the whole read
-        Exception thrown = assertThrows(Exception.class, () ->
+        // when / then — the array where an object is expected fails the whole read with the
+        // structural mismatch Jackson raises (assert the type, not the version-sensitive message)
+        MismatchedInputException thrown = assertThrows(MismatchedInputException.class, () ->
                 lenient.readValue(OFFER_EMPTY_WARNINGS_ARRAY, SaleProductOfferResponseV1Raw.class));
         assertTrue(thrown.getMessage().contains(ARRAY_VALUE_MARKER), thrown.getMessage());
     }
