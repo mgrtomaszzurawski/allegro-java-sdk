@@ -188,6 +188,11 @@ class OffersClientTest {
         assertNotNull(boundProduct.safetyInformation());
         assertEquals(SafetyInformation.TEXT, boundProduct.safetyInformation().type());
         assertNotNull(boundProduct.safetyInformation().description());
+        // Allegro's validation block maps (this active offer validated cleanly, timestamp present)
+        assertNotNull(offer.validation());
+        assertNotNull(offer.validation().validatedAt());
+        assertEquals(0, offer.validation().errors().size());
+        assertEquals(0, offer.validation().warnings().size());
     }
 
     @Test

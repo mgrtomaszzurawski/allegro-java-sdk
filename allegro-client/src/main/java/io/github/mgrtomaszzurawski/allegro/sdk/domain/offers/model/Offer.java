@@ -57,6 +57,8 @@ import org.jspecify.annotations.Nullable;
  *                       or {@code null} if the payload omits them
  * @param messageToSellerSettings the buyer-note settings (mode/hint), or {@code null}
  * @param payments       the payment settings (invoice type), or {@code null}
+ * @param validation     Allegro's validation of the offer (blocking errors, non-blocking
+ *                       warnings, validatedAt), or {@code null} if the payload omits it
  * @since 0.2.0
  */
 public record Offer(
@@ -81,7 +83,8 @@ public record Offer(
         List<ProductSetElement> productSet,
         @Nullable OfferPublication publication,
         @Nullable MessageToSellerSettings messageToSellerSettings,
-        @Nullable OfferPayments payments) {
+        @Nullable OfferPayments payments,
+        @Nullable OfferValidation validation) {
 
     /**
      * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists to
@@ -120,7 +123,8 @@ public record Offer(
                 productSetOf(raw),
                 OfferPublication.from(publication),
                 MessageToSellerSettings.from(raw.getMessageToSellerSettings()),
-                OfferPayments.from(raw.getPayments()));
+                OfferPayments.from(raw.getPayments()),
+                OfferValidation.from(raw.getValidation()));
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {
