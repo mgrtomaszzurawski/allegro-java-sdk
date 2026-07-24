@@ -21,10 +21,12 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>This value references an EXISTING catalogue product by {@link #productId() id} (a
  * product UUID). Defining a brand-new product inline, product attachments, {@code deposits},
- * {@code responsiblePerson}, and the {@code safetyInformation} details are not modelled here
- * yet — this element covers the product reference plus the GPSR {@linkplain
- * ResponsibleProducerRef responsible producer} and the pre-obligation marker, which is what
- * a productized category requires to be created.
+ * and {@code responsiblePerson} are not modelled here yet. On the WRITE side this element
+ * covers the product reference plus the GPSR {@linkplain ResponsibleProducerRef responsible
+ * producer} and the pre-obligation marker, which is what a productized category requires to
+ * be created; on the READ side it additionally surfaces the product's catalogue
+ * {@link #productParameters() parameters}, its {@link #aiCoCreated() AI-co-created flag}, and
+ * its GPSR {@link #safetyInformation() safety information}.
  *
  * <p>The same immutable value is used both ways: build one for {@code CreateOfferRequest}, or
  * read one back from an {@link Offer}. Optional fields are added with the {@code with…}
@@ -40,6 +42,8 @@ import org.jspecify.annotations.Nullable;
  *                                     (empty on a build-by-id element or when the payload omits them)
  * @param aiCoCreated                  {@code true} if the bound product's content was AI co-created,
  *                                     as reported by Allegro, or {@code null}
+ * @param safetyInformation            the product's GPSR safety information (text/attachments/none)
+ *                                     as read back, or {@code null} if the payload omits it
  * @since 0.4.0
  */
 public record ProductSetElement(
@@ -48,7 +52,8 @@ public record ProductSetElement(
         @Nullable ResponsibleProducerRef responsibleProducer,
         @Nullable Boolean marketedBeforeGpsrObligation,
         List<OfferParameter> productParameters,
-        @Nullable Boolean aiCoCreated) {
+        @Nullable Boolean aiCoCreated,
+        @Nullable SafetyInformation safetyInformation) {
 
     private static final String ERR_QUANTITY = "quantity must be at least 1";
     private static final int DEFAULT_QUANTITY = 1;
@@ -68,25 +73,25 @@ public record ProductSetElement(
 
     /** A single unit of the given catalogue product. */
     public static ProductSetElement of(String productId) {
-        return new ProductSetElement(productId, DEFAULT_QUANTITY, null, null, List.of(), null);
+        return new ProductSetElement(productId, DEFAULT_QUANTITY, null, null, List.of(), null, null);
     }
 
     /** {@code quantity} units of the given catalogue product. */
     public static ProductSetElement of(String productId, int quantity) {
-        return new ProductSetElement(productId, quantity, null, null, List.of(), null);
+        return new ProductSetElement(productId, quantity, null, null, List.of(), null, null);
     }
 
     /** A copy of this element with the GPSR responsible producer set. */
     public ProductSetElement withResponsibleProducer(ResponsibleProducerRef producer) {
         return new ProductSetElement(productId, quantity,
                 Objects.requireNonNull(producer, "producer"), marketedBeforeGpsrObligation,
-                productParameters, aiCoCreated);
+                productParameters, aiCoCreated, safetyInformation);
     }
 
     /** A copy of this element with the GPSR pre-obligation marker set. */
     public ProductSetElement withMarketedBeforeGpsrObligation(boolean marketed) {
         return new ProductSetElement(productId, quantity, responsibleProducer, marketed,
-                productParameters, aiCoCreated);
+                productParameters, aiCoCreated, safetyInformation);
     }
 
     /** Project a generated response product-set element onto the consumer value. */
@@ -102,7 +107,8 @@ public record ProductSetElement(
                 producer == null ? null : ResponsibleProducerRef.from(producer),
                 raw.getMarketedBeforeGPSRObligation(),
                 productParametersOf(product),
-                product == null ? null : product.getIsAiCoCreated());
+                product == null ? null : product.getIsAiCoCreated(),
+                SafetyInformation.from(raw.getSafetyInformation()));
     }
 
     private static List<OfferParameter> productParametersOf(

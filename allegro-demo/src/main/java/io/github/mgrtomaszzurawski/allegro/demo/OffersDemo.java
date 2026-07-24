@@ -634,8 +634,11 @@ final class OffersDemo {
             String params = element.productParameters().stream()
                     .map(parameter -> parameter.name() + "=" + parameter.values())
                     .toList().toString();
+            String safety = element.safetyInformation() == null ? "(none)"
+                    : element.safetyInformation().type();
             System.out.println("  productSet[0]: product=" + element.productId()
-                    + ", aiCoCreated=" + element.aiCoCreated() + ", parameters=" + params);
+                    + ", aiCoCreated=" + element.aiCoCreated() + ", safety=" + safety
+                    + ", parameters=" + params);
         }
     }
 
