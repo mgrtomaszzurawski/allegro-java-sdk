@@ -32,6 +32,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoOptionModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoPackageType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
@@ -85,6 +87,9 @@ final class OffersDemo {
     private static final String CREATE_IMPLIED_WARRANTY_ID_PROPERTY = "demo.createImpliedWarrantyId";
     private static final String CREATE_RETURN_POLICY_ID_PROPERTY = "demo.createReturnPolicyId";
     private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
+    private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
+    private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
+    private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
     private static final String DEFAULT_COUNTRY_CODE = "PL";
     private static final String UPLOAD_IMAGE_URL_PROPERTY = "demo.uploadImageUrl";
     private static final String DECLARE_ATTACHMENT_PROPERTY = "demo.declareAttachment";
@@ -165,6 +170,8 @@ final class OffersDemo {
                 streamEvents(client);
             } else if (System.getProperty(PROMO_OPTIONS_PROPERTY) != null) {
                 promoOptions(client);
+            } else if (System.getProperty(PROMO_MODIFY_OFFER_ID_PROPERTY) != null) {
+                promoModify(client, System.getProperty(PROMO_MODIFY_OFFER_ID_PROPERTY));
             } else if (System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY) != null) {
                 bulkModify(client, System.getProperty(BULK_MODIFY_OFFER_ID_PROPERTY));
             } else if (System.getProperty(PRICING_RULE_OFFER_IDS_PROPERTY) != null) {
@@ -284,6 +291,25 @@ final class OffersDemo {
             Offer created = client.offers().create(request);
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
+            if (created.validation() != null) {
+                System.out.println("create validation: " + created.validation().errors().size()
+                        + " error(s), " + created.validation().warnings().size() + " warning(s)"
+                        + (created.validation().warnings().isEmpty() ? ""
+                                : ", e.g. " + created.validation().warnings().get(0).code()));
+            }
+            // Delete-after-create: a just-created product offer is still an INACTIVE draft (the
+            // sandbox auto-activates a valid one shortly after), so deleting it immediately
+            // exercises the deleteDraft (DELETE /sale/offers/{id}) happy path through the SDK.
+            if (System.getProperty(DELETE_AFTER_CREATE_PROPERTY) != null) {
+                client.offers().deleteDraft(created.id());
+                System.out.println("deleteDraft: " + created.id() + " deleted");
+                try {
+                    client.offers().get(created.id());
+                    System.out.println("deleteDraft verify: UNEXPECTED — offer still readable");
+                } catch (AllegroNotFoundException notFound) {
+                    System.out.println("deleteDraft verify: offer is gone (404) — draft delete confirmed");
+                }
+            }
         } catch (AllegroBadRequestException e) {
             System.out.println("create rejected — " + e.errors().size() + " field error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
@@ -301,6 +327,17 @@ final class OffersDemo {
             e.errors().forEach(fieldError -> System.out.println("  - code=" + fieldError.code()
                     + " userMessage=" + fieldError.userMessage()));
         }
+    }
+
+    private static void promoModify(AllegroClient client, String offerId) {
+        String basePackage = System.getProperty(PROMO_MODIFY_BASE_PACKAGE_PROPERTY);
+        client.offers().promoOptions().modify(offerId,
+                List.of(PromoOptionModification.change(PromoPackageType.BASE, basePackage)));
+        System.out.println("promoOptions.modify: offer " + offerId + " base package set to " + basePackage);
+        OfferPromoOptions after = client.offers().promoOptions().forOffer(offerId);
+        System.out.println("  read-back: base="
+                + (after.basePackage() == null ? "(none/pending)" : after.basePackage().id())
+                + ", extras=" + after.extraPackages().size());
     }
 
     private static void promoOptions(AllegroClient client) {
