@@ -17,30 +17,39 @@ import org.junit.jupiter.api.Test;
 class OfferResponseMetadataTest {
 
     private static final String HINT = "Add a note";
+    private static final String MODE_OPTIONAL = "OPTIONAL";
+    private static final String INVOICE_VAT = "VAT";
 
     @Test
     void messageToSellerSettings_whenNull_returnsNull() {
+        // then an absent settings block projects to null, not an empty object
         assertNull(MessageToSellerSettings.from(null));
     }
 
     @Test
     void messageToSellerSettings_whenPopulated_mapsModeAndHint() {
+        // given a settings block with a mode enum and a hint
         MessageToSellerSettingsRaw raw = new MessageToSellerSettingsRaw()
                 .mode(MessageToSellerSettingsRaw.ModeEnum.OPTIONAL).hint(HINT);
+        // when projected onto the consumer value
         MessageToSellerSettings settings = MessageToSellerSettings.from(raw);
-        assertEquals("OPTIONAL", settings.mode());
+        // then the mode's wire value and the hint map through
+        assertEquals(MODE_OPTIONAL, settings.mode());
         assertEquals(HINT, settings.hint());
     }
 
     @Test
     void payments_whenNull_returnsNull() {
+        // then an absent payments block projects to null
         assertNull(OfferPayments.from(null));
     }
 
     @Test
     void payments_whenPopulated_mapsInvoiceType() {
+        // given a payments block carrying an invoice type
         PaymentsRaw raw = new PaymentsRaw().invoice(PaymentsRaw.InvoiceEnum.VAT);
+        // when projected; then the invoice enum's wire value maps through
         OfferPayments payments = OfferPayments.from(raw);
-        assertEquals("VAT", payments.invoice());
+        assertEquals(INVOICE_VAT, payments.invoice());
     }
 }

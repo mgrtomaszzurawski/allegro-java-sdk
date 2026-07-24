@@ -55,7 +55,7 @@ import org.jspecify.annotations.Nullable;
  *                       offer is not productized or the payload omits them
  * @param publication    publication lifecycle details (republish, start/end, base marketplace),
  *                       or {@code null} if the payload omits them
- * @param messageToSellerSettings the buyer-note settings (mode/value/hint), or {@code null}
+ * @param messageToSellerSettings the buyer-note settings (mode/hint), or {@code null}
  * @param payments       the payment settings (invoice type), or {@code null}
  * @since 0.2.0
  */
