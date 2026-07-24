@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 class OfferValidationTest {
 
     private static final String ERROR_CODE = "RESPONSIBLE_PRODUCER_NOT_SPECIFIED";
+    private static final String ERROR_MESSAGE = "Responsible producer is required for every product";
     private static final String ERROR_PATH = "productSet[0].responsibleProducer";
     private static final String WARNING_CODE = "SAFETY_INFO_DESCRIPTION_SUGGESTED_DATA_VERIFICATION_NEEDED";
 
@@ -32,15 +33,17 @@ class OfferValidationTest {
     void from_whenPopulated_mapsErrorsAndWarnings() {
         // given a validation block with one blocking error and one non-blocking warning
         ValidationRaw raw = new ValidationRaw()
-                .addErrorsItem(new ValidationErrorRaw().code(ERROR_CODE).path(ERROR_PATH))
+                .addErrorsItem(new ValidationErrorRaw().code(ERROR_CODE).message(ERROR_MESSAGE).path(ERROR_PATH))
                 .addWarningsItem(new ValidationWarningRaw().code(WARNING_CODE));
 
         // when projected onto the consumer value
         OfferValidation validation = OfferValidation.from(raw);
 
-        // then the error and warning map through with their code/path (reusing AllegroFieldError)
+        // then the error and warning map through with their code/message/path (guards the
+        // AllegroFieldError constructor's field order), reusing the shared error value
         assertEquals(1, validation.errors().size());
         assertEquals(ERROR_CODE, validation.errors().get(0).code());
+        assertEquals(ERROR_MESSAGE, validation.errors().get(0).message());
         assertEquals(ERROR_PATH, validation.errors().get(0).path());
         assertEquals(1, validation.warnings().size());
         assertEquals(WARNING_CODE, validation.warnings().get(0).code());
