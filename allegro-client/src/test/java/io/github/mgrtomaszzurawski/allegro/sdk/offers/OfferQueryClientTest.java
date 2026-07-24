@@ -75,13 +75,18 @@ class OfferQueryClientTest {
     private static final String AMOUNT = "199.99";
     private static final String CURRENCY_PLN = "PLN";
     private static final String IMAGE_URL = "https://img.example/x.jpg";
+    private static final String RETURN_POLICY_ID = "ca36b384-61de-48ca-b296-a0abe1f41930";
+    private static final String STARTED_AT = "2026-07-24T13:35:45Z";
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
             + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
-            + "\"stock\":{\"available\":%d,\"sold\":%d},\"publication\":{\"status\":\"ACTIVE\"},"
+            + "\"stock\":{\"available\":%d,\"sold\":%d},"
+            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\"},"
+            + "\"afterSalesServices\":{\"returnPolicy\":{\"id\":\"%s\"}},\"isFulfillment\":false,"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
-            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD, IMAGE_URL);
+            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD,
+                    STARTED_AT, RETURN_POLICY_ID, IMAGE_URL);
 
     private static final String CONDITION_MET_CODE = "DELIVERY";
     private static final String CONDITION_MET_NAME = "Wysyłka";
@@ -219,6 +224,10 @@ class OfferQueryClientTest {
         assertEquals(AVAILABLE, summary.availableStock());
         assertEquals(SOLD, summary.soldCount());
         assertEquals(IMAGE_URL, summary.primaryImageUrl());
+        assertEquals(Boolean.FALSE, summary.fulfillment());
+        assertEquals(java.time.OffsetDateTime.parse(STARTED_AT), summary.publishedAt());
+        assertNull(summary.endedAt());
+        assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicyId());
     }
 
     @Test
