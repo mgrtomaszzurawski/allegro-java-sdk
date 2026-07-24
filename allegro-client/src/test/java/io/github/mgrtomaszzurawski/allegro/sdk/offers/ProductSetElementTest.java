@@ -34,6 +34,7 @@ class ProductSetElementTest {
     private static final String TYPE_NAME = "NAME";
     private static final String PARAM_ID = "223545";
     private static final String PARAM_NAME = "Tytuł";
+    private static final String PARAM_VALUE = "Nauka duża książka dla małych dzieci";
 
     @Test
     void of_whenOnlyProductId_defaultsToOneUnitNoGpsr() {
@@ -147,7 +148,7 @@ class ProductSetElementTest {
                 new SaleProductOfferResponseV1AllOfProductSetRaw()
                         .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID)
                                 .parameters(List.of(new ParameterProductOfferResponseRaw()
-                                        .id(PARAM_ID).name(PARAM_NAME)))
+                                        .id(PARAM_ID).name(PARAM_NAME).values(List.of(PARAM_VALUE))))
                                 .isAiCoCreated(true))
                         .quantity(new ProductSetElementQuantityQuantityRaw().value(QUANTITY))
                         .responsibleProducer(new SaleProductOfferResponseV1AllOfProductSetAllOfResponsibleProducerRaw()
@@ -167,6 +168,7 @@ class ProductSetElementTest {
         assertEquals(1, element.productParameters().size());
         assertEquals(PARAM_ID, element.productParameters().get(0).id());
         assertEquals(PARAM_NAME, element.productParameters().get(0).name());
+        assertEquals(List.of(PARAM_VALUE), element.productParameters().get(0).values());
         assertEquals(Boolean.TRUE, element.aiCoCreated());
     }
 
@@ -184,6 +186,8 @@ class ProductSetElementTest {
         assertEquals(1, element.quantity());
         assertNull(element.responsibleProducer());
         assertTrue(element.marketedBeforeGpsrObligation() == null);
+        // the product carried no parameters block: the null-parameters branch degrades to empty
+        assertTrue(element.productParameters().isEmpty());
     }
 
     private static ResponsibleProducerRef requireProducer(ProductSetElement element) {
