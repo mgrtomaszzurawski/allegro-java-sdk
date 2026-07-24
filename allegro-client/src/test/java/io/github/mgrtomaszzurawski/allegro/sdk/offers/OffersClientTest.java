@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -168,6 +169,15 @@ class OffersClientTest {
         assertEquals(OfferStatus.ACTIVE, offer.status());
         assertEquals(Money.of("29.99", CURRENCY_PLN), offer.buyNowPrice());
         assertEquals(5, offer.availableStock());
+        // publication details map from the real payload (republish flag + base marketplace)
+        assertNotNull(offer.publication());
+        assertEquals(Boolean.FALSE, offer.publication().republish());
+        assertEquals("allegro-pl", offer.publication().baseMarketplaceId());
+        // response metadata the server fills with defaults maps too
+        assertNotNull(offer.messageToSellerSettings());
+        assertEquals("OPTIONAL", offer.messageToSellerSettings().mode());
+        assertNotNull(offer.payments());
+        assertEquals("VAT", offer.payments().invoice());
     }
 
     @Test

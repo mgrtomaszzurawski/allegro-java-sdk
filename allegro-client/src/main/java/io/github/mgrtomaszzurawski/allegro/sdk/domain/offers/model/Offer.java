@@ -53,6 +53,10 @@ import org.jspecify.annotations.Nullable;
  * @param sizeTableId    the id of the attached size table, or {@code null} if omitted
  * @param productSet     the offer's product-set elements (product bindings), empty when the
  *                       offer is not productized or the payload omits them
+ * @param publication    publication lifecycle details (republish, start/end, base marketplace),
+ *                       or {@code null} if the payload omits them
+ * @param messageToSellerSettings the buyer-note settings (mode/value/hint), or {@code null}
+ * @param payments       the payment settings (invoice type), or {@code null}
  * @since 0.2.0
  */
 public record Offer(
@@ -74,7 +78,10 @@ public record Offer(
         @Nullable String externalId,
         @Nullable String language,
         @Nullable String sizeTableId,
-        List<ProductSetElement> productSet) {
+        List<ProductSetElement> productSet,
+        @Nullable OfferPublication publication,
+        @Nullable MessageToSellerSettings messageToSellerSettings,
+        @Nullable OfferPayments payments) {
 
     /**
      * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists to
@@ -110,7 +117,10 @@ public record Offer(
                 externalIdOf(raw),
                 raw.getLanguage(),
                 sizeTableIdOf(raw),
-                productSetOf(raw));
+                productSetOf(raw),
+                OfferPublication.from(publication),
+                MessageToSellerSettings.from(raw.getMessageToSellerSettings()),
+                OfferPayments.from(raw.getPayments()));
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {
