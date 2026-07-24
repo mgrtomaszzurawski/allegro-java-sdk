@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -57,6 +58,9 @@ class OffersClientTest {
     private static final String LIVE_OFFER_ID = "7781898446";
     private static final String LIVE_GET_PATH = "/sale/product-offers/" + LIVE_OFFER_ID;
     private static final String LIVE_OFFER_FIXTURE = "offers/product-offer-live.json";
+    private static final String LIVE_BASE_MARKETPLACE = "allegro-pl";
+    private static final String LIVE_MESSAGE_MODE = "OPTIONAL";
+    private static final String LIVE_INVOICE_TYPE = "VAT";
     private static final String NEW_AMOUNT = "149.50";
     private static final String CURRENCY_PLN = "PLN";
     private static final String PARTS_BOTH_URL =
@@ -168,6 +172,15 @@ class OffersClientTest {
         assertEquals(OfferStatus.ACTIVE, offer.status());
         assertEquals(Money.of("29.99", CURRENCY_PLN), offer.buyNowPrice());
         assertEquals(5, offer.availableStock());
+        // publication details map from the real payload (republish flag + base marketplace)
+        assertNotNull(offer.publication());
+        assertEquals(Boolean.FALSE, offer.publication().republish());
+        assertEquals(LIVE_BASE_MARKETPLACE, offer.publication().baseMarketplaceId());
+        // response metadata the server fills with defaults maps too
+        assertNotNull(offer.messageToSellerSettings());
+        assertEquals(LIVE_MESSAGE_MODE, offer.messageToSellerSettings().mode());
+        assertNotNull(offer.payments());
+        assertEquals(LIVE_INVOICE_TYPE, offer.payments().invoice());
     }
 
     @Test
