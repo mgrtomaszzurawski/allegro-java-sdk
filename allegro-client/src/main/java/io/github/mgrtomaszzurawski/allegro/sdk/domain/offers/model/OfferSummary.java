@@ -12,6 +12,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1Publica
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StockRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -34,6 +36,12 @@ import org.jspecify.annotations.Nullable;
  * @param availableStock  available quantity, or {@code null} when not tracked
  * @param soldCount       units sold, or {@code null} when not tracked
  * @param primaryImageUrl URL of the primary image, or {@code null}
+ * @param afterSalesServices after-sales conditions (implied warranty, return policy,
+ *                        warranty), or {@code null} if the payload omits them
+ * @param fulfillment     {@code true} if the offer is handled by One Fulfillment by Allegro,
+ *                        or {@code null} if the payload omits the flag
+ * @param publishedAt     when the offer's publication started, or {@code null}
+ * @param endedAt         when the offer's publication ended, or {@code null} if still running
  * @since 0.2.0
  */
 public record OfferSummary(
@@ -45,7 +53,11 @@ public record OfferSummary(
         @Nullable Money buyNowPrice,
         @Nullable Integer availableStock,
         @Nullable Integer soldCount,
-        @Nullable String primaryImageUrl) {
+        @Nullable String primaryImageUrl,
+        @Nullable AfterSalesServices afterSalesServices,
+        @Nullable Boolean fulfillment,
+        @Nullable OffsetDateTime publishedAt,
+        @Nullable OffsetDateTime endedAt) {
 
     /** Project a generated listing item onto the consumer record. */
     public static OfferSummary from(OfferListingDtoRaw raw) {
@@ -63,7 +75,23 @@ public record OfferSummary(
                 buyNowPriceOf(sellingMode),
                 stock == null ? null : stock.getAvailable(),
                 stock == null ? null : stock.getSold(),
-                primaryImage == null ? null : primaryImage.getUrl());
+                primaryImage == null ? null : primaryImage.getUrl(),
+                AfterSalesServices.from(raw.getAfterSalesServices()),
+                raw.getIsFulfillment(),
+                publication == null ? null : parseDateTime(publication.getStartedAt()),
+                publication == null ? null : parseDateTime(publication.getEndedAt()));
+    }
+
+    /** Parse an ISO-8601 timestamp string the listing carries as text, tolerating absence/format. */
+    private static @Nullable OffsetDateTime parseDateTime(@Nullable String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return OffsetDateTime.parse(value);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
     }
 
     private static @Nullable Money buyNowPriceOf(@Nullable OfferListingDtoV1SellingModeRaw sellingMode) {

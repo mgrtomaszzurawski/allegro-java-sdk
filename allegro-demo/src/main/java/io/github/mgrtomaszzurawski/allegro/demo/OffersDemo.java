@@ -218,9 +218,13 @@ final class OffersDemo {
         for (OfferSummary summary : firstOffers) {
             String price = summary.buyNowPrice() == null ? "(no Buy Now price)"
                     : summary.buyNowPrice().amount() + " " + summary.buyNowPrice().currency();
+            String returnPolicy = summary.afterSalesServices() == null ? "(none)"
+                    : summary.afterSalesServices().returnPolicyId();
             System.out.println("  id=" + summary.id() + ", status=" + summary.status()
                     + ", format=" + summary.format() + ", stock=" + summary.availableStock()
-                    + ", buyNow=" + price);
+                    + ", buyNow=" + price + ", fulfillment=" + summary.fulfillment()
+                    + ", publishedAt=" + summary.publishedAt() + ", endedAt=" + summary.endedAt()
+                    + ", returnPolicy=" + returnPolicy);
         }
     }
 
