@@ -629,6 +629,14 @@ final class OffersDemo {
                 : offer.buyNowPrice().amount() + " " + offer.buyNowPrice().currency();
         System.out.println(phase + ": id=" + offer.id() + ", status=" + offer.status()
                 + ", format=" + offer.format() + ", buyNow=" + price);
+        if (!offer.productSet().isEmpty()) {
+            ProductSetElement element = offer.productSet().get(0);
+            String params = element.productParameters().stream()
+                    .map(parameter -> parameter.name() + "=" + parameter.values())
+                    .toList().toString();
+            System.out.println("  productSet[0]: product=" + element.productId()
+                    + ", aiCoCreated=" + element.aiCoCreated() + ", parameters=" + params);
+        }
     }
 
     private static void rotateToken(SharedTokenStore tokenStore, String account,

@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementQuantityQuantityRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerIdRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerNameRequestRaw;
@@ -20,6 +21,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponse
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ProductSetElementTest {
@@ -30,6 +32,8 @@ class ProductSetElementTest {
     private static final int QUANTITY = 3;
     private static final String TYPE_ID = "ID";
     private static final String TYPE_NAME = "NAME";
+    private static final String PARAM_ID = "223545";
+    private static final String PARAM_NAME = "Tytuł";
 
     @Test
     void of_whenOnlyProductId_defaultsToOneUnitNoGpsr() {
@@ -41,6 +45,8 @@ class ProductSetElementTest {
         assertEquals(1, element.quantity());
         assertNull(element.responsibleProducer());
         assertNull(element.marketedBeforeGpsrObligation());
+        assertTrue(element.productParameters().isEmpty());
+        assertNull(element.aiCoCreated());
     }
 
     @Test
@@ -139,7 +145,10 @@ class ProductSetElementTest {
         // given — a productized response element (producer id-only, as Allegro returns it)
         SaleProductOfferResponseV1AllOfProductSetRaw raw =
                 new SaleProductOfferResponseV1AllOfProductSetRaw()
-                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID)
+                                .parameters(List.of(new ParameterProductOfferResponseRaw()
+                                        .id(PARAM_ID).name(PARAM_NAME)))
+                                .isAiCoCreated(true))
                         .quantity(new ProductSetElementQuantityQuantityRaw().value(QUANTITY))
                         .responsibleProducer(new SaleProductOfferResponseV1AllOfProductSetAllOfResponsibleProducerRaw()
                                 .id(PRODUCER_ID))
@@ -154,6 +163,11 @@ class ProductSetElementTest {
         assertEquals(PRODUCER_ID, requireProducer(element).id());
         assertNull(requireProducer(element).name());
         assertEquals(Boolean.TRUE, element.marketedBeforeGpsrObligation());
+        // the bound product's catalogue parameters and AI-co-created flag read back
+        assertEquals(1, element.productParameters().size());
+        assertEquals(PARAM_ID, element.productParameters().get(0).id());
+        assertEquals(PARAM_NAME, element.productParameters().get(0).name());
+        assertEquals(Boolean.TRUE, element.aiCoCreated());
     }
 
     @Test

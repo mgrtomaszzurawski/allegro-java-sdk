@@ -4,10 +4,13 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementQuantityQuantityRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfProductSetRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
+import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -33,44 +36,57 @@ import org.jspecify.annotations.Nullable;
  * @param marketedBeforeGpsrObligation {@code true}/{@code false} to declare the product was
  *                                     placed on the market before the GPSR obligation, or
  *                                     {@code null} to leave it unset
+ * @param productParameters            the bound product's catalogue parameters as read back
+ *                                     (empty on a build-by-id element or when the payload omits them)
+ * @param aiCoCreated                  {@code true} if the bound product's content was AI co-created,
+ *                                     as reported by Allegro, or {@code null}
  * @since 0.4.0
  */
 public record ProductSetElement(
         String productId,
         int quantity,
         @Nullable ResponsibleProducerRef responsibleProducer,
-        @Nullable Boolean marketedBeforeGpsrObligation) {
+        @Nullable Boolean marketedBeforeGpsrObligation,
+        List<OfferParameter> productParameters,
+        @Nullable Boolean aiCoCreated) {
 
     private static final String ERR_QUANTITY = "quantity must be at least 1";
     private static final int DEFAULT_QUANTITY = 1;
 
-    /** Canonical constructor: the product id is required and the quantity must be positive. */
+    /**
+     * Canonical constructor: the product id is required and the quantity must be positive;
+     * {@code productParameters} is normalized to an immutable copy (empty when the payload,
+     * or a build path that only references the product by id, omits them).
+     */
     public ProductSetElement {
         Objects.requireNonNull(productId, "productId");
         if (quantity < DEFAULT_QUANTITY) {
             throw new IllegalArgumentException(ERR_QUANTITY);
         }
+        productParameters = productParameters == null ? List.of() : List.copyOf(productParameters);
     }
 
     /** A single unit of the given catalogue product. */
     public static ProductSetElement of(String productId) {
-        return new ProductSetElement(productId, DEFAULT_QUANTITY, null, null);
+        return new ProductSetElement(productId, DEFAULT_QUANTITY, null, null, List.of(), null);
     }
 
     /** {@code quantity} units of the given catalogue product. */
     public static ProductSetElement of(String productId, int quantity) {
-        return new ProductSetElement(productId, quantity, null, null);
+        return new ProductSetElement(productId, quantity, null, null, List.of(), null);
     }
 
     /** A copy of this element with the GPSR responsible producer set. */
     public ProductSetElement withResponsibleProducer(ResponsibleProducerRef producer) {
         return new ProductSetElement(productId, quantity,
-                Objects.requireNonNull(producer, "producer"), marketedBeforeGpsrObligation);
+                Objects.requireNonNull(producer, "producer"), marketedBeforeGpsrObligation,
+                productParameters, aiCoCreated);
     }
 
     /** A copy of this element with the GPSR pre-obligation marker set. */
     public ProductSetElement withMarketedBeforeGpsrObligation(boolean marketed) {
-        return new ProductSetElement(productId, quantity, responsibleProducer, marketed);
+        return new ProductSetElement(productId, quantity, responsibleProducer, marketed,
+                productParameters, aiCoCreated);
     }
 
     /** Project a generated response product-set element onto the consumer value. */
@@ -84,7 +100,15 @@ public record ProductSetElement(
                 Objects.requireNonNull(product == null ? null : product.getId(), "product.id"),
                 units,
                 producer == null ? null : ResponsibleProducerRef.from(producer),
-                raw.getMarketedBeforeGPSRObligation());
+                raw.getMarketedBeforeGPSRObligation(),
+                productParametersOf(product),
+                product == null ? null : product.getIsAiCoCreated());
+    }
+
+    private static List<OfferParameter> productParametersOf(
+            @Nullable SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw product) {
+        List<ParameterProductOfferResponseRaw> parameters = product == null ? null : product.getParameters();
+        return parameters == null ? List.of() : parameters.stream().map(OfferParameter::from).toList();
     }
 
     /** The generated request element: the product reference, the quantity, and any GPSR fields. */
