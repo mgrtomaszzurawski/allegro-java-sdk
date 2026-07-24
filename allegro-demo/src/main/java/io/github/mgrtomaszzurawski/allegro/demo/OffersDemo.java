@@ -35,6 +35,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOpt
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoOptionModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoPackageType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
@@ -296,6 +297,14 @@ final class OffersDemo {
                         + " error(s), " + created.validation().warnings().size() + " warning(s)"
                         + (created.validation().warnings().isEmpty() ? ""
                                 : ", e.g. " + created.validation().warnings().get(0).code()));
+            }
+            // The async create carries its operation id (from the Location header); poll the
+            // processing status through the SDK to prove operationStatus(id, operationId) is usable.
+            if (created.operationId() != null) {
+                OfferProcessingStatus processing =
+                        client.offers().operationStatus(created.id(), created.operationId());
+                System.out.println("operationStatus: offer=" + processing.offerId()
+                        + ", operation=" + processing.operationId() + ", status=" + processing.status());
             }
             // Delete-after-create: a just-created product offer is still an INACTIVE draft (the
             // sandbox auto-activates a valid one shortly after), so deleting it immediately

@@ -154,10 +154,11 @@ public final class OffersImpl implements Offers {
         // empty collections and leaves nullable scalars (e.g. `language`) null, and
         // Allegro rejects `language:null` with a JsonMappingException — send only the
         // fields actually set (the mapper builds them).
-        return Offer.from(http.request(OP_CREATE)
+        var located = http.request(OP_CREATE)
                 .post(ApiPaths.SALE_PRODUCT_OFFERS)
                 .jsonBodyPartial(OfferRequestMapper.createBody(request))
-                .fetch(SaleProductOfferResponseV1Raw.class));
+                .fetchLocation(SaleProductOfferResponseV1Raw.class);
+        return Offer.from(located.value(), operationIdFrom(located.location()));
     }
 
     @Override
@@ -165,10 +166,25 @@ public final class OffersImpl implements Offers {
         // A partial PATCH: the mapper builds only the changed fields and jsonBodyPartial
         // omits null AND empty fields, so untouched fields — including the request type's
         // pre-initialized empty collections — are absent from the wire rather than reset.
-        return Offer.from(http.request(OP_EDIT)
+        var located = http.request(OP_EDIT)
                 .patch(ApiPaths.productOffer(offerId))
                 .jsonBodyPartial(OfferRequestMapper.editBody(request))
-                .fetch(SaleProductOfferResponseV1Raw.class));
+                .fetchLocation(SaleProductOfferResponseV1Raw.class);
+        return Offer.from(located.value(), operationIdFrom(located.location()));
+    }
+
+    /**
+     * The async create/edit operation id is the last path segment of the response {@code Location}
+     * URL ({@code .../sale/product-offers/{offerId}/operations/{operationId}}), or {@code null} when
+     * the server sends no such header.
+     */
+    private static @Nullable String operationIdFrom(@Nullable String location) {
+        if (location == null || location.isBlank()) {
+            return null;
+        }
+        int lastSlash = location.lastIndexOf('/');
+        return lastSlash < 0 || lastSlash == location.length() - 1
+                ? null : location.substring(lastSlash + 1);
     }
 
     @Override
