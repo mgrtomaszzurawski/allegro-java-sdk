@@ -21,10 +21,12 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>This value references an EXISTING catalogue product by {@link #productId() id} (a
  * product UUID). Defining a brand-new product inline, product attachments, {@code deposits},
- * {@code responsiblePerson}, and the {@code safetyInformation} details are not modelled here
- * yet — this element covers the product reference plus the GPSR {@linkplain
- * ResponsibleProducerRef responsible producer} and the pre-obligation marker, which is what
- * a productized category requires to be created.
+ * and {@code responsiblePerson} are not modelled here yet. On the WRITE side this element
+ * covers the product reference plus the GPSR {@linkplain ResponsibleProducerRef responsible
+ * producer} and the pre-obligation marker, which is what a productized category requires to
+ * be created; on the READ side it additionally surfaces the product's catalogue
+ * {@link #productParameters() parameters}, its {@link #aiCoCreated() AI-co-created flag}, and
+ * its GPSR {@link #safetyInformation() safety information}.
  *
  * <p>The same immutable value is used both ways: build one for {@code CreateOfferRequest}, or
  * read one back from an {@link Offer}. Optional fields are added with the {@code with…}

@@ -10,6 +10,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.NoSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementSafetyInformationResponseSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.TextSafetyInformationRaw;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -62,7 +63,8 @@ public record SafetyInformation(
                     attachments.getType() == null ? null : attachments.getType().getValue(),
                     null,
                     items == null ? List.of()
-                            : items.stream().map(AttachmentsSafetyInformationAttachmentsInnerRaw::getId).toList());
+                            : items.stream().map(AttachmentsSafetyInformationAttachmentsInnerRaw::getId)
+                                    .filter(Objects::nonNull).toList());
         }
         if (instance instanceof NoSafetyInformationRaw none) {
             return new SafetyInformation(none.getType() == null ? null : none.getType().getValue(),

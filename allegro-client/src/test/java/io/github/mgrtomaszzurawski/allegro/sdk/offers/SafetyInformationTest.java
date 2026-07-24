@@ -63,6 +63,21 @@ class SafetyInformationTest {
     }
 
     @Test
+    void from_whenAttachmentIdMissing_dropsNullWithoutThrowing() {
+        // given an ATTACHMENTS form whose attachment carries no id (spec-legal: id is not required)
+        var raw = new ProductSetElementSafetyInformationResponseSafetyInformationRaw(
+                new AttachmentsSafetyInformationRaw()
+                        .type(AttachmentsSafetyInformationRaw.TypeEnum.ATTACHMENTS)
+                        .attachments(List.of(new AttachmentsSafetyInformationAttachmentsInnerRaw())));
+
+        // when projected; then the null id is dropped and the read does not throw
+        // (the List.copyOf in the canonical constructor rejects null elements)
+        SafetyInformation safety = SafetyInformation.from(raw);
+        assertEquals(SafetyInformation.ATTACHMENTS, safety.type());
+        assertTrue(safety.attachmentIds().isEmpty());
+    }
+
+    @Test
     void from_whenNone_mapsTypeOnly() {
         // given the explicit NONE oneOf form
         var raw = new ProductSetElementSafetyInformationResponseSafetyInformationRaw(
