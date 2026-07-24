@@ -33,6 +33,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -181,6 +183,11 @@ class OffersClientTest {
         assertEquals(LIVE_MESSAGE_MODE, offer.messageToSellerSettings().mode());
         assertNotNull(offer.payments());
         assertEquals(LIVE_INVOICE_TYPE, offer.payments().invoice());
+        // the productSet's GPSR safety information (a oneOf) resolves to the TEXT form end-to-end
+        ProductSetElement boundProduct = offer.productSet().get(0);
+        assertNotNull(boundProduct.safetyInformation());
+        assertEquals(SafetyInformation.TEXT, boundProduct.safetyInformation().type());
+        assertNotNull(boundProduct.safetyInformation().description());
     }
 
     @Test
