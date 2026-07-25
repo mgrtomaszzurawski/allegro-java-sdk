@@ -36,6 +36,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.Publication
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
@@ -189,6 +190,15 @@ class OfferWriteClientTest {
     private static final String PRODUCER_ID_JSON_PATH = "$.productSet[0].responsibleProducer.id";
     private static final String MARKETED_BEFORE_JSON_PATH = "$.productSet[0].marketedBeforeGPSRObligation";
     private static final String PRODUCER_TYPE_ID = "ID";
+    private static final String INLINE_NAME = "Inline product name";
+    private static final String INLINE_CATEGORY_ID = "302";
+    private static final String INLINE_IMAGE = "https://example.test/inline.jpg";
+    private static final String INLINE_PARAM_ID = "223545";
+    private static final String INLINE_PARAM_VALUE_ID = "223545_1";
+    private static final String INLINE_NAME_JSON_PATH = "$.productSet[0].product.name";
+    private static final String INLINE_CATEGORY_JSON_PATH = "$.productSet[0].product.category.id";
+    private static final String INLINE_IMAGE_JSON_PATH = "$.productSet[0].product.images[0]";
+    private static final String INLINE_PARAM_JSON_PATH = "$.productSet[0].product.parameters[0].id";
     private static final String PRODUCT_SET_RESPONSE_BODY = ("{\"id\":\"%s\",\"name\":\"%s\","
             + "\"productSet\":[{\"product\":{\"id\":\"%s\"},\"quantity\":{\"value\":%d},"
             + "\"responsibleProducer\":{\"id\":\"%s\"},\"marketedBeforeGPSRObligation\":true}]}")
@@ -631,6 +641,35 @@ class OfferWriteClientTest {
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(MESSAGE_MODE_JSON_PATH, equalTo(MESSAGE_MODE_REQUIRED)))
                 .withRequestBody(matchingJsonPath(MESSAGE_HINT_JSON_PATH, equalTo(MESSAGE_HINT))));
+    }
+
+    @Test
+    void create_whenInlineProductSet_serializesProductDefinitionFields(WireMockRuntimeInfo wmInfo) {
+        // given — a productSet element carrying an inline product definition
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addProductSetElement(ProductSetElement.of(PRODUCT_ID)
+                        .withInlineProduct(InlineProduct.builder()
+                                .name(INLINE_NAME)
+                                .categoryId(INLINE_CATEGORY_ID)
+                                .image(INLINE_IMAGE)
+                                .parameter(OfferParameter.dictionary(INLINE_PARAM_ID, INLINE_PARAM_VALUE_ID))
+                                .build()))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the inline name/category/images/parameters ride the product object on the wire
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(INLINE_NAME_JSON_PATH, equalTo(INLINE_NAME)))
+                .withRequestBody(matchingJsonPath(INLINE_CATEGORY_JSON_PATH, equalTo(INLINE_CATEGORY_ID)))
+                .withRequestBody(matchingJsonPath(INLINE_IMAGE_JSON_PATH, equalTo(INLINE_IMAGE)))
+                .withRequestBody(matchingJsonPath(INLINE_PARAM_JSON_PATH, equalTo(INLINE_PARAM_ID))));
     }
 
     @Test
