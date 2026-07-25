@@ -44,6 +44,10 @@ import org.jspecify.annotations.Nullable;
  *                                     as reported by Allegro, or {@code null}
  * @param safetyInformation            the product's GPSR safety information (text/attachments/none)
  *                                     as read back, or {@code null} if the payload omits it
+ * @param idType                       how {@code productId} identifies the product on a WRITE —
+ *                                     {@code null} means an Allegro catalogue product id, or set
+ *                                     {@link ProductIdType#GTIN}/{@link ProductIdType#MPN} to
+ *                                     reference it by a manufacturer identifier
  * @since 0.4.0
  */
 public record ProductSetElement(
@@ -53,7 +57,8 @@ public record ProductSetElement(
         @Nullable Boolean marketedBeforeGpsrObligation,
         List<OfferParameter> productParameters,
         @Nullable Boolean aiCoCreated,
-        @Nullable SafetyInformation safetyInformation) {
+        @Nullable SafetyInformation safetyInformation,
+        @Nullable ProductIdType idType) {
 
     private static final String ERR_QUANTITY = "quantity must be at least 1";
     private static final int DEFAULT_QUANTITY = 1;
@@ -73,25 +78,36 @@ public record ProductSetElement(
 
     /** A single unit of the given catalogue product. */
     public static ProductSetElement of(String productId) {
-        return new ProductSetElement(productId, DEFAULT_QUANTITY, null, null, List.of(), null, null);
+        return new ProductSetElement(productId, DEFAULT_QUANTITY, null, null, List.of(), null, null, null);
     }
 
     /** {@code quantity} units of the given catalogue product. */
     public static ProductSetElement of(String productId, int quantity) {
-        return new ProductSetElement(productId, quantity, null, null, List.of(), null, null);
+        return new ProductSetElement(productId, quantity, null, null, List.of(), null, null, null);
     }
 
     /** A copy of this element with the GPSR responsible producer set. */
     public ProductSetElement withResponsibleProducer(ResponsibleProducerRef producer) {
         return new ProductSetElement(productId, quantity,
                 Objects.requireNonNull(producer, "producer"), marketedBeforeGpsrObligation,
-                productParameters, aiCoCreated, safetyInformation);
+                productParameters, aiCoCreated, safetyInformation, idType);
     }
 
     /** A copy of this element with the GPSR pre-obligation marker set. */
     public ProductSetElement withMarketedBeforeGpsrObligation(boolean marketed) {
         return new ProductSetElement(productId, quantity, responsibleProducer, marketed,
-                productParameters, aiCoCreated, safetyInformation);
+                productParameters, aiCoCreated, safetyInformation, idType);
+    }
+
+    /**
+     * A copy of this element that references the product by a manufacturer identifier: the
+     * {@code productId} is read as a {@link ProductIdType#GTIN GTIN} or
+     * {@link ProductIdType#MPN MPN} rather than an Allegro catalogue id.
+     */
+    public ProductSetElement withIdType(ProductIdType idType) {
+        return new ProductSetElement(productId, quantity, responsibleProducer,
+                marketedBeforeGpsrObligation, productParameters, aiCoCreated, safetyInformation,
+                Objects.requireNonNull(idType, "idType"));
     }
 
     /** Project a generated response product-set element onto the consumer value. */
@@ -108,7 +124,8 @@ public record ProductSetElement(
                 raw.getMarketedBeforeGPSRObligation(),
                 productParametersOf(product),
                 product == null ? null : product.getIsAiCoCreated(),
-                SafetyInformation.from(raw.getSafetyInformation()));
+                SafetyInformation.from(raw.getSafetyInformation()),
+                null);
     }
 
     private static List<OfferParameter> productParametersOf(
@@ -119,9 +136,13 @@ public record ProductSetElement(
 
     /** The generated request element: the product reference, the quantity, and any GPSR fields. */
     public SaleProductOfferRequestV1AllOfProductSetRaw toRaw() {
+        ProductOfferRaw productRaw = new ProductOfferRaw().id(productId);
+        if (idType != null) {
+            productRaw.idType(idType.toRaw());
+        }
         SaleProductOfferRequestV1AllOfProductSetRaw raw =
                 new SaleProductOfferRequestV1AllOfProductSetRaw()
-                        .product(new ProductOfferRaw().id(productId))
+                        .product(productRaw)
                         .quantity(new ProductSetElementQuantityQuantityRaw().value(quantity));
         if (responsibleProducer != null) {
             raw.responsibleProducer(responsibleProducer.toRaw());

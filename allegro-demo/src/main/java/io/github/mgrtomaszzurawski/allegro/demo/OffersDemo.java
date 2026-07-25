@@ -46,6 +46,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
@@ -84,6 +85,7 @@ final class OffersDemo {
     private static final String CREATE_PRICE_PROPERTY = "demo.createPrice";
     private static final String CREATE_STOCK_PROPERTY = "demo.createStock";
     private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
+    private static final String CREATE_PRODUCT_ID_TYPE_PROPERTY = "demo.createProductIdType";
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String CREATE_SHIPPING_RATES_ID_PROPERTY = "demo.createShippingRatesId";
@@ -271,6 +273,10 @@ final class OffersDemo {
             if (producerId != null) {
                 element = element.withResponsibleProducer(ResponsibleProducerRef.byId(producerId))
                         .withMarketedBeforeGpsrObligation(false);
+            }
+            String productIdType = System.getProperty(CREATE_PRODUCT_ID_TYPE_PROPERTY);
+            if (productIdType != null) {
+                element = element.withIdType(ProductIdType.valueOf(productIdType));
             }
             builder.addProductSetElement(element);
             System.out.println("create: sending productSet product=" + productId
