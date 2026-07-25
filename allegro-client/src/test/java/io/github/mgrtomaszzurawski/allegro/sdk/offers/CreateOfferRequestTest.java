@@ -23,6 +23,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParamete
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -339,5 +341,27 @@ class CreateOfferRequestTest {
 
         // then
         assertNull(request.publication());
+    }
+
+    @Test
+    void build_whenTaxSettingsSet_exposesIt() {
+        // given
+        TaxSettings taxSettings = TaxSettings.builder()
+                .subject("GOODS").rates(List.of(TaxRate.of("23", "PL"))).build();
+
+        // when
+        CreateOfferRequest request = validBuilder().taxSettings(taxSettings).build();
+
+        // then
+        assertEquals(taxSettings, request.taxSettings());
+    }
+
+    @Test
+    void build_whenTaxSettingsNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.taxSettings());
     }
 }

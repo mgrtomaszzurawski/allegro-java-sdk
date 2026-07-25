@@ -61,6 +61,8 @@ import org.jspecify.annotations.Nullable;
  *                       warnings, validatedAt), or {@code null} if the payload omits it
  * @param businessOnly   {@code true} if the offer is buyable only by business buyers, or
  *                       {@code null} if the payload omits it
+ * @param taxSettings    the offer's VAT settings (per-country rates, subject, exemption), or
+ *                       {@code null} if the payload omits them
  * @param operationId    the id of the asynchronous create/edit operation that produced this
  *                       offer — pass it with {@link #id()} to {@code offers().operationStatus(...)}
  *                       to poll processing; {@code null} on a plain read (create/edit only)
@@ -91,6 +93,7 @@ public record Offer(
         @Nullable OfferPayments payments,
         @Nullable OfferValidation validation,
         @Nullable Boolean businessOnly,
+        @Nullable TaxSettings taxSettings,
         @Nullable String operationId) {
 
     /**
@@ -141,6 +144,7 @@ public record Offer(
                 OfferPayments.from(raw.getPayments()),
                 OfferValidation.from(raw.getValidation()),
                 businessOnlyOf(raw),
+                TaxSettings.from(raw.getTaxSettings()),
                 operationId);
     }
 

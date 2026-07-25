@@ -13,6 +13,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -62,6 +63,7 @@ public final class CreateOfferRequest {
     private final @Nullable String sizeTableId;
     private final @Nullable Boolean businessOnly;
     private final @Nullable PublicationSettings publication;
+    private final @Nullable TaxSettings taxSettings;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -84,6 +86,7 @@ public final class CreateOfferRequest {
         this.sizeTableId = builder.sizeTableId;
         this.businessOnly = builder.businessOnly;
         this.publication = builder.publication;
+        this.taxSettings = builder.taxSettings;
     }
 
     /** The offer title. */
@@ -186,6 +189,11 @@ public final class CreateOfferRequest {
         return publication;
     }
 
+    /** The offer's VAT settings (rates/subject/exemption), or {@code null} if not set. */
+    public @Nullable TaxSettings taxSettings() {
+        return taxSettings;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -214,6 +222,7 @@ public final class CreateOfferRequest {
         private @Nullable String sizeTableId;
         private @Nullable Boolean businessOnly;
         private @Nullable PublicationSettings publication;
+        private @Nullable TaxSettings taxSettings;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -348,6 +357,12 @@ public final class CreateOfferRequest {
         /** Set how the offer should be published — status, schedule, republish, duration (optional). */
         public Builder publication(@Nullable PublicationSettings publication) {
             this.publication = publication;
+            return this;
+        }
+
+        /** Set the offer's VAT settings — rates, subject, exemption (optional). */
+        public Builder taxSettings(@Nullable TaxSettings taxSettings) {
+            this.taxSettings = taxSettings;
             return this;
         }
 
