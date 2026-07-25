@@ -28,6 +28,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.Publication
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
@@ -45,6 +46,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesSer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
@@ -114,6 +116,7 @@ final class OffersDemo {
     private static final String CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY = "demo.createWholesalePriceListId";
     private static final String CREATE_MESSAGE_MODE_PROPERTY = "demo.createMessageMode";
     private static final String CREATE_MESSAGE_HINT_PROPERTY = "demo.createMessageHint";
+    private static final String CREATE_INVOICE_TYPE_PROPERTY = "demo.createInvoiceType";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -359,6 +362,10 @@ final class OffersDemo {
                     ? MessageToSellerSettings.of(mode)
                     : MessageToSellerSettings.of(mode, messageHint));
         }
+        String invoiceType = System.getProperty(CREATE_INVOICE_TYPE_PROPERTY);
+        if (invoiceType != null) {
+            builder.payments(OfferPayments.of(InvoiceType.valueOf(invoiceType)));
+        }
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
@@ -378,6 +385,9 @@ final class OffersDemo {
             if (messageMode != null && created.messageToSellerSettings() != null) {
                 System.out.println("create messageToSeller: mode=" + created.messageToSellerSettings().mode()
                         + ", hint=" + created.messageToSellerSettings().hint());
+            }
+            if (invoiceType != null && created.payments() != null) {
+                System.out.println("create payments: invoice=" + created.payments().invoice());
             }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
