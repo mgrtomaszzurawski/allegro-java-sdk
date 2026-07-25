@@ -63,6 +63,9 @@ import org.jspecify.annotations.Nullable;
  *                       {@code null} if the payload omits it
  * @param taxSettings    the offer's VAT settings (per-country rates, subject, exemption), or
  *                       {@code null} if the payload omits them
+ * @param contactId      the id of the seller's contact attached to the offer, or {@code null}
+ * @param additionalServicesGroupId the id of the seller's additional-services group, or {@code null}
+ * @param fundraisingCampaignId the id of the fundraising campaign attached, or {@code null}
  * @param operationId    the id of the asynchronous create/edit operation that produced this
  *                       offer — pass it with {@link #id()} to {@code offers().operationStatus(...)}
  *                       to poll processing; {@code null} on a plain read (create/edit only)
@@ -94,6 +97,9 @@ public record Offer(
         @Nullable OfferValidation validation,
         @Nullable Boolean businessOnly,
         @Nullable TaxSettings taxSettings,
+        @Nullable String contactId,
+        @Nullable String additionalServicesGroupId,
+        @Nullable String fundraisingCampaignId,
         @Nullable String operationId) {
 
     /**
@@ -145,7 +151,22 @@ public record Offer(
                 OfferValidation.from(raw.getValidation()),
                 businessOnlyOf(raw),
                 TaxSettings.from(raw.getTaxSettings()),
+                contactIdOf(raw),
+                additionalServicesGroupIdOf(raw),
+                fundraisingCampaignIdOf(raw),
                 operationId);
+    }
+
+    private static @Nullable String contactIdOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getContact() == null ? null : raw.getContact().getId();
+    }
+
+    private static @Nullable String additionalServicesGroupIdOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getAdditionalServices() == null ? null : raw.getAdditionalServices().getId();
+    }
+
+    private static @Nullable String fundraisingCampaignIdOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getFundraisingCampaign() == null ? null : raw.getFundraisingCampaign().getId();
     }
 
     private static @Nullable Boolean businessOnlyOf(SaleProductOfferResponseV1Raw raw) {

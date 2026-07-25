@@ -56,9 +56,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.function.Consumer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Bucket A sandbox probe. With no {@code -Pdemo.offerId} it lists the seller's

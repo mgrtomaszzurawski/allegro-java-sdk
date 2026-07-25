@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ContactRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
@@ -27,6 +28,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxRateRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
@@ -89,6 +92,9 @@ class OfferTest {
     private static final String TAX_EXEMPTION = "NONE";
     private static final String TAX_RATE = "23";
     private static final String TAX_COUNTRY = "PL";
+    private static final String CONTACT_ID = "contact-1";
+    private static final String ADDITIONAL_SERVICES_ID = "group-1";
+    private static final String FUNDRAISING_ID = "campaign-1";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -254,6 +260,41 @@ class OfferTest {
 
         // then
         assertNull(offer.taxSettings());
+    }
+
+    @Test
+    void from_whenReferencesPresent_unwrapsEachId() {
+        // given — a payload carrying a contact, additional-services group and fundraising campaign
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .contact(new ContactRaw().id(CONTACT_ID))
+                .additionalServices(new ProductOfferAdditionalServicesResponseRaw().id(ADDITIONAL_SERVICES_ID))
+                .fundraisingCampaign(new ProductOfferFundraisingCampaignResponseRaw().id(FUNDRAISING_ID));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — each nested id is surfaced flat
+        assertEquals(CONTACT_ID, offer.contactId());
+        assertEquals(ADDITIONAL_SERVICES_ID, offer.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, offer.fundraisingCampaignId());
+    }
+
+    @Test
+    void from_whenReferencesAbsent_leaveThemNull() {
+        // given — a payload without those reference blocks
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL);
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.contactId());
+        assertNull(offer.additionalServicesGroupId());
+        assertNull(offer.fundraisingCampaignId());
     }
 
     @Test
