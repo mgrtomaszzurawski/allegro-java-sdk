@@ -294,7 +294,9 @@ final class OffersDemo {
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
-            System.out.println("create b2b businessOnly=" + created.businessOnly());
+            if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
+                System.out.println("create b2b businessOnly=" + created.businessOnly());
+            }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
             if (created.validation() != null) {

@@ -140,8 +140,12 @@ public record Offer(
                 MessageToSellerSettings.from(raw.getMessageToSellerSettings()),
                 OfferPayments.from(raw.getPayments()),
                 OfferValidation.from(raw.getValidation()),
-                raw.getB2b() == null ? null : raw.getB2b().getBuyableOnlyByBusiness(),
+                businessOnlyOf(raw),
                 operationId);
+    }
+
+    private static @Nullable Boolean businessOnlyOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getB2b() == null ? null : raw.getB2b().getBuyableOnlyByBusiness();
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {

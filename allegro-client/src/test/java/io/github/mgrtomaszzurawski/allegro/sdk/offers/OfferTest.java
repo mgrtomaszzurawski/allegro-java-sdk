@@ -186,6 +186,22 @@ class OfferTest {
     }
 
     @Test
+    void from_whenBusinessOnlyFalse_passesTheValueThrough() {
+        // given — a payload explicitly NOT restricted to business buyers (proves the value is
+        // passed through, not short-circuited to a constant)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .b2b(new B2bRaw().buyableOnlyByBusiness(false));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertEquals(Boolean.FALSE, offer.businessOnly());
+    }
+
+    @Test
     void from_whenB2bBlockAbsent_leavesBusinessOnlyNull() {
         // given — a payload without a b2b block
         SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
