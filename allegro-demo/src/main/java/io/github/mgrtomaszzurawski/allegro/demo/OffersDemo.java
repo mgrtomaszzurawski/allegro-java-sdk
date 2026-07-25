@@ -131,6 +131,7 @@ final class OffersDemo {
     private static final String CREATE_MARKETPLACE_CURRENCY_PROPERTY = "demo.createMarketplaceCurrency";
     private static final String CREATE_COMPAT_TEXT_PROPERTY = "demo.createCompatText";
     private static final String CREATE_COMPAT_PRODUCT_ID_PROPERTY = "demo.createCompatProductId";
+    private static final String CREATE_AI_IMAGE_URL_PROPERTY = "demo.createAiImageUrl";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -407,6 +408,8 @@ final class OffersDemo {
                 value -> builder.addCompatibilityEntry(CompatibilityEntry.text(value)));
         applyIfPresent(CREATE_COMPAT_PRODUCT_ID_PROPERTY,
                 value -> builder.addCompatibilityEntry(CompatibilityEntry.productId(value)));
+        applyIfPresent(CREATE_AI_IMAGE_URL_PROPERTY,
+                value -> builder.aiCoCreatedImageUrls(List.of(value)));
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);

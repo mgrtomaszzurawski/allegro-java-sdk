@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesRequestValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesRequestValueSellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
@@ -110,6 +112,11 @@ public final class OfferRequestMapper {
         }
         if (!request.compatibilityList().isEmpty()) {
             body.compatibilityList(compatibilityListRawOf(request.compatibilityList()));
+        }
+        if (!request.aiCoCreatedImageUrls().isEmpty()) {
+            body.aiCoCreatedContent(new AiCoCreatedContentRaw().images(
+                    request.aiCoCreatedImageUrls().stream()
+                            .map(url -> new AiCoCreatedImageRaw().url(url)).toList()));
         }
     }
 
