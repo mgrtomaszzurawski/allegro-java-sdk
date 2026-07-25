@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementQuantityQuantityRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerIdRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerNameRequestRaw;
@@ -19,6 +20,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfResponsibleProducerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import java.util.List;
@@ -48,6 +50,41 @@ class ProductSetElementTest {
         assertNull(element.marketedBeforeGpsrObligation());
         assertTrue(element.productParameters().isEmpty());
         assertNull(element.aiCoCreated());
+        assertNull(element.idType());
+    }
+
+    @Test
+    void withIdType_whenGtin_referencesProductByGtinInTheBody() {
+        // given — a product referenced by its GTIN barcode rather than a catalogue id
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID).withIdType(ProductIdType.GTIN);
+
+        // then — the flag is exposed and mapped onto the product's idType
+        assertEquals(ProductIdType.GTIN, element.idType());
+        assertEquals(ProductOfferRaw.IdTypeEnum.GTIN, element.toRaw().getProduct().getIdType());
+    }
+
+    @Test
+    void withIdType_whenMpn_mapsToTheGeneratedIdType() {
+        // then
+        assertEquals(ProductOfferRaw.IdTypeEnum.MPN,
+                ProductSetElement.of(PRODUCT_ID).withIdType(ProductIdType.MPN).toRaw().getProduct().getIdType());
+    }
+
+    @Test
+    void toRaw_whenNoIdType_leavesProductIdTypeUnset() {
+        // then — a plain catalogue-id reference does not write an idType
+        assertNull(ProductSetElement.of(PRODUCT_ID).toRaw().getProduct().getIdType());
+    }
+
+    @Test
+    void withCopies_preservePreviouslySetIdType() {
+        // given — an idType set first, then another wither applied
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withIdType(ProductIdType.GTIN)
+                .withResponsibleProducer(ResponsibleProducerRef.byId(PRODUCER_ID));
+
+        // then — the later copy carries the earlier idType forward
+        assertEquals(ProductIdType.GTIN, element.idType());
     }
 
     @Test
