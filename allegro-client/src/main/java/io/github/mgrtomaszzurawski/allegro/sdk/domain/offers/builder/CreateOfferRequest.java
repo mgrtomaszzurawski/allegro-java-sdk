@@ -64,6 +64,9 @@ public final class CreateOfferRequest {
     private final @Nullable Boolean businessOnly;
     private final @Nullable PublicationSettings publication;
     private final @Nullable TaxSettings taxSettings;
+    private final @Nullable String contactId;
+    private final @Nullable String additionalServicesGroupId;
+    private final @Nullable String fundraisingCampaignId;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -87,6 +90,9 @@ public final class CreateOfferRequest {
         this.businessOnly = builder.businessOnly;
         this.publication = builder.publication;
         this.taxSettings = builder.taxSettings;
+        this.contactId = builder.contactId;
+        this.additionalServicesGroupId = builder.additionalServicesGroupId;
+        this.fundraisingCampaignId = builder.fundraisingCampaignId;
     }
 
     /** The offer title. */
@@ -194,6 +200,21 @@ public final class CreateOfferRequest {
         return taxSettings;
     }
 
+    /** The id of the seller's contact to attach to the offer, or {@code null} if not set. */
+    public @Nullable String contactId() {
+        return contactId;
+    }
+
+    /** The id of the seller's additional-services group to attach, or {@code null} if not set. */
+    public @Nullable String additionalServicesGroupId() {
+        return additionalServicesGroupId;
+    }
+
+    /** The id of the fundraising campaign to attach to the offer, or {@code null} if not set. */
+    public @Nullable String fundraisingCampaignId() {
+        return fundraisingCampaignId;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -223,6 +244,9 @@ public final class CreateOfferRequest {
         private @Nullable Boolean businessOnly;
         private @Nullable PublicationSettings publication;
         private @Nullable TaxSettings taxSettings;
+        private @Nullable String contactId;
+        private @Nullable String additionalServicesGroupId;
+        private @Nullable String fundraisingCampaignId;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -363,6 +387,24 @@ public final class CreateOfferRequest {
         /** Set the offer's VAT settings — rates, subject, exemption (optional). */
         public Builder taxSettings(@Nullable TaxSettings taxSettings) {
             this.taxSettings = taxSettings;
+            return this;
+        }
+
+        /** Attach the seller's contact by id (optional). */
+        public Builder contactId(@Nullable String contactId) {
+            this.contactId = contactId;
+            return this;
+        }
+
+        /** Attach the seller's additional-services group by id (optional). */
+        public Builder additionalServicesGroupId(@Nullable String additionalServicesGroupId) {
+            this.additionalServicesGroupId = additionalServicesGroupId;
+            return this;
+        }
+
+        /** Attach a fundraising campaign by id (optional). */
+        public Builder fundraisingCampaignId(@Nullable String fundraisingCampaignId) {
+            this.fundraisingCampaignId = fundraisingCampaignId;
             return this;
         }
 

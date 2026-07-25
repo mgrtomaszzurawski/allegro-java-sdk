@@ -156,6 +156,12 @@ class OfferWriteClientTest {
     private static final String TAX_COUNTRY = "PL";
     private static final String TAX_SUBJECT = "GOODS";
     private static final String TAX_EXEMPTION = "NONE";
+    private static final String CONTACT_ID_JSON_PATH = "$.contact.id";
+    private static final String ADDITIONAL_SERVICES_ID_JSON_PATH = "$.additionalServices.id";
+    private static final String FUNDRAISING_ID_JSON_PATH = "$.fundraisingCampaign.id";
+    private static final String CONTACT_ID = "contact-1";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "campaign-1";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -566,6 +572,30 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(TAX_COUNTRY_JSON_PATH, equalTo(TAX_COUNTRY)))
                 .withRequestBody(matchingJsonPath(TAX_SUBJECT_JSON_PATH, equalTo(TAX_SUBJECT)))
                 .withRequestBody(matchingJsonPath(TAX_EXEMPTION_JSON_PATH, equalTo(TAX_EXEMPTION))));
+    }
+
+    @Test
+    void create_whenReferenceIdsSet_serializesThemAsIdObjects(WireMockRuntimeInfo wmInfo) {
+        // given — a create attaching a contact, additional-services group and fundraising campaign by id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .contactId(CONTACT_ID)
+                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
+                .fundraisingCampaignId(FUNDRAISING_ID)
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — each reference is wrapped as an {id:...} object at its own path
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(CONTACT_ID_JSON_PATH, equalTo(CONTACT_ID)))
+                .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
+                .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID))));
     }
 
     @Test

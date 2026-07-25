@@ -58,6 +58,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Bucket A sandbox probe. With no {@code -Pdemo.offerId} it lists the seller's
@@ -97,6 +98,9 @@ final class OffersDemo {
     private static final String CREATE_REPUBLISH_PROPERTY = "demo.createRepublish";
     private static final String CREATE_TAX_RATE_PROPERTY = "demo.createTaxRate";
     private static final String CREATE_TAX_COUNTRY_PROPERTY = "demo.createTaxCountry";
+    private static final String CREATE_CONTACT_ID_PROPERTY = "demo.createContactId";
+    private static final String CREATE_ADDITIONAL_SERVICES_ID_PROPERTY = "demo.createAdditionalServicesId";
+    private static final String CREATE_FUNDRAISING_ID_PROPERTY = "demo.createFundraisingId";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -314,6 +318,9 @@ final class OffersDemo {
             builder.taxSettings(TaxSettings.builder()
                     .rates(List.of(TaxRate.of(taxRate, taxCountry))).build());
         }
+        applyIfPresent(CREATE_CONTACT_ID_PROPERTY, builder::contactId);
+        applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY, builder::additionalServicesGroupId);
+        applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY, builder::fundraisingCampaignId);
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
@@ -363,6 +370,14 @@ final class OffersDemo {
             System.out.println("create rejected — " + e.errors().size() + " field error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
                     + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
+        }
+    }
+
+    /** Apply a create-request setter from an optional {@code -Pdemo.*} system property. */
+    private static void applyIfPresent(String property, Consumer<String> setter) {
+        String value = System.getProperty(property);
+        if (value != null) {
+            setter.accept(value);
         }
     }
 
