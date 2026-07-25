@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.NoSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductDepositRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementQuantityQuantityRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsiblePersonRequestResponsiblePersonRaw;
@@ -25,12 +26,14 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponse
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfResponsiblePersonRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfResponsibleProducerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductDeposit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePersonRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ProductSetElementTest {
@@ -40,6 +43,8 @@ class ProductSetElementTest {
     private static final String PRODUCER_NAME = "ACME Manufacturing";
     private static final String PERSON_ID = "817ab828-255e-4ca8-a4da-c6defa3e6918";
     private static final String PERSON_NAME = "Responsible EU Operator";
+    private static final String DEPOSIT_ID = "b1f9d6d0-0000-4000-8000-000000000009";
+    private static final int DEPOSIT_QUANTITY = 3;
     private static final int QUANTITY = 3;
     private static final String TYPE_ID = "ID";
     private static final String TYPE_NAME = "NAME";
@@ -365,6 +370,50 @@ class ProductSetElementTest {
         // then — the write omits the non-sendable NONE block (round-trip does not throw)
         assertEquals(SafetyInformation.NONE, element.safetyInformation().type());
         assertNull(element.toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void withDeposits_setsThemAndToRawEmitsThem() {
+        // given — a returnable-packaging deposit attached to the element
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withDeposits(List.of(ProductDeposit.of(DEPOSIT_ID, DEPOSIT_QUANTITY)));
+
+        // then — the element exposes it and toRaw emits the deposit with the parsed UUID + quantity
+        assertEquals(1, element.deposits().size());
+        assertEquals(DEPOSIT_ID, element.deposits().get(0).id());
+        assertEquals(DEPOSIT_ID, element.toRaw().getDeposits().get(0).getId().toString());
+        assertEquals(DEPOSIT_QUANTITY, element.toRaw().getDeposits().get(0).getQuantity());
+    }
+
+    @Test
+    void toRaw_whenNoDeposits_writesNoDepositEntries() {
+        // then — a plain element leaves the deposits list empty (the generated raw defaults it
+        // to an empty list, so an empty element carries no deposit entries)
+        assertTrue(ProductSetElement.of(PRODUCT_ID).toRaw().getDeposits().isEmpty());
+    }
+
+    @Test
+    void of_whenOnlyProductId_hasNoDeposits() {
+        // then — deposits default to an empty immutable list
+        assertTrue(ProductSetElement.of(PRODUCT_ID).deposits().isEmpty());
+    }
+
+    @Test
+    void from_whenDepositsPresent_projectsThem() {
+        // given — a response element carrying a deposit
+        SaleProductOfferResponseV1AllOfProductSetRaw raw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
+                        .deposits(List.of(new ProductDepositRaw()
+                                .id(UUID.fromString(DEPOSIT_ID)).quantity(DEPOSIT_QUANTITY)));
+
+        // when
+        ProductSetElement element = ProductSetElement.from(raw);
+
+        // then — the deposit maps back through the value object
+        assertEquals(1, element.deposits().size());
+        assertEquals(DEPOSIT_ID, element.deposits().get(0).id());
+        assertEquals(DEPOSIT_QUANTITY, element.deposits().get(0).quantity());
     }
 
     private static ResponsiblePersonRef requirePerson(ProductSetElement element) {

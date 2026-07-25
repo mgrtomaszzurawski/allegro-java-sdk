@@ -48,6 +48,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductDeposit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
@@ -93,6 +94,7 @@ final class OffersDemo {
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
     private static final String CREATE_RESPONSIBLE_PERSON_ID_PROPERTY = "demo.createResponsiblePersonId";
     private static final String CREATE_SAFETY_TEXT_PROPERTY = "demo.createSafetyText";
+    private static final String CREATE_DEPOSIT_ID_PROPERTY = "demo.createDepositId";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String CREATE_SHIPPING_RATES_ID_PROPERTY = "demo.createShippingRatesId";
     private static final String CREATE_PROVINCE_PROPERTY = "demo.createProvince";
@@ -294,6 +296,10 @@ final class OffersDemo {
             if (safetyText != null) {
                 element = element.withSafetyInformation(SafetyInformation.text(safetyText));
             }
+            String depositId = System.getProperty(CREATE_DEPOSIT_ID_PROPERTY);
+            if (depositId != null) {
+                element = element.withDeposits(List.of(ProductDeposit.of(depositId)));
+            }
             builder.addProductSetElement(element);
             System.out.println("create: sending productSet product=" + productId
                     + " quantity=" + quantity + (producerId == null ? "" : " producer=" + producerId));
@@ -384,6 +390,10 @@ final class OffersDemo {
                     && !created.productSet().isEmpty()) {
                 System.out.println("create safetyInformation: "
                         + created.productSet().get(0).safetyInformation());
+            }
+            if (System.getProperty(CREATE_DEPOSIT_ID_PROPERTY) != null
+                    && !created.productSet().isEmpty()) {
+                System.out.println("create deposits: " + created.productSet().get(0).deposits());
             }
             if (created.validation() != null) {
                 System.out.println("create validation: " + created.validation().errors().size()
