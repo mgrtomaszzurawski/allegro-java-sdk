@@ -304,6 +304,22 @@ class OfferTest {
     }
 
     @Test
+    void from_whenDiscountsPresentButWholesalePriceListAbsent_leavesIdNull() {
+        // given — a discounts block present but without a wholesale price list (a real wire
+        // shape: wholesalePriceList is JsonNullable). Guards the projector's middle null-branch.
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .discounts(new DiscountsProductOfferResponseRaw());
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.wholesalePriceListId());
+    }
+
+    @Test
     void from_whenParametersPresent_mapsDictionaryAndRangeInOrder() {
         // given — a payload with a dictionary parameter (value ids) and a range parameter
         SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
