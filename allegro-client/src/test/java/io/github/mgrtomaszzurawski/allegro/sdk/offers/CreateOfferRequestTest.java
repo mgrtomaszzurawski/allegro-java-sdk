@@ -49,6 +49,9 @@ class CreateOfferRequestTest {
     private static final String EXTERNAL_ID = "SKU-12345";
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
+    private static final String CONTACT_ID = "contact-1";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "campaign-1";
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -363,5 +366,31 @@ class CreateOfferRequestTest {
 
         // then
         assertNull(request.taxSettings());
+    }
+
+    @Test
+    void build_whenReferenceIdsSet_exposeThem() {
+        // when — the contact, additional-services group and fundraising campaign are attached by id
+        CreateOfferRequest request = validBuilder()
+                .contactId(CONTACT_ID)
+                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
+                .fundraisingCampaignId(FUNDRAISING_ID)
+                .build();
+
+        // then
+        assertEquals(CONTACT_ID, request.contactId());
+        assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, request.fundraisingCampaignId());
+    }
+
+    @Test
+    void build_whenReferenceIdsNotSet_leaveThemNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.contactId());
+        assertNull(request.additionalServicesGroupId());
+        assertNull(request.fundraisingCampaignId());
     }
 }

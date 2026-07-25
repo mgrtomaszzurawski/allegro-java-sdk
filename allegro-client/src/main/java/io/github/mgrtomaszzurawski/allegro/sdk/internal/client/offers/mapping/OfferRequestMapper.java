@@ -15,7 +15,10 @@ import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestBaseAllOfContactRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfDeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
@@ -97,6 +100,17 @@ public final class OfferRequestMapper {
         }
         if (request.taxSettings() != null) {
             body.taxSettings(request.taxSettings().toRaw());
+        }
+        if (request.contactId() != null) {
+            body.contact(new SaleProductOfferRequestBaseAllOfContactRaw().id(request.contactId()));
+        }
+        if (request.additionalServicesGroupId() != null) {
+            body.additionalServices(
+                    new ProductOfferAdditionalServicesRequestRaw().id(request.additionalServicesGroupId()));
+        }
+        if (request.fundraisingCampaignId() != null) {
+            body.fundraisingCampaign(
+                    new ProductOfferFundraisingCampaignRequestRaw().id(request.fundraisingCampaignId()));
         }
         return body;
     }
