@@ -44,6 +44,7 @@ class ProductSetElementTest {
     private static final String PERSON_ID = "817ab828-255e-4ca8-a4da-c6defa3e6918";
     private static final String PERSON_NAME = "Responsible EU Operator";
     private static final String DEPOSIT_ID = "b1f9d6d0-0000-4000-8000-000000000009";
+    private static final int DEPOSIT_QUANTITY = 3;
     private static final int QUANTITY = 3;
     private static final String TYPE_ID = "ID";
     private static final String TYPE_NAME = "NAME";
@@ -375,13 +376,13 @@ class ProductSetElementTest {
     void withDeposits_setsThemAndToRawEmitsThem() {
         // given — a returnable-packaging deposit attached to the element
         ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
-                .withDeposits(List.of(ProductDeposit.of(DEPOSIT_ID, 2)));
+                .withDeposits(List.of(ProductDeposit.of(DEPOSIT_ID, DEPOSIT_QUANTITY)));
 
         // then — the element exposes it and toRaw emits the deposit with the parsed UUID + quantity
         assertEquals(1, element.deposits().size());
         assertEquals(DEPOSIT_ID, element.deposits().get(0).id());
         assertEquals(DEPOSIT_ID, element.toRaw().getDeposits().get(0).getId().toString());
-        assertEquals(2, element.toRaw().getDeposits().get(0).getQuantity());
+        assertEquals(DEPOSIT_QUANTITY, element.toRaw().getDeposits().get(0).getQuantity());
     }
 
     @Test
@@ -404,7 +405,7 @@ class ProductSetElementTest {
                 new SaleProductOfferResponseV1AllOfProductSetRaw()
                         .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
                         .deposits(List.of(new ProductDepositRaw()
-                                .id(UUID.fromString(DEPOSIT_ID)).quantity(3)));
+                                .id(UUID.fromString(DEPOSIT_ID)).quantity(DEPOSIT_QUANTITY)));
 
         // when
         ProductSetElement element = ProductSetElement.from(raw);
@@ -412,7 +413,7 @@ class ProductSetElementTest {
         // then — the deposit maps back through the value object
         assertEquals(1, element.deposits().size());
         assertEquals(DEPOSIT_ID, element.deposits().get(0).id());
-        assertEquals(3, element.deposits().get(0).quantity());
+        assertEquals(DEPOSIT_QUANTITY, element.deposits().get(0).quantity());
     }
 
     private static ResponsiblePersonRef requirePerson(ProductSetElement element) {

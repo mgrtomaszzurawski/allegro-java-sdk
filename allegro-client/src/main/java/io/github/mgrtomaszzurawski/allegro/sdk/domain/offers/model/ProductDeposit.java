@@ -23,9 +23,12 @@ public record ProductDeposit(String id, int quantity) {
     private static final String ERR_QUANTITY = "quantity must be at least 1";
     private static final int DEFAULT_QUANTITY = 1;
 
-    /** Canonical constructor: the deposit id is required and the quantity must be positive. */
+    /**
+     * Canonical constructor: the deposit id is required and must be a well-formed UUID (validated
+     * fail-fast, not deferred to the wire mapping), and the quantity must be positive.
+     */
     public ProductDeposit {
-        Objects.requireNonNull(id, "id");
+        UUID.fromString(Objects.requireNonNull(id, "id"));
         if (quantity < DEFAULT_QUANTITY) {
             throw new IllegalArgumentException(ERR_QUANTITY);
         }
@@ -43,9 +46,8 @@ public record ProductDeposit(String id, int quantity) {
 
     /** Project a generated response deposit onto the consumer value. */
     public static ProductDeposit from(ProductDepositRaw raw) {
-        UUID rawId = raw.getId();
         return new ProductDeposit(
-                Objects.requireNonNull(rawId == null ? null : rawId.toString(), "id"),
+                Objects.requireNonNull(raw.getId(), "id").toString(),
                 raw.getQuantity() == null ? DEFAULT_QUANTITY : raw.getQuantity());
     }
 

@@ -79,8 +79,8 @@ class ProductDepositTest {
     }
 
     @Test
-    void toRaw_whenIdNotUuid_throws() {
-        // then a non-UUID id is rejected when it must become the wire UUID
-        assertThrows(IllegalArgumentException.class, () -> ProductDeposit.of("not-a-uuid").toRaw());
+    void of_whenIdNotUuid_throws() {
+        // then a non-UUID id is rejected fail-fast at construction, not deferred to the wire mapping
+        assertThrows(IllegalArgumentException.class, () -> ProductDeposit.of("not-a-uuid"));
     }
 }
