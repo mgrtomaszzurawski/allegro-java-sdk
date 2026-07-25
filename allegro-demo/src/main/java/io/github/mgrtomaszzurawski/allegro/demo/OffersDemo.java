@@ -101,6 +101,7 @@ final class OffersDemo {
     private static final String CREATE_CONTACT_ID_PROPERTY = "demo.createContactId";
     private static final String CREATE_ADDITIONAL_SERVICES_ID_PROPERTY = "demo.createAdditionalServicesId";
     private static final String CREATE_FUNDRAISING_ID_PROPERTY = "demo.createFundraisingId";
+    private static final String CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY = "demo.createWholesalePriceListId";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -321,6 +322,7 @@ final class OffersDemo {
         applyIfPresent(CREATE_CONTACT_ID_PROPERTY, builder::contactId);
         applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY, builder::additionalServicesGroupId);
         applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY, builder::fundraisingCampaignId);
+        applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY, builder::wholesalePriceListId);
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);

@@ -162,6 +162,8 @@ class OfferWriteClientTest {
     private static final String CONTACT_ID = "contact-1";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "campaign-1";
+    private static final String WHOLESALE_PRICE_LIST_ID_JSON_PATH = "$.discounts.wholesalePriceList.id";
+    private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -586,6 +588,7 @@ class OfferWriteClientTest {
                 .contactId(CONTACT_ID)
                 .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
                 .fundraisingCampaignId(FUNDRAISING_ID)
+                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
                 .build();
 
         // when
@@ -595,7 +598,8 @@ class OfferWriteClientTest {
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(CONTACT_ID_JSON_PATH, equalTo(CONTACT_ID)))
                 .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
-                .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID))));
+                .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID)))
+                .withRequestBody(matchingJsonPath(WHOLESALE_PRICE_LIST_ID_JSON_PATH, equalTo(WHOLESALE_PRICE_LIST_ID))));
     }
 
     @Test

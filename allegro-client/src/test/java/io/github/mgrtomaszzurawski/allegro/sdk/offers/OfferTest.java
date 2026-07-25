@@ -17,6 +17,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.ContactRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
@@ -95,6 +96,7 @@ class OfferTest {
     private static final String CONTACT_ID = "contact-1";
     private static final String ADDITIONAL_SERVICES_ID = "group-1";
     private static final String FUNDRAISING_ID = "campaign-1";
+    private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -270,7 +272,9 @@ class OfferTest {
                 .name(NAME_FULL)
                 .contact(new ContactRaw().id(CONTACT_ID))
                 .additionalServices(new ProductOfferAdditionalServicesResponseRaw().id(ADDITIONAL_SERVICES_ID))
-                .fundraisingCampaign(new ProductOfferFundraisingCampaignResponseRaw().id(FUNDRAISING_ID));
+                .fundraisingCampaign(new ProductOfferFundraisingCampaignResponseRaw().id(FUNDRAISING_ID))
+                .discounts(new DiscountsProductOfferResponseRaw().wholesalePriceList(
+                        new JustIdRaw().id(WHOLESALE_PRICE_LIST_ID)));
 
         // when
         Offer offer = Offer.from(raw);
@@ -279,6 +283,7 @@ class OfferTest {
         assertEquals(CONTACT_ID, offer.contactId());
         assertEquals(ADDITIONAL_SERVICES_ID, offer.additionalServicesGroupId());
         assertEquals(FUNDRAISING_ID, offer.fundraisingCampaignId());
+        assertEquals(WHOLESALE_PRICE_LIST_ID, offer.wholesalePriceListId());
     }
 
     @Test
@@ -295,6 +300,7 @@ class OfferTest {
         assertNull(offer.contactId());
         assertNull(offer.additionalServicesGroupId());
         assertNull(offer.fundraisingCampaignId());
+        assertNull(offer.wholesalePriceListId());
     }
 
     @Test

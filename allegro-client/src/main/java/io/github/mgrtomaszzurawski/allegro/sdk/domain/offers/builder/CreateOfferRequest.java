@@ -67,6 +67,7 @@ public final class CreateOfferRequest {
     private final @Nullable String contactId;
     private final @Nullable String additionalServicesGroupId;
     private final @Nullable String fundraisingCampaignId;
+    private final @Nullable String wholesalePriceListId;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -93,6 +94,7 @@ public final class CreateOfferRequest {
         this.contactId = builder.contactId;
         this.additionalServicesGroupId = builder.additionalServicesGroupId;
         this.fundraisingCampaignId = builder.fundraisingCampaignId;
+        this.wholesalePriceListId = builder.wholesalePriceListId;
     }
 
     /** The offer title. */
@@ -215,6 +217,11 @@ public final class CreateOfferRequest {
         return fundraisingCampaignId;
     }
 
+    /** The id of the seller's wholesale price list to attach, or {@code null} if not set. */
+    public @Nullable String wholesalePriceListId() {
+        return wholesalePriceListId;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -247,6 +254,7 @@ public final class CreateOfferRequest {
         private @Nullable String contactId;
         private @Nullable String additionalServicesGroupId;
         private @Nullable String fundraisingCampaignId;
+        private @Nullable String wholesalePriceListId;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -405,6 +413,12 @@ public final class CreateOfferRequest {
         /** Attach a fundraising campaign by id (optional). */
         public Builder fundraisingCampaignId(@Nullable String fundraisingCampaignId) {
             this.fundraisingCampaignId = fundraisingCampaignId;
+            return this;
+        }
+
+        /** Attach the seller's wholesale price list by id (optional). */
+        public Builder wholesalePriceListId(@Nullable String wholesalePriceListId) {
+            this.wholesalePriceListId = wholesalePriceListId;
             return this;
         }
 
