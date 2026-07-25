@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
@@ -47,6 +48,16 @@ class PublicationSettingsTest {
         assertNull(settings.startingAt());
         assertNull(settings.republish());
         assertNull(settings.duration());
+    }
+
+    @Test
+    void status_whenNonRequestableStatus_throwsAtSetTime() {
+        // ACTIVATING/UNKNOWN are not client-requestable — the builder rejects them fail-fast,
+        // not later at mapping time
+        assertThrows(IllegalArgumentException.class,
+                () -> PublicationSettings.builder().status(OfferStatus.ACTIVATING));
+        assertThrows(IllegalArgumentException.class,
+                () -> PublicationSettings.builder().status(OfferStatus.UNKNOWN));
     }
 
     @Test

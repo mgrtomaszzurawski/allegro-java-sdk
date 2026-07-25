@@ -17,7 +17,9 @@ import org.jspecify.annotations.Nullable;
  * <p>Every field is optional — an offer created without publication settings starts as a
  * draft you publish later with {@code offers().batch().publish(...)}. Set {@code status}
  * to {@link OfferStatus#ACTIVE} to request immediate publication, or schedule it with
- * {@code startingAt}.
+ * {@code startingAt}. Activation is asynchronous: a freshly created offer may still read
+ * {@code INACTIVE}/{@code ACTIVATING} immediately after create even when {@code ACTIVE} was
+ * requested — re-read it (or poll {@code offers().operationStatus(...)}) to see it go live.
  *
  * @param status     the publication status to request ({@link OfferStatus#ACTIVE} to
  *                   publish, {@link OfferStatus#INACTIVE} to keep as a draft,
@@ -56,8 +58,19 @@ public record PublicationSettings(
         private @Nullable Boolean republish;
         private @Nullable Duration duration;
 
-        /** Request a publication status ({@code ACTIVE} to publish, {@code INACTIVE} for a draft). */
+        /**
+         * Request a publication status ({@code ACTIVE} to publish, {@code INACTIVE} for a draft,
+         * {@code ENDED} to end the offer). Fails fast here: the transient {@code ACTIVATING} and
+         * {@code UNKNOWN} states are not something a client can request.
+         *
+         * @throws IllegalArgumentException if the status cannot be requested by a client
+         */
         public Builder status(@Nullable OfferStatus status) {
+            if (status != null) {
+                // Validate at set time (not later at mapping time): toRaw() rejects a
+                // non-requestable status, so an unsettable value throws before build().
+                status.toRaw();
+            }
             this.status = status;
             return this;
         }
