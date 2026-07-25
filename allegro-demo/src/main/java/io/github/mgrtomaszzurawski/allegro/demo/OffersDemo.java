@@ -124,6 +124,7 @@ final class OffersDemo {
     private static final String CREATE_MESSAGE_HINT_PROPERTY = "demo.createMessageHint";
     private static final String CREATE_INVOICE_TYPE_PROPERTY = "demo.createInvoiceType";
     private static final String CREATE_MARKETPLACE_ID_PROPERTY = "demo.createMarketplaceId";
+    private static final String CREATE_ATTACHMENT_ID_PROPERTY = "demo.createAttachmentId";
     private static final String CREATE_MARKETPLACE_PRICE_PROPERTY = "demo.createMarketplacePrice";
     private static final String CREATE_MARKETPLACE_CURRENCY_PROPERTY = "demo.createMarketplaceCurrency";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
@@ -375,6 +376,7 @@ final class OffersDemo {
                 value -> builder.fundraisingCampaign(NamedReference.byId(value)));
         applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY,
                 value -> builder.wholesalePriceList(NamedReference.byId(value)));
+        applyIfPresent(CREATE_ATTACHMENT_ID_PROPERTY, value -> builder.attachmentIds(List.of(value)));
         String messageMode = System.getProperty(CREATE_MESSAGE_MODE_PROPERTY);
         if (messageMode != null) {
             MessageToSellerMode mode = MessageToSellerMode.valueOf(messageMode);

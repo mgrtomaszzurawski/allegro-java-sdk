@@ -21,6 +21,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestBaseAllOfContactRaw;
@@ -82,6 +83,10 @@ public final class OfferRequestMapper {
     private static void applyContentFields(SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
+        }
+        if (!request.attachmentIds().isEmpty()) {
+            body.attachments(request.attachmentIds().stream()
+                    .map(attachmentId -> new ProductOfferAttachmentInnerRaw().id(attachmentId)).toList());
         }
         if (request.delivery() != null) {
             body.delivery(deliveryRawOf(request.delivery()));
