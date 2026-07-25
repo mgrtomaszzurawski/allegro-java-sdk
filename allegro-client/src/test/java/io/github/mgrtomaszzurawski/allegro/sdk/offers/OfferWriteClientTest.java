@@ -19,6 +19,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -62,6 +63,11 @@ class OfferWriteClientTest {
     private static final String TEST_TOKEN = "offers-write-token";
     private static final String CREATE_PATH = "/sale/product-offers";
     private static final String CREATED_OFFER_ID = "13579";
+    private static final String LOCATION_HEADER = "Location";
+    private static final String CREATE_OPERATION_ID = "c12370ae-1612-48d9-9c3f-34e4d944c2c7";
+    private static final String CREATE_LOCATION =
+            "https://api.allegro.pl/sale/product-offers/" + CREATED_OFFER_ID
+                    + "/operations/" + CREATE_OPERATION_ID;
     private static final String DELETE_OFFER_ID = "97531";
     private static final String DELETE_PATH = "/sale/offers/" + DELETE_OFFER_ID;
     private static final String EDIT_OFFER_ID = "654321";
@@ -211,6 +217,7 @@ class OfferWriteClientTest {
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withHeader(LOCATION_HEADER, CREATE_LOCATION)
                         .withBodyFile(OFFER_FIXTURE)));
 
         // when
@@ -225,8 +232,10 @@ class OfferWriteClientTest {
                         + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
                         + "\"stock\":{\"available\":%d}}").formatted(NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, STOCK),
                         true, false)));
-        // and the response is mapped to the created offer
+        // and the response is mapped to the created offer, with the async operation id parsed
+        // from the Location header so the caller can poll operationStatus(id, operationId)
         assertEquals(CREATED_OFFER_ID, created.id());
+        assertEquals(CREATE_OPERATION_ID, created.operationId());
     }
 
     @Test
@@ -498,6 +507,8 @@ class OfferWriteClientTest {
                         "{\"name\":\"" + EDIT_NAME + "\",\"stock\":{\"available\":" + EDIT_STOCK + "}}",
                         true, false)));
         assertEquals(CREATED_OFFER_ID, updated.id());
+        // no Location header on this stub → no async operation id surfaced (the plain-read contract)
+        assertNull(updated.operationId());
     }
 
     @Test

@@ -95,6 +95,8 @@ public final class OffersImpl implements Offers {
     private static final String PART_PRICE = "price";
     private static final String ERR_NO_PARTS = "at least one offer part is required";
     private static final String ERR_OFFER_ID = "offerId must not be null";
+    /** Marker in the create/edit response Location URL that precedes the async operation id. */
+    private static final String OPERATIONS_SEGMENT = "/operations/";
 
     private final HttpSupport http;
     private final OfferBatch batch;
@@ -154,10 +156,11 @@ public final class OffersImpl implements Offers {
         // empty collections and leaves nullable scalars (e.g. `language`) null, and
         // Allegro rejects `language:null` with a JsonMappingException — send only the
         // fields actually set (the mapper builds them).
-        return Offer.from(http.request(OP_CREATE)
+        var located = http.request(OP_CREATE)
                 .post(ApiPaths.SALE_PRODUCT_OFFERS)
                 .jsonBodyPartial(OfferRequestMapper.createBody(request))
-                .fetch(SaleProductOfferResponseV1Raw.class));
+                .fetchLocation(SaleProductOfferResponseV1Raw.class);
+        return Offer.from(located.value(), operationIdFrom(located.location()));
     }
 
     @Override
@@ -165,10 +168,28 @@ public final class OffersImpl implements Offers {
         // A partial PATCH: the mapper builds only the changed fields and jsonBodyPartial
         // omits null AND empty fields, so untouched fields — including the request type's
         // pre-initialized empty collections — are absent from the wire rather than reset.
-        return Offer.from(http.request(OP_EDIT)
+        var located = http.request(OP_EDIT)
                 .patch(ApiPaths.productOffer(offerId))
                 .jsonBodyPartial(OfferRequestMapper.editBody(request))
-                .fetch(SaleProductOfferResponseV1Raw.class));
+                .fetchLocation(SaleProductOfferResponseV1Raw.class);
+        return Offer.from(located.value(), operationIdFrom(located.location()));
+    }
+
+    /**
+     * The async create/edit operation id is the segment after {@code /operations/} in the response
+     * {@code Location} URL ({@code .../sale/product-offers/{offerId}/operations/{operationId}}), or
+     * {@code null} when the server sends no such header (or one that is not an operations URL).
+     */
+    private static @Nullable String operationIdFrom(@Nullable String location) {
+        if (location == null) {
+            return null;
+        }
+        int marker = location.indexOf(OPERATIONS_SEGMENT);
+        if (marker < 0) {
+            return null;
+        }
+        String operationId = location.substring(marker + OPERATIONS_SEGMENT.length());
+        return operationId.isBlank() ? null : operationId;
     }
 
     @Override

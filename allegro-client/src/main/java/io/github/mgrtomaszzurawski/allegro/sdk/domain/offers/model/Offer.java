@@ -59,6 +59,9 @@ import org.jspecify.annotations.Nullable;
  * @param payments       the payment settings (invoice type), or {@code null}
  * @param validation     Allegro's validation of the offer (blocking errors, non-blocking
  *                       warnings, validatedAt), or {@code null} if the payload omits it
+ * @param operationId    the id of the asynchronous create/edit operation that produced this
+ *                       offer — pass it with {@link #id()} to {@code offers().operationStatus(...)}
+ *                       to poll processing; {@code null} on a plain read (create/edit only)
  * @since 0.2.0
  */
 public record Offer(
@@ -84,7 +87,8 @@ public record Offer(
         @Nullable OfferPublication publication,
         @Nullable MessageToSellerSettings messageToSellerSettings,
         @Nullable OfferPayments payments,
-        @Nullable OfferValidation validation) {
+        @Nullable OfferValidation validation,
+        @Nullable String operationId) {
 
     /**
      * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists to
@@ -96,8 +100,16 @@ public record Offer(
         productSet = List.copyOf(productSet);
     }
 
-    /** Project a generated product-offer response onto the consumer record. */
+    /** Project a generated product-offer response onto the consumer record (a plain read). */
     public static Offer from(SaleProductOfferResponseV1Raw raw) {
+        return from(raw, null);
+    }
+
+    /**
+     * Project a generated product-offer response, carrying the id of the asynchronous create/edit
+     * operation (from the response {@code Location} header) so the caller can poll processing.
+     */
+    public static Offer from(SaleProductOfferResponseV1Raw raw, @Nullable String operationId) {
         SellingModeRaw sellingMode = raw.getSellingMode();
         OfferCategoryRaw category = raw.getCategory();
         SaleProductOfferPublicationResponseRaw publication = raw.getPublication();
@@ -124,7 +136,8 @@ public record Offer(
                 OfferPublication.from(publication),
                 MessageToSellerSettings.from(raw.getMessageToSellerSettings()),
                 OfferPayments.from(raw.getPayments()),
-                OfferValidation.from(raw.getValidation()));
+                OfferValidation.from(raw.getValidation()),
+                operationId);
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {
