@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
@@ -65,6 +66,7 @@ public final class CreateOfferRequest {
     private final @Nullable Boolean businessOnly;
     private final @Nullable PublicationSettings publication;
     private final @Nullable TaxSettings taxSettings;
+    private final @Nullable OfferPayments payments;
     private final @Nullable String contactId;
     private final @Nullable String additionalServicesGroupId;
     private final @Nullable String fundraisingCampaignId;
@@ -93,6 +95,7 @@ public final class CreateOfferRequest {
         this.businessOnly = builder.businessOnly;
         this.publication = builder.publication;
         this.taxSettings = builder.taxSettings;
+        this.payments = builder.payments;
         this.contactId = builder.contactId;
         this.additionalServicesGroupId = builder.additionalServicesGroupId;
         this.fundraisingCampaignId = builder.fundraisingCampaignId;
@@ -205,6 +208,11 @@ public final class CreateOfferRequest {
         return taxSettings;
     }
 
+    /** The offer's payment settings (invoice type), or {@code null} if not set. */
+    public @Nullable OfferPayments payments() {
+        return payments;
+    }
+
     /** The id of the seller's contact to attach to the offer, or {@code null} if not set. */
     public @Nullable String contactId() {
         return contactId;
@@ -259,6 +267,7 @@ public final class CreateOfferRequest {
         private @Nullable Boolean businessOnly;
         private @Nullable PublicationSettings publication;
         private @Nullable TaxSettings taxSettings;
+        private @Nullable OfferPayments payments;
         private @Nullable String contactId;
         private @Nullable String additionalServicesGroupId;
         private @Nullable String fundraisingCampaignId;
@@ -404,6 +413,12 @@ public final class CreateOfferRequest {
         /** Set the offer's VAT settings — rates, subject, exemption (optional). */
         public Builder taxSettings(@Nullable TaxSettings taxSettings) {
             this.taxSettings = taxSettings;
+            return this;
+        }
+
+        /** Set the offer's payment settings — the invoice type the seller issues (optional). */
+        public Builder payments(@Nullable OfferPayments payments) {
+            this.payments = payments;
             return this;
         }
 

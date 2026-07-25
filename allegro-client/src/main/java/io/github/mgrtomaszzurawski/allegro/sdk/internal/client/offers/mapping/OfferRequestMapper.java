@@ -64,6 +64,14 @@ public final class OfferRequestMapper {
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
                 .sellingMode(sellingModeOf(request))
                 .stock(stockOf(request));
+        applyContentFields(body, request);
+        applyOfferMetadata(body, request);
+        applyReferencesAndSettings(body, request);
+        return body;
+    }
+
+    /** Media, delivery, description, location, parameters and the product set. */
+    private static void applyContentFields(SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
         }
@@ -85,6 +93,10 @@ public final class OfferRequestMapper {
         if (!request.productSet().isEmpty()) {
             body.productSet(productSetRawOf(request.productSet()));
         }
+    }
+
+    /** Identity, language, size table, B2B, publication and VAT settings. */
+    private static void applyOfferMetadata(SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
         if (request.externalId() != null) {
             body.external(new ExternalIdRaw().id(request.externalId()));
         }
@@ -103,6 +115,11 @@ public final class OfferRequestMapper {
         if (request.taxSettings() != null) {
             body.taxSettings(request.taxSettings().toRaw());
         }
+    }
+
+    /** Seller-registered references (contact, services, fundraising, discounts) and buyer/payment settings. */
+    private static void applyReferencesAndSettings(
+            SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
         if (request.contactId() != null) {
             body.contact(new SaleProductOfferRequestBaseAllOfContactRaw().id(request.contactId()));
         }
@@ -121,7 +138,9 @@ public final class OfferRequestMapper {
         if (request.messageToSellerSettings() != null) {
             body.messageToSellerSettings(request.messageToSellerSettings().toRaw());
         }
-        return body;
+        if (request.payments() != null) {
+            body.payments(request.payments().toRaw());
+        }
     }
 
     /** The generated publication block for the SDK settings (only set fields are written). */
