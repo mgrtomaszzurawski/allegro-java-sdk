@@ -77,6 +77,17 @@ class ProductSetElementTest {
     }
 
     @Test
+    void withCopies_preservePreviouslySetIdType() {
+        // given — an idType set first, then another wither applied
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withIdType(ProductIdType.GTIN)
+                .withResponsibleProducer(ResponsibleProducerRef.byId(PRODUCER_ID));
+
+        // then — the later copy carries the earlier idType forward
+        assertEquals(ProductIdType.GTIN, element.idType());
+    }
+
+    @Test
     void of_whenQuantityBelowOne_throws() {
         // then
         assertThrows(IllegalArgumentException.class, () -> ProductSetElement.of(PRODUCT_ID, 0));
