@@ -125,7 +125,8 @@ public record ProductSetElement(
     /**
      * A copy of this element with the GPSR safety information to send set. Build the argument
      * with {@link SafetyInformation#text(String)} or {@link SafetyInformation#attachments(List)}
-     * — the "none" form cannot be sent on a request.
+     * — the "none" form cannot be sent on a request (a read-origin "none" value is silently
+     * omitted by {@link #toRaw()}, so a read-then-write round-trip does not fail).
      */
     public ProductSetElement withSafetyInformation(SafetyInformation safetyInformation) {
         return new ProductSetElement(productId, quantity, responsibleProducer,
@@ -178,7 +179,9 @@ public record ProductSetElement(
         if (responsiblePerson != null) {
             raw.responsiblePerson(responsiblePerson.toRaw());
         }
-        if (safetyInformation != null) {
+        // A read-origin "none" safety block is not a sendable form; on a write it means
+        // "leave unchanged", so it is omitted rather than propagating toRaw()'s rejection.
+        if (safetyInformation != null && !SafetyInformation.NONE.equals(safetyInformation.type())) {
             raw.safetyInformation(safetyInformation.toRaw());
         }
         return raw;

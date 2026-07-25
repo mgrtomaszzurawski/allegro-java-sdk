@@ -111,6 +111,12 @@ class SafetyInformationTest {
     }
 
     @Test
+    void text_whenDescriptionBlank_throws() {
+        // then the TEXT factory rejects a blank description (Allegro rejects empty GPSR text)
+        assertThrows(IllegalArgumentException.class, () -> SafetyInformation.text("   "));
+    }
+
+    @Test
     void attachments_whenBuilt_carriesTheTypeAndIds() {
         // when a document-backed safety declaration is built
         SafetyInformation safety = SafetyInformation.attachments(List.of(ATTACHMENT_ID));

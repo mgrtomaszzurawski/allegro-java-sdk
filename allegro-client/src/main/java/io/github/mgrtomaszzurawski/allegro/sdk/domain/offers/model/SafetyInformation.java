@@ -47,6 +47,7 @@ public record SafetyInformation(
     /** The explicit "no safety information" form (Allegro's {@code NO_SAFETY_INFORMATION}). */
     public static final String NONE = "NO_SAFETY_INFORMATION";
 
+    private static final String ERR_BLANK_DESCRIPTION = "description must not be blank";
     private static final String ERR_EMPTY_ATTACHMENTS = "attachmentIds must not be empty";
     private static final String ERR_NOT_WRITABLE =
             "safety information can only be sent as TEXT or ATTACHMENTS on a request, not: ";
@@ -56,9 +57,12 @@ public record SafetyInformation(
         attachmentIds = attachmentIds == null ? List.of() : List.copyOf(attachmentIds);
     }
 
-    /** A free-text safety declaration (the {@code TEXT} form). */
+    /** A free-text safety declaration (the {@code TEXT} form). The description must be non-blank. */
     public static SafetyInformation text(String description) {
-        return new SafetyInformation(TEXT, Objects.requireNonNull(description, "description"), List.of());
+        if (Objects.requireNonNull(description, "description").isBlank()) {
+            throw new IllegalArgumentException(ERR_BLANK_DESCRIPTION);
+        }
+        return new SafetyInformation(TEXT, description, List.of());
     }
 
     /**
