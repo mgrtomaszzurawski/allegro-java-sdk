@@ -84,11 +84,44 @@ class CompatibilityEntryTest {
 
     @Test
     void text_whenTextNull_throws() {
+        // when/then
         assertThrows(NullPointerException.class, () -> CompatibilityEntry.text(null));
     }
 
     @Test
     void productId_whenIdNull_throws() {
+        // when/then
         assertThrows(NullPointerException.class, () -> CompatibilityEntry.productId(null));
+    }
+
+    @Test
+    void constructor_whenTextKindCarriesProductId_throws() {
+        // when/then — a TEXT entry must not also carry a product id (exactly-one-of invariant)
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompatibilityEntry(CompatibilityEntry.Kind.TEXT, TEXT_LINE, PRODUCT_ID, List.of()));
+    }
+
+    @Test
+    void constructor_whenProductIdKindCarriesText_throws() {
+        // when/then — a PRODUCT_ID entry must not also carry a text line (exactly-one-of invariant)
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompatibilityEntry(CompatibilityEntry.Kind.PRODUCT_ID, TEXT_LINE, PRODUCT_ID, List.of()));
+    }
+
+    @Test
+    void constructor_whenProductIdKindMissingProductId_throws() {
+        // when/then — a PRODUCT_ID entry requires the identifier
+        assertThrows(IllegalArgumentException.class,
+                () -> new CompatibilityEntry(CompatibilityEntry.Kind.PRODUCT_ID, null, null, List.of()));
+    }
+
+    @Test
+    void constructor_whenAdditionalInfoNull_defaultsToEmpty() {
+        // when — a direct caller passes a null additional-info list
+        CompatibilityEntry entry =
+                new CompatibilityEntry(CompatibilityEntry.Kind.PRODUCT_ID, null, PRODUCT_ID, null);
+
+        // then — it is normalized to an empty, immutable list
+        assertTrue(entry.additionalInfo().isEmpty());
     }
 }

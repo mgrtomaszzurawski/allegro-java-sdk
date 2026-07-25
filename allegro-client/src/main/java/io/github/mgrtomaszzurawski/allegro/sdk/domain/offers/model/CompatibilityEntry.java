@@ -28,13 +28,17 @@ import org.jspecify.annotations.Nullable;
  * <p>The section is only accepted in categories that support "fits to"; check with
  * {@code offers().compatibility().supportedCategories(...)} before setting it.
  *
- * @since 0.4.0
+ * @since 0.6.0
  */
 public record CompatibilityEntry(
         Kind kind,
         @Nullable String text,
         @Nullable String productId,
         List<String> additionalInfo) {
+
+    private static final String ERR_TEXT = "a TEXT compatibility entry requires a text line and no productId";
+    private static final String ERR_PRODUCT_ID =
+            "a PRODUCT_ID compatibility entry requires a productId and no text";
 
     /** Which of the two compatibility-entry forms this is. */
     public enum Kind {
@@ -46,10 +50,20 @@ public record CompatibilityEntry(
         PRODUCT_ID
     }
 
-    /** Canonical constructor: defends the invariants and defensively copies {@code additionalInfo}. */
+    /**
+     * Canonical constructor: enforces the exactly-one-of invariant (a {@link Kind#TEXT} entry carries
+     * only {@code text}; a {@link Kind#PRODUCT_ID} entry carries only {@code productId}) and defensively
+     * copies {@code additionalInfo}. The factories always satisfy this; it also guards direct callers.
+     */
     public CompatibilityEntry {
         Objects.requireNonNull(kind, "kind");
         additionalInfo = additionalInfo == null ? List.of() : List.copyOf(additionalInfo);
+        if (kind == Kind.TEXT && (text == null || productId != null)) {
+            throw new IllegalArgumentException(ERR_TEXT);
+        }
+        if (kind == Kind.PRODUCT_ID && (productId == null || text != null)) {
+            throw new IllegalArgumentException(ERR_PRODUCT_ID);
+        }
     }
 
     /** A free-text compatibility line (non-null). */
