@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -86,5 +87,20 @@ class InlineProductTest {
     void parameters_whenNull_throws() {
         // then a null parameters list is rejected fail-fast
         assertThrows(NullPointerException.class, () -> InlineProduct.builder().parameters(null));
+    }
+
+    @Test
+    void images_whenListHasNullElement_throws() {
+        // then a null element inside the replacement list is rejected at the setter
+        List<String> withNull = Arrays.asList(IMAGE_ONE, null);
+        assertThrows(NullPointerException.class, () -> InlineProduct.builder().images(withNull));
+    }
+
+    @Test
+    void parameters_whenListHasNullElement_throws() {
+        // then a null element inside the replacement list is rejected at the setter
+        List<OfferParameter> withNull = Arrays.asList(
+                OfferParameter.dictionary(PARAM_ID, List.of(PARAM_VALUE_ID)), null);
+        assertThrows(NullPointerException.class, () -> InlineProduct.builder().parameters(withNull));
     }
 }

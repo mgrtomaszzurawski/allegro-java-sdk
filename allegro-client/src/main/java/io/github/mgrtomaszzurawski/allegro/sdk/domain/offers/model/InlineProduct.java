@@ -99,7 +99,7 @@ public record InlineProduct(
         public Builder images(List<String> imageUrls) {
             Objects.requireNonNull(imageUrls, "imageUrls");
             this.images.clear();
-            this.images.addAll(imageUrls);
+            imageUrls.forEach(this::image);
             return this;
         }
 
@@ -113,7 +113,7 @@ public record InlineProduct(
         public Builder parameters(List<OfferParameter> productParameters) {
             Objects.requireNonNull(productParameters, "parameters");
             this.parameters.clear();
-            this.parameters.addAll(productParameters);
+            productParameters.forEach(this::parameter);
             return this;
         }
 

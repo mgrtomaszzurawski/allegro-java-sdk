@@ -36,10 +36,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.Publication
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
