@@ -189,6 +189,9 @@ exemptions you may assign to an offer in that category. Read-only reference data
 TaxSettings tax = client.settings().taxSettings(categoryId);
 tax.rates().forEach(rate ->
         System.out.println(rate.countryCode() + ": " + rate.values().size() + " VAT rates"));
+
+// Narrow to specific countries:
+TaxSettings polishOnly = client.settings().taxSettings(categoryId, List.of("PL"));
 ```
 
 ## Errors

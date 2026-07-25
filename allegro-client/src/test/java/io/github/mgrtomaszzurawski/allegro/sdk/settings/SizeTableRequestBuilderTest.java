@@ -6,7 +6,6 @@ package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.builder.SizeTableRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.builder.SizeTableRequestBuilder;
@@ -95,6 +94,6 @@ class SizeTableRequestBuilderTest {
                 .row(SizeTableRow.of(List.of(CELL_SIZE)))
                 .build();
 
-        assertTrue(request.rows().get(0).cells().contains(CELL_SIZE));
+        assertEquals(List.of(CELL_SIZE), request.rows().get(0).cells());
     }
 }

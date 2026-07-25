@@ -14,6 +14,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.complian
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.sizetables.SizeTablesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.tax.TaxSettingsClientImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
+import java.util.List;
 
 /**
  * Root implementation of the {@link SaleSettings} facade; wires the nested
@@ -52,6 +53,11 @@ public final class SaleSettingsImpl implements SaleSettings {
 
     @Override
     public TaxSettings taxSettings(String categoryId) {
-        return taxSettingsClient.taxSettings(categoryId);
+        return taxSettingsClient.taxSettings(categoryId, List.of());
+    }
+
+    @Override
+    public TaxSettings taxSettings(String categoryId, List<String> countryCodes) {
+        return taxSettingsClient.taxSettings(categoryId, countryCodes);
     }
 }

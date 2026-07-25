@@ -4,8 +4,6 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.model;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.CellsRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.HeaderRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableTemplateResponseRaw;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -39,12 +37,9 @@ public record SizeTableTemplate(
 
     /** Map the generated Layer-1 DTO. */
     public static SizeTableTemplate from(SizeTableTemplateResponseRaw raw) {
-        List<HeaderRaw> rawHeaders = raw.getHeaders() == null ? List.of() : raw.getHeaders();
-        List<CellsRaw> rawValues = raw.getValues() == null ? List.of() : raw.getValues();
-        List<String> headers = rawHeaders.stream().map(HeaderRaw::getName).toList();
-        List<SizeTableRow> rows = rawValues.stream().map(SizeTableRow::from).toList();
         SizeTableTemplateImage image =
                 raw.getImage() == null ? null : SizeTableTemplateImage.from(raw.getImage());
-        return new SizeTableTemplate(raw.getId(), raw.getName(), image, headers, rows);
+        return new SizeTableTemplate(raw.getId(), raw.getName(), image,
+                SizeGridMapping.headerNames(raw.getHeaders()), SizeGridMapping.rows(raw.getValues()));
     }
 }

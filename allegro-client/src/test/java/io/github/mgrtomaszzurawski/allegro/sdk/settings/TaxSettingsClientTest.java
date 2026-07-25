@@ -26,6 +26,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredenti
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.tax.model.TaxSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -47,10 +48,13 @@ class TaxSettingsClientTest {
 
     private static final String TAX_PATH = "/sale/tax-settings";
     private static final String PARAM_CATEGORY_ID = "category.id";
+    private static final String PARAM_COUNTRY_CODE = "countryCode";
     private static final String CATEGORY_ID = "316194";
     private static final String COUNTRY = "PL";
+    private static final String COUNTRY_CZ = "CZ";
     private static final String RATE_VALUE = "23.00";
     private static final String SUBJECT_VALUE = "GOODS";
+    private static final String EXEMPTION_VALUE = "MARGIN_SCHEME";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -101,9 +105,27 @@ class TaxSettingsClientTest {
             assertEquals(COUNTRY, settings.rates().get(0).countryCode());
             assertEquals(RATE_VALUE, settings.rates().get(0).values().get(0).value());
             assertTrue(settings.rates().get(0).values().get(1).exemptionRequired());
-            assertEquals("MARGIN_SCHEME", settings.exemptions().get(0).value());
+            assertEquals(EXEMPTION_VALUE, settings.exemptions().get(0).value());
             verify(1, getRequestedFor(urlPathEqualTo(TAX_PATH))
                     .withQueryParam(PARAM_CATEGORY_ID, equalTo(CATEGORY_ID)));
+        }
+    }
+
+    @Test
+    void taxSettings_whenCountryCodesGiven_sendsRepeatedCountryParam(WireMockRuntimeInfo wmInfo) {
+        stubToken();
+        stubFor(get(urlPathEqualTo(TAX_PATH))
+                .withQueryParam(PARAM_CATEGORY_ID, equalTo(CATEGORY_ID))
+                .withQueryParam(PARAM_COUNTRY_CODE, equalTo(COUNTRY))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TAX_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            allegro.settings().taxSettings(CATEGORY_ID, List.of(COUNTRY, COUNTRY_CZ));
+
+            verify(1, getRequestedFor(urlPathEqualTo(TAX_PATH))
+                    .withQueryParam(PARAM_CATEGORY_ID, equalTo(CATEGORY_ID))
+                    .withQueryParam(PARAM_COUNTRY_CODE, equalTo(COUNTRY))
+                    .withQueryParam(PARAM_COUNTRY_CODE, equalTo(COUNTRY_CZ)));
         }
     }
 

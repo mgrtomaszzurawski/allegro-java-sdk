@@ -62,6 +62,8 @@ class SizeTablesClientTest {
     private static final String CELL_SIZE = "M";
     private static final String CELL_LENGTH = "38";
     private static final String UPDATED_NAME = "Nike shoes size table v2";
+    private static final String IMAGE_URL = "https://a.allegroimg.com/original/aa/table";
+    private static final String CAPTION_VALUE = "chest";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -74,10 +76,10 @@ class SizeTablesClientTest {
     private static final String TABLES_RESPONSE = "{\"tables\":[" + TABLE_RESPONSE + "]}";
     private static final String TEMPLATES_RESPONSE = """
             {"templates":[{"id":"%s","name":"%s",
-              "image":{"url":"https://a.allegroimg.com/original/aa/table","captions":[{"index":"1","value":"chest"}]},
+              "image":{"url":"%s","captions":[{"index":"1","value":"%s"}]},
               "headers":[{"name":"%s"}],
               "values":[{"cells":["%s"]}]}]}
-            """.formatted(TEMPLATE_ID, NAME, HEADER_SIZE, CELL_SIZE);
+            """.formatted(TEMPLATE_ID, NAME, IMAGE_URL, CAPTION_VALUE, HEADER_SIZE, CELL_SIZE);
     private static final String NOT_FOUND_RESPONSE = """
             {"errors":[{"code":"NotFound","message":"table not found","path":"tableId"}]}
             """;
@@ -162,8 +164,8 @@ class SizeTablesClientTest {
             SizeTableTemplate template = templates.get(0);
             assertEquals(TEMPLATE_ID, template.id());
             assertEquals(1, template.headers().size());
-            assertEquals("https://a.allegroimg.com/original/aa/table", template.image().url());
-            assertEquals("chest", template.image().captions().get(0).value());
+            assertEquals(IMAGE_URL, template.image().url());
+            assertEquals(CAPTION_VALUE, template.image().captions().get(0).value());
         }
     }
 
