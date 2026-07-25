@@ -90,6 +90,13 @@ class OfferWriteClientTest {
     private static final String CATEGORY_ID = "257";
     private static final String AMOUNT = "199.99";
     private static final String CURRENCY_PLN = "PLN";
+    private static final String MARKETPLACE_ID = "allegro-cz";
+    private static final String MARKETPLACE_AMOUNT = "899.00";
+    private static final String MARKETPLACE_CURRENCY = "CZK";
+    private static final String MARKETPLACE_AMOUNT_JSON_PATH =
+            "$.additionalMarketplaces['allegro-cz'].sellingMode.price.amount";
+    private static final String MARKETPLACE_CURRENCY_JSON_PATH =
+            "$.additionalMarketplaces['allegro-cz'].sellingMode.price.currency";
     private static final int STOCK = 10;
 
     private static final String PRICE_JSON_PATH = "$.sellingMode.price.amount";
@@ -743,6 +750,27 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(INLINE_CATEGORY_JSON_PATH, equalTo(INLINE_CATEGORY_ID)))
                 .withRequestBody(matchingJsonPath(INLINE_IMAGE_JSON_PATH, equalTo(INLINE_IMAGE)))
                 .withRequestBody(matchingJsonPath(INLINE_PARAM_JSON_PATH, equalTo(INLINE_PARAM_ID))));
+    }
+
+    @Test
+    void create_whenAdditionalMarketplacePriceSet_serializesPerMarketplacePrice(WireMockRuntimeInfo wmInfo) {
+        // given — a Buy Now price to publish on a foreign marketplace
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .additionalMarketplacePrice(MARKETPLACE_ID, Money.of(MARKETPLACE_AMOUNT, MARKETPLACE_CURRENCY))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the price rides the map under the marketplace-id key at sellingMode.price
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(MARKETPLACE_AMOUNT_JSON_PATH, equalTo(MARKETPLACE_AMOUNT)))
+                .withRequestBody(matchingJsonPath(MARKETPLACE_CURRENCY_JSON_PATH, equalTo(MARKETPLACE_CURRENCY))));
     }
 
     @Test

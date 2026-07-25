@@ -18,7 +18,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetEle
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -68,6 +70,7 @@ public final class CreateOfferRequest {
     private final @Nullable PublicationSettings publication;
     private final @Nullable TaxSettings taxSettings;
     private final @Nullable OfferPayments payments;
+    private final Map<String, Money> additionalMarketplacePrices;
     private final @Nullable NamedReference contact;
     private final @Nullable NamedReference additionalServices;
     private final @Nullable NamedReference fundraisingCampaign;
@@ -97,6 +100,7 @@ public final class CreateOfferRequest {
         this.publication = builder.publication;
         this.taxSettings = builder.taxSettings;
         this.payments = builder.payments;
+        this.additionalMarketplacePrices = Map.copyOf(builder.additionalMarketplacePrices);
         this.contact = builder.contact;
         this.additionalServices = builder.additionalServices;
         this.fundraisingCampaign = builder.fundraisingCampaign;
@@ -214,6 +218,14 @@ public final class CreateOfferRequest {
         return payments;
     }
 
+    /**
+     * The Buy Now prices to publish on additional (foreign) marketplaces, keyed by marketplace id
+     * (e.g. {@code allegro-cz}); empty when the offer is not cross-listed.
+     */
+    public Map<String, Money> additionalMarketplacePrices() {
+        return additionalMarketplacePrices;
+    }
+
     /** The seller's contact to attach (by id or name), or {@code null} if not set. */
     public @Nullable NamedReference contact() {
         return contact;
@@ -269,6 +281,7 @@ public final class CreateOfferRequest {
         private @Nullable PublicationSettings publication;
         private @Nullable TaxSettings taxSettings;
         private @Nullable OfferPayments payments;
+        private final Map<String, Money> additionalMarketplacePrices = new LinkedHashMap<>();
         private @Nullable NamedReference contact;
         private @Nullable NamedReference additionalServices;
         private @Nullable NamedReference fundraisingCampaign;
@@ -420,6 +433,20 @@ public final class CreateOfferRequest {
         /** Set the offer's payment settings — the invoice type the seller issues (optional). */
         public Builder payments(@Nullable OfferPayments payments) {
             this.payments = payments;
+            return this;
+        }
+
+        /**
+         * Publish the offer on an additional (foreign) marketplace at the given Buy Now price.
+         * Call once per marketplace (e.g. {@code allegro-cz}); a repeated marketplace id replaces
+         * its price. The price must use the marketplace's required currency (discover the eligible
+         * marketplaces and their currencies via {@code marketplaces().list()}) — the server returns
+         * a validation error otherwise; the SDK cannot check it (the valid set is account-dynamic).
+         */
+        public Builder additionalMarketplacePrice(String marketplaceId, Money price) {
+            this.additionalMarketplacePrices.put(
+                    Objects.requireNonNull(marketplaceId, "marketplaceId"),
+                    Objects.requireNonNull(price, "price"));
             return this;
         }
 

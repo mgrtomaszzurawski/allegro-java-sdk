@@ -123,6 +123,9 @@ final class OffersDemo {
     private static final String CREATE_MESSAGE_MODE_PROPERTY = "demo.createMessageMode";
     private static final String CREATE_MESSAGE_HINT_PROPERTY = "demo.createMessageHint";
     private static final String CREATE_INVOICE_TYPE_PROPERTY = "demo.createInvoiceType";
+    private static final String CREATE_MARKETPLACE_ID_PROPERTY = "demo.createMarketplaceId";
+    private static final String CREATE_MARKETPLACE_PRICE_PROPERTY = "demo.createMarketplacePrice";
+    private static final String CREATE_MARKETPLACE_CURRENCY_PROPERTY = "demo.createMarketplaceCurrency";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -383,6 +386,12 @@ final class OffersDemo {
         String invoiceType = System.getProperty(CREATE_INVOICE_TYPE_PROPERTY);
         if (invoiceType != null) {
             builder.payments(OfferPayments.of(InvoiceType.valueOf(invoiceType)));
+        }
+        String marketplaceId = System.getProperty(CREATE_MARKETPLACE_ID_PROPERTY);
+        String marketplacePrice = System.getProperty(CREATE_MARKETPLACE_PRICE_PROPERTY);
+        if (marketplaceId != null && marketplacePrice != null) {
+            String marketplaceCurrency = System.getProperty(CREATE_MARKETPLACE_CURRENCY_PROPERTY, CURRENCY_PLN);
+            builder.additionalMarketplacePrice(marketplaceId, Money.of(marketplacePrice, marketplaceCurrency));
         }
         CreateOfferRequest request = builder.build();
         try {

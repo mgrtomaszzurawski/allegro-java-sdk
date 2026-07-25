@@ -38,6 +38,8 @@ class CreateOfferRequestTest {
     private static final String NAME = "Mechanical keyboard";
     private static final String CATEGORY_ID = "257";
     private static final Money PRICE = Money.of("199.99", "PLN");
+    private static final String MARKETPLACE_ID = "allegro-cz";
+    private static final Money MARKETPLACE_PRICE = Money.of("899.00", "CZK");
     private static final int STOCK = 10;
     private static final String IMAGE_URL = "https://img.example/x.jpg";
     private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
@@ -394,6 +396,49 @@ class CreateOfferRequestTest {
 
         // then
         assertNull(request.payments());
+    }
+
+    @Test
+    void build_whenAdditionalMarketplacePriceSet_exposesItByMarketplaceId() {
+        // when — a Buy Now price is set for a foreign marketplace
+        CreateOfferRequest request = validBuilder()
+                .additionalMarketplacePrice(MARKETPLACE_ID, MARKETPLACE_PRICE)
+                .build();
+
+        // then
+        assertEquals(1, request.additionalMarketplacePrices().size());
+        assertEquals(MARKETPLACE_PRICE, request.additionalMarketplacePrices().get(MARKETPLACE_ID));
+    }
+
+    @Test
+    void build_whenNoAdditionalMarketplaces_isEmpty() {
+        // then — the map is empty when nothing is cross-listed
+        assertTrue(validBuilder().build().additionalMarketplacePrices().isEmpty());
+    }
+
+    @Test
+    void additionalMarketplacePrices_whenExposed_isImmutable() {
+        // given — a request with one cross-listing
+        CreateOfferRequest request = validBuilder()
+                .additionalMarketplacePrice(MARKETPLACE_ID, MARKETPLACE_PRICE).build();
+
+        // then — the exposed map cannot be mutated by the caller
+        assertThrows(UnsupportedOperationException.class,
+                () -> request.additionalMarketplacePrices().put("allegro-sk", MARKETPLACE_PRICE));
+    }
+
+    @Test
+    void additionalMarketplacePrice_whenPriceNull_throws() {
+        // then — a null price is rejected fail-fast
+        assertThrows(NullPointerException.class,
+                () -> CreateOfferRequest.builder().additionalMarketplacePrice(MARKETPLACE_ID, null));
+    }
+
+    @Test
+    void additionalMarketplacePrice_whenMarketplaceIdNull_throws() {
+        // then — a null marketplace id is rejected fail-fast
+        assertThrows(NullPointerException.class,
+                () -> CreateOfferRequest.builder().additionalMarketplacePrice(null, MARKETPLACE_PRICE));
     }
 
     @Test
