@@ -63,6 +63,7 @@ public final class CreateOfferRequest {
     private final @Nullable OfferLocation location;
     private final List<OfferParameter> parameters;
     private final List<ProductSetElement> productSet;
+    private final List<String> attachmentIds;
     private final @Nullable String externalId;
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
@@ -93,6 +94,7 @@ public final class CreateOfferRequest {
         this.location = builder.location;
         this.parameters = List.copyOf(builder.parameters);
         this.productSet = List.copyOf(builder.productSet);
+        this.attachmentIds = List.copyOf(builder.attachmentIds);
         this.externalId = builder.externalId;
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
@@ -131,6 +133,11 @@ public final class CreateOfferRequest {
     /** Image URLs, in display order (possibly empty). */
     public List<String> imageUrls() {
         return imageUrls;
+    }
+
+    /** The ids of the seller's uploaded attachments to link to the offer; empty when none. */
+    public List<String> attachmentIds() {
+        return attachmentIds;
     }
 
     /** The selling format, or {@code null} to default to {@code BUY_NOW}. */
@@ -264,6 +271,7 @@ public final class CreateOfferRequest {
         private @Nullable Money buyNowPrice;
         private @Nullable Integer availableStock;
         private List<String> imageUrls = List.of();
+        private List<String> attachmentIds = List.of();
         private @Nullable OfferFormat sellingFormat;
         private @Nullable Money startingPrice;
         private @Nullable Money minimalPrice;
@@ -315,6 +323,12 @@ public final class CreateOfferRequest {
         /** Image URLs, in display order (optional). */
         public Builder imageUrls(List<String> imageUrls) {
             this.imageUrls = List.copyOf(imageUrls);
+            return this;
+        }
+
+        /** Link the seller's uploaded attachments to the offer by id (optional). */
+        public Builder attachmentIds(List<String> attachmentIds) {
+            this.attachmentIds = List.copyOf(attachmentIds);
             return this;
         }
 

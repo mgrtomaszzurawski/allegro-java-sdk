@@ -40,6 +40,7 @@ class CreateOfferRequestTest {
     private static final Money PRICE = Money.of("199.99", "PLN");
     private static final String MARKETPLACE_ID = "allegro-cz";
     private static final Money MARKETPLACE_PRICE = Money.of("899.00", "CZK");
+    private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
     private static final int STOCK = 10;
     private static final String IMAGE_URL = "https://img.example/x.jpg";
     private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
@@ -439,6 +440,21 @@ class CreateOfferRequestTest {
         // then — a null marketplace id is rejected fail-fast
         assertThrows(NullPointerException.class,
                 () -> CreateOfferRequest.builder().additionalMarketplacePrice(null, MARKETPLACE_PRICE));
+    }
+
+    @Test
+    void build_whenAttachmentIdsSet_exposesThemInOrder() {
+        // when — uploaded attachments are linked to the offer by id
+        CreateOfferRequest request = validBuilder().attachmentIds(List.of(ATTACHMENT_ID)).build();
+
+        // then
+        assertEquals(List.of(ATTACHMENT_ID), request.attachmentIds());
+    }
+
+    @Test
+    void build_whenNoAttachments_isEmpty() {
+        // then — the list is empty (and immutable) when none are linked
+        assertTrue(validBuilder().build().attachmentIds().isEmpty());
     }
 
     @Test

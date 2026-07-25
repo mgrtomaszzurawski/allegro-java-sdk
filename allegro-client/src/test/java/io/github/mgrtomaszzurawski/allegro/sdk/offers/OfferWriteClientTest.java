@@ -90,6 +90,8 @@ class OfferWriteClientTest {
     private static final String CATEGORY_ID = "257";
     private static final String AMOUNT = "199.99";
     private static final String CURRENCY_PLN = "PLN";
+    private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
+    private static final String ATTACHMENT_ID_JSON_PATH = "$.attachments[0].id";
     private static final String MARKETPLACE_ID = "allegro-cz";
     private static final String MARKETPLACE_AMOUNT = "899.00";
     private static final String MARKETPLACE_CURRENCY = "CZK";
@@ -750,6 +752,26 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(INLINE_CATEGORY_JSON_PATH, equalTo(INLINE_CATEGORY_ID)))
                 .withRequestBody(matchingJsonPath(INLINE_IMAGE_JSON_PATH, equalTo(INLINE_IMAGE)))
                 .withRequestBody(matchingJsonPath(INLINE_PARAM_JSON_PATH, equalTo(INLINE_PARAM_ID))));
+    }
+
+    @Test
+    void create_whenAttachmentIdsSet_serializesThemAsIdObjects(WireMockRuntimeInfo wmInfo) {
+        // given — a create linking an uploaded attachment by id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .attachmentIds(List.of(ATTACHMENT_ID))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — each attachment is wrapped as an {id:...} object in the attachments array
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(ATTACHMENT_ID_JSON_PATH, equalTo(ATTACHMENT_ID))));
     }
 
     @Test
