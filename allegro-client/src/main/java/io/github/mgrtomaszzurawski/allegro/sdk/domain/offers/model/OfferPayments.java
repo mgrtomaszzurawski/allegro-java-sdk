@@ -19,7 +19,11 @@ import org.jspecify.annotations.Nullable;
 public record OfferPayments(
         @Nullable InvoiceType invoice) {
 
-    /** The payment settings declaring the given invoice type for a write. */
+    /**
+     * The payment settings declaring the given invoice type for a write. Any modelled type is
+     * accepted here; {@link InvoiceType#UNKNOWN} (only reachable from a read) is rejected later
+     * by {@link #toRaw()} as it is not a value a client can request.
+     */
     public static OfferPayments of(InvoiceType invoice) {
         return new OfferPayments(Objects.requireNonNull(invoice, "invoice"));
     }

@@ -39,11 +39,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSe
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
@@ -170,6 +172,8 @@ class OfferWriteClientTest {
     private static final String MESSAGE_HINT_JSON_PATH = "$.messageToSellerSettings.hint";
     private static final String MESSAGE_MODE_REQUIRED = "REQUIRED";
     private static final String MESSAGE_HINT = "Leave your note here.";
+    private static final String PAYMENTS_INVOICE_JSON_PATH = "$.payments.invoice";
+    private static final String INVOICE_VAT = "VAT";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -627,6 +631,26 @@ class OfferWriteClientTest {
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(MESSAGE_MODE_JSON_PATH, equalTo(MESSAGE_MODE_REQUIRED)))
                 .withRequestBody(matchingJsonPath(MESSAGE_HINT_JSON_PATH, equalTo(MESSAGE_HINT))));
+    }
+
+    @Test
+    void create_whenPaymentsSet_serializesInvoiceType(WireMockRuntimeInfo wmInfo) {
+        // given — a create declaring the seller's invoice type
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .payments(OfferPayments.of(InvoiceType.VAT))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the invoice type maps to its wire enum name at the payments path
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PAYMENTS_INVOICE_JSON_PATH, equalTo(INVOICE_VAT))));
     }
 
     @Test
