@@ -6,17 +6,20 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.NoSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementQuantityQuantityRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsiblePersonRequestResponsiblePersonRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerIdRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerNameRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsiblePersonRequestResponsiblePersonRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementSafetyInformationResponseSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfResponsiblePersonRaw;
@@ -26,6 +29,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePersonRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -317,6 +321,50 @@ class ProductSetElementTest {
         // then
         assertThrows(IllegalArgumentException.class,
                 () -> new ResponsiblePersonRef(null, null));
+    }
+
+    @Test
+    void withSafetyInformation_whenText_writesTheSafetyBlock() {
+        // given — an explicit TEXT safety declaration attached to the element
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withSafetyInformation(SafetyInformation.text("Keep dry."));
+
+        // then — the element exposes it and toRaw emits the request safety block
+        assertEquals(SafetyInformation.TEXT, element.safetyInformation().type());
+        assertNotNull(element.toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void withSafetyInformation_preservedByLaterCopies() {
+        // given — safety set first, then another wither applied
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withSafetyInformation(SafetyInformation.text("Keep dry."))
+                .withResponsiblePerson(ResponsiblePersonRef.byId(PERSON_ID));
+
+        // then — the later copy carries the earlier safety information forward
+        assertEquals(SafetyInformation.TEXT, element.safetyInformation().type());
+    }
+
+    @Test
+    void toRaw_whenNoSafetyInformation_omitsIt() {
+        // then — a plain element writes no safetyInformation block
+        assertNull(ProductSetElement.of(PRODUCT_ID).toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void toRaw_whenReadOriginNoneSafety_omitsItInsteadOfThrowing() {
+        // given — an element read back with the read-only NONE safety form, then re-submitted
+        SaleProductOfferResponseV1AllOfProductSetRaw responseRaw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
+                        .safetyInformation(new ProductSetElementSafetyInformationResponseSafetyInformationRaw(
+                                new NoSafetyInformationRaw()
+                                        .type(NoSafetyInformationRaw.TypeEnum.NO_SAFETY_INFORMATION)));
+        ProductSetElement element = ProductSetElement.from(responseRaw);
+
+        // then — the write omits the non-sendable NONE block (round-trip does not throw)
+        assertEquals(SafetyInformation.NONE, element.safetyInformation().type());
+        assertNull(element.toRaw().getSafetyInformation());
     }
 
     private static ResponsiblePersonRef requirePerson(ProductSetElement element) {
