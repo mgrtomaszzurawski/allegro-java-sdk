@@ -23,6 +23,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.LocationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxRateRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
@@ -83,6 +85,10 @@ class OfferTest {
     private static final String EXTERNAL_ID = "SKU-12345";
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
+    private static final String TAX_SUBJECT = "GOODS";
+    private static final String TAX_EXEMPTION = "NONE";
+    private static final String TAX_RATE = "23";
+    private static final String TAX_COUNTRY = "PL";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -213,6 +219,41 @@ class OfferTest {
 
         // then
         assertNull(offer.businessOnly());
+    }
+
+    @Test
+    void from_whenTaxSettingsPresent_mapsRatesSubjectAndExemption() {
+        // given — a payload carrying VAT settings
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .taxSettings(new OfferTaxSettingsRaw()
+                        .subject(TAX_SUBJECT)
+                        .exemption(TAX_EXEMPTION)
+                        .rates(List.of(new OfferTaxRateRaw().rate(TAX_RATE).countryCode(TAX_COUNTRY))));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertEquals(TAX_SUBJECT, offer.taxSettings().subject());
+        assertEquals(TAX_EXEMPTION, offer.taxSettings().exemption());
+        assertEquals(TAX_RATE, offer.taxSettings().rates().get(0).rate());
+        assertEquals(TAX_COUNTRY, offer.taxSettings().rates().get(0).countryCode());
+    }
+
+    @Test
+    void from_whenTaxSettingsAbsent_leavesItNull() {
+        // given — a payload without a tax-settings block
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL);
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.taxSettings());
     }
 
     @Test

@@ -30,6 +30,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentTyp
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
@@ -93,6 +95,8 @@ final class OffersDemo {
     private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
     private static final String CREATE_BUSINESS_ONLY_PROPERTY = "demo.createBusinessOnly";
     private static final String CREATE_REPUBLISH_PROPERTY = "demo.createRepublish";
+    private static final String CREATE_TAX_RATE_PROPERTY = "demo.createTaxRate";
+    private static final String CREATE_TAX_COUNTRY_PROPERTY = "demo.createTaxCountry";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -304,6 +308,12 @@ final class OffersDemo {
                     .startingAt(OffsetDateTime.now(ZoneOffset.UTC).plusDays(SCHEDULE_DAYS_AHEAD))
                     .build());
         }
+        String taxRate = System.getProperty(CREATE_TAX_RATE_PROPERTY);
+        if (taxRate != null) {
+            String taxCountry = System.getProperty(CREATE_TAX_COUNTRY_PROPERTY, DEFAULT_COUNTRY_CODE);
+            builder.taxSettings(TaxSettings.builder()
+                    .rates(List.of(TaxRate.of(taxRate, taxCountry))).build());
+        }
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
@@ -314,6 +324,11 @@ final class OffersDemo {
                 System.out.println("create publication: status=" + created.status()
                         + ", republish=" + created.publication().republish()
                         + ", startingAt=" + created.publication().startingAt());
+            }
+            if (taxRate != null && created.taxSettings() != null) {
+                System.out.println("create taxSettings: subject=" + created.taxSettings().subject()
+                        + ", exemption=" + created.taxSettings().exemption()
+                        + ", rates=" + created.taxSettings().rates());
             }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());

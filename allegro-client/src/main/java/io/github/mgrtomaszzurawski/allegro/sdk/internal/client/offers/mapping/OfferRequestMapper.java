@@ -95,6 +95,9 @@ public final class OfferRequestMapper {
         if (request.publication() != null) {
             body.publication(publicationRawOf(request.publication()));
         }
+        if (request.taxSettings() != null) {
+            body.taxSettings(request.taxSettings().toRaw());
+        }
         return body;
     }
 

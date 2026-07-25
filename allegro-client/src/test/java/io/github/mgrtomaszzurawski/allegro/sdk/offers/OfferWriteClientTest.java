@@ -46,6 +46,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -146,6 +148,14 @@ class OfferWriteClientTest {
     private static final String PUBLICATION_DURATION_JSON_PATH = "$.publication.duration";
     private static final String PUBLICATION_STATUS_ACTIVE = "ACTIVE";
     private static final String PUBLICATION_DURATION_ISO = "PT72H";
+    private static final String TAX_RATE_JSON_PATH = "$.taxSettings.rates[0].rate";
+    private static final String TAX_COUNTRY_JSON_PATH = "$.taxSettings.rates[0].countryCode";
+    private static final String TAX_SUBJECT_JSON_PATH = "$.taxSettings.subject";
+    private static final String TAX_EXEMPTION_JSON_PATH = "$.taxSettings.exemption";
+    private static final String TAX_RATE = "23";
+    private static final String TAX_COUNTRY = "PL";
+    private static final String TAX_SUBJECT = "GOODS";
+    private static final String TAX_EXEMPTION = "NONE";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -529,6 +539,33 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(PUBLICATION_REPUBLISH_JSON_PATH, equalTo("true")))
                 .withRequestBody(matchingJsonPath(PUBLICATION_STARTING_AT_JSON_PATH))
                 .withRequestBody(matchingJsonPath(PUBLICATION_DURATION_JSON_PATH, equalTo(PUBLICATION_DURATION_ISO))));
+    }
+
+    @Test
+    void create_whenTaxSettingsSet_serializesTaxBlock(WireMockRuntimeInfo wmInfo) {
+        // given — a create declaring a VAT rate, subject and exemption
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .taxSettings(TaxSettings.builder()
+                        .subject(TAX_SUBJECT)
+                        .exemption(TAX_EXEMPTION)
+                        .rates(List.of(TaxRate.of(TAX_RATE, TAX_COUNTRY)))
+                        .build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the rate is an array element with rate/countryCode; subject/exemption are scalars
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(TAX_RATE_JSON_PATH, equalTo(TAX_RATE)))
+                .withRequestBody(matchingJsonPath(TAX_COUNTRY_JSON_PATH, equalTo(TAX_COUNTRY)))
+                .withRequestBody(matchingJsonPath(TAX_SUBJECT_JSON_PATH, equalTo(TAX_SUBJECT)))
+                .withRequestBody(matchingJsonPath(TAX_EXEMPTION_JSON_PATH, equalTo(TAX_EXEMPTION))));
     }
 
     @Test
