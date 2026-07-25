@@ -95,7 +95,7 @@ class CreateOfferRequestTest {
         // given
         OfferDelivery delivery = OfferDelivery.builder().shippingRatesId(SHIPPING_RATES_ID).build();
         AfterSalesServices afterSales =
-                AfterSalesServices.builder().impliedWarrantyId(IMPLIED_WARRANTY_ID).build();
+                AfterSalesServices.builder().impliedWarranty(NamedReference.byId(IMPLIED_WARRANTY_ID)).build();
 
         // when
         CreateOfferRequest request = validBuilder()

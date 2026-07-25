@@ -13,6 +13,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.WarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -21,54 +22,67 @@ class AfterSalesServicesTest {
     private static final String IMPLIED_WARRANTY_ID = "11111111-1111-1111-1111-111111111111";
     private static final String RETURN_POLICY_ID = "22222222-2222-2222-2222-222222222222";
     private static final String WARRANTY_ID = "33333333-3333-3333-3333-333333333333";
+    private static final String IMPLIED_WARRANTY_NAME = "Standard implied warranty";
     private static final String MALFORMED_ID = "not-a-uuid";
 
     @Test
-    void build_whenAllIdsSet_exposesEachValue() {
+    void build_whenAllReferencesById_exposesEachValue() {
         // when
         AfterSalesServices services = AfterSalesServices.builder()
-                .impliedWarrantyId(IMPLIED_WARRANTY_ID)
-                .returnPolicyId(RETURN_POLICY_ID)
-                .warrantyId(WARRANTY_ID)
+                .impliedWarranty(NamedReference.byId(IMPLIED_WARRANTY_ID))
+                .returnPolicy(NamedReference.byId(RETURN_POLICY_ID))
+                .warranty(NamedReference.byId(WARRANTY_ID))
                 .build();
 
         // then
-        assertEquals(IMPLIED_WARRANTY_ID, services.impliedWarrantyId());
-        assertEquals(RETURN_POLICY_ID, services.returnPolicyId());
-        assertEquals(WARRANTY_ID, services.warrantyId());
+        assertEquals(IMPLIED_WARRANTY_ID, services.impliedWarranty().id());
+        assertEquals(RETURN_POLICY_ID, services.returnPolicy().id());
+        assertEquals(WARRANTY_ID, services.warranty().id());
     }
 
     @Test
-    void build_whenNoIdsSet_leavesEveryFieldNull() {
+    void build_whenImpliedWarrantyByName_keepsTheNameFormWithoutUuidCheck() {
+        // when a reference is given by name (not a UUID), it is accepted as-is
+        AfterSalesServices services = AfterSalesServices.builder()
+                .impliedWarranty(NamedReference.byName(IMPLIED_WARRANTY_NAME))
+                .build();
+
+        // then the name form is carried and no id is set
+        assertEquals(IMPLIED_WARRANTY_NAME, services.impliedWarranty().name());
+        assertNull(services.impliedWarranty().id());
+    }
+
+    @Test
+    void build_whenNoReferencesSet_leavesEveryFieldNull() {
         // when
         AfterSalesServices services = AfterSalesServices.builder().build();
 
         // then
-        assertNull(services.impliedWarrantyId());
-        assertNull(services.returnPolicyId());
-        assertNull(services.warrantyId());
+        assertNull(services.impliedWarranty());
+        assertNull(services.returnPolicy());
+        assertNull(services.warranty());
     }
 
     @Test
     void toBuilder_whenRebuilt_preservesEveryField() {
         // given
         AfterSalesServices original = AfterSalesServices.builder()
-                .impliedWarrantyId(IMPLIED_WARRANTY_ID)
-                .returnPolicyId(RETURN_POLICY_ID)
-                .warrantyId(WARRANTY_ID)
+                .impliedWarranty(NamedReference.byId(IMPLIED_WARRANTY_ID))
+                .returnPolicy(NamedReference.byId(RETURN_POLICY_ID))
+                .warranty(NamedReference.byId(WARRANTY_ID))
                 .build();
 
         // when
         AfterSalesServices copy = original.toBuilder().build();
 
         // then
-        assertEquals(original.impliedWarrantyId(), copy.impliedWarrantyId());
-        assertEquals(original.returnPolicyId(), copy.returnPolicyId());
-        assertEquals(original.warrantyId(), copy.warrantyId());
+        assertEquals(original.impliedWarranty(), copy.impliedWarranty());
+        assertEquals(original.returnPolicy(), copy.returnPolicy());
+        assertEquals(original.warranty(), copy.warranty());
     }
 
     @Test
-    void from_whenResponsePresent_mapsEveryUuidAsString() {
+    void from_whenResponsePresent_mapsEveryUuidAsAnIdReference() {
         // given — a generated after-sales response block carrying UUID ids
         AfterSalesServicesRaw raw = new AfterSalesServicesRaw()
                 .impliedWarranty(new ImpliedWarrantyRaw().id(UUID.fromString(IMPLIED_WARRANTY_ID)))
@@ -78,10 +92,10 @@ class AfterSalesServicesTest {
         // when
         AfterSalesServices services = AfterSalesServices.from(raw);
 
-        // then
-        assertEquals(IMPLIED_WARRANTY_ID, services.impliedWarrantyId());
-        assertEquals(RETURN_POLICY_ID, services.returnPolicyId());
-        assertEquals(WARRANTY_ID, services.warrantyId());
+        // then each response id maps to an id reference
+        assertEquals(IMPLIED_WARRANTY_ID, services.impliedWarranty().id());
+        assertEquals(RETURN_POLICY_ID, services.returnPolicy().id());
+        assertEquals(WARRANTY_ID, services.warranty().id());
     }
 
     @Test
@@ -90,16 +104,17 @@ class AfterSalesServicesTest {
     }
 
     @Test
-    void builder_whenMalformedUuid_throwsIllegalArgumentFailFast() {
+    void builder_whenMalformedUuidById_throwsIllegalArgumentFailFast() {
         // then — a bad id is rejected at the point it is set, not deep in create()
         AfterSalesServices.Builder builder = AfterSalesServices.builder();
-        assertThrows(IllegalArgumentException.class, () -> builder.impliedWarrantyId(MALFORMED_ID));
-        assertThrows(IllegalArgumentException.class, () -> builder.returnPolicyId(MALFORMED_ID));
-        assertThrows(IllegalArgumentException.class, () -> builder.warrantyId(MALFORMED_ID));
+        NamedReference badReference = NamedReference.byId(MALFORMED_ID);
+        assertThrows(IllegalArgumentException.class, () -> builder.impliedWarranty(badReference));
+        assertThrows(IllegalArgumentException.class, () -> builder.returnPolicy(badReference));
+        assertThrows(IllegalArgumentException.class, () -> builder.warranty(badReference));
     }
 
     @Test
-    void from_whenPolicyAbsent_leavesThatIdNull() {
+    void from_whenPolicyAbsent_leavesThatReferenceNull() {
         // given — only an implied warranty is attached
         AfterSalesServicesRaw raw = new AfterSalesServicesRaw()
                 .impliedWarranty(new ImpliedWarrantyRaw().id(UUID.fromString(IMPLIED_WARRANTY_ID)));
@@ -108,8 +123,8 @@ class AfterSalesServicesTest {
         AfterSalesServices services = AfterSalesServices.from(raw);
 
         // then
-        assertEquals(IMPLIED_WARRANTY_ID, services.impliedWarrantyId());
-        assertNull(services.returnPolicyId());
-        assertNull(services.warrantyId());
+        assertEquals(IMPLIED_WARRANTY_ID, services.impliedWarranty().id());
+        assertNull(services.returnPolicy());
+        assertNull(services.warranty());
     }
 }
