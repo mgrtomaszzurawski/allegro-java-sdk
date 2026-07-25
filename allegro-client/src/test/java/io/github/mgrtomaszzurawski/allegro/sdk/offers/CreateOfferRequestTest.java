@@ -453,7 +453,7 @@ class CreateOfferRequestTest {
 
     @Test
     void build_whenNoAttachments_isEmpty() {
-        // then — the list is empty (and immutable) when none are linked
+        // then — the list is empty when none are linked
         assertTrue(validBuilder().build().attachmentIds().isEmpty());
     }
 
