@@ -32,6 +32,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
@@ -41,6 +42,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
@@ -138,6 +140,12 @@ class OfferWriteClientTest {
     private static final String LANGUAGE_JSON_PATH = "$.language";
     private static final String SIZE_TABLE_ID_JSON_PATH = "$.sizeTable.id";
     private static final String BUSINESS_ONLY_JSON_PATH = "$.b2b.buyableOnlyByBusiness";
+    private static final String PUBLICATION_STATUS_JSON_PATH = "$.publication.status";
+    private static final String PUBLICATION_REPUBLISH_JSON_PATH = "$.publication.republish";
+    private static final String PUBLICATION_STARTING_AT_JSON_PATH = "$.publication.startingAt";
+    private static final String PUBLICATION_DURATION_JSON_PATH = "$.publication.duration";
+    private static final String PUBLICATION_STATUS_ACTIVE = "ACTIVE";
+    private static final String PUBLICATION_DURATION_ISO = "PT72H";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -493,6 +501,34 @@ class OfferWriteClientTest {
         // then — the flag is wrapped as {b2b:{buyableOnlyByBusiness:true}}
         verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withRequestBody(matchingJsonPath(BUSINESS_ONLY_JSON_PATH, equalTo("true"))));
+    }
+
+    @Test
+    void create_whenPublicationSet_serializesPublicationBlock(WireMockRuntimeInfo wmInfo) {
+        // given — a create that publishes immediately, auto-relists, is scheduled and time-boxed
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .publication(PublicationSettings.builder()
+                        .status(OfferStatus.ACTIVE)
+                        .republish(Boolean.TRUE)
+                        .startingAt(SHIPMENT_DATE)
+                        .duration(Duration.ofHours(72))
+                        .build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the settings map onto the publication block (status enum name, ISO-8601 duration)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PUBLICATION_STATUS_JSON_PATH, equalTo(PUBLICATION_STATUS_ACTIVE)))
+                .withRequestBody(matchingJsonPath(PUBLICATION_REPUBLISH_JSON_PATH, equalTo("true")))
+                .withRequestBody(matchingJsonPath(PUBLICATION_STARTING_AT_JSON_PATH))
+                .withRequestBody(matchingJsonPath(PUBLICATION_DURATION_JSON_PATH, equalTo(PUBLICATION_DURATION_ISO))));
     }
 
     @Test

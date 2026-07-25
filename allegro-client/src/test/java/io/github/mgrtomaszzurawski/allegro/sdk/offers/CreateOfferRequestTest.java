@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
@@ -19,6 +20,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import java.util.List;
@@ -315,5 +317,27 @@ class CreateOfferRequestTest {
 
         // then
         assertNull(request.businessOnly());
+    }
+
+    @Test
+    void build_whenPublicationSet_exposesIt() {
+        // given — publish immediately and auto-relist
+        PublicationSettings publication = PublicationSettings.builder()
+                .status(OfferStatus.ACTIVE).republish(Boolean.TRUE).build();
+
+        // when
+        CreateOfferRequest request = validBuilder().publication(publication).build();
+
+        // then
+        assertEquals(publication, request.publication());
+    }
+
+    @Test
+    void build_whenPublicationNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.publication());
     }
 }

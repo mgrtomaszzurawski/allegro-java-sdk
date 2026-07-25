@@ -15,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfDeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
@@ -26,6 +27,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
@@ -90,7 +92,28 @@ public final class OfferRequestMapper {
         if (request.businessOnly() != null) {
             body.b2b(new B2bRaw().buyableOnlyByBusiness(request.businessOnly()));
         }
+        if (request.publication() != null) {
+            body.publication(publicationRawOf(request.publication()));
+        }
         return body;
+    }
+
+    /** The generated publication block for the SDK settings (only set fields are written). */
+    private static SaleProductOfferPublicationRequestRaw publicationRawOf(PublicationSettings settings) {
+        SaleProductOfferPublicationRequestRaw raw = new SaleProductOfferPublicationRequestRaw();
+        if (settings.status() != null) {
+            raw.status(settings.status().toRaw());
+        }
+        if (settings.startingAt() != null) {
+            raw.startingAt(settings.startingAt());
+        }
+        if (settings.republish() != null) {
+            raw.republish(settings.republish());
+        }
+        if (settings.duration() != null) {
+            raw.duration(settings.duration().toString());
+        }
+        return raw;
     }
 
     /** The partial edit body: only the fields the request changed. */

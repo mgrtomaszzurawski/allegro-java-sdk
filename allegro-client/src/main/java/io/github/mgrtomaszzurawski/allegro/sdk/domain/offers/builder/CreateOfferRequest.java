@@ -61,6 +61,7 @@ public final class CreateOfferRequest {
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
     private final @Nullable Boolean businessOnly;
+    private final @Nullable PublicationSettings publication;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -82,6 +83,7 @@ public final class CreateOfferRequest {
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
         this.businessOnly = builder.businessOnly;
+        this.publication = builder.publication;
     }
 
     /** The offer title. */
@@ -179,6 +181,11 @@ public final class CreateOfferRequest {
         return businessOnly;
     }
 
+    /** How the offer should be published (status/schedule/republish/duration), or {@code null} if not set. */
+    public @Nullable PublicationSettings publication() {
+        return publication;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -206,6 +213,7 @@ public final class CreateOfferRequest {
         private @Nullable String language;
         private @Nullable String sizeTableId;
         private @Nullable Boolean businessOnly;
+        private @Nullable PublicationSettings publication;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -334,6 +342,12 @@ public final class CreateOfferRequest {
         /** Restrict the offer to business buyers only (optional). */
         public Builder businessOnly(@Nullable Boolean businessOnly) {
             this.businessOnly = businessOnly;
+            return this;
+        }
+
+        /** Set how the offer should be published — status, schedule, republish, duration (optional). */
+        public Builder publication(@Nullable PublicationSettings publication) {
+            this.publication = publication;
             return this;
         }
 
