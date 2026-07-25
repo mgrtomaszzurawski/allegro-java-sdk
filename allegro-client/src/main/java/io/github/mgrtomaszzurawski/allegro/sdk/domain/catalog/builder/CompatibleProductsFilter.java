@@ -13,14 +13,15 @@ import org.jspecify.annotations.Nullable;
  * <p>A {@link Builder#type(String) type} is required — it names the kind of
  * compatible products, one of the values a category advertises as its
  * {@code itemsType} in {@code compatibility().supportedCategories()} (e.g.
- * {@code CAR}). The search is then narrowed by one of a
+ * {@code CAR}). The search must ALSO be narrowed by at least one of a
  * {@link Builder#groupId(String) group id} (from
  * {@code compatibility().productGroups(...)}), a TecDoc
  * {@link Builder#tecdocKTypNr(String) passenger} or
  * {@link Builder#tecdocNTypNr(String) commercial} vehicle number, or a free-text
- * {@link Builder#phrase(String) phrase}. When a phrase is set, Allegro returns all
- * matches at once (offset/limit are ignored), so the returned stream is a single
- * page.
+ * {@link Builder#phrase(String) phrase} — Allegro rejects a type-only query
+ * ({@code group.id is required}), so the builder enforces this fail-fast. When a
+ * phrase is set, Allegro returns all matches at once (offset/limit are ignored), so
+ * the returned stream is a single page.
  *
  * @since 0.2.0
  */
@@ -28,6 +29,9 @@ public final class CompatibleProductsFilter {
 
     private static final String ERR_NO_TYPE =
             "a compatible-products search requires a type (see supportedCategories() itemsType)";
+    private static final String ERR_NO_NARROWING =
+            "a compatible-products search requires at least one of groupId, tecdocKTypNr, "
+                    + "tecdocNTypNr or phrase (Allegro rejects a type-only query)";
 
     private final String type;
     private final @Nullable String groupId;
@@ -68,9 +72,14 @@ public final class CompatibleProductsFilter {
         return phrase;
     }
 
-    /** A filter of just a type (all narrowing filters default). */
-    public static CompatibleProductsFilter ofType(String type) {
-        return builder().type(type).build();
+    /** A filter narrowed to a product group. */
+    public static CompatibleProductsFilter inGroup(String type, String groupId) {
+        return builder().type(type).groupId(groupId).build();
+    }
+
+    /** A filter narrowed by a free-text phrase (returns a single page). */
+    public static CompatibleProductsFilter matching(String type, String phrase) {
+        return builder().type(type).phrase(phrase).build();
     }
 
     /** A new builder. */
@@ -126,11 +135,16 @@ public final class CompatibleProductsFilter {
         /**
          * Build the filter.
          *
-         * @throws IllegalStateException if no type is set
+         * @throws IllegalStateException if no type is set, or if none of
+         *     {@code groupId} / {@code tecdocKTypNr} / {@code tecdocNTypNr} /
+         *     {@code phrase} is set (Allegro rejects a type-only query)
          */
         public CompatibleProductsFilter build() {
             if (isBlank(type)) {
                 throw new IllegalStateException(ERR_NO_TYPE);
+            }
+            if (isBlank(groupId) && isBlank(tecdocKTypNr) && isBlank(tecdocNTypNr) && isBlank(phrase)) {
+                throw new IllegalStateException(ERR_NO_NARROWING);
             }
             return new CompatibleProductsFilter(this);
         }

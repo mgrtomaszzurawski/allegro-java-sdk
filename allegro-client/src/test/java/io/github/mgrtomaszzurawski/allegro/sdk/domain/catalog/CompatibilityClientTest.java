@@ -417,7 +417,7 @@ class CompatibilityClientTest {
             var compatibility = allegro.catalog().compatibility();
 
             // when — a bounded consumer takes only the first page's worth
-            long taken = compatibility.products(CompatibleProductsFilter.ofType(TEST_TYPE))
+            long taken = compatibility.products(CompatibleProductsFilter.inGroup(TEST_TYPE, TEST_GROUP_ID))
                     .limit(EXPECTED_TWO).count();
 
             // then — page two was NOT fetched (lazy)
@@ -426,7 +426,7 @@ class CompatibilityClientTest {
                     .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND)));
 
             // when — a full consumer drains both pages
-            long allProducts = compatibility.products(CompatibleProductsFilter.ofType(TEST_TYPE)).count();
+            long allProducts = compatibility.products(CompatibleProductsFilter.inGroup(TEST_TYPE, TEST_GROUP_ID)).count();
 
             // then — offset advanced to page two and the type filter survived the boundary
             assertEquals(EXPECTED_THREE, allProducts);
@@ -471,7 +471,7 @@ class CompatibilityClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             var stream = allegro.catalog().compatibility()
-                    .products(CompatibleProductsFilter.ofType(TEST_TYPE));
+                    .products(CompatibleProductsFilter.inGroup(TEST_TYPE, TEST_GROUP_ID));
 
             // then — the lazy stream surfaces the error when first consumed
             AllegroBadRequestException failure =
@@ -508,6 +508,14 @@ class CompatibilityClientTest {
         // then — a filter without a type is rejected fail-fast at build time
         assertThrows(IllegalStateException.class,
                 () -> CompatibleProductsFilter.builder().phrase(TEST_PHRASE).build());
+    }
+
+    @Test
+    void products_whenTypeOnlyNoNarrowing_throwsIllegalState() {
+        // then — Allegro rejects a type-only query (group.id required), so the builder
+        // fails fast when none of group/TecDoc/phrase narrows the search
+        assertThrows(IllegalStateException.class,
+                () -> CompatibleProductsFilter.builder().type(TEST_TYPE).build());
     }
 
     @Test
