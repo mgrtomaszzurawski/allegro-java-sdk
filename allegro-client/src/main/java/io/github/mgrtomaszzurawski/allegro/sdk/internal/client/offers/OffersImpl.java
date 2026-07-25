@@ -95,6 +95,8 @@ public final class OffersImpl implements Offers {
     private static final String PART_PRICE = "price";
     private static final String ERR_NO_PARTS = "at least one offer part is required";
     private static final String ERR_OFFER_ID = "offerId must not be null";
+    /** Marker in the create/edit response Location URL that precedes the async operation id. */
+    private static final String OPERATIONS_SEGMENT = "/operations/";
 
     private final HttpSupport http;
     private final OfferBatch batch;
@@ -174,17 +176,20 @@ public final class OffersImpl implements Offers {
     }
 
     /**
-     * The async create/edit operation id is the last path segment of the response {@code Location}
-     * URL ({@code .../sale/product-offers/{offerId}/operations/{operationId}}), or {@code null} when
-     * the server sends no such header.
+     * The async create/edit operation id is the segment after {@code /operations/} in the response
+     * {@code Location} URL ({@code .../sale/product-offers/{offerId}/operations/{operationId}}), or
+     * {@code null} when the server sends no such header (or one that is not an operations URL).
      */
     private static @Nullable String operationIdFrom(@Nullable String location) {
-        if (location == null || location.isBlank()) {
+        if (location == null) {
             return null;
         }
-        int lastSlash = location.lastIndexOf('/');
-        return lastSlash < 0 || lastSlash == location.length() - 1
-                ? null : location.substring(lastSlash + 1);
+        int marker = location.indexOf(OPERATIONS_SEGMENT);
+        if (marker < 0) {
+            return null;
+        }
+        String operationId = location.substring(marker + OPERATIONS_SEGMENT.length());
+        return operationId.isBlank() ? null : operationId;
     }
 
     @Override

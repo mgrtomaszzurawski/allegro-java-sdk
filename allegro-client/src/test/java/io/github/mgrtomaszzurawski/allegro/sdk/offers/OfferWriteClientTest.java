@@ -19,6 +19,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -62,6 +63,7 @@ class OfferWriteClientTest {
     private static final String TEST_TOKEN = "offers-write-token";
     private static final String CREATE_PATH = "/sale/product-offers";
     private static final String CREATED_OFFER_ID = "13579";
+    private static final String LOCATION_HEADER = "Location";
     private static final String CREATE_OPERATION_ID = "c12370ae-1612-48d9-9c3f-34e4d944c2c7";
     private static final String CREATE_LOCATION =
             "https://api.allegro.pl/sale/product-offers/" + CREATED_OFFER_ID
@@ -215,7 +217,7 @@ class OfferWriteClientTest {
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
-                        .withHeader("Location", CREATE_LOCATION)
+                        .withHeader(LOCATION_HEADER, CREATE_LOCATION)
                         .withBodyFile(OFFER_FIXTURE)));
 
         // when
@@ -505,6 +507,8 @@ class OfferWriteClientTest {
                         "{\"name\":\"" + EDIT_NAME + "\",\"stock\":{\"available\":" + EDIT_STOCK + "}}",
                         true, false)));
         assertEquals(CREATED_OFFER_ID, updated.id());
+        // no Location header on this stub → no async operation id surfaced (the plain-read contract)
+        assertNull(updated.operationId());
     }
 
     @Test
