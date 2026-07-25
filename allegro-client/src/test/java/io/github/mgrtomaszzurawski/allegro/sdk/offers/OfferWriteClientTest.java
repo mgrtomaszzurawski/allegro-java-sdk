@@ -34,6 +34,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
@@ -191,6 +192,17 @@ class OfferWriteClientTest {
     private static final String MESSAGE_HINT = "Leave your note here.";
     private static final String PAYMENTS_INVOICE_JSON_PATH = "$.payments.invoice";
     private static final String INVOICE_VAT = "VAT";
+    private static final String COMPAT_TEXT_TYPE_JSON_PATH = "$.compatibilityList.items[0].type";
+    private static final String COMPAT_TEXT_VALUE_JSON_PATH = "$.compatibilityList.items[0].text";
+    private static final String COMPAT_ID_TYPE_JSON_PATH = "$.compatibilityList.items[1].type";
+    private static final String COMPAT_ID_VALUE_JSON_PATH = "$.compatibilityList.items[1].id";
+    private static final String COMPAT_ID_INFO_JSON_PATH =
+            "$.compatibilityList.items[1].additionalInfo[0].value";
+    private static final String COMPAT_TEXT_LINE = "CITROEN C6 (TD_) 2005/09-2011/12 2.7 HDi 204KM/150kW";
+    private static final String COMPAT_PRODUCT_ID = "d04e8a0c-40a1-4c53-8902-ffee7261845e";
+    private static final String COMPAT_INFO_VALUE = "engine-2.7-HDi";
+    private static final String COMPAT_TYPE_TEXT = "TEXT";
+    private static final String COMPAT_TYPE_ID = "ID";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -336,6 +348,33 @@ class OfferWriteClientTest {
         assertEquals(PRODUCT_SET_QUANTITY, element.quantity());
         assertEquals(PRODUCER_ID, requireNonNull(element.responsibleProducer()).id());
         assertEquals(Boolean.TRUE, element.marketedBeforeGpsrObligation());
+    }
+
+    @Test
+    void create_whenCompatibilityListSet_serializesTextAndProductIdItems(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying a manual "fits to" list: one free-text line and one product id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addCompatibilityEntry(CompatibilityEntry.text(COMPAT_TEXT_LINE))
+                .addCompatibilityEntry(
+                        CompatibilityEntry.productId(COMPAT_PRODUCT_ID, List.of(COMPAT_INFO_VALUE)))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — both union kinds reach the body with their discriminator (TEXT+text, ID+id);
+        // the id item also carries its additional-info value
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(COMPAT_TEXT_TYPE_JSON_PATH, equalTo(COMPAT_TYPE_TEXT)))
+                .withRequestBody(matchingJsonPath(COMPAT_TEXT_VALUE_JSON_PATH, equalTo(COMPAT_TEXT_LINE)))
+                .withRequestBody(matchingJsonPath(COMPAT_ID_TYPE_JSON_PATH, equalTo(COMPAT_TYPE_ID)))
+                .withRequestBody(matchingJsonPath(COMPAT_ID_VALUE_JSON_PATH, equalTo(COMPAT_PRODUCT_ID)))
+                .withRequestBody(matchingJsonPath(COMPAT_ID_INFO_JSON_PATH, equalTo(COMPAT_INFO_VALUE))));
     }
 
     @Test

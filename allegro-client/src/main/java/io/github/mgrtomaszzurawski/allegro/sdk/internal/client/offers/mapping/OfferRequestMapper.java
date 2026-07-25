@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProduc
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListManualRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferRequestWholesalePriceListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
@@ -38,6 +39,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
@@ -106,6 +108,15 @@ public final class OfferRequestMapper {
         if (!request.productSet().isEmpty()) {
             body.productSet(productSetRawOf(request.productSet()));
         }
+        if (!request.compatibilityList().isEmpty()) {
+            body.compatibilityList(compatibilityListRawOf(request.compatibilityList()));
+        }
+    }
+
+    /** The generated manual "fits to" request body: each SDK entry becomes one union item, in order. */
+    private static CompatibilityListManualRequestRaw compatibilityListRawOf(List<CompatibilityEntry> entries) {
+        return new CompatibilityListManualRequestRaw()
+                .items(entries.stream().map(CompatibilityEntry::toRaw).toList());
     }
 
     /** Identity, language, size table, B2B, publication and VAT settings. */
