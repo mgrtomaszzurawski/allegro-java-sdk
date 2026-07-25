@@ -45,6 +45,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoPackageT
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
@@ -128,6 +129,8 @@ final class OffersDemo {
     private static final String CREATE_UPLOAD_ATTACHMENT_PROPERTY = "demo.createUploadAttachment";
     private static final String CREATE_MARKETPLACE_PRICE_PROPERTY = "demo.createMarketplacePrice";
     private static final String CREATE_MARKETPLACE_CURRENCY_PROPERTY = "demo.createMarketplaceCurrency";
+    private static final String CREATE_COMPAT_TEXT_PROPERTY = "demo.createCompatText";
+    private static final String CREATE_COMPAT_PRODUCT_ID_PROPERTY = "demo.createCompatProductId";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -400,6 +403,10 @@ final class OffersDemo {
             String marketplaceCurrency = System.getProperty(CREATE_MARKETPLACE_CURRENCY_PROPERTY, CURRENCY_PLN);
             builder.additionalMarketplacePrice(marketplaceId, Money.of(marketplacePrice, marketplaceCurrency));
         }
+        applyIfPresent(CREATE_COMPAT_TEXT_PROPERTY,
+                value -> builder.addCompatibilityEntry(CompatibilityEntry.text(value)));
+        applyIfPresent(CREATE_COMPAT_PRODUCT_ID_PROPERTY,
+                value -> builder.addCompatibilityEntry(CompatibilityEntry.productId(value)));
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);

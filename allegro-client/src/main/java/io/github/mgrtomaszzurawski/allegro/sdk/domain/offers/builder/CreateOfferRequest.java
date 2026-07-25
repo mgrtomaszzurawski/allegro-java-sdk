@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
@@ -63,6 +64,7 @@ public final class CreateOfferRequest {
     private final @Nullable OfferLocation location;
     private final List<OfferParameter> parameters;
     private final List<ProductSetElement> productSet;
+    private final List<CompatibilityEntry> compatibilityList;
     private final List<String> attachmentIds;
     private final @Nullable String externalId;
     private final @Nullable String language;
@@ -94,6 +96,7 @@ public final class CreateOfferRequest {
         this.location = builder.location;
         this.parameters = List.copyOf(builder.parameters);
         this.productSet = List.copyOf(builder.productSet);
+        this.compatibilityList = List.copyOf(builder.compatibilityList);
         this.attachmentIds = List.copyOf(builder.attachmentIds);
         this.externalId = builder.externalId;
         this.language = builder.language;
@@ -190,6 +193,11 @@ public final class CreateOfferRequest {
         return productSet;
     }
 
+    /** The offer's "fits to" ({@code compatibilityList}) entries, in the order added (possibly empty). */
+    public List<CompatibilityEntry> compatibilityList() {
+        return compatibilityList;
+    }
+
     /** The seller's own external identifier (your system's SKU/id) for the offer, or {@code null} if not set. */
     public @Nullable String externalId() {
         return externalId;
@@ -282,6 +290,7 @@ public final class CreateOfferRequest {
         private @Nullable OfferLocation location;
         private final List<OfferParameter> parameters = new ArrayList<>();
         private final List<ProductSetElement> productSet = new ArrayList<>();
+        private final List<CompatibilityEntry> compatibilityList = new ArrayList<>();
         private @Nullable String externalId;
         private @Nullable String language;
         private @Nullable String sizeTableId;
@@ -405,6 +414,20 @@ public final class CreateOfferRequest {
         /** Add a single product-set element (optional, non-null; call repeatedly to add several). */
         public Builder addProductSetElement(ProductSetElement element) {
             this.productSet.add(Objects.requireNonNull(element, "element"));
+            return this;
+        }
+
+        /** Replace the offer's "fits to" ({@code compatibilityList}) entries with the given list (optional, non-null). */
+        public Builder compatibilityList(List<CompatibilityEntry> compatibilityList) {
+            Objects.requireNonNull(compatibilityList, "compatibilityList");
+            this.compatibilityList.clear();
+            this.compatibilityList.addAll(compatibilityList);
+            return this;
+        }
+
+        /** Add a single "fits to" entry (optional, non-null; call repeatedly to add several). */
+        public Builder addCompatibilityEntry(CompatibilityEntry entry) {
+            this.compatibilityList.add(Objects.requireNonNull(entry, "entry"));
             return this;
         }
 

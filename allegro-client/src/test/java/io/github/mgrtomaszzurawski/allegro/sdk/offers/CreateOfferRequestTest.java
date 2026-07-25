@@ -13,6 +13,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
@@ -291,6 +292,23 @@ class CreateOfferRequestTest {
         assertEquals(1, request.productSet().size());
         assertEquals(PRODUCT_ID_B, request.productSet().get(0).productId());
         assertEquals(PRODUCT_SET_QUANTITY, request.productSet().get(0).quantity());
+    }
+
+    @Test
+    void compatibilityList_whenSetAsList_replacesTheAddedEntries() {
+        // given — a builder that already has one "fits to" entry added
+        CreateOfferRequest.Builder builder = validBuilder()
+                .addCompatibilityEntry(CompatibilityEntry.text("first line"));
+
+        // when — a bulk set replaces (does not append to) the accumulated entries
+        CreateOfferRequest request = builder
+                .compatibilityList(List.of(CompatibilityEntry.productId(PRODUCT_ID_B)))
+                .build();
+
+        // then — only the list's entry remains
+        assertEquals(1, request.compatibilityList().size());
+        assertEquals(CompatibilityEntry.Kind.PRODUCT_ID, request.compatibilityList().get(0).kind());
+        assertEquals(PRODUCT_ID_B, request.compatibilityList().get(0).productId());
     }
 
     @Test
