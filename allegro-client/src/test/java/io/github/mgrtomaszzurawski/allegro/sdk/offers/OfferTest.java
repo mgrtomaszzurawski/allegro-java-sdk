@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
@@ -167,6 +168,35 @@ class OfferTest {
         assertEquals(EXTERNAL_ID, offer.externalId());
         assertEquals(LANGUAGE, offer.language());
         assertEquals(SIZE_TABLE_ID, offer.sizeTableId());
+    }
+
+    @Test
+    void from_whenBusinessOnlyPresent_unwrapsTheFlag() {
+        // given — a payload restricting the offer to business buyers
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .b2b(new B2bRaw().buyableOnlyByBusiness(true));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — the nested flag is surfaced flat
+        assertEquals(Boolean.TRUE, offer.businessOnly());
+    }
+
+    @Test
+    void from_whenB2bBlockAbsent_leavesBusinessOnlyNull() {
+        // given — a payload without a b2b block
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL);
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.businessOnly());
     }
 
     @Test

@@ -137,6 +137,7 @@ class OfferWriteClientTest {
     private static final String EXTERNAL_ID_JSON_PATH = "$.external.id";
     private static final String LANGUAGE_JSON_PATH = "$.language";
     private static final String SIZE_TABLE_ID_JSON_PATH = "$.sizeTable.id";
+    private static final String BUSINESS_ONLY_JSON_PATH = "$.b2b.buyableOnlyByBusiness";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -472,6 +473,26 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(EXTERNAL_ID_JSON_PATH, equalTo(EXTERNAL_ID)))
                 .withRequestBody(matchingJsonPath(LANGUAGE_JSON_PATH, equalTo(LANGUAGE)))
                 .withRequestBody(matchingJsonPath(SIZE_TABLE_ID_JSON_PATH, equalTo(SIZE_TABLE_ID))));
+    }
+
+    @Test
+    void create_whenBusinessOnlySet_serializesB2bBlock(WireMockRuntimeInfo wmInfo) {
+        // given — a create restricted to business buyers
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .businessOnly(Boolean.TRUE)
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the flag is wrapped as {b2b:{buyableOnlyByBusiness:true}}
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(BUSINESS_ONLY_JSON_PATH, equalTo("true"))));
     }
 
     @Test
