@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.MessageToSellerSettingsRaw;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -22,14 +23,14 @@ public record MessageToSellerSettings(
         @Nullable MessageToSellerMode mode,
         @Nullable String hint) {
 
-    /** Settings with just a mode. */
+    /** Settings with just a mode (required). */
     public static MessageToSellerSettings of(MessageToSellerMode mode) {
-        return new MessageToSellerSettings(mode, null);
+        return new MessageToSellerSettings(Objects.requireNonNull(mode, "mode"), null);
     }
 
-    /** Settings with a mode and a buyer hint. */
-    public static MessageToSellerSettings of(MessageToSellerMode mode, String hint) {
-        return new MessageToSellerSettings(mode, hint);
+    /** Settings with a mode (required) and an optional buyer hint. */
+    public static MessageToSellerSettings of(MessageToSellerMode mode, @Nullable String hint) {
+        return new MessageToSellerSettings(Objects.requireNonNull(mode, "mode"), hint);
     }
 
     /** Project a generated settings block onto the consumer value, or {@code null}. */

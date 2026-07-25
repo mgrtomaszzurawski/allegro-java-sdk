@@ -335,9 +335,11 @@ final class OffersDemo {
         applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY, builder::wholesalePriceListId);
         String messageMode = System.getProperty(CREATE_MESSAGE_MODE_PROPERTY);
         if (messageMode != null) {
-            builder.messageToSellerSettings(MessageToSellerSettings.of(
-                    MessageToSellerMode.valueOf(messageMode),
-                    System.getProperty(CREATE_MESSAGE_HINT_PROPERTY)));
+            MessageToSellerMode mode = MessageToSellerMode.valueOf(messageMode);
+            String messageHint = System.getProperty(CREATE_MESSAGE_HINT_PROPERTY);
+            builder.messageToSellerSettings(messageHint == null
+                    ? MessageToSellerSettings.of(mode)
+                    : MessageToSellerSettings.of(mode, messageHint));
         }
         CreateOfferRequest request = builder.build();
         try {

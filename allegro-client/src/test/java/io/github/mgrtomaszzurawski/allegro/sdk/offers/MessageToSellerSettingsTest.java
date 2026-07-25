@@ -58,13 +58,25 @@ class MessageToSellerSettingsTest {
     }
 
     @Test
-    void mode_fromRaw_mapsKnownAndToleratesUnknown() {
-        // then — known values map, the open-api sentinel degrades to UNKNOWN, null stays null
+    void mode_fromRaw_mapsEveryKnownValueTheSentinelAndNull() {
+        // then — each known value maps 1:1, the open-api sentinel degrades to UNKNOWN, null stays null
         assertEquals(MessageToSellerMode.REQUIRED,
                 MessageToSellerMode.from(MessageToSellerSettingsRaw.ModeEnum.REQUIRED));
+        assertEquals(MessageToSellerMode.OPTIONAL,
+                MessageToSellerMode.from(MessageToSellerSettingsRaw.ModeEnum.OPTIONAL));
+        assertEquals(MessageToSellerMode.HIDDEN,
+                MessageToSellerMode.from(MessageToSellerSettingsRaw.ModeEnum.HIDDEN));
         assertEquals(MessageToSellerMode.UNKNOWN,
                 MessageToSellerMode.from(MessageToSellerSettingsRaw.ModeEnum.UNKNOWN_DEFAULT_OPEN_API));
         assertNull(MessageToSellerMode.from(null));
+    }
+
+    @Test
+    void mode_toRaw_mapsEveryRequestableValue() {
+        // then — each client-settable mode maps 1:1 to the generated enum
+        assertEquals(MessageToSellerSettingsRaw.ModeEnum.REQUIRED, MessageToSellerMode.REQUIRED.toRaw());
+        assertEquals(MessageToSellerSettingsRaw.ModeEnum.OPTIONAL, MessageToSellerMode.OPTIONAL.toRaw());
+        assertEquals(MessageToSellerSettingsRaw.ModeEnum.HIDDEN, MessageToSellerMode.HIDDEN.toRaw());
     }
 
     @Test
