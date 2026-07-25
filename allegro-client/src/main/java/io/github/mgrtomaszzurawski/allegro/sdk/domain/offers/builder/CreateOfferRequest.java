@@ -439,7 +439,9 @@ public final class CreateOfferRequest {
         /**
          * Publish the offer on an additional (foreign) marketplace at the given Buy Now price.
          * Call once per marketplace (e.g. {@code allegro-cz}); a repeated marketplace id replaces
-         * its price.
+         * its price. The price must use the marketplace's required currency (discover the eligible
+         * marketplaces and their currencies via {@code marketplaces().list()}) — the server returns
+         * a validation error otherwise; the SDK cannot check it (the valid set is account-dynamic).
          */
         public Builder additionalMarketplacePrice(String marketplaceId, Money price) {
             this.additionalMarketplacePrices.put(

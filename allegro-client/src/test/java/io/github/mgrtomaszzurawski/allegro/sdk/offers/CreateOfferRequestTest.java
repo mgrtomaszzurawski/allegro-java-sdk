@@ -412,8 +412,19 @@ class CreateOfferRequestTest {
 
     @Test
     void build_whenNoAdditionalMarketplaces_isEmpty() {
-        // then — the map is empty (and immutable) when nothing is cross-listed
+        // then — the map is empty when nothing is cross-listed
         assertTrue(validBuilder().build().additionalMarketplacePrices().isEmpty());
+    }
+
+    @Test
+    void additionalMarketplacePrices_whenExposed_isImmutable() {
+        // given — a request with one cross-listing
+        CreateOfferRequest request = validBuilder()
+                .additionalMarketplacePrice(MARKETPLACE_ID, MARKETPLACE_PRICE).build();
+
+        // then — the exposed map cannot be mutated by the caller
+        assertThrows(UnsupportedOperationException.class,
+                () -> request.additionalMarketplacePrices().put("allegro-sk", MARKETPLACE_PRICE));
     }
 
     @Test
@@ -421,6 +432,13 @@ class CreateOfferRequestTest {
         // then — a null price is rejected fail-fast
         assertThrows(NullPointerException.class,
                 () -> CreateOfferRequest.builder().additionalMarketplacePrice(MARKETPLACE_ID, null));
+    }
+
+    @Test
+    void additionalMarketplacePrice_whenMarketplaceIdNull_throws() {
+        // then — a null marketplace id is rejected fail-fast
+        assertThrows(NullPointerException.class,
+                () -> CreateOfferRequest.builder().additionalMarketplacePrice(null, MARKETPLACE_PRICE));
     }
 
     @Test

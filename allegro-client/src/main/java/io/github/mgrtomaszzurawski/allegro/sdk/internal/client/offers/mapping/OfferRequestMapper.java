@@ -19,6 +19,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationRequestRaw;
@@ -30,7 +31,6 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequest
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
