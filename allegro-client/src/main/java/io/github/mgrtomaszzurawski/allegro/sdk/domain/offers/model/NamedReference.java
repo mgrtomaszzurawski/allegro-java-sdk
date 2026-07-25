@@ -10,9 +10,10 @@ import org.jspecify.annotations.Nullable;
 /**
  * A reference to a seller-registered resource by exactly one of its {@linkplain #byId(String) id}
  * or its {@linkplain #byName(String) name}. Several create-request attachments — the seller's
- * contact, additional-services group, fundraising campaign and wholesale price list — accept
- * either form; Allegro resolves a name to the stored resource. On read those attachments come
- * back resolved to their id.
+ * contact, additional-services group, fundraising campaign, wholesale price list and the
+ * after-sales conditions (implied warranty / return policy / warranty) — accept either form;
+ * Allegro resolves a name to the stored resource. On read those attachments come back resolved
+ * to their id.
  *
  * <p>Use this shared value for the plain {@code {id|name}} attachments. The GPSR
  * {@link ResponsibleProducerRef}/{@link ResponsiblePersonRef} references keep their own types
