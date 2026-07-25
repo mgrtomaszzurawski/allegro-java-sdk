@@ -51,6 +51,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBat
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePersonRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
@@ -89,6 +90,7 @@ final class OffersDemo {
     private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
     private static final String CREATE_PRODUCT_ID_TYPE_PROPERTY = "demo.createProductIdType";
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
+    private static final String CREATE_RESPONSIBLE_PERSON_ID_PROPERTY = "demo.createResponsiblePersonId";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String CREATE_SHIPPING_RATES_ID_PROPERTY = "demo.createShippingRatesId";
     private static final String CREATE_PROVINCE_PROPERTY = "demo.createProvince";
@@ -282,6 +284,10 @@ final class OffersDemo {
             if (productIdType != null) {
                 element = element.withIdType(ProductIdType.valueOf(productIdType));
             }
+            String responsiblePersonId = System.getProperty(CREATE_RESPONSIBLE_PERSON_ID_PROPERTY);
+            if (responsiblePersonId != null) {
+                element = element.withResponsiblePerson(ResponsiblePersonRef.byId(responsiblePersonId));
+            }
             builder.addProductSetElement(element);
             System.out.println("create: sending productSet product=" + productId
                     + " quantity=" + quantity + (producerId == null ? "" : " producer=" + producerId));
@@ -363,6 +369,11 @@ final class OffersDemo {
             }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
+            if (System.getProperty(CREATE_RESPONSIBLE_PERSON_ID_PROPERTY) != null
+                    && !created.productSet().isEmpty()) {
+                System.out.println("create responsiblePerson: "
+                        + created.productSet().get(0).responsiblePerson());
+            }
             if (created.validation() != null) {
                 System.out.println("create validation: " + created.validation().errors().size()
                         + " error(s), " + created.validation().warnings().size() + " warning(s)"
