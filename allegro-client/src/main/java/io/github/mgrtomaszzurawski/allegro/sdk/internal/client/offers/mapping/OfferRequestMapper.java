@@ -4,6 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesRequestValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesRequestValueSellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestReturnPolicyRaw;
@@ -28,6 +30,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequest
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
@@ -38,7 +41,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReferenc
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -152,6 +157,20 @@ public final class OfferRequestMapper {
         if (request.payments() != null) {
             body.payments(request.payments().toRaw());
         }
+        if (!request.additionalMarketplacePrices().isEmpty()) {
+            body.additionalMarketplaces(additionalMarketplacesRawOf(request.additionalMarketplacePrices()));
+        }
+    }
+
+    /** The generated per-marketplace request values: each marketplace id maps to its Buy Now price. */
+    private static Map<String, AdditionalMarketplacesRequestValueRaw> additionalMarketplacesRawOf(
+            Map<String, Money> prices) {
+        Map<String, AdditionalMarketplacesRequestValueRaw> raw = new LinkedHashMap<>();
+        prices.forEach((marketplaceId, price) -> raw.put(marketplaceId,
+                new AdditionalMarketplacesRequestValueRaw().sellingMode(
+                        new AdditionalMarketplacesRequestValueSellingModeRaw()
+                                .price(new PriceRaw().amount(price.amount()).currency(price.currency())))));
+        return raw;
     }
 
     /**
