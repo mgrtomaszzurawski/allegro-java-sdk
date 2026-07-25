@@ -77,7 +77,8 @@ import org.jspecify.annotations.Nullable;
  *                       to poll processing; {@code null} on a plain read (create/edit only)
  * @param additionalMarketplaces the offer's per-marketplace listing (pricing + publication state),
  *                       keyed by marketplace id; empty when the offer is not cross-listed
- * @param attachmentIds  the ids of the attachments linked to the offer; empty when none
+ * @param attachmentIds  the ids of the attachments linked to the offer; empty when none. Resolve
+ *                       an id to its file name/url/type via {@code offers().media().getAttachment(id)}
  * @since 0.2.0
  */
 public record Offer(
