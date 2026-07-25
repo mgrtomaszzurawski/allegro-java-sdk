@@ -6,12 +6,15 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -55,9 +58,18 @@ public final class CreateOfferRequest {
     private final @Nullable OfferDescription description;
     private final @Nullable OfferLocation location;
     private final List<OfferParameter> parameters;
+    private final List<ProductSetElement> productSet;
     private final @Nullable String externalId;
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
+    private final @Nullable Boolean businessOnly;
+    private final @Nullable PublicationSettings publication;
+    private final @Nullable TaxSettings taxSettings;
+    private final @Nullable String contactId;
+    private final @Nullable String additionalServicesGroupId;
+    private final @Nullable String fundraisingCampaignId;
+    private final @Nullable String wholesalePriceListId;
+    private final @Nullable MessageToSellerSettings messageToSellerSettings;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -74,9 +86,18 @@ public final class CreateOfferRequest {
         this.description = builder.description;
         this.location = builder.location;
         this.parameters = List.copyOf(builder.parameters);
+        this.productSet = List.copyOf(builder.productSet);
         this.externalId = builder.externalId;
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
+        this.businessOnly = builder.businessOnly;
+        this.publication = builder.publication;
+        this.taxSettings = builder.taxSettings;
+        this.contactId = builder.contactId;
+        this.additionalServicesGroupId = builder.additionalServicesGroupId;
+        this.fundraisingCampaignId = builder.fundraisingCampaignId;
+        this.wholesalePriceListId = builder.wholesalePriceListId;
+        this.messageToSellerSettings = builder.messageToSellerSettings;
     }
 
     /** The offer title. */
@@ -149,6 +170,11 @@ public final class CreateOfferRequest {
         return parameters;
     }
 
+    /** The offer's product-set elements (product bindings), in the order added (possibly empty). */
+    public List<ProductSetElement> productSet() {
+        return productSet;
+    }
+
     /** The seller's own external identifier (your system's SKU/id) for the offer, or {@code null} if not set. */
     public @Nullable String externalId() {
         return externalId;
@@ -162,6 +188,46 @@ public final class CreateOfferRequest {
     /** The id of the seller's size table to attach, or {@code null} if not set. */
     public @Nullable String sizeTableId() {
         return sizeTableId;
+    }
+
+    /** {@code true} to make the offer buyable only by business buyers, or {@code null} if not set. */
+    public @Nullable Boolean businessOnly() {
+        return businessOnly;
+    }
+
+    /** How the offer should be published (status/schedule/republish/duration), or {@code null} if not set. */
+    public @Nullable PublicationSettings publication() {
+        return publication;
+    }
+
+    /** The offer's VAT settings (rates/subject/exemption), or {@code null} if not set. */
+    public @Nullable TaxSettings taxSettings() {
+        return taxSettings;
+    }
+
+    /** The id of the seller's contact to attach to the offer, or {@code null} if not set. */
+    public @Nullable String contactId() {
+        return contactId;
+    }
+
+    /** The id of the seller's additional-services group to attach, or {@code null} if not set. */
+    public @Nullable String additionalServicesGroupId() {
+        return additionalServicesGroupId;
+    }
+
+    /** The id of the fundraising campaign to attach to the offer, or {@code null} if not set. */
+    public @Nullable String fundraisingCampaignId() {
+        return fundraisingCampaignId;
+    }
+
+    /** The id of the seller's wholesale price list to attach, or {@code null} if not set. */
+    public @Nullable String wholesalePriceListId() {
+        return wholesalePriceListId;
+    }
+
+    /** The buyer-note ("message to seller") settings, or {@code null} if not set. */
+    public @Nullable MessageToSellerSettings messageToSellerSettings() {
+        return messageToSellerSettings;
     }
 
     /** A new builder. */
@@ -186,9 +252,18 @@ public final class CreateOfferRequest {
         private @Nullable OfferDescription description;
         private @Nullable OfferLocation location;
         private final List<OfferParameter> parameters = new ArrayList<>();
+        private final List<ProductSetElement> productSet = new ArrayList<>();
         private @Nullable String externalId;
         private @Nullable String language;
         private @Nullable String sizeTableId;
+        private @Nullable Boolean businessOnly;
+        private @Nullable PublicationSettings publication;
+        private @Nullable TaxSettings taxSettings;
+        private @Nullable String contactId;
+        private @Nullable String additionalServicesGroupId;
+        private @Nullable String fundraisingCampaignId;
+        private @Nullable String wholesalePriceListId;
+        private @Nullable MessageToSellerSettings messageToSellerSettings;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -282,6 +357,20 @@ public final class CreateOfferRequest {
             return this;
         }
 
+        /** Replace the offer's product-set elements with the given list (optional, non-null). */
+        public Builder productSet(List<ProductSetElement> productSet) {
+            Objects.requireNonNull(productSet, "productSet");
+            this.productSet.clear();
+            this.productSet.addAll(productSet);
+            return this;
+        }
+
+        /** Add a single product-set element (optional, non-null; call repeatedly to add several). */
+        public Builder addProductSetElement(ProductSetElement element) {
+            this.productSet.add(Objects.requireNonNull(element, "element"));
+            return this;
+        }
+
         /** Set the seller's own external identifier for the offer (optional). */
         public Builder externalId(@Nullable String externalId) {
             this.externalId = externalId;
@@ -297,6 +386,54 @@ public final class CreateOfferRequest {
         /** Set the id of the seller's size table to attach (optional). */
         public Builder sizeTableId(@Nullable String sizeTableId) {
             this.sizeTableId = sizeTableId;
+            return this;
+        }
+
+        /** Restrict the offer to business buyers only (optional). */
+        public Builder businessOnly(@Nullable Boolean businessOnly) {
+            this.businessOnly = businessOnly;
+            return this;
+        }
+
+        /** Set how the offer should be published — status, schedule, republish, duration (optional). */
+        public Builder publication(@Nullable PublicationSettings publication) {
+            this.publication = publication;
+            return this;
+        }
+
+        /** Set the offer's VAT settings — rates, subject, exemption (optional). */
+        public Builder taxSettings(@Nullable TaxSettings taxSettings) {
+            this.taxSettings = taxSettings;
+            return this;
+        }
+
+        /** Attach the seller's contact by id (optional). */
+        public Builder contactId(@Nullable String contactId) {
+            this.contactId = contactId;
+            return this;
+        }
+
+        /** Attach the seller's additional-services group by id (optional). */
+        public Builder additionalServicesGroupId(@Nullable String additionalServicesGroupId) {
+            this.additionalServicesGroupId = additionalServicesGroupId;
+            return this;
+        }
+
+        /** Attach a fundraising campaign by id (optional). */
+        public Builder fundraisingCampaignId(@Nullable String fundraisingCampaignId) {
+            this.fundraisingCampaignId = fundraisingCampaignId;
+            return this;
+        }
+
+        /** Attach the seller's wholesale price list by id (optional). */
+        public Builder wholesalePriceListId(@Nullable String wholesalePriceListId) {
+            this.wholesalePriceListId = wholesalePriceListId;
+            return this;
+        }
+
+        /** Set the buyer-note ("message to seller") settings — mode and hint (optional). */
+        public Builder messageToSellerSettings(@Nullable MessageToSellerSettings messageToSellerSettings) {
+            this.messageToSellerSettings = messageToSellerSettings;
             return this;
         }
 

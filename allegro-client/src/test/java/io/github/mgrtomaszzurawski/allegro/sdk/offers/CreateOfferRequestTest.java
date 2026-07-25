@@ -11,15 +11,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -38,9 +45,16 @@ class CreateOfferRequestTest {
     private static final String PARAM_FREE_ID = "11324";
     private static final String PARAM_FREE_VALUE = "Cherry MX";
     private static final int EXPECTED_PARAM_COUNT = 2;
+    private static final String PRODUCT_ID_A = "8f2b1c00-0000-4000-8000-00000000000a";
+    private static final String PRODUCT_ID_B = "8f2b1c00-0000-4000-8000-00000000000b";
+    private static final int PRODUCT_SET_QUANTITY = 2;
     private static final String EXTERNAL_ID = "SKU-12345";
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
+    private static final String CONTACT_ID = "contact-1";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "campaign-1";
+    private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -256,6 +270,23 @@ class CreateOfferRequestTest {
     }
 
     @Test
+    void productSet_whenSetAsList_replacesTheAddedElements() {
+        // given — a builder that already has one product-set element added
+        CreateOfferRequest.Builder builder = validBuilder()
+                .addProductSetElement(ProductSetElement.of(PRODUCT_ID_A));
+
+        // when — a bulk set replaces (does not append to) the accumulated elements
+        CreateOfferRequest request = builder
+                .productSet(List.of(ProductSetElement.of(PRODUCT_ID_B, PRODUCT_SET_QUANTITY)))
+                .build();
+
+        // then — only the list's element remains
+        assertEquals(1, request.productSet().size());
+        assertEquals(PRODUCT_ID_B, request.productSet().get(0).productId());
+        assertEquals(PRODUCT_SET_QUANTITY, request.productSet().get(0).quantity());
+    }
+
+    @Test
     void build_whenOfferRefsSet_exposesThem() {
         // when — the external id, listing language and size-table id are set
         CreateOfferRequest request = validBuilder()
@@ -276,5 +307,118 @@ class CreateOfferRequestTest {
         assertNull(request.externalId());
         assertNull(request.language());
         assertNull(request.sizeTableId());
+    }
+
+    @Test
+    void build_whenBusinessOnlySet_exposesIt() {
+        // when — the offer is restricted to business buyers
+        CreateOfferRequest request = validBuilder().businessOnly(Boolean.TRUE).build();
+
+        // then
+        assertEquals(Boolean.TRUE, request.businessOnly());
+    }
+
+    @Test
+    void build_whenBusinessOnlyNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.businessOnly());
+    }
+
+    @Test
+    void build_whenPublicationSet_exposesIt() {
+        // given — publish immediately and auto-relist
+        PublicationSettings publication = PublicationSettings.builder()
+                .status(OfferStatus.ACTIVE).republish(Boolean.TRUE).build();
+
+        // when
+        CreateOfferRequest request = validBuilder().publication(publication).build();
+
+        // then
+        assertEquals(publication, request.publication());
+    }
+
+    @Test
+    void build_whenPublicationNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.publication());
+    }
+
+    @Test
+    void build_whenTaxSettingsSet_exposesIt() {
+        // given
+        TaxSettings taxSettings = TaxSettings.builder()
+                .subject("GOODS").rates(List.of(TaxRate.of("23", "PL"))).build();
+
+        // when
+        CreateOfferRequest request = validBuilder().taxSettings(taxSettings).build();
+
+        // then
+        assertEquals(taxSettings, request.taxSettings());
+    }
+
+    @Test
+    void build_whenTaxSettingsNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.taxSettings());
+    }
+
+    @Test
+    void build_whenReferenceIdsSet_exposeThem() {
+        // when — the contact, additional-services group and fundraising campaign are attached by id
+        CreateOfferRequest request = validBuilder()
+                .contactId(CONTACT_ID)
+                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
+                .fundraisingCampaignId(FUNDRAISING_ID)
+                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
+                .build();
+
+        // then
+        assertEquals(CONTACT_ID, request.contactId());
+        assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, request.fundraisingCampaignId());
+        assertEquals(WHOLESALE_PRICE_LIST_ID, request.wholesalePriceListId());
+    }
+
+    @Test
+    void build_whenReferenceIdsNotSet_leaveThemNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.contactId());
+        assertNull(request.additionalServicesGroupId());
+        assertNull(request.fundraisingCampaignId());
+        assertNull(request.wholesalePriceListId());
+    }
+
+    @Test
+    void build_whenMessageToSellerSettingsSet_exposesThem() {
+        // given
+        MessageToSellerSettings settings =
+                MessageToSellerSettings.of(MessageToSellerMode.REQUIRED, "note");
+
+        // when
+        CreateOfferRequest request = validBuilder().messageToSellerSettings(settings).build();
+
+        // then
+        assertEquals(settings, request.messageToSellerSettings());
+    }
+
+    @Test
+    void build_whenMessageToSellerSettingsNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.messageToSellerSettings());
     }
 }

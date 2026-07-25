@@ -17,7 +17,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -30,16 +32,24 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
@@ -59,6 +69,11 @@ class OfferWriteClientTest {
     private static final String TEST_TOKEN = "offers-write-token";
     private static final String CREATE_PATH = "/sale/product-offers";
     private static final String CREATED_OFFER_ID = "13579";
+    private static final String LOCATION_HEADER = "Location";
+    private static final String CREATE_OPERATION_ID = "c12370ae-1612-48d9-9c3f-34e4d944c2c7";
+    private static final String CREATE_LOCATION =
+            "https://api.allegro.pl/sale/product-offers/" + CREATED_OFFER_ID
+                    + "/operations/" + CREATE_OPERATION_ID;
     private static final String DELETE_OFFER_ID = "97531";
     private static final String DELETE_PATH = "/sale/offers/" + DELETE_OFFER_ID;
     private static final String EDIT_OFFER_ID = "654321";
@@ -128,11 +143,52 @@ class OfferWriteClientTest {
     private static final String EXTERNAL_ID_JSON_PATH = "$.external.id";
     private static final String LANGUAGE_JSON_PATH = "$.language";
     private static final String SIZE_TABLE_ID_JSON_PATH = "$.sizeTable.id";
+    private static final String BUSINESS_ONLY_JSON_PATH = "$.b2b.buyableOnlyByBusiness";
+    private static final String PUBLICATION_STATUS_JSON_PATH = "$.publication.status";
+    private static final String PUBLICATION_REPUBLISH_JSON_PATH = "$.publication.republish";
+    private static final String PUBLICATION_STARTING_AT_JSON_PATH = "$.publication.startingAt";
+    private static final String PUBLICATION_DURATION_JSON_PATH = "$.publication.duration";
+    private static final String PUBLICATION_STATUS_ACTIVE = "ACTIVE";
+    private static final String PUBLICATION_DURATION_ISO = "PT72H";
+    private static final String TAX_RATE_JSON_PATH = "$.taxSettings.rates[0].rate";
+    private static final String TAX_COUNTRY_JSON_PATH = "$.taxSettings.rates[0].countryCode";
+    private static final String TAX_SUBJECT_JSON_PATH = "$.taxSettings.subject";
+    private static final String TAX_EXEMPTION_JSON_PATH = "$.taxSettings.exemption";
+    private static final String TAX_RATE = "23";
+    private static final String TAX_COUNTRY = "PL";
+    private static final String TAX_SUBJECT = "GOODS";
+    private static final String TAX_EXEMPTION = "NONE";
+    private static final String CONTACT_ID_JSON_PATH = "$.contact.id";
+    private static final String ADDITIONAL_SERVICES_ID_JSON_PATH = "$.additionalServices.id";
+    private static final String FUNDRAISING_ID_JSON_PATH = "$.fundraisingCampaign.id";
+    private static final String CONTACT_ID = "contact-1";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "campaign-1";
+    private static final String WHOLESALE_PRICE_LIST_ID_JSON_PATH = "$.discounts.wholesalePriceList.id";
+    private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
+    private static final String MESSAGE_MODE_JSON_PATH = "$.messageToSellerSettings.mode";
+    private static final String MESSAGE_HINT_JSON_PATH = "$.messageToSellerSettings.hint";
+    private static final String MESSAGE_MODE_REQUIRED = "REQUIRED";
+    private static final String MESSAGE_HINT = "Leave your note here.";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
     private static final String PARAM_RANGE_FROM_JSON_PATH = "$.parameters[1].rangeValue.from";
     private static final String PARAM_RANGE_TO_JSON_PATH = "$.parameters[1].rangeValue.to";
+
+    private static final String PRODUCT_ID = "8f2b1c00-0000-4000-8000-000000000001";
+    private static final int PRODUCT_SET_QUANTITY = 2;
+    private static final String PRODUCER_ID = "44444444-4444-4444-4444-444444444444";
+    private static final String PRODUCT_ID_JSON_PATH = "$.productSet[0].product.id";
+    private static final String PRODUCT_QUANTITY_JSON_PATH = "$.productSet[0].quantity.value";
+    private static final String PRODUCER_TYPE_JSON_PATH = "$.productSet[0].responsibleProducer.type";
+    private static final String PRODUCER_ID_JSON_PATH = "$.productSet[0].responsibleProducer.id";
+    private static final String MARKETED_BEFORE_JSON_PATH = "$.productSet[0].marketedBeforeGPSRObligation";
+    private static final String PRODUCER_TYPE_ID = "ID";
+    private static final String PRODUCT_SET_RESPONSE_BODY = ("{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"productSet\":[{\"product\":{\"id\":\"%s\"},\"quantity\":{\"value\":%d},"
+            + "\"responsibleProducer\":{\"id\":\"%s\"},\"marketedBeforeGPSRObligation\":true}]}")
+            .formatted(CREATED_OFFER_ID, NAME, PRODUCT_ID, PRODUCT_SET_QUANTITY, PRODUCER_ID);
 
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"bad name\",\"path\":\"name\"}]}";
@@ -194,6 +250,7 @@ class OfferWriteClientTest {
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withHeader(LOCATION_HEADER, CREATE_LOCATION)
                         .withBodyFile(OFFER_FIXTURE)));
 
         // when
@@ -208,8 +265,47 @@ class OfferWriteClientTest {
                         + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
                         + "\"stock\":{\"available\":%d}}").formatted(NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, STOCK),
                         true, false)));
-        // and the response is mapped to the created offer
+        // and the response is mapped to the created offer, with the async operation id parsed
+        // from the Location header so the caller can poll operationStatus(id, operationId)
         assertEquals(CREATED_OFFER_ID, created.id());
+        assertEquals(CREATE_OPERATION_ID, created.operationId());
+    }
+
+    @Test
+    void create_whenProductSetProvided_serializesBindingAndReadsItBack(WireMockRuntimeInfo wmInfo) {
+        // given — the create echoes a productized offer (product ref + GPSR producer)
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, TestHttpConstants.VND_ALLEGRO_V1)
+                        .withBody(PRODUCT_SET_RESPONSE_BODY)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME)
+                .categoryId(CATEGORY_ID)
+                .buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addProductSetElement(ProductSetElement.of(PRODUCT_ID, PRODUCT_SET_QUANTITY)
+                        .withResponsibleProducer(ResponsibleProducerRef.byId(PRODUCER_ID))
+                        .withMarketedBeforeGpsrObligation(true))
+                .build();
+
+        // when
+        Offer created = offers(wmInfo).create(request);
+
+        // then — the product binding + GPSR are on the wire (write mapping)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PRODUCT_ID_JSON_PATH, equalTo(PRODUCT_ID)))
+                .withRequestBody(matchingJsonPath(PRODUCT_QUANTITY_JSON_PATH,
+                        equalTo(String.valueOf(PRODUCT_SET_QUANTITY))))
+                .withRequestBody(matchingJsonPath(PRODUCER_TYPE_JSON_PATH, equalTo(PRODUCER_TYPE_ID)))
+                .withRequestBody(matchingJsonPath(PRODUCER_ID_JSON_PATH, equalTo(PRODUCER_ID)))
+                .withRequestBody(matchingJsonPath(MARKETED_BEFORE_JSON_PATH, equalTo("true"))));
+        // and the productSet is read back off the response (read mapping)
+        assertEquals(1, created.productSet().size());
+        ProductSetElement element = created.productSet().get(0);
+        assertEquals(PRODUCT_ID, element.productId());
+        assertEquals(PRODUCT_SET_QUANTITY, element.quantity());
+        assertEquals(PRODUCER_ID, requireNonNull(element.responsibleProducer()).id());
+        assertEquals(Boolean.TRUE, element.marketedBeforeGpsrObligation());
     }
 
     @Test
@@ -412,6 +508,128 @@ class OfferWriteClientTest {
     }
 
     @Test
+    void create_whenBusinessOnlySet_serializesB2bBlock(WireMockRuntimeInfo wmInfo) {
+        // given — a create restricted to business buyers
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .businessOnly(Boolean.TRUE)
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the flag is wrapped as {b2b:{buyableOnlyByBusiness:true}}
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(BUSINESS_ONLY_JSON_PATH, equalTo("true"))));
+    }
+
+    @Test
+    void create_whenPublicationSet_serializesPublicationBlock(WireMockRuntimeInfo wmInfo) {
+        // given — a create that publishes immediately, auto-relists, is scheduled and time-boxed
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .publication(PublicationSettings.builder()
+                        .status(OfferStatus.ACTIVE)
+                        .republish(Boolean.TRUE)
+                        .startingAt(SHIPMENT_DATE)
+                        .duration(Duration.ofHours(72))
+                        .build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the settings map onto the publication block (status enum name, ISO-8601 duration)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PUBLICATION_STATUS_JSON_PATH, equalTo(PUBLICATION_STATUS_ACTIVE)))
+                .withRequestBody(matchingJsonPath(PUBLICATION_REPUBLISH_JSON_PATH, equalTo("true")))
+                .withRequestBody(matchingJsonPath(PUBLICATION_STARTING_AT_JSON_PATH))
+                .withRequestBody(matchingJsonPath(PUBLICATION_DURATION_JSON_PATH, equalTo(PUBLICATION_DURATION_ISO))));
+    }
+
+    @Test
+    void create_whenTaxSettingsSet_serializesTaxBlock(WireMockRuntimeInfo wmInfo) {
+        // given — a create declaring a VAT rate, subject and exemption
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .taxSettings(TaxSettings.builder()
+                        .subject(TAX_SUBJECT)
+                        .exemption(TAX_EXEMPTION)
+                        .rates(List.of(TaxRate.of(TAX_RATE, TAX_COUNTRY)))
+                        .build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the rate is an array element with rate/countryCode; subject/exemption are scalars
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(TAX_RATE_JSON_PATH, equalTo(TAX_RATE)))
+                .withRequestBody(matchingJsonPath(TAX_COUNTRY_JSON_PATH, equalTo(TAX_COUNTRY)))
+                .withRequestBody(matchingJsonPath(TAX_SUBJECT_JSON_PATH, equalTo(TAX_SUBJECT)))
+                .withRequestBody(matchingJsonPath(TAX_EXEMPTION_JSON_PATH, equalTo(TAX_EXEMPTION))));
+    }
+
+    @Test
+    void create_whenReferenceIdsSet_serializesThemAsIdObjects(WireMockRuntimeInfo wmInfo) {
+        // given — a create attaching a contact, additional-services group and fundraising campaign by id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .contactId(CONTACT_ID)
+                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
+                .fundraisingCampaignId(FUNDRAISING_ID)
+                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — each reference is wrapped as an {id:...} object at its own path
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(CONTACT_ID_JSON_PATH, equalTo(CONTACT_ID)))
+                .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
+                .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID)))
+                .withRequestBody(matchingJsonPath(WHOLESALE_PRICE_LIST_ID_JSON_PATH, equalTo(WHOLESALE_PRICE_LIST_ID))));
+    }
+
+    @Test
+    void create_whenMessageToSellerSettingsSet_serializesModeAndHint(WireMockRuntimeInfo wmInfo) {
+        // given — a create requiring a buyer note with a hint
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .messageToSellerSettings(MessageToSellerSettings.of(MessageToSellerMode.REQUIRED, MESSAGE_HINT))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the mode maps to its enum name and the hint is a scalar
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(MESSAGE_MODE_JSON_PATH, equalTo(MESSAGE_MODE_REQUIRED)))
+                .withRequestBody(matchingJsonPath(MESSAGE_HINT_JSON_PATH, equalTo(MESSAGE_HINT))));
+    }
+
+    @Test
     void create_whenRejected_throwsBadRequestWithTypedFieldError(WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(post(urlEqualTo(CREATE_PATH))
@@ -444,6 +662,8 @@ class OfferWriteClientTest {
                         "{\"name\":\"" + EDIT_NAME + "\",\"stock\":{\"available\":" + EDIT_STOCK + "}}",
                         true, false)));
         assertEquals(CREATED_OFFER_ID, updated.id());
+        // no Location header on this stub → no async operation id surfaced (the plain-read contract)
+        assertNull(updated.operationId());
     }
 
     @Test

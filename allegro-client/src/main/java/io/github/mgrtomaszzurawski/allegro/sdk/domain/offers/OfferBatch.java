@@ -5,7 +5,11 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import java.util.List;
 
 /**
@@ -51,4 +55,44 @@ public interface OfferBatch {
      * @return the command report once every offer has been processed
      */
     BatchReport changeQuantities(List<String> offerIds, int quantity);
+
+    /**
+     * Apply per-offer Buy Now price and/or stock changes in one command, mixing
+     * FIXED / GAIN / PERCENTAGE adjustments across marketplaces. Unlike
+     * {@link #changePrices} and {@link #changeQuantities} (which set one fixed
+     * value across the given offers), each {@link BulkPriceStockModification}
+     * targets a single offer with its own price map and stock change.
+     *
+     * @param modifications one entry per offer to change (each with at least a
+     *     price or a stock change)
+     * @return the command report once every modification has been processed
+     */
+    PriceStockBatchReport modifyPricesAndStock(List<BulkPriceStockModification> modifications);
+
+    /**
+     * Assign or remove automatic-pricing rules on the request's offers in one
+     * command. An automatic-pricing rule recalculates an offer's Buy Now price to
+     * follow the market (e.g. the lowest Allegro price); this command attaches such
+     * a rule to — or removes it from — the given offers on one or more
+     * marketplaces. Defining the rules themselves is a separate concern (the
+     * pricing facade); this only applies existing rules to offers in bulk.
+     *
+     * @param request the offers and the per-marketplace rule assignments or
+     *     removals, built with {@link BatchPricingRulesRequest}
+     * @return the command report once every offer has been processed
+     */
+    BatchReport applyPricingRules(BatchPricingRulesRequest request);
+
+    /**
+     * Apply an offer-settings change to the request's offers in one command — the
+     * listing duration (a fixed length or unlimited) or the dispatch time. Unlike
+     * {@link #changePrices}/{@link #changeQuantities} (which set a single value
+     * across offers), the change is described by a {@link BatchModificationRequest},
+     * which requires exactly one field to change (Allegro rejects a command whose
+     * modification carries more than one element).
+     *
+     * @param modification the offers and the single field change to apply
+     * @return the command report once every offer has been processed
+     */
+    BatchReport modify(BatchModificationRequest modification);
 }
