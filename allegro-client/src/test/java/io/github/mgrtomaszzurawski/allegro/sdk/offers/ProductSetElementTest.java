@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +27,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePersonRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -317,6 +319,34 @@ class ProductSetElementTest {
         // then
         assertThrows(IllegalArgumentException.class,
                 () -> new ResponsiblePersonRef(null, null));
+    }
+
+    @Test
+    void withSafetyInformation_whenText_writesTheSafetyBlock() {
+        // given — an explicit TEXT safety declaration attached to the element
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withSafetyInformation(SafetyInformation.text("Keep dry."));
+
+        // then — the element exposes it and toRaw emits the request safety block
+        assertEquals(SafetyInformation.TEXT, element.safetyInformation().type());
+        assertNotNull(element.toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void withSafetyInformation_preservedByLaterCopies() {
+        // given — safety set first, then another wither applied
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withSafetyInformation(SafetyInformation.text("Keep dry."))
+                .withResponsiblePerson(ResponsiblePersonRef.byId(PERSON_ID));
+
+        // then — the later copy carries the earlier safety information forward
+        assertEquals(SafetyInformation.TEXT, element.safetyInformation().type());
+    }
+
+    @Test
+    void toRaw_whenNoSafetyInformation_omitsIt() {
+        // then — a plain element writes no safetyInformation block
+        assertNull(ProductSetElement.of(PRODUCT_ID).toRaw().getSafetyInformation());
     }
 
     private static ResponsiblePersonRef requirePerson(ProductSetElement element) {

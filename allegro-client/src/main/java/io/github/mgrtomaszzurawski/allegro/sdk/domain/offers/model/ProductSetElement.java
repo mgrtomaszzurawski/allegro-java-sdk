@@ -23,11 +23,10 @@ import org.jspecify.annotations.Nullable;
  * product UUID). Defining a brand-new product inline, product attachments, and
  * {@code deposits} are not modelled here yet. On the WRITE side this element covers the
  * product reference plus the GPSR {@linkplain ResponsibleProducerRef responsible producer},
- * the {@linkplain ResponsiblePersonRef responsible person} and the pre-obligation marker,
- * which is what a productized category requires to be created; on the READ side it
- * additionally surfaces the product's catalogue {@link #productParameters() parameters}, its
- * {@link #aiCoCreated() AI-co-created flag}, and its GPSR {@link #safetyInformation() safety
- * information}.
+ * the {@linkplain ResponsiblePersonRef responsible person}, the pre-obligation marker and the
+ * GPSR {@link #safetyInformation() safety information}, which is what a productized category
+ * requires to be created; on the READ side it additionally surfaces the product's catalogue
+ * {@link #productParameters() parameters} and its {@link #aiCoCreated() AI-co-created flag}.
  *
  * <p>The same immutable value is used both ways: build one for {@code CreateOfferRequest}, or
  * read one back from an {@link Offer}. Optional fields are added with the {@code with…}
@@ -44,7 +43,9 @@ import org.jspecify.annotations.Nullable;
  * @param aiCoCreated                  {@code true} if the bound product's content was AI co-created,
  *                                     as reported by Allegro, or {@code null}
  * @param safetyInformation            the product's GPSR safety information (text/attachments/none)
- *                                     as read back, or {@code null} if the payload omits it
+ *                                     — read back from a response, or set for a write via
+ *                                     {@link #withSafetyInformation(SafetyInformation)}; {@code null}
+ *                                     when the payload omits it
  * @param idType                       how {@code productId} identifies the product on a WRITE —
  *                                     {@code null} means an Allegro catalogue product id, or set
  *                                     {@link ProductIdType#GTIN}/{@link ProductIdType#MPN} to
@@ -121,6 +122,17 @@ public record ProductSetElement(
                 idType, Objects.requireNonNull(person, "person"));
     }
 
+    /**
+     * A copy of this element with the GPSR safety information to send set. Build the argument
+     * with {@link SafetyInformation#text(String)} or {@link SafetyInformation#attachments(List)}
+     * — the "none" form cannot be sent on a request.
+     */
+    public ProductSetElement withSafetyInformation(SafetyInformation safetyInformation) {
+        return new ProductSetElement(productId, quantity, responsibleProducer,
+                marketedBeforeGpsrObligation, productParameters, aiCoCreated,
+                Objects.requireNonNull(safetyInformation, "safetyInformation"), idType, responsiblePerson);
+    }
+
     /** Project a generated response product-set element onto the consumer value. */
     public static ProductSetElement from(SaleProductOfferResponseV1AllOfProductSetRaw raw) {
         var product = raw.getProduct();
@@ -165,6 +177,9 @@ public record ProductSetElement(
         }
         if (responsiblePerson != null) {
             raw.responsiblePerson(responsiblePerson.toRaw());
+        }
+        if (safetyInformation != null) {
+            raw.safetyInformation(safetyInformation.toRaw());
         }
         return raw;
     }
