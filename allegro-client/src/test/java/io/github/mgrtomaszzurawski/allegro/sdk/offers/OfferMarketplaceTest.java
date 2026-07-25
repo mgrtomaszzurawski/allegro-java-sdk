@@ -97,6 +97,16 @@ class OfferMarketplaceTest {
     }
 
     @Test
+    void constructor_whenRefusalReasonsNull_normalizesToEmptyList() {
+        // given a value constructed directly with a null refusalReasons list
+        OfferMarketplace marketplace =
+                new OfferMarketplace(null, null, null, null, null, null);
+
+        // then the canonical constructor normalizes it to an immutable empty list
+        assertTrue(marketplace.refusalReasons().isEmpty());
+    }
+
+    @Test
     void from_whenBlocksAbsent_degradesToNullsAndEmptyReasons() {
         // given an empty per-marketplace value (no sellingMode, no publication)
         OfferMarketplace marketplace = OfferMarketplace.from(new AdditionalMarketplacesResponseValueRaw());

@@ -19,7 +19,9 @@ import org.jspecify.annotations.Nullable;
  * the per-marketplace selling terms (format and prices) and the publication outcome (state plus any
  * refusal reasons). Keyed by marketplace id in {@link Offer#additionalMarketplaces()}.
  *
- * @param format           the selling format on this marketplace, or {@code null}
+ * @param format           the selling format on this marketplace — {@code null} when the
+ *                         marketplace carries no selling mode, or {@link OfferFormat#UNKNOWN} when
+ *                         the format is present but not one this release models
  * @param price            the Buy Now price on this marketplace, or {@code null}
  * @param minimalPrice     the minimal (auction) price on this marketplace, or {@code null}
  * @param startingPrice    the starting (auction) price on this marketplace, or {@code null}

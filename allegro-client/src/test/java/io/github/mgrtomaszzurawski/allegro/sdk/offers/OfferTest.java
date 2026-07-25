@@ -11,10 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValuePublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ContactRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
@@ -50,8 +50,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionIt
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItemType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplacePublicationState;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferMarketplace;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
