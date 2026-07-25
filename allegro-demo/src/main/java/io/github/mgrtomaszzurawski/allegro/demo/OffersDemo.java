@@ -416,6 +416,9 @@ final class OffersDemo {
             if (invoiceType != null && created.payments() != null) {
                 System.out.println("create payments: invoice=" + created.payments().invoice());
             }
+            if (marketplaceId != null) {
+                System.out.println("create additionalMarketplaces: " + created.additionalMarketplaces());
+            }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
             if (System.getProperty(CREATE_RESPONSIBLE_PERSON_ID_PROPERTY) != null

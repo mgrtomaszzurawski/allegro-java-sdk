@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
@@ -15,7 +16,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -70,6 +73,8 @@ import org.jspecify.annotations.Nullable;
  * @param operationId    the id of the asynchronous create/edit operation that produced this
  *                       offer — pass it with {@link #id()} to {@code offers().operationStatus(...)}
  *                       to poll processing; {@code null} on a plain read (create/edit only)
+ * @param additionalMarketplaces the offer's per-marketplace listing (pricing + publication state),
+ *                       keyed by marketplace id; empty when the offer is not cross-listed
  * @since 0.2.0
  */
 public record Offer(
@@ -102,16 +107,19 @@ public record Offer(
         @Nullable String additionalServicesGroupId,
         @Nullable String fundraisingCampaignId,
         @Nullable String wholesalePriceListId,
-        @Nullable String operationId) {
+        @Nullable String operationId,
+        Map<String, OfferMarketplace> additionalMarketplaces) {
 
     /**
-     * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists to
-     * immutable copies so the non-null "empty when the payload omits them" contract holds on
-     * every construction path (the mapper already supplies immutable lists).
+     * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists and the
+     * {@code additionalMarketplaces} map to immutable copies so the non-null "empty when the payload
+     * omits them" contract holds on every construction path (the mapper already supplies immutable
+     * collections).
      */
     public Offer {
         parameters = List.copyOf(parameters);
         productSet = List.copyOf(productSet);
+        additionalMarketplaces = Map.copyOf(additionalMarketplaces);
     }
 
     /** Project a generated product-offer response onto the consumer record (a plain read). */
@@ -157,7 +165,19 @@ public record Offer(
                 additionalServicesGroupIdOf(raw),
                 fundraisingCampaignIdOf(raw),
                 wholesalePriceListIdOf(raw),
-                operationId);
+                operationId,
+                additionalMarketplacesOf(raw));
+    }
+
+    private static Map<String, OfferMarketplace> additionalMarketplacesOf(SaleProductOfferResponseV1Raw raw) {
+        Map<String, AdditionalMarketplacesResponseValueRaw> marketplaces = raw.getAdditionalMarketplaces();
+        if (marketplaces == null || marketplaces.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, OfferMarketplace> mapped = new LinkedHashMap<>();
+        marketplaces.forEach((marketplaceId, value) ->
+                mapped.put(marketplaceId, OfferMarketplace.from(value)));
+        return mapped;
     }
 
     private static @Nullable String contactIdOf(SaleProductOfferResponseV1Raw raw) {
