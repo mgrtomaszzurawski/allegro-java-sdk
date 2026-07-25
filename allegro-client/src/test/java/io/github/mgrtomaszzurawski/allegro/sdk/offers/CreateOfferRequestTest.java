@@ -295,6 +295,16 @@ class CreateOfferRequestTest {
     }
 
     @Test
+    void aiCoCreatedImageUrls_whenSet_exposesThem() {
+        // when — an offer image is declared as AI co-created
+        CreateOfferRequest request = validBuilder()
+                .aiCoCreatedImageUrls(List.of(IMAGE_URL)).build();
+
+        // then
+        assertEquals(List.of(IMAGE_URL), request.aiCoCreatedImageUrls());
+    }
+
+    @Test
     void compatibilityList_whenSetAsList_replacesTheAddedEntries() {
         // given — a builder that already has one "fits to" entry added
         CreateOfferRequest.Builder builder = validBuilder()

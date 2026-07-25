@@ -66,6 +66,7 @@ public final class CreateOfferRequest {
     private final List<ProductSetElement> productSet;
     private final List<CompatibilityEntry> compatibilityList;
     private final List<String> attachmentIds;
+    private final List<String> aiCoCreatedImageUrls;
     private final @Nullable String externalId;
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
@@ -98,6 +99,7 @@ public final class CreateOfferRequest {
         this.productSet = List.copyOf(builder.productSet);
         this.compatibilityList = List.copyOf(builder.compatibilityList);
         this.attachmentIds = List.copyOf(builder.attachmentIds);
+        this.aiCoCreatedImageUrls = List.copyOf(builder.aiCoCreatedImageUrls);
         this.externalId = builder.externalId;
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
@@ -141,6 +143,11 @@ public final class CreateOfferRequest {
     /** The ids of the seller's uploaded attachments to link to the offer; empty when none. */
     public List<String> attachmentIds() {
         return attachmentIds;
+    }
+
+    /** The URLs of the offer images declared as AI co-created, in the order added; empty when none. */
+    public List<String> aiCoCreatedImageUrls() {
+        return aiCoCreatedImageUrls;
     }
 
     /** The selling format, or {@code null} to default to {@code BUY_NOW}. */
@@ -280,6 +287,7 @@ public final class CreateOfferRequest {
         private @Nullable Integer availableStock;
         private List<String> imageUrls = List.of();
         private List<String> attachmentIds = List.of();
+        private List<String> aiCoCreatedImageUrls = List.of();
         private @Nullable OfferFormat sellingFormat;
         private @Nullable Money startingPrice;
         private @Nullable Money minimalPrice;
@@ -338,6 +346,12 @@ public final class CreateOfferRequest {
         /** Link the seller's uploaded attachments to the offer by id (optional). */
         public Builder attachmentIds(List<String> attachmentIds) {
             this.attachmentIds = List.copyOf(attachmentIds);
+            return this;
+        }
+
+        /** Declare the given offer image URLs as AI co-created (optional). */
+        public Builder aiCoCreatedImageUrls(List<String> aiCoCreatedImageUrls) {
+            this.aiCoCreatedImageUrls = List.copyOf(aiCoCreatedImageUrls);
             return this;
         }
 

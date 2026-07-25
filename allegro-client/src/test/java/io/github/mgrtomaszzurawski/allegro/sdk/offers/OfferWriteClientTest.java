@@ -203,6 +203,8 @@ class OfferWriteClientTest {
     private static final String COMPAT_INFO_VALUE = "engine-2.7-HDi";
     private static final String COMPAT_TYPE_TEXT = "TEXT";
     private static final String COMPAT_TYPE_ID = "ID";
+    private static final String AI_IMAGE_URL_JSON_PATH = "$.aiCoCreatedContent.images[0].url";
+    private static final String AI_IMAGE_URL = "https://a.allegroimg.com/original/11ea99/ai-co-created";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -375,6 +377,26 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(COMPAT_ID_TYPE_JSON_PATH, equalTo(COMPAT_TYPE_ID)))
                 .withRequestBody(matchingJsonPath(COMPAT_ID_VALUE_JSON_PATH, equalTo(COMPAT_PRODUCT_ID)))
                 .withRequestBody(matchingJsonPath(COMPAT_ID_INFO_JSON_PATH, equalTo(COMPAT_INFO_VALUE))));
+    }
+
+    @Test
+    void create_whenAiCoCreatedImagesSet_serializesThem(WireMockRuntimeInfo wmInfo) {
+        // given — a create declaring one offer image as AI co-created
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .aiCoCreatedImageUrls(List.of(AI_IMAGE_URL))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the image URL reaches the aiCoCreatedContent.images[] block
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(AI_IMAGE_URL_JSON_PATH, equalTo(AI_IMAGE_URL))));
     }
 
     @Test
