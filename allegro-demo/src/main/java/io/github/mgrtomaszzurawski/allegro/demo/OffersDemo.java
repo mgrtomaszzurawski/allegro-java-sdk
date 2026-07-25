@@ -22,6 +22,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTim
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
@@ -51,6 +52,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestExcept
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 
@@ -89,6 +92,7 @@ final class OffersDemo {
     private static final String CREATE_RETURN_POLICY_ID_PROPERTY = "demo.createReturnPolicyId";
     private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
     private static final String CREATE_BUSINESS_ONLY_PROPERTY = "demo.createBusinessOnly";
+    private static final String CREATE_REPUBLISH_PROPERTY = "demo.createRepublish";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -141,6 +145,7 @@ final class OffersDemo {
     private static final String CURRENCY_PLN = "PLN";
     private static final String OFFER_ID_SEPARATOR = ",";
     private static final int STREAM_LIMIT = 10;
+    private static final int SCHEDULE_DAYS_AHEAD = 7;
     private static final String ERR_NO_STORED_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
 
@@ -291,11 +296,24 @@ final class OffersDemo {
         if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
             builder.businessOnly(Boolean.TRUE);
         }
+        if (System.getProperty(CREATE_REPUBLISH_PROPERTY) != null) {
+            // A scheduled publication keeps the offer INACTIVE until startingAt, so the draft
+            // stays deletable — this lets the probe live-verify both republish and startingAt.
+            builder.publication(PublicationSettings.builder()
+                    .republish(Boolean.TRUE)
+                    .startingAt(OffsetDateTime.now(ZoneOffset.UTC).plusDays(SCHEDULE_DAYS_AHEAD))
+                    .build());
+        }
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
             if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
                 System.out.println("create b2b businessOnly=" + created.businessOnly());
+            }
+            if (System.getProperty(CREATE_REPUBLISH_PROPERTY) != null && created.publication() != null) {
+                System.out.println("create publication: status=" + created.status()
+                        + ", republish=" + created.publication().republish()
+                        + ", startingAt=" + created.publication().startingAt());
             }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
