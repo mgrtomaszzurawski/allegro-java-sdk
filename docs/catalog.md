@@ -168,6 +168,30 @@ yet reads as `UNKNOWN`. `validationRules` caps the list size (`maxRows`) for eit
 `maxCharactersPerLine` bounds a free-text row and is `null` for an `ID` category, whose items are
 picked rather than typed.
 
+### The compatible-products database
+
+For an `ID`-type category, the items come from Allegro's compatible-products database. Browse it by
+`type` (a value a category advertises as its `itemsType`, e.g. `CAR`), narrowed by a product group,
+a TecDoc vehicle number, or a free-text phrase. Both reads are lazy offset-paginated streams:
+
+```java
+// The coarse dimension first — e.g. vehicle makes.
+compatibility.productGroups(CompatibleProductGroupsFilter.ofType("CAR"))
+        .limit(20)
+        .forEach(group -> System.out.println(group.id() + "  " + group.text()));
+
+// Then the products within a group.
+compatibility.products(CompatibleProductsFilter.builder().type("CAR").groupId(groupId).build())
+        .limit(50)
+        .forEach(product -> System.out.println(product.id() + "  " + product.text()));
+```
+
+A `type` is required — `build()` fails fast without it. Each `CompatibleProduct` carries its `id()`
+(reuse it as a compatibility-list `ID` item), a `text()` label, the `groupId()` it belongs to, and
+`attributes()` that disambiguate it (`CompatibleProductAttribute` — an id such as `ENGINE_CODE` or
+`BRAND` and its values). A phrase search returns all matches on a single page (Allegro ignores
+offset/limit when a phrase is present), so the stream does not page further.
+
 ## Verifying against the sandbox
 
 The read-only demo scenario navigates the live category tree and confirms the mapped fields
@@ -175,6 +199,7 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 
 ```bash
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-categories
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products      -Pdemo.account=seller
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products             -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility        -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatible-products
 ```
