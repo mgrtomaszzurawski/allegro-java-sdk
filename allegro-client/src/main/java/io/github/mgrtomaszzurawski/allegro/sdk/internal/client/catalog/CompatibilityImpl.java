@@ -104,16 +104,20 @@ public final class CompatibilityImpl implements Compatibility {
         List<CompatibleProduct> items = raw == null
                 ? List.of()
                 : raw.stream().map(CompatibleProduct::from).toList();
-        return new PagedSpliterator.Page<>(
-                items, hasMore(filter.phrase(), offset, items.size(), response.getTotalCount()));
+        // A phrase search returns every match on the first page (Allegro ignores
+        // offset/limit when phrase is set), so it never advances — guarding against
+        // a non-advancing-offset fetch loop.
+        boolean more = filter.phrase() == null
+                && hasMoreByOffset(offset, items.size(), response.getTotalCount());
+        return new PagedSpliterator.Page<>(items, more);
     }
 
     private PagedSpliterator.Page<CompatibleProductGroup> fetchProductGroups(
             CompatibleProductGroupsFilter filter, int pageIndex) {
         int offset = pageIndex * PAGE_SIZE;
+        // The groups endpoint takes only type + offset/limit — no phrase narrowing.
         Query query = Query.create()
                 .add(PARAM_TYPE, filter.type())
-                .add(PARAM_PHRASE, filter.phrase())
                 .add(PARAM_LIMIT, PAGE_SIZE)
                 .add(PARAM_OFFSET, offset);
         CompatibleProductsGroupsDtoRaw response = http.request(OP_COMPATIBLE_PRODUCT_GROUPS)
@@ -125,20 +129,11 @@ public final class CompatibilityImpl implements Compatibility {
                 ? List.of()
                 : raw.stream().map(CompatibleProductGroup::from).toList();
         return new PagedSpliterator.Page<>(
-                items, hasMore(filter.phrase(), offset, items.size(), response.getTotalCount()));
+                items, hasMoreByOffset(offset, items.size(), response.getTotalCount()));
     }
 
-    /**
-     * Whether another page should be fetched. A phrase search returns every match on
-     * the first page (Allegro ignores offset/limit when {@code phrase} is set), so it
-     * never advances — guarding against a non-advancing-offset fetch loop. Otherwise
-     * advance while the offset consumed so far is below the reported total.
-     */
-    private static boolean hasMore(
-            @Nullable String phrase, int offset, int pageCount, @Nullable Integer totalCount) {
-        if (phrase != null || totalCount == null) {
-            return false;
-        }
-        return (long) offset + pageCount < totalCount;
+    /** Advance while the offset consumed so far is below the server's reported total. */
+    private static boolean hasMoreByOffset(int offset, int pageCount, @Nullable Integer totalCount) {
+        return totalCount != null && (long) offset + pageCount < totalCount;
     }
 }

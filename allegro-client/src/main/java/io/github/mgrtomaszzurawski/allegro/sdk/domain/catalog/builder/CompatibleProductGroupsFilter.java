@@ -12,9 +12,10 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>A {@link Builder#type(String) type} is required (a value a category advertises
  * as its {@code itemsType} in {@code compatibility().supportedCategories()}, e.g.
- * {@code CAR}); an optional {@link Builder#phrase(String) phrase} narrows the
- * groups. When a phrase is set, Allegro returns all matches at once (offset/limit
- * are ignored), so the returned stream is a single page.
+ * {@code CAR}); the groups of that type are returned lazily, offset-paginated. The
+ * groups endpoint takes no other filter — unlike
+ * {@link CompatibleProductsFilter products}, it has no phrase or group/TecDoc
+ * narrowing.
  *
  * @since 0.2.0
  */
@@ -24,11 +25,9 @@ public final class CompatibleProductGroupsFilter {
             "a compatible-product-groups search requires a type (see supportedCategories() itemsType)";
 
     private final String type;
-    private final @Nullable String phrase;
 
     private CompatibleProductGroupsFilter(Builder builder) {
         this.type = builder.type;
-        this.phrase = builder.phrase;
     }
 
     /** The compatible-products type; always set on a valid filter. */
@@ -36,12 +35,7 @@ public final class CompatibleProductGroupsFilter {
         return type;
     }
 
-    /** The free-text phrase to match, or {@code null}. */
-    public @Nullable String phrase() {
-        return phrase;
-    }
-
-    /** A filter of just a type (phrase defaults). */
+    /** A filter for the groups of a type. */
     public static CompatibleProductGroupsFilter ofType(String type) {
         return builder().type(type).build();
     }
@@ -53,24 +47,17 @@ public final class CompatibleProductGroupsFilter {
 
     /** A builder pre-filled from this filter. */
     public Builder toBuilder() {
-        return new Builder().type(type).phrase(phrase);
+        return new Builder().type(type);
     }
 
     /** Fluent builder for {@link CompatibleProductGroupsFilter}. */
     public static final class Builder {
 
         private @Nullable String type;
-        private @Nullable String phrase;
 
         /** The compatible-products type (a {@code supportedCategories()} {@code itemsType}). */
         public Builder type(@Nullable String type) {
             this.type = type;
-            return this;
-        }
-
-        /** Match by free-text phrase (offset/limit are ignored when set). */
-        public Builder phrase(@Nullable String phrase) {
-            this.phrase = phrase;
             return this;
         }
 
@@ -80,14 +67,10 @@ public final class CompatibleProductGroupsFilter {
          * @throws IllegalStateException if no type is set
          */
         public CompatibleProductGroupsFilter build() {
-            if (isBlank(type)) {
+            if (type == null || type.isBlank()) {
                 throw new IllegalStateException(ERR_NO_TYPE);
             }
             return new CompatibleProductGroupsFilter(this);
-        }
-
-        private static boolean isBlank(@Nullable String value) {
-            return value == null || value.isBlank();
         }
     }
 }

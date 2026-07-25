@@ -426,10 +426,10 @@ class CompatibilityClientTest {
                     .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND)));
 
             // when — a full consumer drains both pages
-            long all = compatibility.products(CompatibleProductsFilter.ofType(TEST_TYPE)).count();
+            long allProducts = compatibility.products(CompatibleProductsFilter.ofType(TEST_TYPE)).count();
 
             // then — offset advanced to page two and the type filter survived the boundary
-            assertEquals(EXPECTED_THREE, all);
+            assertEquals(EXPECTED_THREE, allProducts);
             verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
                     .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
                     .withQueryParam(QUERY_TYPE, equalTo(TEST_TYPE)));
@@ -514,7 +514,35 @@ class CompatibilityClientTest {
     void productGroups_whenNoType_throwsIllegalState() {
         // then — a groups filter without a type is rejected fail-fast at build time
         assertThrows(IllegalStateException.class,
-                () -> CompatibleProductGroupsFilter.builder().phrase(TEST_PHRASE).build());
+                () -> CompatibleProductGroupsFilter.builder().build());
+    }
+
+    @Test
+    void productGroups_whenMoreThanOnePage_paginatesByOffset(WireMockRuntimeInfo wmInfo) {
+        // given — two offset pages of groups (the live endpoint reports 185 for type=CAR)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("""
+                        {"groups":[{"id":"G1"},{"id":"G2"}],"count":2,"totalCount":3}
+                        """)));
+        stubFor(get(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("""
+                        {"groups":[{"id":"G3"}],"count":1,"totalCount":3}
+                        """)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — drain every group
+            long groups = allegro.catalog().compatibility()
+                    .productGroups(CompatibleProductGroupsFilter.ofType(TEST_TYPE)).count();
+
+            // then — offset advanced to the second page, carrying the type filter
+            assertEquals(EXPECTED_THREE, groups);
+            verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                    .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                    .withQueryParam(QUERY_TYPE, equalTo(TEST_TYPE)));
+        }
     }
 
     // ---- filter builder round-trips ----
@@ -558,16 +586,14 @@ class CompatibilityClientTest {
     }
 
     @Test
-    void compatibleProductGroupsFilter_whenAllFieldsSet_roundTripsAndToBuilderPreserves() {
-        // given / when
+    void compatibleProductGroupsFilter_roundTripsAndToBuilderPreservesType() {
+        // given / when — the groups filter is type-only (no phrase on this endpoint)
         CompatibleProductGroupsFilter filter = CompatibleProductGroupsFilter.builder()
-                .type(TEST_TYPE).phrase(TEST_PHRASE).build();
+                .type(TEST_TYPE).build();
         CompatibleProductGroupsFilter copy = filter.toBuilder().build();
 
         // then
         assertEquals(TEST_TYPE, filter.type());
-        assertEquals(TEST_PHRASE, filter.phrase());
         assertEquals(filter.type(), copy.type());
-        assertEquals(filter.phrase(), copy.phrase());
     }
 }

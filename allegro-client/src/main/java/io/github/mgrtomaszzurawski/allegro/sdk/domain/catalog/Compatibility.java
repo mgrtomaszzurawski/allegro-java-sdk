@@ -45,7 +45,7 @@ public interface Compatibility {
      * Lists the groups compatible products are organized into — the coarse
      * dimension (e.g. vehicle make/model) whose id narrows a {@link
      * #products(CompatibleProductsFilter) products} search. Paginated lazily by
-     * offset; a phrase search returns all matches at once.
+     * offset.
      *
      * @param filter the search criteria (a {@code type} is required)
      * @return a lazy stream of matching groups
