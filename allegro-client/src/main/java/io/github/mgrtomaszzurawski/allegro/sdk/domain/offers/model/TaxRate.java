@@ -13,13 +13,17 @@ import org.jspecify.annotations.Nullable;
  * <p>The same immutable value is used both ways: build one to set an offer's tax rate on
  * {@code CreateOfferRequest}, or read one back from an {@link Offer}.
  *
- * @param rate        the VAT rate as a percentage string (e.g. {@code "23"}, {@code "5"}), or {@code null}
+ * <p>The {@code rate} must be one of the exact value strings the seller's account offers for the
+ * category (two decimals, e.g. {@code "5.00"}, {@code "23.00"} — a bare {@code "5"} is rejected).
+ * The available values come from {@code GET /sale/tax-settings?category.id=…}.
+ *
+ * @param rate        the VAT rate as an exact percentage value string (e.g. {@code "23.00"}, {@code "5.00"}), or {@code null}
  * @param countryCode the marketplace country the rate applies to (e.g. {@code "PL"}), or {@code null}
  * @since 0.5.0
  */
 public record TaxRate(@Nullable String rate, @Nullable String countryCode) {
 
-    /** A rate for a country. */
+    /** A rate (e.g. {@code "5.00"}) for a marketplace country (e.g. {@code "PL"}). */
     public static TaxRate of(String rate, String countryCode) {
         return new TaxRate(rate, countryCode);
     }

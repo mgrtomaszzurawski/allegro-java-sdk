@@ -12,6 +12,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxRateRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -91,6 +92,48 @@ class TaxSettingsTest {
     void from_whenRawNull_returnsNull() {
         // then
         assertNull(TaxSettings.from(null));
+    }
+
+    @Test
+    void toRaw_whenRatesEmpty_leavesRatesEmpty() {
+        // given — only scalars set, no rates
+        TaxSettings settings = TaxSettings.builder().subject(SUBJECT).build();
+
+        // when
+        OfferTaxSettingsRaw raw = settings.toRaw();
+
+        // then — the empty-rates branch leaves the generated default (an empty list): the
+        // mapper never populates a rate, so nothing is written for it
+        assertTrue(raw.getRates().isEmpty());
+    }
+
+    @Test
+    void toRaw_whenScalarsUnset_omitsThem() {
+        // given — only a rate set, no subject/exemption
+        TaxSettings settings = TaxSettings.builder()
+                .rates(List.of(TaxRate.of(RATE, COUNTRY_CODE))).build();
+
+        // when
+        OfferTaxSettingsRaw raw = settings.toRaw();
+
+        // then — unset scalars are left off the body
+        assertNull(raw.getSubject());
+        assertNull(raw.getExemption());
+    }
+
+    @Test
+    void from_whenRateElementNull_filtersItOut() {
+        // given — a payload whose rates list carries a null element (defensive against a
+        // sparse array); the null must be dropped before the immutable copy
+        OfferTaxSettingsRaw raw = new OfferTaxSettingsRaw()
+                .rates(Arrays.asList(new OfferTaxRateRaw().rate(RATE).countryCode(COUNTRY_CODE), null));
+
+        // when
+        TaxSettings settings = TaxSettings.from(raw);
+
+        // then — only the non-null rate survives
+        assertEquals(1, settings.rates().size());
+        assertEquals(RATE, settings.rates().get(0).rate());
     }
 
     @Test

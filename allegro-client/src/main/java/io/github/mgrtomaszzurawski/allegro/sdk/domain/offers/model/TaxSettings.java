@@ -97,7 +97,7 @@ public record TaxSettings(
 
         /** Replace the declared VAT rates with the given list (non-null). */
         public Builder rates(List<TaxRate> rates) {
-            this.rates = List.copyOf(rates);
+            this.rates = List.copyOf(Objects.requireNonNull(rates, "rates"));
             return this;
         }
 
