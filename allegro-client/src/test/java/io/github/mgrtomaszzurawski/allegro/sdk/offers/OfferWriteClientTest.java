@@ -39,6 +39,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSe
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
@@ -164,6 +166,10 @@ class OfferWriteClientTest {
     private static final String FUNDRAISING_ID = "campaign-1";
     private static final String WHOLESALE_PRICE_LIST_ID_JSON_PATH = "$.discounts.wholesalePriceList.id";
     private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
+    private static final String MESSAGE_MODE_JSON_PATH = "$.messageToSellerSettings.mode";
+    private static final String MESSAGE_HINT_JSON_PATH = "$.messageToSellerSettings.hint";
+    private static final String MESSAGE_MODE_REQUIRED = "REQUIRED";
+    private static final String MESSAGE_HINT = "Leave your note here.";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -600,6 +606,27 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
                 .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID)))
                 .withRequestBody(matchingJsonPath(WHOLESALE_PRICE_LIST_ID_JSON_PATH, equalTo(WHOLESALE_PRICE_LIST_ID))));
+    }
+
+    @Test
+    void create_whenMessageToSellerSettingsSet_serializesModeAndHint(WireMockRuntimeInfo wmInfo) {
+        // given — a create requiring a buyer note with a hint
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .messageToSellerSettings(MessageToSellerSettings.of(MessageToSellerMode.REQUIRED, MESSAGE_HINT))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the mode maps to its enum name and the hint is a scalar
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(MESSAGE_MODE_JSON_PATH, equalTo(MESSAGE_MODE_REQUIRED)))
+                .withRequestBody(matchingJsonPath(MESSAGE_HINT_JSON_PATH, equalTo(MESSAGE_HINT))));
     }
 
     @Test

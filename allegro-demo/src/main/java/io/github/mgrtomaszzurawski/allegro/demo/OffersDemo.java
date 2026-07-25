@@ -29,6 +29,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDec
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
@@ -104,6 +106,8 @@ final class OffersDemo {
     private static final String CREATE_ADDITIONAL_SERVICES_ID_PROPERTY = "demo.createAdditionalServicesId";
     private static final String CREATE_FUNDRAISING_ID_PROPERTY = "demo.createFundraisingId";
     private static final String CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY = "demo.createWholesalePriceListId";
+    private static final String CREATE_MESSAGE_MODE_PROPERTY = "demo.createMessageMode";
+    private static final String CREATE_MESSAGE_HINT_PROPERTY = "demo.createMessageHint";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -329,6 +333,14 @@ final class OffersDemo {
         applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY, builder::additionalServicesGroupId);
         applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY, builder::fundraisingCampaignId);
         applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY, builder::wholesalePriceListId);
+        String messageMode = System.getProperty(CREATE_MESSAGE_MODE_PROPERTY);
+        if (messageMode != null) {
+            MessageToSellerMode mode = MessageToSellerMode.valueOf(messageMode);
+            String messageHint = System.getProperty(CREATE_MESSAGE_HINT_PROPERTY);
+            builder.messageToSellerSettings(messageHint == null
+                    ? MessageToSellerSettings.of(mode)
+                    : MessageToSellerSettings.of(mode, messageHint));
+        }
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
@@ -344,6 +356,10 @@ final class OffersDemo {
                 System.out.println("create taxSettings: subject=" + created.taxSettings().subject()
                         + ", exemption=" + created.taxSettings().exemption()
                         + ", rates=" + created.taxSettings().rates());
+            }
+            if (messageMode != null && created.messageToSellerSettings() != null) {
+                System.out.println("create messageToSeller: mode=" + created.messageToSellerSettings().mode()
+                        + ", hint=" + created.messageToSellerSettings().hint());
             }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());

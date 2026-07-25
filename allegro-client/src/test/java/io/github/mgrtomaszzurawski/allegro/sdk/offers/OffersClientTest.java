@@ -29,6 +29,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionIntercepto
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
@@ -61,7 +62,7 @@ class OffersClientTest {
     private static final String LIVE_GET_PATH = "/sale/product-offers/" + LIVE_OFFER_ID;
     private static final String LIVE_OFFER_FIXTURE = "offers/product-offer-live.json";
     private static final String LIVE_BASE_MARKETPLACE = "allegro-pl";
-    private static final String LIVE_MESSAGE_MODE = "OPTIONAL";
+    private static final MessageToSellerMode LIVE_MESSAGE_MODE = MessageToSellerMode.OPTIONAL;
     private static final String LIVE_INVOICE_TYPE = "VAT";
     private static final String NEW_AMOUNT = "149.50";
     private static final String CURRENCY_PLN = "PLN";

@@ -15,6 +15,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.Publication
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -396,5 +398,27 @@ class CreateOfferRequestTest {
         assertNull(request.additionalServicesGroupId());
         assertNull(request.fundraisingCampaignId());
         assertNull(request.wholesalePriceListId());
+    }
+
+    @Test
+    void build_whenMessageToSellerSettingsSet_exposesThem() {
+        // given
+        MessageToSellerSettings settings =
+                MessageToSellerSettings.of(MessageToSellerMode.REQUIRED, "note");
+
+        // when
+        CreateOfferRequest request = validBuilder().messageToSellerSettings(settings).build();
+
+        // then
+        assertEquals(settings, request.messageToSellerSettings());
+    }
+
+    @Test
+    void build_whenMessageToSellerSettingsNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.messageToSellerSettings());
     }
 }
