@@ -125,6 +125,7 @@ final class OffersDemo {
     private static final String CREATE_INVOICE_TYPE_PROPERTY = "demo.createInvoiceType";
     private static final String CREATE_MARKETPLACE_ID_PROPERTY = "demo.createMarketplaceId";
     private static final String CREATE_ATTACHMENT_ID_PROPERTY = "demo.createAttachmentId";
+    private static final String CREATE_UPLOAD_ATTACHMENT_PROPERTY = "demo.createUploadAttachment";
     private static final String CREATE_MARKETPLACE_PRICE_PROPERTY = "demo.createMarketplacePrice";
     private static final String CREATE_MARKETPLACE_CURRENCY_PROPERTY = "demo.createMarketplaceCurrency";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
@@ -377,6 +378,10 @@ final class OffersDemo {
         applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY,
                 value -> builder.wholesalePriceList(NamedReference.byId(value)));
         applyIfPresent(CREATE_ATTACHMENT_ID_PROPERTY, value -> builder.attachmentIds(List.of(value)));
+        String uploadAttachmentName = System.getProperty(CREATE_UPLOAD_ATTACHMENT_PROPERTY);
+        if (uploadAttachmentName != null) {
+            builder.attachmentIds(List.of(uploadAttachmentAndGetId(client, uploadAttachmentName)));
+        }
         String messageMode = System.getProperty(CREATE_MESSAGE_MODE_PROPERTY);
         if (messageMode != null) {
             MessageToSellerMode mode = MessageToSellerMode.valueOf(messageMode);
@@ -420,6 +425,9 @@ final class OffersDemo {
             }
             if (marketplaceId != null) {
                 System.out.println("create additionalMarketplaces: " + created.additionalMarketplaces());
+            }
+            if (!created.attachmentIds().isEmpty()) {
+                System.out.println("create attachmentIds: " + created.attachmentIds());
             }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
@@ -605,6 +613,16 @@ final class OffersDemo {
     private static void deleteDraft(AllegroClient client, String offerId) {
         client.offers().deleteDraft(offerId);
         System.out.println("deleteDraft: " + offerId + " deleted");
+    }
+
+    /** Declare + upload a minimal attachment and return its id, for linking on a create. */
+    private static String uploadAttachmentAndGetId(AllegroClient client, String fileName) {
+        OfferMedia media = client.offers().media();
+        OfferAttachment declared = media.createAttachment(
+                AttachmentDeclaration.of(AttachmentType.USER_MANUAL, fileName));
+        media.uploadAttachment(declared, MINIMAL_PDF.getBytes(StandardCharsets.UTF_8), PDF_CONTENT_TYPE);
+        System.out.println("uploadAttachment: id=" + declared.id() + " uploaded");
+        return declared.id();
     }
 
     private static void attachmentFlow(AllegroClient client, String fileName) {

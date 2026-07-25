@@ -33,6 +33,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
@@ -70,6 +71,8 @@ class OfferTest {
     private static final String MARKETPLACE_ID = "allegro-cz";
     private static final String MARKETPLACE_AMOUNT = "899.00";
     private static final String MARKETPLACE_CURRENCY = "CZK";
+    private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
+    private static final String ATTACHMENT_ID_2 = "5c7d1e20-0000-4000-8000-000000000def";
     private static final String CATEGORY_ID = "257";
     private static final String TEST_UNKNOWN_FORMAT = "FUTURE_FORMAT";
     private static final String TEST_UNKNOWN_STATUS = "FUTURE_STATUS";
@@ -220,6 +223,38 @@ class OfferTest {
         // then — an offer that is not cross-listed exposes an empty map
         SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw().id(OFFER_ID).name(NAME_FULL);
         assertTrue(Offer.from(raw).additionalMarketplaces().isEmpty());
+    }
+
+    @Test
+    void from_whenAttachmentsPresent_projectsTheirIds() {
+        // given — an offer with a linked attachment
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .attachments(List.of(new ProductOfferAttachmentInnerRaw().id(ATTACHMENT_ID)));
+
+        // then — the attachment ids are surfaced flat
+        assertEquals(List.of(ATTACHMENT_ID), Offer.from(raw).attachmentIds());
+    }
+
+    @Test
+    void from_whenNoAttachments_isEmpty() {
+        // then — an offer with no linked attachments exposes an empty list
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw().id(OFFER_ID).name(NAME_FULL);
+        assertTrue(Offer.from(raw).attachmentIds().isEmpty());
+    }
+
+    @Test
+    void from_whenAttachmentHasNullId_skipsItAndKeepsOrder() {
+        // given — attachments where one carries no id (spec-legal: id is not required)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .attachments(List.of(
+                        new ProductOfferAttachmentInnerRaw().id(ATTACHMENT_ID),
+                        new ProductOfferAttachmentInnerRaw(),
+                        new ProductOfferAttachmentInnerRaw().id(ATTACHMENT_ID_2)));
+
+        // then — the null id is dropped and the surviving ids keep their order
+        assertEquals(List.of(ATTACHMENT_ID, ATTACHMENT_ID_2), Offer.from(raw).attachmentIds());
     }
 
     @Test

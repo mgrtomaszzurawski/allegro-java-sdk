@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
@@ -19,6 +20,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -75,6 +77,8 @@ import org.jspecify.annotations.Nullable;
  *                       to poll processing; {@code null} on a plain read (create/edit only)
  * @param additionalMarketplaces the offer's per-marketplace listing (pricing + publication state),
  *                       keyed by marketplace id; empty when the offer is not cross-listed
+ * @param attachmentIds  the ids of the attachments linked to the offer; empty when none. Resolve
+ *                       an id to its file name/url/type via {@code offers().media().getAttachment(id)}
  * @since 0.2.0
  */
 public record Offer(
@@ -108,7 +112,8 @@ public record Offer(
         @Nullable String fundraisingCampaignId,
         @Nullable String wholesalePriceListId,
         @Nullable String operationId,
-        Map<String, OfferMarketplace> additionalMarketplaces) {
+        Map<String, OfferMarketplace> additionalMarketplaces,
+        List<String> attachmentIds) {
 
     /**
      * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists and the
@@ -120,6 +125,7 @@ public record Offer(
         parameters = List.copyOf(parameters);
         productSet = List.copyOf(productSet);
         additionalMarketplaces = Map.copyOf(additionalMarketplaces);
+        attachmentIds = List.copyOf(attachmentIds);
     }
 
     /** Project a generated product-offer response onto the consumer record (a plain read). */
@@ -166,7 +172,17 @@ public record Offer(
                 fundraisingCampaignIdOf(raw),
                 wholesalePriceListIdOf(raw),
                 operationId,
-                additionalMarketplacesOf(raw));
+                additionalMarketplacesOf(raw),
+                attachmentIdsOf(raw));
+    }
+
+    private static List<String> attachmentIdsOf(SaleProductOfferResponseV1Raw raw) {
+        List<ProductOfferAttachmentInnerRaw> attachments = raw.getAttachments();
+        if (attachments == null) {
+            return List.of();
+        }
+        return attachments.stream()
+                .map(ProductOfferAttachmentInnerRaw::getId).filter(Objects::nonNull).toList();
     }
 
     private static Map<String, OfferMarketplace> additionalMarketplacesOf(SaleProductOfferResponseV1Raw raw) {
