@@ -28,6 +28,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.Publication
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
@@ -97,6 +98,8 @@ final class OffersDemo {
     private static final String CREATE_RESPONSIBLE_PERSON_ID_PROPERTY = "demo.createResponsiblePersonId";
     private static final String CREATE_SAFETY_TEXT_PROPERTY = "demo.createSafetyText";
     private static final String CREATE_DEPOSIT_ID_PROPERTY = "demo.createDepositId";
+    private static final String CREATE_INLINE_PRODUCT_NAME_PROPERTY = "demo.createInlineProductName";
+    private static final String CREATE_INLINE_PRODUCT_CATEGORY_PROPERTY = "demo.createInlineProductCategory";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String CREATE_SHIPPING_RATES_ID_PROPERTY = "demo.createShippingRatesId";
     private static final String CREATE_PROVINCE_PROPERTY = "demo.createProvince";
@@ -302,6 +305,12 @@ final class OffersDemo {
             String depositId = System.getProperty(CREATE_DEPOSIT_ID_PROPERTY);
             if (depositId != null) {
                 element = element.withDeposits(List.of(ProductDeposit.of(depositId)));
+            }
+            String inlineProductName = System.getProperty(CREATE_INLINE_PRODUCT_NAME_PROPERTY);
+            String inlineProductCategory = System.getProperty(CREATE_INLINE_PRODUCT_CATEGORY_PROPERTY);
+            if (inlineProductName != null || inlineProductCategory != null) {
+                element = element.withInlineProduct(InlineProduct.builder()
+                        .name(inlineProductName).categoryId(inlineProductCategory).build());
             }
             builder.addProductSetElement(element);
             System.out.println("create: sending productSet product=" + productId

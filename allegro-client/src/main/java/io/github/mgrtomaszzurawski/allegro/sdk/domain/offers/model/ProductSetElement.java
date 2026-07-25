@@ -21,8 +21,9 @@ import org.jspecify.annotations.Nullable;
  * multipack has several, each with its own {@code quantity}.
  *
  * <p>This value references an EXISTING catalogue product by {@link #productId() id} (a
- * product UUID). Defining a brand-new product inline and product attachments are not modelled
- * here yet. On the WRITE side this element covers the product reference plus the GPSR
+ * product UUID), and can additionally carry a WRITE-only {@link #inlineProduct() inline product}
+ * definition to create or override the product in the same call. On the WRITE side this element
+ * covers the product reference plus the GPSR
  * {@linkplain ResponsibleProducerRef responsible producer}, the {@linkplain ResponsiblePersonRef
  * responsible person}, the pre-obligation marker, the GPSR {@link #safetyInformation() safety
  * information} and any returnable-packaging {@link #deposits() deposits}, which is what a
@@ -56,6 +57,9 @@ import org.jspecify.annotations.Nullable;
  *                                     {@code null}; read back id-only
  * @param deposits                     the returnable-packaging deposits on this element (empty
  *                                     when none), attached for a write or read back
+ * @param inlineProduct                a WRITE-only inline product definition (name/category/
+ *                                     images/parameters) to create or override the product in the
+ *                                     same call, or {@code null}; never populated on a read
  * @since 0.4.0
  */
 public record ProductSetElement(
@@ -68,7 +72,8 @@ public record ProductSetElement(
         @Nullable SafetyInformation safetyInformation,
         @Nullable ProductIdType idType,
         @Nullable ResponsiblePersonRef responsiblePerson,
-        List<ProductDeposit> deposits) {
+        List<ProductDeposit> deposits,
+        @Nullable InlineProduct inlineProduct) {
 
     private static final String ERR_QUANTITY = "quantity must be at least 1";
     private static final int DEFAULT_QUANTITY = 1;
@@ -90,26 +95,28 @@ public record ProductSetElement(
     /** A single unit of the given catalogue product. */
     public static ProductSetElement of(String productId) {
         return new ProductSetElement(
-                productId, DEFAULT_QUANTITY, null, null, List.of(), null, null, null, null, List.of());
+                productId, DEFAULT_QUANTITY, null, null, List.of(), null, null, null, null, List.of(), null);
     }
 
     /** {@code quantity} units of the given catalogue product. */
     public static ProductSetElement of(String productId, int quantity) {
         return new ProductSetElement(
-                productId, quantity, null, null, List.of(), null, null, null, null, List.of());
+                productId, quantity, null, null, List.of(), null, null, null, null, List.of(), null);
     }
 
     /** A copy of this element with the GPSR responsible producer set. */
     public ProductSetElement withResponsibleProducer(ResponsibleProducerRef producer) {
         return new ProductSetElement(productId, quantity,
                 Objects.requireNonNull(producer, "producer"), marketedBeforeGpsrObligation,
-                productParameters, aiCoCreated, safetyInformation, idType, responsiblePerson, deposits);
+                productParameters, aiCoCreated, safetyInformation, idType, responsiblePerson, deposits,
+                inlineProduct);
     }
 
     /** A copy of this element with the GPSR pre-obligation marker set. */
     public ProductSetElement withMarketedBeforeGpsrObligation(boolean marketed) {
         return new ProductSetElement(productId, quantity, responsibleProducer, marketed,
-                productParameters, aiCoCreated, safetyInformation, idType, responsiblePerson, deposits);
+                productParameters, aiCoCreated, safetyInformation, idType, responsiblePerson, deposits,
+                inlineProduct);
     }
 
     /**
@@ -120,14 +127,14 @@ public record ProductSetElement(
     public ProductSetElement withIdType(ProductIdType idType) {
         return new ProductSetElement(productId, quantity, responsibleProducer,
                 marketedBeforeGpsrObligation, productParameters, aiCoCreated, safetyInformation,
-                Objects.requireNonNull(idType, "idType"), responsiblePerson, deposits);
+                Objects.requireNonNull(idType, "idType"), responsiblePerson, deposits, inlineProduct);
     }
 
     /** A copy of this element with the GPSR responsible person set. */
     public ProductSetElement withResponsiblePerson(ResponsiblePersonRef person) {
         return new ProductSetElement(productId, quantity, responsibleProducer,
                 marketedBeforeGpsrObligation, productParameters, aiCoCreated, safetyInformation,
-                idType, Objects.requireNonNull(person, "person"), deposits);
+                idType, Objects.requireNonNull(person, "person"), deposits, inlineProduct);
     }
 
     /**
@@ -140,14 +147,24 @@ public record ProductSetElement(
         return new ProductSetElement(productId, quantity, responsibleProducer,
                 marketedBeforeGpsrObligation, productParameters, aiCoCreated,
                 Objects.requireNonNull(safetyInformation, "safetyInformation"), idType, responsiblePerson,
-                deposits);
+                deposits, inlineProduct);
     }
 
     /** A copy of this element with the returnable-packaging deposits set. */
     public ProductSetElement withDeposits(List<ProductDeposit> deposits) {
         return new ProductSetElement(productId, quantity, responsibleProducer,
                 marketedBeforeGpsrObligation, productParameters, aiCoCreated, safetyInformation,
-                idType, responsiblePerson, Objects.requireNonNull(deposits, "deposits"));
+                idType, responsiblePerson, Objects.requireNonNull(deposits, "deposits"), inlineProduct);
+    }
+
+    /**
+     * A copy of this element with a WRITE-only inline product definition
+     * (name/category/images/parameters) to create or override the product in the create call.
+     */
+    public ProductSetElement withInlineProduct(InlineProduct inlineProduct) {
+        return new ProductSetElement(productId, quantity, responsibleProducer,
+                marketedBeforeGpsrObligation, productParameters, aiCoCreated, safetyInformation,
+                idType, responsiblePerson, deposits, Objects.requireNonNull(inlineProduct, "inlineProduct"));
     }
 
     /** Project a generated response product-set element onto the consumer value. */
@@ -168,7 +185,8 @@ public record ProductSetElement(
                 SafetyInformation.from(raw.getSafetyInformation()),
                 null,
                 person == null ? null : ResponsiblePersonRef.from(person),
-                depositsOf(raw.getDeposits()));
+                depositsOf(raw.getDeposits()),
+                null);
     }
 
     private static List<OfferParameter> productParametersOf(
@@ -186,6 +204,9 @@ public record ProductSetElement(
         ProductOfferRaw productRaw = new ProductOfferRaw().id(productId);
         if (idType != null) {
             productRaw.idType(idType.toRaw());
+        }
+        if (inlineProduct != null) {
+            inlineProduct.applyTo(productRaw);
         }
         SaleProductOfferRequestV1AllOfProductSetRaw raw =
                 new SaleProductOfferRequestV1AllOfProductSetRaw()
