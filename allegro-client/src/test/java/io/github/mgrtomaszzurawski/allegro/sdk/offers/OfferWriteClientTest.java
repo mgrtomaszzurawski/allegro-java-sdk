@@ -43,6 +43,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescript
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
@@ -162,9 +163,13 @@ class OfferWriteClientTest {
     private static final String TAX_SUBJECT = "GOODS";
     private static final String TAX_EXEMPTION = "NONE";
     private static final String CONTACT_ID_JSON_PATH = "$.contact.id";
+    private static final String CONTACT_NAME_JSON_PATH = "$.contact.name";
     private static final String ADDITIONAL_SERVICES_ID_JSON_PATH = "$.additionalServices.id";
     private static final String FUNDRAISING_ID_JSON_PATH = "$.fundraisingCampaign.id";
     private static final String CONTACT_ID = "contact-1";
+    private static final String CONTACT_NAME = "Main contact card";
+    private static final String ADDITIONAL_SERVICES_NAME_JSON_PATH = "$.additionalServices.name";
+    private static final String ADDITIONAL_SERVICES_NAME = "Standard services group";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "campaign-1";
     private static final String WHOLESALE_PRICE_LIST_ID_JSON_PATH = "$.discounts.wholesalePriceList.id";
@@ -605,10 +610,10 @@ class OfferWriteClientTest {
         CreateOfferRequest request = CreateOfferRequest.builder()
                 .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
                 .availableStock(STOCK)
-                .contactId(CONTACT_ID)
-                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
-                .fundraisingCampaignId(FUNDRAISING_ID)
-                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
+                .contact(NamedReference.byId(CONTACT_ID))
+                .additionalServices(NamedReference.byId(ADDITIONAL_SERVICES_ID))
+                .fundraisingCampaign(NamedReference.byId(FUNDRAISING_ID))
+                .wholesalePriceList(NamedReference.byId(WHOLESALE_PRICE_LIST_ID))
                 .build();
 
         // when
@@ -620,6 +625,49 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
                 .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID)))
                 .withRequestBody(matchingJsonPath(WHOLESALE_PRICE_LIST_ID_JSON_PATH, equalTo(WHOLESALE_PRICE_LIST_ID))));
+    }
+
+    @Test
+    void create_whenContactByName_serializesTheNameForm(WireMockRuntimeInfo wmInfo) {
+        // given — the contact is attached by name instead of id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .contact(NamedReference.byName(CONTACT_NAME))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the contact is written as a {name:...} object (the exactly-one-of NamedReference
+        // invariant, unit-tested, guarantees no id accompanies it)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(CONTACT_NAME_JSON_PATH, equalTo(CONTACT_NAME))));
+    }
+
+    @Test
+    void create_whenAdditionalServicesByName_serializesTheNameForm(WireMockRuntimeInfo wmInfo) {
+        // given — the additional-services group is attached by name (a second ref through the
+        // shared namedRaw helper, so its per-type setName reference is locked too)
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .additionalServices(NamedReference.byName(ADDITIONAL_SERVICES_NAME))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the group is written as a {name:...} object at its own path
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_NAME_JSON_PATH,
+                        equalTo(ADDITIONAL_SERVICES_NAME))));
     }
 
     @Test

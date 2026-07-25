@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -67,10 +68,10 @@ public final class CreateOfferRequest {
     private final @Nullable PublicationSettings publication;
     private final @Nullable TaxSettings taxSettings;
     private final @Nullable OfferPayments payments;
-    private final @Nullable String contactId;
-    private final @Nullable String additionalServicesGroupId;
-    private final @Nullable String fundraisingCampaignId;
-    private final @Nullable String wholesalePriceListId;
+    private final @Nullable NamedReference contact;
+    private final @Nullable NamedReference additionalServices;
+    private final @Nullable NamedReference fundraisingCampaign;
+    private final @Nullable NamedReference wholesalePriceList;
     private final @Nullable MessageToSellerSettings messageToSellerSettings;
 
     private CreateOfferRequest(Builder builder) {
@@ -96,10 +97,10 @@ public final class CreateOfferRequest {
         this.publication = builder.publication;
         this.taxSettings = builder.taxSettings;
         this.payments = builder.payments;
-        this.contactId = builder.contactId;
-        this.additionalServicesGroupId = builder.additionalServicesGroupId;
-        this.fundraisingCampaignId = builder.fundraisingCampaignId;
-        this.wholesalePriceListId = builder.wholesalePriceListId;
+        this.contact = builder.contact;
+        this.additionalServices = builder.additionalServices;
+        this.fundraisingCampaign = builder.fundraisingCampaign;
+        this.wholesalePriceList = builder.wholesalePriceList;
         this.messageToSellerSettings = builder.messageToSellerSettings;
     }
 
@@ -213,24 +214,24 @@ public final class CreateOfferRequest {
         return payments;
     }
 
-    /** The id of the seller's contact to attach to the offer, or {@code null} if not set. */
-    public @Nullable String contactId() {
-        return contactId;
+    /** The seller's contact to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference contact() {
+        return contact;
     }
 
-    /** The id of the seller's additional-services group to attach, or {@code null} if not set. */
-    public @Nullable String additionalServicesGroupId() {
-        return additionalServicesGroupId;
+    /** The seller's additional-services group to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference additionalServices() {
+        return additionalServices;
     }
 
-    /** The id of the fundraising campaign to attach to the offer, or {@code null} if not set. */
-    public @Nullable String fundraisingCampaignId() {
-        return fundraisingCampaignId;
+    /** The fundraising campaign to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference fundraisingCampaign() {
+        return fundraisingCampaign;
     }
 
-    /** The id of the seller's wholesale price list to attach, or {@code null} if not set. */
-    public @Nullable String wholesalePriceListId() {
-        return wholesalePriceListId;
+    /** The seller's wholesale price list to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference wholesalePriceList() {
+        return wholesalePriceList;
     }
 
     /** The buyer-note ("message to seller") settings, or {@code null} if not set. */
@@ -268,10 +269,10 @@ public final class CreateOfferRequest {
         private @Nullable PublicationSettings publication;
         private @Nullable TaxSettings taxSettings;
         private @Nullable OfferPayments payments;
-        private @Nullable String contactId;
-        private @Nullable String additionalServicesGroupId;
-        private @Nullable String fundraisingCampaignId;
-        private @Nullable String wholesalePriceListId;
+        private @Nullable NamedReference contact;
+        private @Nullable NamedReference additionalServices;
+        private @Nullable NamedReference fundraisingCampaign;
+        private @Nullable NamedReference wholesalePriceList;
         private @Nullable MessageToSellerSettings messageToSellerSettings;
 
         /** The offer title (required). */
@@ -422,27 +423,27 @@ public final class CreateOfferRequest {
             return this;
         }
 
-        /** Attach the seller's contact by id (optional). */
-        public Builder contactId(@Nullable String contactId) {
-            this.contactId = contactId;
+        /** Attach the seller's contact by id or name (optional). */
+        public Builder contact(@Nullable NamedReference contact) {
+            this.contact = contact;
             return this;
         }
 
-        /** Attach the seller's additional-services group by id (optional). */
-        public Builder additionalServicesGroupId(@Nullable String additionalServicesGroupId) {
-            this.additionalServicesGroupId = additionalServicesGroupId;
+        /** Attach the seller's additional-services group by id or name (optional). */
+        public Builder additionalServices(@Nullable NamedReference additionalServices) {
+            this.additionalServices = additionalServices;
             return this;
         }
 
-        /** Attach a fundraising campaign by id (optional). */
-        public Builder fundraisingCampaignId(@Nullable String fundraisingCampaignId) {
-            this.fundraisingCampaignId = fundraisingCampaignId;
+        /** Attach a fundraising campaign by id or name (optional). */
+        public Builder fundraisingCampaign(@Nullable NamedReference fundraisingCampaign) {
+            this.fundraisingCampaign = fundraisingCampaign;
             return this;
         }
 
-        /** Attach the seller's wholesale price list by id (optional). */
-        public Builder wholesalePriceListId(@Nullable String wholesalePriceListId) {
-            this.wholesalePriceListId = wholesalePriceListId;
+        /** Attach the seller's wholesale price list by id or name (optional). */
+        public Builder wholesalePriceList(@Nullable NamedReference wholesalePriceList) {
+            this.wholesalePriceList = wholesalePriceList;
             return this;
         }
 

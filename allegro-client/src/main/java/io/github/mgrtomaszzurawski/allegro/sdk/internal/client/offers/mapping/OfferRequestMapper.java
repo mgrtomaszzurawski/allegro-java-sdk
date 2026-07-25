@@ -34,11 +34,14 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Builds the generated {@code SaleProductOfferRequestV1Raw} request body from the SDK's
@@ -120,20 +123,28 @@ public final class OfferRequestMapper {
     /** Seller-registered references (contact, services, fundraising, discounts) and buyer/payment settings. */
     private static void applyReferencesAndSettings(
             SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
-        if (request.contactId() != null) {
-            body.contact(new SaleProductOfferRequestBaseAllOfContactRaw().id(request.contactId()));
+        if (request.contact() != null) {
+            body.contact(namedRaw(request.contact(), SaleProductOfferRequestBaseAllOfContactRaw::new,
+                    SaleProductOfferRequestBaseAllOfContactRaw::setId,
+                    SaleProductOfferRequestBaseAllOfContactRaw::setName));
         }
-        if (request.additionalServicesGroupId() != null) {
-            body.additionalServices(
-                    new ProductOfferAdditionalServicesRequestRaw().id(request.additionalServicesGroupId()));
+        if (request.additionalServices() != null) {
+            body.additionalServices(namedRaw(request.additionalServices(),
+                    ProductOfferAdditionalServicesRequestRaw::new,
+                    ProductOfferAdditionalServicesRequestRaw::setId,
+                    ProductOfferAdditionalServicesRequestRaw::setName));
         }
-        if (request.fundraisingCampaignId() != null) {
-            body.fundraisingCampaign(
-                    new ProductOfferFundraisingCampaignRequestRaw().id(request.fundraisingCampaignId()));
+        if (request.fundraisingCampaign() != null) {
+            body.fundraisingCampaign(namedRaw(request.fundraisingCampaign(),
+                    ProductOfferFundraisingCampaignRequestRaw::new,
+                    ProductOfferFundraisingCampaignRequestRaw::setId,
+                    ProductOfferFundraisingCampaignRequestRaw::setName));
         }
-        if (request.wholesalePriceListId() != null) {
+        if (request.wholesalePriceList() != null) {
             body.discounts(new DiscountsProductOfferRequestRaw().wholesalePriceList(
-                    new DiscountsProductOfferRequestWholesalePriceListRaw().id(request.wholesalePriceListId())));
+                    namedRaw(request.wholesalePriceList(), DiscountsProductOfferRequestWholesalePriceListRaw::new,
+                            DiscountsProductOfferRequestWholesalePriceListRaw::setId,
+                            DiscountsProductOfferRequestWholesalePriceListRaw::setName)));
         }
         if (request.messageToSellerSettings() != null) {
             body.messageToSellerSettings(request.messageToSellerSettings().toRaw());
@@ -141,6 +152,21 @@ public final class OfferRequestMapper {
         if (request.payments() != null) {
             body.payments(request.payments().toRaw());
         }
+    }
+
+    /**
+     * Build a generated id-or-name reference DTO: sets the id when the reference carries one, else
+     * the name. The exactly-one-of invariant is enforced by {@link NamedReference} at construction.
+     */
+    private static <R> R namedRaw(NamedReference reference, Supplier<R> factory,
+            BiConsumer<R, String> setId, BiConsumer<R, String> setName) {
+        R raw = factory.get();
+        if (reference.id() != null) {
+            setId.accept(raw, reference.id());
+        } else {
+            setName.accept(raw, reference.name());
+        }
+        return raw;
     }
 
     /** The generated publication block for the SDK settings (only set fields are written). */
