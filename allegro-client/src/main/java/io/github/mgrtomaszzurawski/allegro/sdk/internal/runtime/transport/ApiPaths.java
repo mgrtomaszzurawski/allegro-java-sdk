@@ -175,6 +175,10 @@ public final class ApiPaths {
     /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
     public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
             "/sale/compatibility-list/supported-categories";
+    /** Compatible-products database search ({@code /sale/compatible-products}). */
+    public static final String COMPATIBLE_PRODUCTS = "/sale/compatible-products";
+    /** Compatible-product groups ({@code /sale/compatible-products/groups}). */
+    public static final String COMPATIBLE_PRODUCTS_GROUPS = "/sale/compatible-products/groups";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */

@@ -74,6 +74,26 @@ for both input types (2000 across the sample), while `maxCharactersPerLine` was 
 maps each to a `CompatibleCategory` with `CompatibilityInputType` (`ID`/`TEXT`, else `UNKNOWN`)
 and a nullable `CompatibilityValidationRules`.
 
+### Compatible-products reads: app-only, offset-paged, but phrase ignores offset (verified 2026-07-19, sandbox)
+
+`GET /sale/compatible-products` (`compatibility().products(...)`) and
+`GET /sale/compatible-products/groups` (`compatibility().productGroups(...)`) both succeed with an
+app-only client-credentials token despite the spec tag `sale:offers:read` — global reference data.
+Live probe (`type=CAR`): groups returned `count:3 / totalCount:185` (Abarth, AC, Acura, …) and
+products in the Abarth group returned `count:2 / totalCount:3`, each product carrying `id` (UUID),
+`text` (a long vehicle description), `group.id`, and an `attributes[]` of `{id, values[]}` with
+uppercase ids (`BODY`, `BRAND`, `ENGINE_CAPACITY`, `ENGINE_CODE`, `ENGINE_TYPE`, `GEAR_TYPE`,
+`K_TYP_NR`, `MODEL`, …) — 11–15 attributes per product. The SDK maps these to lazy offset-paginated
+`Stream<CompatibleProduct>` / `Stream<CompatibleProductGroup>` (`CompatibleProduct` = id + text +
+groupId + `CompatibleProductAttribute` list).
+
+The `type` query param is REQUIRED and is a free-form string (no spec enum) — its valid values are
+the `itemsType` a category advertises in `supportedCategories()` (`CAR`, `MOTORCYCLE_EXPLODED`,
+`BICYCLE`, `LAPTOP`, `PHONE`, `AGRICULTURAL_MACHINE`, `FORKLIFT`, `MOWER`, …). Per the spec, `limit`
+and `offset` are IGNORED when a `phrase` is present (all matches return on one response), so the SDK
+does NOT advance the stream for a phrase search — advancing would re-fetch the same page (a
+non-advancing-offset loop). Without a phrase, paging advances by offset against `totalCount`.
+
 ## Shipping & delivery (bucket C)
 
 ### `GET /sale/delivery-methods` works with an app-only token (verified 2026-07-18, sandbox)

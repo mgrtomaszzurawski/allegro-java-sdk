@@ -384,6 +384,17 @@ sections. Empty subsections are dropped by the release engineer when folding
   characters for free-text lists). Adds the `catalog-compatibility` demo scenario.
   First slice of `compatibility()`; the suggestion and compatible-product reads
   follow.
+- `catalog().compatibility().products(...)` and `productGroups(...)` — the
+  compatible-products database (`GET /sale/compatible-products`) and its groups
+  (`GET /sale/compatible-products/groups`), as lazy offset-paginated
+  `Stream<CompatibleProduct>` / `Stream<CompatibleProductGroup>`. A
+  `CompatibleProductsFilter` / `CompatibleProductGroupsFilter` carries the required
+  `type` (fail-fast) plus optional group/TecDoc/phrase narrowing; a phrase search
+  returns a single page (Allegro ignores offset/limit for a phrase, so the stream
+  does not advance). Each `CompatibleProduct` maps id, text, group id and
+  `CompatibleProductAttribute` descriptors. Live-verified through the SDK against
+  the sandbox (client-credentials). Adds the `catalog-compatible-products` demo
+  scenario.
 
 ### F — offers-extras
 
