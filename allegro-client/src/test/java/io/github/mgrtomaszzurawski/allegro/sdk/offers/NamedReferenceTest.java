@@ -18,15 +18,19 @@ class NamedReferenceTest {
     private static final String NAME = "Reference name";
 
     @Test
-    void byId_setsIdAndLeavesNameNull() {
+    void byId_whenGivenId_setsIdAndLeavesNameNull() {
+        // when a reference is built by id
         NamedReference reference = NamedReference.byId(ID);
+        // then only the id is populated
         assertEquals(ID, reference.id());
         assertNull(reference.name());
     }
 
     @Test
-    void byName_setsNameAndLeavesIdNull() {
+    void byName_whenGivenName_setsNameAndLeavesIdNull() {
+        // when a reference is built by name
         NamedReference reference = NamedReference.byName(NAME);
+        // then only the name is populated
         assertEquals(NAME, reference.name());
         assertNull(reference.id());
     }

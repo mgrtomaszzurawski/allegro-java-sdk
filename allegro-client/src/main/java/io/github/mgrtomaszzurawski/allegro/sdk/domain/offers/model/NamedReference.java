@@ -14,6 +14,11 @@ import org.jspecify.annotations.Nullable;
  * either form; Allegro resolves a name to the stored resource. On read those attachments come
  * back resolved to their id.
  *
+ * <p>Use this shared value for the plain {@code {id|name}} attachments. The GPSR
+ * {@link ResponsibleProducerRef}/{@link ResponsiblePersonRef} references keep their own types
+ * because their wire form is a discriminated {@code oneOf} (a {@code type: ID|NAME} field), not a
+ * plain object.
+ *
  * @param id   the registered resource id, or {@code null} when referenced by name
  * @param name the resource name, or {@code null} when referenced by id
  * @since 0.6.0

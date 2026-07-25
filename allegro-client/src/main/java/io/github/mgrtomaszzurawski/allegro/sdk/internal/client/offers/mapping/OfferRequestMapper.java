@@ -34,8 +34,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import java.util.List;
