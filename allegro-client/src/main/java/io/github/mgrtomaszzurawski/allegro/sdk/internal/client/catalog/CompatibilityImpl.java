@@ -6,23 +6,53 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListSupportedCategoriesDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListSupportedCategoriesDtoSupportedCategoriesInnerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductsGroupsDtoGroupsInnerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductsGroupsDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductsListDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Compatibility;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductGroupsFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleCategory;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProduct;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProductGroup;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Endpoint wrapper behind the {@link Compatibility} facade.
  * {@link #supportedCategories()} hits
- * {@code GET /sale/compatibility-list/supported-categories}.
+ * {@code GET /sale/compatibility-list/supported-categories}; {@link #products} hits
+ * {@code GET /sale/compatible-products} and {@link #productGroups} hits
+ * {@code GET /sale/compatible-products/groups}, both offset-paginated as lazy
+ * streams.
  *
  * @since 0.2.0
  */
 public final class CompatibilityImpl implements Compatibility {
 
+    private static final int PAGE_SIZE = 100;
+
     private static final String OP_SUPPORTED_CATEGORIES = "get compatibility supported categories";
+    private static final String OP_COMPATIBLE_PRODUCTS = "get compatible products";
+    private static final String OP_COMPATIBLE_PRODUCT_GROUPS = "get compatible product groups";
+
+    private static final String PARAM_TYPE = "type";
+    private static final String PARAM_GROUP_ID = "group.id";
+    private static final String PARAM_TECDOC_KTYP = "tecdoc.kTypNr";
+    private static final String PARAM_TECDOC_NTYP = "tecdoc.nTypNr";
+    private static final String PARAM_PHRASE = "phrase";
+    private static final String PARAM_LIMIT = "limit";
+    private static final String PARAM_OFFSET = "offset";
+
+    private static final String ERR_FILTER_NULL = "filter must not be null";
 
     private final HttpSupport http;
 
@@ -41,5 +71,69 @@ public final class CompatibilityImpl implements Compatibility {
             return List.of();
         }
         return rawCategories.stream().map(CompatibleCategory::from).toList();
+    }
+
+    @Override
+    public Stream<CompatibleProduct> products(CompatibleProductsFilter filter) {
+        Objects.requireNonNull(filter, ERR_FILTER_NULL);
+        return PagedSpliterator.stream(pageIndex -> fetchProducts(filter, pageIndex));
+    }
+
+    @Override
+    public Stream<CompatibleProductGroup> productGroups(CompatibleProductGroupsFilter filter) {
+        Objects.requireNonNull(filter, ERR_FILTER_NULL);
+        return PagedSpliterator.stream(pageIndex -> fetchProductGroups(filter, pageIndex));
+    }
+
+    private PagedSpliterator.Page<CompatibleProduct> fetchProducts(
+            CompatibleProductsFilter filter, int pageIndex) {
+        int offset = pageIndex * PAGE_SIZE;
+        Query query = Query.create()
+                .add(PARAM_TYPE, filter.type())
+                .add(PARAM_GROUP_ID, filter.groupId())
+                .add(PARAM_TECDOC_KTYP, filter.tecdocKTypNr())
+                .add(PARAM_TECDOC_NTYP, filter.tecdocNTypNr())
+                .add(PARAM_PHRASE, filter.phrase())
+                .add(PARAM_LIMIT, PAGE_SIZE)
+                .add(PARAM_OFFSET, offset);
+        CompatibleProductsListDtoRaw response = http.request(OP_COMPATIBLE_PRODUCTS)
+                .get(ApiPaths.COMPATIBLE_PRODUCTS)
+                .query(query)
+                .fetch(CompatibleProductsListDtoRaw.class);
+        List<CompatibleProductDtoRaw> raw = response.getCompatibleProducts();
+        List<CompatibleProduct> items = raw == null
+                ? List.of()
+                : raw.stream().map(CompatibleProduct::from).toList();
+        // A phrase search returns every match on the first page (Allegro ignores
+        // offset/limit when phrase is set), so it never advances — guarding against
+        // a non-advancing-offset fetch loop.
+        boolean more = filter.phrase() == null
+                && hasMoreByOffset(offset, items.size(), response.getTotalCount());
+        return new PagedSpliterator.Page<>(items, more);
+    }
+
+    private PagedSpliterator.Page<CompatibleProductGroup> fetchProductGroups(
+            CompatibleProductGroupsFilter filter, int pageIndex) {
+        int offset = pageIndex * PAGE_SIZE;
+        // The groups endpoint takes only type + offset/limit — no phrase narrowing.
+        Query query = Query.create()
+                .add(PARAM_TYPE, filter.type())
+                .add(PARAM_LIMIT, PAGE_SIZE)
+                .add(PARAM_OFFSET, offset);
+        CompatibleProductsGroupsDtoRaw response = http.request(OP_COMPATIBLE_PRODUCT_GROUPS)
+                .get(ApiPaths.COMPATIBLE_PRODUCTS_GROUPS)
+                .query(query)
+                .fetch(CompatibleProductsGroupsDtoRaw.class);
+        List<CompatibleProductsGroupsDtoGroupsInnerRaw> raw = response.getGroups();
+        List<CompatibleProductGroup> items = raw == null
+                ? List.of()
+                : raw.stream().map(CompatibleProductGroup::from).toList();
+        return new PagedSpliterator.Page<>(
+                items, hasMoreByOffset(offset, items.size(), response.getTotalCount()));
+    }
+
+    /** Advance while the offset consumed so far is below the server's reported total. */
+    private static boolean hasMoreByOffset(int offset, int pageCount, @Nullable Integer totalCount) {
+        return totalCount != null && (long) offset + pageCount < totalCount;
     }
 }
