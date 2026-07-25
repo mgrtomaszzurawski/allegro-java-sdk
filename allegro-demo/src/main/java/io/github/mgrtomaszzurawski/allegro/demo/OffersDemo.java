@@ -33,6 +33,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
@@ -114,6 +115,7 @@ final class OffersDemo {
     private static final String CREATE_TAX_RATE_PROPERTY = "demo.createTaxRate";
     private static final String CREATE_TAX_COUNTRY_PROPERTY = "demo.createTaxCountry";
     private static final String CREATE_CONTACT_ID_PROPERTY = "demo.createContactId";
+    private static final String CREATE_CONTACT_NAME_PROPERTY = "demo.createContactName";
     private static final String CREATE_ADDITIONAL_SERVICES_ID_PROPERTY = "demo.createAdditionalServicesId";
     private static final String CREATE_FUNDRAISING_ID_PROPERTY = "demo.createFundraisingId";
     private static final String CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY = "demo.createWholesalePriceListId";
@@ -359,10 +361,14 @@ final class OffersDemo {
             builder.taxSettings(TaxSettings.builder()
                     .rates(List.of(TaxRate.of(taxRate, taxCountry))).build());
         }
-        applyIfPresent(CREATE_CONTACT_ID_PROPERTY, builder::contactId);
-        applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY, builder::additionalServicesGroupId);
-        applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY, builder::fundraisingCampaignId);
-        applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY, builder::wholesalePriceListId);
+        applyIfPresent(CREATE_CONTACT_ID_PROPERTY, value -> builder.contact(NamedReference.byId(value)));
+        applyIfPresent(CREATE_CONTACT_NAME_PROPERTY, value -> builder.contact(NamedReference.byName(value)));
+        applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY,
+                value -> builder.additionalServices(NamedReference.byId(value)));
+        applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY,
+                value -> builder.fundraisingCampaign(NamedReference.byId(value)));
+        applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY,
+                value -> builder.wholesalePriceList(NamedReference.byId(value)));
         String messageMode = System.getProperty(CREATE_MESSAGE_MODE_PROPERTY);
         if (messageMode != null) {
             MessageToSellerMode mode = MessageToSellerMode.valueOf(messageMode);

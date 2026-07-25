@@ -18,6 +18,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSe
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -54,6 +55,7 @@ class CreateOfferRequestTest {
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
     private static final String CONTACT_ID = "contact-1";
+    private static final String CONTACT_NAME = "Main contact card";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "campaign-1";
     private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
@@ -395,32 +397,42 @@ class CreateOfferRequestTest {
     }
 
     @Test
-    void build_whenReferenceIdsSet_exposeThem() {
+    void build_whenReferencesByIdSet_exposeThem() {
         // when — the contact, additional-services group and fundraising campaign are attached by id
         CreateOfferRequest request = validBuilder()
-                .contactId(CONTACT_ID)
-                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
-                .fundraisingCampaignId(FUNDRAISING_ID)
-                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
+                .contact(NamedReference.byId(CONTACT_ID))
+                .additionalServices(NamedReference.byId(ADDITIONAL_SERVICES_ID))
+                .fundraisingCampaign(NamedReference.byId(FUNDRAISING_ID))
+                .wholesalePriceList(NamedReference.byId(WHOLESALE_PRICE_LIST_ID))
                 .build();
 
         // then
-        assertEquals(CONTACT_ID, request.contactId());
-        assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServicesGroupId());
-        assertEquals(FUNDRAISING_ID, request.fundraisingCampaignId());
-        assertEquals(WHOLESALE_PRICE_LIST_ID, request.wholesalePriceListId());
+        assertEquals(CONTACT_ID, request.contact().id());
+        assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServices().id());
+        assertEquals(FUNDRAISING_ID, request.fundraisingCampaign().id());
+        assertEquals(WHOLESALE_PRICE_LIST_ID, request.wholesalePriceList().id());
     }
 
     @Test
-    void build_whenReferenceIdsNotSet_leaveThemNull() {
+    void build_whenContactByName_exposesTheNameForm() {
+        // when — the contact is attached by name instead of id
+        CreateOfferRequest request = validBuilder().contact(NamedReference.byName(CONTACT_NAME)).build();
+
+        // then — the reference carries the name and no id
+        assertEquals(CONTACT_NAME, request.contact().name());
+        assertNull(request.contact().id());
+    }
+
+    @Test
+    void build_whenReferencesNotSet_leaveThemNull() {
         // when
         CreateOfferRequest request = validBuilder().build();
 
         // then
-        assertNull(request.contactId());
-        assertNull(request.additionalServicesGroupId());
-        assertNull(request.fundraisingCampaignId());
-        assertNull(request.wholesalePriceListId());
+        assertNull(request.contact());
+        assertNull(request.additionalServices());
+        assertNull(request.fundraisingCampaign());
+        assertNull(request.wholesalePriceList());
     }
 
     @Test
