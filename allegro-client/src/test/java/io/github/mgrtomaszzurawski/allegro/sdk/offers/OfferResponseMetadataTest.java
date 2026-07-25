@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.MessageToSellerSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PaymentsRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test;
 class OfferResponseMetadataTest {
 
     private static final String HINT = "Add a note";
-    private static final String MODE_OPTIONAL = "OPTIONAL";
+    private static final MessageToSellerMode MODE_OPTIONAL = MessageToSellerMode.OPTIONAL;
     private static final String INVOICE_VAT = "VAT";
 
     @Test

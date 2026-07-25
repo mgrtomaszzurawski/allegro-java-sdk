@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
@@ -68,6 +69,7 @@ public final class CreateOfferRequest {
     private final @Nullable String additionalServicesGroupId;
     private final @Nullable String fundraisingCampaignId;
     private final @Nullable String wholesalePriceListId;
+    private final @Nullable MessageToSellerSettings messageToSellerSettings;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -95,6 +97,7 @@ public final class CreateOfferRequest {
         this.additionalServicesGroupId = builder.additionalServicesGroupId;
         this.fundraisingCampaignId = builder.fundraisingCampaignId;
         this.wholesalePriceListId = builder.wholesalePriceListId;
+        this.messageToSellerSettings = builder.messageToSellerSettings;
     }
 
     /** The offer title. */
@@ -222,6 +225,11 @@ public final class CreateOfferRequest {
         return wholesalePriceListId;
     }
 
+    /** The buyer-note ("message to seller") settings, or {@code null} if not set. */
+    public @Nullable MessageToSellerSettings messageToSellerSettings() {
+        return messageToSellerSettings;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -255,6 +263,7 @@ public final class CreateOfferRequest {
         private @Nullable String additionalServicesGroupId;
         private @Nullable String fundraisingCampaignId;
         private @Nullable String wholesalePriceListId;
+        private @Nullable MessageToSellerSettings messageToSellerSettings;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -419,6 +428,12 @@ public final class CreateOfferRequest {
         /** Attach the seller's wholesale price list by id (optional). */
         public Builder wholesalePriceListId(@Nullable String wholesalePriceListId) {
             this.wholesalePriceListId = wholesalePriceListId;
+            return this;
+        }
+
+        /** Set the buyer-note ("message to seller") settings — mode and hint (optional). */
+        public Builder messageToSellerSettings(@Nullable MessageToSellerSettings messageToSellerSettings) {
+            this.messageToSellerSettings = messageToSellerSettings;
             return this;
         }
 

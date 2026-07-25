@@ -118,6 +118,9 @@ public final class OfferRequestMapper {
             body.discounts(new DiscountsProductOfferRequestRaw().wholesalePriceList(
                     new DiscountsProductOfferRequestWholesalePriceListRaw().id(request.wholesalePriceListId())));
         }
+        if (request.messageToSellerSettings() != null) {
+            body.messageToSellerSettings(request.messageToSellerSettings().toRaw());
+        }
         return body;
     }
 
