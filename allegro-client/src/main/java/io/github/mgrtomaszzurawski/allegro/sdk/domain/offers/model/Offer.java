@@ -59,6 +59,8 @@ import org.jspecify.annotations.Nullable;
  * @param payments       the payment settings (invoice type), or {@code null}
  * @param validation     Allegro's validation of the offer (blocking errors, non-blocking
  *                       warnings, validatedAt), or {@code null} if the payload omits it
+ * @param businessOnly   {@code true} if the offer is buyable only by business buyers, or
+ *                       {@code null} if the payload omits it
  * @param operationId    the id of the asynchronous create/edit operation that produced this
  *                       offer — pass it with {@link #id()} to {@code offers().operationStatus(...)}
  *                       to poll processing; {@code null} on a plain read (create/edit only)
@@ -88,6 +90,7 @@ public record Offer(
         @Nullable MessageToSellerSettings messageToSellerSettings,
         @Nullable OfferPayments payments,
         @Nullable OfferValidation validation,
+        @Nullable Boolean businessOnly,
         @Nullable String operationId) {
 
     /**
@@ -137,7 +140,12 @@ public record Offer(
                 MessageToSellerSettings.from(raw.getMessageToSellerSettings()),
                 OfferPayments.from(raw.getPayments()),
                 OfferValidation.from(raw.getValidation()),
+                businessOnlyOf(raw),
                 operationId);
+    }
+
+    private static @Nullable Boolean businessOnlyOf(SaleProductOfferResponseV1Raw raw) {
+        return raw.getB2b() == null ? null : raw.getB2b().getBuyableOnlyByBusiness();
     }
 
     private static List<OfferParameter> parametersOf(SaleProductOfferResponseV1Raw raw) {

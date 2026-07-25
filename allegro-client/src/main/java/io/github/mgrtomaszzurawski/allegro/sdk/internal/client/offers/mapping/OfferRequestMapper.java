@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProduc
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
@@ -85,6 +86,9 @@ public final class OfferRequestMapper {
         }
         if (request.sizeTableId() != null) {
             body.sizeTable(new SizeTableRaw().id(request.sizeTableId()));
+        }
+        if (request.businessOnly() != null) {
+            body.b2b(new B2bRaw().buyableOnlyByBusiness(request.businessOnly()));
         }
         return body;
     }

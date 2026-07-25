@@ -298,4 +298,22 @@ class CreateOfferRequestTest {
         assertNull(request.language());
         assertNull(request.sizeTableId());
     }
+
+    @Test
+    void build_whenBusinessOnlySet_exposesIt() {
+        // when — the offer is restricted to business buyers
+        CreateOfferRequest request = validBuilder().businessOnly(Boolean.TRUE).build();
+
+        // then
+        assertEquals(Boolean.TRUE, request.businessOnly());
+    }
+
+    @Test
+    void build_whenBusinessOnlyNotSet_leavesItNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.businessOnly());
+    }
 }

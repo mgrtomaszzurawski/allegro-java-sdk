@@ -88,6 +88,7 @@ final class OffersDemo {
     private static final String CREATE_IMPLIED_WARRANTY_ID_PROPERTY = "demo.createImpliedWarrantyId";
     private static final String CREATE_RETURN_POLICY_ID_PROPERTY = "demo.createReturnPolicyId";
     private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
+    private static final String CREATE_BUSINESS_ONLY_PROPERTY = "demo.createBusinessOnly";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -287,9 +288,15 @@ final class OffersDemo {
                     .warrantyId(warrantyId)
                     .build());
         }
+        if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
+            builder.businessOnly(Boolean.TRUE);
+        }
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
+            if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
+                System.out.println("create b2b businessOnly=" + created.businessOnly());
+            }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
             if (created.validation() != null) {

@@ -60,6 +60,7 @@ public final class CreateOfferRequest {
     private final @Nullable String externalId;
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
+    private final @Nullable Boolean businessOnly;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -80,6 +81,7 @@ public final class CreateOfferRequest {
         this.externalId = builder.externalId;
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
+        this.businessOnly = builder.businessOnly;
     }
 
     /** The offer title. */
@@ -172,6 +174,11 @@ public final class CreateOfferRequest {
         return sizeTableId;
     }
 
+    /** {@code true} to make the offer buyable only by business buyers, or {@code null} if not set. */
+    public @Nullable Boolean businessOnly() {
+        return businessOnly;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -198,6 +205,7 @@ public final class CreateOfferRequest {
         private @Nullable String externalId;
         private @Nullable String language;
         private @Nullable String sizeTableId;
+        private @Nullable Boolean businessOnly;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -320,6 +328,12 @@ public final class CreateOfferRequest {
         /** Set the id of the seller's size table to attach (optional). */
         public Builder sizeTableId(@Nullable String sizeTableId) {
             this.sizeTableId = sizeTableId;
+            return this;
+        }
+
+        /** Restrict the offer to business buyers only (optional). */
+        public Builder businessOnly(@Nullable Boolean businessOnly) {
+            this.businessOnly = businessOnly;
             return this;
         }
 
