@@ -10,6 +10,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProduc
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferRequestWholesalePriceListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
@@ -111,6 +113,10 @@ public final class OfferRequestMapper {
         if (request.fundraisingCampaignId() != null) {
             body.fundraisingCampaign(
                     new ProductOfferFundraisingCampaignRequestRaw().id(request.fundraisingCampaignId()));
+        }
+        if (request.wholesalePriceListId() != null) {
+            body.discounts(new DiscountsProductOfferRequestRaw().wholesalePriceList(
+                    new DiscountsProductOfferRequestWholesalePriceListRaw().id(request.wholesalePriceListId())));
         }
         return body;
     }

@@ -52,6 +52,7 @@ class CreateOfferRequestTest {
     private static final String CONTACT_ID = "contact-1";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "campaign-1";
+    private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
 
     private static CreateOfferRequest.Builder validBuilder() {
         return CreateOfferRequest.builder()
@@ -375,12 +376,14 @@ class CreateOfferRequestTest {
                 .contactId(CONTACT_ID)
                 .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
                 .fundraisingCampaignId(FUNDRAISING_ID)
+                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
                 .build();
 
         // then
         assertEquals(CONTACT_ID, request.contactId());
         assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServicesGroupId());
         assertEquals(FUNDRAISING_ID, request.fundraisingCampaignId());
+        assertEquals(WHOLESALE_PRICE_LIST_ID, request.wholesalePriceListId());
     }
 
     @Test
@@ -392,5 +395,6 @@ class CreateOfferRequestTest {
         assertNull(request.contactId());
         assertNull(request.additionalServicesGroupId());
         assertNull(request.fundraisingCampaignId());
+        assertNull(request.wholesalePriceListId());
     }
 }

@@ -66,6 +66,7 @@ import org.jspecify.annotations.Nullable;
  * @param contactId      the id of the seller's contact attached to the offer, or {@code null}
  * @param additionalServicesGroupId the id of the seller's additional-services group, or {@code null}
  * @param fundraisingCampaignId the id of the fundraising campaign attached, or {@code null}
+ * @param wholesalePriceListId the id of the seller's wholesale price list attached, or {@code null}
  * @param operationId    the id of the asynchronous create/edit operation that produced this
  *                       offer — pass it with {@link #id()} to {@code offers().operationStatus(...)}
  *                       to poll processing; {@code null} on a plain read (create/edit only)
@@ -100,6 +101,7 @@ public record Offer(
         @Nullable String contactId,
         @Nullable String additionalServicesGroupId,
         @Nullable String fundraisingCampaignId,
+        @Nullable String wholesalePriceListId,
         @Nullable String operationId) {
 
     /**
@@ -154,11 +156,20 @@ public record Offer(
                 contactIdOf(raw),
                 additionalServicesGroupIdOf(raw),
                 fundraisingCampaignIdOf(raw),
+                wholesalePriceListIdOf(raw),
                 operationId);
     }
 
     private static @Nullable String contactIdOf(SaleProductOfferResponseV1Raw raw) {
         return raw.getContact() == null ? null : raw.getContact().getId();
+    }
+
+    private static @Nullable String wholesalePriceListIdOf(SaleProductOfferResponseV1Raw raw) {
+        var discounts = raw.getDiscounts();
+        if (discounts == null || discounts.getWholesalePriceList() == null) {
+            return null;
+        }
+        return discounts.getWholesalePriceList().getId();
     }
 
     private static @Nullable String additionalServicesGroupIdOf(SaleProductOfferResponseV1Raw raw) {
