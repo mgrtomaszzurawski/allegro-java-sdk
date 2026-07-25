@@ -109,6 +109,8 @@ class OfferWriteClientTest {
     private static final String DELIVERY_INFO_JSON_PATH = "$.delivery.additionalInfo";
     private static final String SHIPMENT_DATE_JSON_PATH = "$.delivery.shipmentDate";
     private static final String IMPLIED_WARRANTY_JSON_PATH = "$.afterSalesServices.impliedWarranty.id";
+    private static final String IMPLIED_WARRANTY_NAME_JSON_PATH = "$.afterSalesServices.impliedWarranty.name";
+    private static final String IMPLIED_WARRANTY_NAME = "Standard implied warranty";
     private static final String RETURN_POLICY_JSON_PATH = "$.afterSalesServices.returnPolicy.id";
     private static final String WARRANTY_JSON_PATH = "$.afterSalesServices.warranty.id";
 
@@ -358,8 +360,9 @@ class OfferWriteClientTest {
                         .shippingRatesId(SHIPPING_RATES_ID).handlingTime(HANDLING_TIME)
                         .shipmentDate(SHIPMENT_DATE).additionalInfo(DELIVERY_INFO).build())
                 .afterSalesServices(AfterSalesServices.builder()
-                        .impliedWarrantyId(IMPLIED_WARRANTY_ID).returnPolicyId(RETURN_POLICY_ID)
-                        .warrantyId(WARRANTY_ID).build())
+                        .impliedWarranty(NamedReference.byId(IMPLIED_WARRANTY_ID))
+                        .returnPolicy(NamedReference.byId(RETURN_POLICY_ID))
+                        .warranty(NamedReference.byId(WARRANTY_ID)).build())
                 .build();
 
         // when
@@ -625,6 +628,28 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
                 .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID)))
                 .withRequestBody(matchingJsonPath(WHOLESALE_PRICE_LIST_ID_JSON_PATH, equalTo(WHOLESALE_PRICE_LIST_ID))));
+    }
+
+    @Test
+    void create_whenAfterSalesImpliedWarrantyByName_serializesTheNameForm(WireMockRuntimeInfo wmInfo) {
+        // given — the implied warranty is referenced by name (a UUID-id DTO via namedUuidRaw)
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .afterSalesServices(AfterSalesServices.builder()
+                        .impliedWarranty(NamedReference.byName(IMPLIED_WARRANTY_NAME)).build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the implied warranty is written as a {name:...} object (no UUID parsing on the name path)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(IMPLIED_WARRANTY_NAME_JSON_PATH,
+                        equalTo(IMPLIED_WARRANTY_NAME))));
     }
 
     @Test

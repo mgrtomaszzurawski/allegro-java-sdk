@@ -399,9 +399,9 @@ class OfferTest {
         assertEquals(HANDLING_TIME, delivery.handlingTime());
         AfterSalesServices afterSales = offer.afterSalesServices();
         assertNotNull(afterSales);
-        assertEquals(IMPLIED_WARRANTY_ID, afterSales.impliedWarrantyId());
-        assertEquals(RETURN_POLICY_ID, afterSales.returnPolicyId());
-        assertNull(afterSales.warrantyId());
+        assertEquals(IMPLIED_WARRANTY_ID, afterSales.impliedWarranty().id());
+        assertEquals(RETURN_POLICY_ID, afterSales.returnPolicy().id());
+        assertNull(afterSales.warranty());
     }
 
     @Test

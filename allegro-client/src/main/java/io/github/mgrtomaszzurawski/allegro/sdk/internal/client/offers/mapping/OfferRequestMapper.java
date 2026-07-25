@@ -169,6 +169,21 @@ public final class OfferRequestMapper {
         return raw;
     }
 
+    /**
+     * As {@link #namedRaw} but for DTOs whose {@code id} is a {@code UUID} on the wire: the id form
+     * is parsed to a {@link UUID} (its UUID shape is already validated fail-fast by the builder).
+     */
+    private static <R> R namedUuidRaw(NamedReference reference, Supplier<R> factory,
+            BiConsumer<R, UUID> setId, BiConsumer<R, String> setName) {
+        R raw = factory.get();
+        if (reference.id() != null) {
+            setId.accept(raw, UUID.fromString(reference.id()));
+        } else {
+            setName.accept(raw, reference.name());
+        }
+        return raw;
+    }
+
     /** The generated publication block for the SDK settings (only set fields are written). */
     private static SaleProductOfferPublicationRequestRaw publicationRawOf(PublicationSettings settings) {
         SaleProductOfferPublicationRequestRaw raw = new SaleProductOfferPublicationRequestRaw();
@@ -261,17 +276,23 @@ public final class OfferRequestMapper {
     /** The generated after-sales block for the SDK conditions; the ids are parsed as Allegro UUIDs. */
     private static AfterSalesServicesProductOfferRequestRaw afterSalesRawOf(AfterSalesServices services) {
         AfterSalesServicesProductOfferRequestRaw raw = new AfterSalesServicesProductOfferRequestRaw();
-        if (services.impliedWarrantyId() != null) {
-            raw.impliedWarranty(new AfterSalesServicesProductOfferRequestImpliedWarrantyRaw()
-                    .id(UUID.fromString(services.impliedWarrantyId())));
+        if (services.impliedWarranty() != null) {
+            raw.impliedWarranty(namedUuidRaw(services.impliedWarranty(),
+                    AfterSalesServicesProductOfferRequestImpliedWarrantyRaw::new,
+                    AfterSalesServicesProductOfferRequestImpliedWarrantyRaw::setId,
+                    AfterSalesServicesProductOfferRequestImpliedWarrantyRaw::setName));
         }
-        if (services.returnPolicyId() != null) {
-            raw.returnPolicy(new AfterSalesServicesProductOfferRequestReturnPolicyRaw()
-                    .id(UUID.fromString(services.returnPolicyId())));
+        if (services.returnPolicy() != null) {
+            raw.returnPolicy(namedUuidRaw(services.returnPolicy(),
+                    AfterSalesServicesProductOfferRequestReturnPolicyRaw::new,
+                    AfterSalesServicesProductOfferRequestReturnPolicyRaw::setId,
+                    AfterSalesServicesProductOfferRequestReturnPolicyRaw::setName));
         }
-        if (services.warrantyId() != null) {
-            raw.warranty(new AfterSalesServicesProductOfferRequestWarrantyRaw()
-                    .id(UUID.fromString(services.warrantyId())));
+        if (services.warranty() != null) {
+            raw.warranty(namedUuidRaw(services.warranty(),
+                    AfterSalesServicesProductOfferRequestWarrantyRaw::new,
+                    AfterSalesServicesProductOfferRequestWarrantyRaw::setId,
+                    AfterSalesServicesProductOfferRequestWarrantyRaw::setName));
         }
         return raw;
     }

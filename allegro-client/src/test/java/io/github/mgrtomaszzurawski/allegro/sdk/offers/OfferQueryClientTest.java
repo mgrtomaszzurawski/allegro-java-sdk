@@ -235,7 +235,7 @@ class OfferQueryClientTest {
         assertEquals(Boolean.FALSE, summary.fulfillment());
         assertEquals(OffsetDateTime.parse(STARTED_AT), summary.publishedAt());
         assertNull(summary.endedAt());
-        assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicyId());
+        assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicy().id());
     }
 
     @Test

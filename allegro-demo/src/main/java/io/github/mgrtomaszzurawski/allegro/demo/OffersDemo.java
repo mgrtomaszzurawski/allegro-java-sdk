@@ -110,6 +110,7 @@ final class OffersDemo {
     private static final String CREATE_IMPLIED_WARRANTY_ID_PROPERTY = "demo.createImpliedWarrantyId";
     private static final String CREATE_RETURN_POLICY_ID_PROPERTY = "demo.createReturnPolicyId";
     private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
+    private static final String CREATE_IMPLIED_WARRANTY_NAME_PROPERTY = "demo.createImpliedWarrantyName";
     private static final String CREATE_BUSINESS_ONLY_PROPERTY = "demo.createBusinessOnly";
     private static final String CREATE_REPUBLISH_PROPERTY = "demo.createRepublish";
     private static final String CREATE_TAX_RATE_PROPERTY = "demo.createTaxRate";
@@ -261,8 +262,9 @@ final class OffersDemo {
         for (OfferSummary summary : firstOffers) {
             String price = summary.buyNowPrice() == null ? "(no Buy Now price)"
                     : summary.buyNowPrice().amount() + " " + summary.buyNowPrice().currency();
-            String returnPolicy = summary.afterSalesServices() == null ? "(none)"
-                    : summary.afterSalesServices().returnPolicyId();
+            NamedReference returnPolicyRef =
+                    summary.afterSalesServices() == null ? null : summary.afterSalesServices().returnPolicy();
+            String returnPolicy = returnPolicyRef == null ? "(none)" : returnPolicyRef.id();
             System.out.println("  id=" + summary.id() + ", status=" + summary.status()
                     + ", format=" + summary.format() + ", stock=" + summary.availableStock()
                     + ", buyNow=" + price + ", fulfillment=" + summary.fulfillment()
@@ -334,14 +336,15 @@ final class OffersDemo {
                     .postCode(System.getProperty(CREATE_POST_CODE_PROPERTY))
                     .build());
         }
-        String impliedWarrantyId = System.getProperty(CREATE_IMPLIED_WARRANTY_ID_PROPERTY);
-        String returnPolicyId = System.getProperty(CREATE_RETURN_POLICY_ID_PROPERTY);
-        String warrantyId = System.getProperty(CREATE_WARRANTY_ID_PROPERTY);
-        if (impliedWarrantyId != null || returnPolicyId != null || warrantyId != null) {
+        NamedReference impliedWarranty = afterSalesRef(
+                CREATE_IMPLIED_WARRANTY_ID_PROPERTY, CREATE_IMPLIED_WARRANTY_NAME_PROPERTY);
+        NamedReference returnPolicy = afterSalesRef(CREATE_RETURN_POLICY_ID_PROPERTY, null);
+        NamedReference warranty = afterSalesRef(CREATE_WARRANTY_ID_PROPERTY, null);
+        if (impliedWarranty != null || returnPolicy != null || warranty != null) {
             builder.afterSalesServices(AfterSalesServices.builder()
-                    .impliedWarrantyId(impliedWarrantyId)
-                    .returnPolicyId(returnPolicyId)
-                    .warrantyId(warrantyId)
+                    .impliedWarranty(impliedWarranty)
+                    .returnPolicy(returnPolicy)
+                    .warranty(warranty)
                     .build());
         }
         if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
@@ -460,6 +463,16 @@ final class OffersDemo {
         if (value != null) {
             setter.accept(value);
         }
+    }
+
+    /** Build a reference from an optional id property, else an optional name property, else null. */
+    private static NamedReference afterSalesRef(String idProperty, String nameProperty) {
+        String id = System.getProperty(idProperty);
+        if (id != null) {
+            return NamedReference.byId(id);
+        }
+        String name = nameProperty == null ? null : System.getProperty(nameProperty);
+        return name == null ? null : NamedReference.byName(name);
     }
 
     private static void uploadImage(AllegroClient client, String imageUrl) {
