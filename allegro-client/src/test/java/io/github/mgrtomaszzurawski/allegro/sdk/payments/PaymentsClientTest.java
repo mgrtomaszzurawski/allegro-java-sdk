@@ -17,7 +17,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -37,11 +40,15 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.builder.RefundSur
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.PaymentOperation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.PaymentRefund;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.RefundReason;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.RefundedDeposit;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.RefundedLineItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.payments.model.RefundedSurcharge;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -86,7 +93,16 @@ class PaymentsClientTest {
     private static final String SURCHARGE_AMOUNT = "4.00";
     private static final String SELLER_COMMENT = "One item out of stock";
     private static final String LINE_ITEM_TYPE_AMOUNT = "AMOUNT";
+    private static final String LINE_ITEM_TYPE_QUANTITY = "QUANTITY";
+    private static final String LINE_ITEM_ID_2 = "f6a7b8c9-1111-2222-3333-444455556666";
+    private static final String LINE_ITEM_QUANTITY = "2";
+    private static final String OVERPAID_AMOUNT = "2.00";
+    private static final String ADDITIONAL_SERVICES_AMOUNT = "3.00";
+    private static final String TOTAL_VALUE_AMOUNT = "10.00";
+    private static final String REFUND_CREATED_AT = "2026-01-01T00:00:00Z";
     private static final String REFUND_STATUS_NEW = "NEW";
+    private static final String REFUND_STATUS_PARTIAL = "PARTIAL";
+    private static final String REFUND_REASON_COMPLAINT = "COMPLAINT";
 
     private static final long RETRY_AFTER_SECONDS = 30L;
     private static final int FAST_MAX_ATTEMPTS = 2;
@@ -103,8 +119,36 @@ class PaymentsClientTest {
     private static final String REFUND_BODY = "{\"id\":\"" + REFUND_ID + "\","
             + "\"payment\":{\"id\":\"" + PAYMENT_ID + "\"},"
             + "\"status\":\"" + REFUND_STATUS_NEW + "\","
-            + "\"createdAt\":\"2026-01-01T00:00:00Z\","
-            + "\"totalValue\":{\"amount\":\"10.00\",\"currency\":\"PLN\"}}";
+            + "\"createdAt\":\"" + REFUND_CREATED_AT + "\","
+            + "\"totalValue\":{\"amount\":\"" + TOTAL_VALUE_AMOUNT + "\",\"currency\":\""
+            + CURRENCY + "\"}}";
+    // spec-derived: the partial-refund breakdown the server echoes back on a
+    // RefundDetails response — line items by amount AND by quantity, plus deposit,
+    // delivery, overpaid, surcharge, additionalServices and sellerComment.
+    private static final String REFUND_BODY_BREAKDOWN = "{\"id\":\"" + REFUND_ID + "\","
+            + "\"payment\":{\"id\":\"" + PAYMENT_ID + "\"},"
+            + "\"order\":{\"id\":\"" + ORDER_ID + "\"},"
+            + "\"reason\":\"" + REFUND_REASON_COMPLAINT + "\","
+            + "\"status\":\"" + REFUND_STATUS_PARTIAL + "\","
+            + "\"createdAt\":\"" + REFUND_CREATED_AT + "\","
+            + "\"totalValue\":{\"amount\":\"" + TOTAL_VALUE_AMOUNT + "\",\"currency\":\""
+            + CURRENCY + "\"},"
+            + "\"lineItems\":["
+            + "{\"id\":\"" + LINE_ITEM_ID + "\",\"type\":\"" + LINE_ITEM_TYPE_AMOUNT + "\","
+            + "\"value\":{\"amount\":\"" + LINE_ITEM_AMOUNT + "\",\"currency\":\"" + CURRENCY + "\"}},"
+            + "{\"id\":\"" + LINE_ITEM_ID_2 + "\",\"type\":\"" + LINE_ITEM_TYPE_QUANTITY + "\","
+            + "\"quantity\":" + LINE_ITEM_QUANTITY + "}],"
+            + "\"deposits\":[{\"lineItemId\":\"" + LINE_ITEM_ID + "\","
+            + "\"totalValue\":{\"amount\":\"" + DEPOSIT_AMOUNT + "\",\"currency\":\"" + CURRENCY + "\"}}],"
+            + "\"delivery\":{\"value\":{\"amount\":\"" + DELIVERY_AMOUNT + "\",\"currency\":\""
+            + CURRENCY + "\"}},"
+            + "\"overpaid\":{\"value\":{\"amount\":\"" + OVERPAID_AMOUNT + "\",\"currency\":\""
+            + CURRENCY + "\"}},"
+            + "\"surcharges\":[{\"id\":\"" + SURCHARGE_ID + "\","
+            + "\"value\":{\"amount\":\"" + SURCHARGE_AMOUNT + "\",\"currency\":\"" + CURRENCY + "\"}}],"
+            + "\"additionalServices\":{\"value\":{\"amount\":\"" + ADDITIONAL_SERVICES_AMOUNT
+            + "\",\"currency\":\"" + CURRENCY + "\"}},"
+            + "\"sellerComment\":\"" + SELLER_COMMENT + "\"}";
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         return client(wmInfo, RetryPolicy.defaults());
@@ -406,6 +450,85 @@ class PaymentsClientTest {
                     .withRequestBody(notMatching(".*\"lineItems\".*"))
                     .withRequestBody(notMatching(".*\"deposits\".*"))
                     .withRequestBody(notMatching(".*\"surcharges\".*")));
+        }
+    }
+
+    @Test
+    void refund_whenServerEchoesBreakdown_mapsAllComponents(WireMockRuntimeInfo wmInfo) {
+        // given — the server echoes back the partial breakdown it applied
+        stubToken();
+        stubFor(post(urlPathEqualTo(REFUNDS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBody(REFUND_BODY_BREAKDOWN)));
+        RefundRequest request = RefundRequest.builder()
+                .paymentId(PAYMENT_ID).orderId(ORDER_ID)
+                .commandId(COMMAND_ID).reason(RefundReason.COMPLAINT)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            PaymentRefund refund = allegro.payments().refund(request);
+
+            // then — the by-amount line item maps its typed value, quantity null
+            assertEquals(2, refund.lineItems().size());
+            RefundedLineItem byAmount = refund.lineItems().get(0);
+            assertEquals(LINE_ITEM_ID, byAmount.lineItemId());
+            assertEquals(LINE_ITEM_TYPE_AMOUNT, byAmount.type());
+            assertNotNull(byAmount.value());
+            assertEquals(LINE_ITEM_AMOUNT, byAmount.value().amount());
+            assertNull(byAmount.quantity());
+            // and the by-quantity line item maps its quantity, value null
+            RefundedLineItem byQuantity = refund.lineItems().get(1);
+            assertEquals(LINE_ITEM_TYPE_QUANTITY, byQuantity.type());
+            assertNull(byQuantity.value());
+            assertNotNull(byQuantity.quantity());
+            assertEquals(0, new BigDecimal(LINE_ITEM_QUANTITY).compareTo(byQuantity.quantity()));
+            // and the deposit, surcharge and the three standalone amounts + comment
+            assertEquals(1, refund.deposits().size());
+            RefundedDeposit deposit = refund.deposits().get(0);
+            assertEquals(LINE_ITEM_ID, deposit.lineItemId());
+            assertNotNull(deposit.totalValue());
+            assertEquals(DEPOSIT_AMOUNT, deposit.totalValue().amount());
+            assertEquals(1, refund.surcharges().size());
+            RefundedSurcharge surcharge = refund.surcharges().get(0);
+            assertEquals(SURCHARGE_ID, surcharge.surchargeId());
+            assertNotNull(surcharge.value());
+            assertEquals(SURCHARGE_AMOUNT, surcharge.value().amount());
+            assertNotNull(refund.delivery());
+            assertEquals(DELIVERY_AMOUNT, refund.delivery().amount());
+            assertNotNull(refund.overpaid());
+            assertEquals(OVERPAID_AMOUNT, refund.overpaid().amount());
+            assertNotNull(refund.additionalServices());
+            assertEquals(ADDITIONAL_SERVICES_AMOUNT, refund.additionalServices().amount());
+            assertEquals(SELLER_COMMENT, refund.sellerComment());
+        }
+    }
+
+    @Test
+    void refund_whenFullRefundResponse_hasEmptyBreakdownAndNullAmounts(WireMockRuntimeInfo wmInfo) {
+        // given — a full-refund response carries no breakdown
+        stubToken();
+        stubFor(post(urlPathEqualTo(REFUNDS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED).withBody(REFUND_BODY)));
+        RefundRequest request = RefundRequest.builder()
+                .paymentId(PAYMENT_ID).orderId(ORDER_ID)
+                .commandId(COMMAND_ID).reason(RefundReason.REFUND)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            PaymentRefund refund = allegro.payments().refund(request);
+
+            // then — breakdown collections empty, standalone component amounts null
+            assertTrue(refund.lineItems().isEmpty());
+            assertTrue(refund.deposits().isEmpty());
+            assertTrue(refund.surcharges().isEmpty());
+            assertNull(refund.delivery());
+            assertNull(refund.overpaid());
+            assertNull(refund.additionalServices());
+            assertNull(refund.sellerComment());
         }
     }
 
