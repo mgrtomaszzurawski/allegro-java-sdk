@@ -151,6 +151,49 @@ compliance.streamResponsiblePersons().forEach(person -> System.out.println(perso
 ResponsibleProducer producer = compliance.responsibleProducer(producerId);
 ```
 
+## Size tables
+
+A size table is a small grid — named column `headers` plus `rows` of cell values — that a
+seller attaches to clothing and footwear offers. Tables are created from an Allegro
+template; pick one from `templates()` and reference its id.
+
+```java
+SizeTables sizeTables = client.settings().sizeTables();
+
+// Pick a template and build a table from it.
+SizeTableTemplate template = sizeTables.templates().get(0);
+SizeTableRequest request = SizeTableRequest.builder()
+        .name("My shoes size table")
+        .templateId(template.id())
+        .headers(template.headers())
+        .row(List.of("M", "38", "96-104"))
+        .build();
+
+SizeTable created = sizeTables.create(request);
+
+// Read one, list all, or update in place (update keeps the same template).
+SizeTable table = sizeTables.get(created.id());
+List<SizeTable> all = sizeTables.list();
+SizeTable renamed = sizeTables.update(table.id(), request.toBuilder().name("Renamed").build());
+```
+
+`templateId` is required when creating a table and ignored when updating one; creating without
+it fails fast with `IllegalArgumentException`.
+
+## Tax settings
+
+Read the VAT options available for a category — the subjects, rates (grouped by country) and
+exemptions you may assign to an offer in that category. Read-only reference data:
+
+```java
+TaxSettings tax = client.settings().taxSettings(categoryId);
+tax.rates().forEach(rate ->
+        System.out.println(rate.countryCode() + ": " + rate.values().size() + " VAT rates"));
+
+// Narrow to specific countries:
+TaxSettings polishOnly = client.settings().taxSettings(categoryId, List.of("PL"));
+```
+
 ## Errors
 
 All calls surface the SDK's remediation-grouped exceptions: `AllegroBadRequestException`

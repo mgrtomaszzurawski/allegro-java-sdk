@@ -517,6 +517,12 @@ public final class ApiPaths {
     public static final String RESPONSIBLE_PERSONS = "/sale/responsible-persons";
     /** Product-compliance (GPSR) responsible producers dictionary. */
     public static final String RESPONSIBLE_PRODUCERS = "/sale/responsible-producers";
+    /** Seller size tables ({@code /sale/size-tables}). */
+    public static final String SIZE_TABLES = "/sale/size-tables";
+    /** Allegro-provided size-table templates ({@code /sale/size-tables-templates}). */
+    public static final String SIZE_TABLES_TEMPLATES = "/sale/size-tables-templates";
+    /** Per-category tax (VAT) settings ({@code /sale/tax-settings}). */
+    public static final String TAX_SETTINGS = "/sale/tax-settings";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block
