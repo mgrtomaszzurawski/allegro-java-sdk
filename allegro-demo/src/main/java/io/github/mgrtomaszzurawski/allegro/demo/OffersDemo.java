@@ -154,6 +154,7 @@ final class OffersDemo {
     private static final String MODIFY_DURATION_PROPERTY = "demo.modifyDuration";
     private static final String MODIFY_UNLIMITED_PROPERTY = "demo.modifyUnlimited";
     private static final String MODIFY_HANDLING_TIME_PROPERTY = "demo.modifyHandlingTime";
+    private static final String MODIFY_SHIPPING_RATES_PROPERTY = "demo.modifyShippingRates";
     private static final String PROMO_BATCH_OFFER_IDS_PROPERTY = "demo.promoBatchOfferIds";
     private static final String PROMO_BATCH_BASE_PACKAGE_PROPERTY = "demo.promoBatchBasePackage";
     private static final String PROMO_BATCH_EXTRA_PACKAGE_PROPERTY = "demo.promoBatchExtraPackage";
@@ -833,12 +834,15 @@ final class OffersDemo {
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(offerIds);
         String duration = System.getProperty(MODIFY_DURATION_PROPERTY);
         String handlingTime = System.getProperty(MODIFY_HANDLING_TIME_PROPERTY);
+        String shippingRatesId = System.getProperty(MODIFY_SHIPPING_RATES_PROPERTY);
         if (System.getProperty(MODIFY_UNLIMITED_PROPERTY) != null) {
             builder.unlimitedListing();
         } else if (duration != null) {
             builder.listingDuration(OfferDuration.valueOf(duration));
         } else if (handlingTime != null) {
             builder.handlingTime(HandlingTime.valueOf(handlingTime));
+        } else if (shippingRatesId != null) {
+            builder.shippingRates(shippingRatesId);
         }
         System.out.println("modify: applying a setting to " + offerIds.size() + " offer(s)");
         try {
