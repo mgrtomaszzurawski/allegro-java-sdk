@@ -5,9 +5,9 @@ parameters, the product database, and vehicle/part compatibility lists. It is wh
 classified and described against. All of it is public data, so an app-only **client-credentials**
 token is enough — no user login required.
 
-> **Status:** the `catalog().categories()` sub-facade ships — tree navigation, per-category
-> parameters, and name-based suggestions; `products()` and `compatibility()` follow in the same
-> bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
+> **Status:** the `catalog().categories()` and `catalog().products()` sub-facades ship, along
+> with the first `catalog().compatibility()` read; the remaining compatibility reads follow in the
+> same bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
 
 ## Categories
 
@@ -141,6 +141,57 @@ its `unit`, and — by type — either the numeric/text `restrictions` or the se
 `dictionary` values. It shares those value types with `CategoryParameter` but omits the two
 components that apply only to an offer's parameters (`requiredForProduct`, display options).
 
+## Compatibility
+
+Some categories — car parts and accessories — let an offer carry a **compatibility list**: the
+set of vehicles or products the item fits. Before building such a list, learn which categories
+support one, and how each expects its items:
+
+```java
+Compatibility compatibility = client.catalog().compatibility();
+
+for (CompatibleCategory category : compatibility.supportedCategories()) {
+    System.out.println(category.categoryId() + "  " + category.name()
+            + "  input=" + category.inputType());
+    if (category.validationRules() != null) {
+        System.out.println("    up to " + category.validationRules().maxRows() + " entries"
+                + (category.validationRules().maxCharactersPerLine() != null
+                        ? ", " + category.validationRules().maxCharactersPerLine() + " chars/row"
+                        : ""));
+    }
+}
+```
+
+`inputType` tells you how the list's items are supplied: `ID` (chosen from Allegro's
+compatible-products database) or `TEXT` (free text); an input type this release does not model
+yet reads as `UNKNOWN`. `validationRules` caps the list size (`maxRows`) for either input type;
+`maxCharactersPerLine` bounds a free-text row and is `null` for an `ID` category, whose items are
+picked rather than typed.
+
+### The compatible-products database
+
+For an `ID`-type category, the items come from Allegro's compatible-products database. Browse it by
+`type` (a value a category advertises as its `itemsType`, e.g. `CAR`), narrowed by a product group,
+a TecDoc vehicle number, or a free-text phrase. Both reads are lazy offset-paginated streams:
+
+```java
+// The coarse dimension first — e.g. vehicle makes.
+compatibility.productGroups(CompatibleProductGroupsFilter.ofType("CAR"))
+        .limit(20)
+        .forEach(group -> System.out.println(group.id() + "  " + group.text()));
+
+// Then the products within a group.
+compatibility.products(CompatibleProductsFilter.builder().type("CAR").groupId(groupId).build())
+        .limit(50)
+        .forEach(product -> System.out.println(product.id() + "  " + product.text()));
+```
+
+A `type` is required — `build()` fails fast without it. Each `CompatibleProduct` carries its `id()`
+(reuse it as a compatibility-list `ID` item), a `text()` label, the `groupId()` it belongs to, and
+`attributes()` that disambiguate it (`CompatibleProductAttribute` — an id such as `ENGINE_CODE` or
+`BRAND` and its values). A phrase search returns all matches on a single page (Allegro ignores
+offset/limit when a phrase is present), so the stream does not page further.
+
 ## Verifying against the sandbox
 
 The read-only demo scenario navigates the live category tree and confirms the mapped fields
@@ -148,5 +199,7 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 
 ```bash
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-categories
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products             -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility        -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatible-products
 ```

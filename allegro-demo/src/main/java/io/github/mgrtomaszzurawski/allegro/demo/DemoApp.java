@@ -76,6 +76,8 @@ public final class DemoApp {
         SCENARIOS.put(SCENARIO_ACCOUNT, AccountDemo::run);
         SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
         SCENARIOS.put(CatalogProductsDemo.SCENARIO, CatalogProductsDemo::run);
+        SCENARIOS.put(CatalogCompatibilityDemo.SCENARIO, CatalogCompatibilityDemo::run);
+        SCENARIOS.put(CatalogCompatibleProductsDemo.SCENARIO, CatalogCompatibleProductsDemo::run);
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
         SCENARIOS.put(OfferTagsDemo.SCENARIO, OfferTagsDemo::run);
         SCENARIOS.put(OfferExtrasDemo.SCENARIO, OfferExtrasDemo::run);
@@ -96,6 +98,7 @@ public final class DemoApp {
         SCENARIOS.put(SettingsReturnPolicyDemo.SCENARIO, SettingsReturnPolicyDemo::run);
         SCENARIOS.put(ComplianceDemo.SCENARIO, ComplianceDemo::run);
         SCENARIOS.put(AdditionalServicesDemo.SCENARIO, AdditionalServicesDemo::run);
+        SCENARIOS.put(SizeTablesDemo.SCENARIO, SizeTablesDemo::run);
     }
 
     private DemoApp() {

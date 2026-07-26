@@ -25,6 +25,23 @@ try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment
 `null` when the offer has no tracked quantity. Amounts use the shared `Money` type
 (`sdk.core.Money`) — the exact server decimal string plus its ISO-4217 currency.
 
+### Read only selected parts
+
+When you need just the stock or the price, `getFields(...)` is a faster, lighter read than the full
+`get(...)`. Request one or more `OfferPart`s; the returned `PartialOffer` populates only those.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
+
+PartialOffer parts = client.offers().getFields("13579", OfferPart.STOCK, OfferPart.PRICE);
+System.out.println("stock=" + parts.availableStock() + ", price=" + parts.price());
+parts.marketplacePrices().forEach((marketplace, price) ->
+        System.out.println(marketplace + ": " + price.amount() + " " + price.currency()));
+```
+
+A part you did not request is `null` (`availableStock`/`price`) or empty (`marketplacePrices`); at
+least one part is required.
+
 ## List your offers
 
 `streamOffers` returns a **lazy** `Stream<OfferSummary>`: pages are fetched from Allegro only
@@ -95,6 +112,95 @@ client.offers().batch().changeQuantities(List.of("13579", "24680"), 50);
 
 `changePrices` sets a fixed Buy Now price on every listed offer; `changeQuantities` sets their
 available stock. Both return the same terminal `BatchReport`.
+
+For mixed, per-offer changes — a different price on each marketplace, a relative adjustment, or a
+price and a stock change together — use `modifyPricesAndStock`. Each `BulkPriceStockModification`
+targets one offer and needs at least one price or stock change; a price change is `fixed` (set),
+`gain` (add/subtract an amount) or `percentage`, a stock change is `fixed` or `gain`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.StockChange;
+
+PriceStockBatchReport report = client.offers().batch().modifyPricesAndStock(List.of(
+        BulkPriceStockModification.forOffer("13579")
+                .price("allegro-pl", PriceChange.fixed(Money.of("129.00", "PLN")))
+                .price("allegro-cz", PriceChange.percentage("-5%"))
+                .stock(StockChange.fixed(50))
+                .build(),
+        BulkPriceStockModification.forOffer("24680")
+                .stock(StockChange.gain(-3))
+                .build()));
+
+System.out.println(report.success() + "/" + report.total() + " changes applied");
+```
+
+It returns a `PriceStockBatchReport` — the same `total`/`success`/`failed` counts plus a
+`PriceStockTaskResult` per changed field (its `offerId`, the `field` it touched, `status`, and a
+`message` on failure).
+
+## Apply automatic-pricing rules in bulk
+
+An automatic-pricing rule keeps an offer's Buy Now price in step with the market (for example,
+following the lowest Allegro price). `batch().applyPricingRules(...)` attaches such a rule to — or
+removes it from — many offers at once on one or more marketplaces; defining the rules themselves
+lives on the pricing facade. The request has two mutually exclusive modes: **assign** a rule, or
+**remove** the rules. An assignment may carry an optional `PriceRange` bounding the price the rule
+may set. It returns the same terminal `BatchReport`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest.PriceRange.CurrencyBasis;
+
+// Assign a rule on allegro-pl, bounded between 10 and 500 PLN, to two offers.
+BatchReport assigned = client.offers().batch().applyPricingRules(
+        BatchPricingRulesRequest.assignRules(List.of("13579", "24680"))
+                .onMarketplace("allegro-pl", "641c73feaef0a8281a3d11f8", PriceRange.of(
+                        CurrencyBasis.MARKETPLACE_CURRENCY,
+                        Money.of("10.00", "PLN"), Money.of("500.00", "PLN")))
+                .build());
+
+// Remove the rules on allegro-pl from one offer.
+client.offers().batch().applyPricingRules(
+        BatchPricingRulesRequest.removeRules(List.of("13579"))
+                .fromMarketplace("allegro-pl")
+                .build());
+```
+
+`onMarketplace` has an overload without the `PriceRange` when the rule needs no bound. Call it
+once per marketplace to assign the rule on several; call `fromMarketplace` once per marketplace to
+remove.
+
+## Change offer settings in bulk
+
+`batch().modify(...)` applies an offer-settings change to many offers in one command. The first
+supported settings are the **listing duration** (a fixed `OfferDuration` or unlimited) and the
+**dispatch time** (`HandlingTime`). A command changes **exactly one** setting — Allegro rejects a
+command whose modification carries more than one element — so to change two settings submit two
+commands. It returns the same terminal `BatchReport`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
+
+// Set a 30-day listing duration on two offers.
+BatchReport report = client.offers().batch().modify(
+        BatchModificationRequest.forOffers(List.of("13579", "24680"))
+                .listingDuration(OfferDuration.DAYS_30)   // or .unlimitedListing()
+                .build());
+
+// A separate command changes the dispatch time.
+client.offers().batch().modify(
+        BatchModificationRequest.forOffers(List.of("13579", "24680"))
+                .handlingTime(HandlingTime.DAYS_2)
+                .build());
+```
+
+`OfferDuration`/`HandlingTime` name one clean set of durations (e.g. `DAYS_30`, `IMMEDIATE`); the
+wire's redundant hour/day spellings for the same duration are hidden.
 
 ## Create an offer
 
@@ -229,6 +335,34 @@ for (OfferParameter parameter : offer.parameters()) {
 A read parameter can be fed straight back into a create: `toRaw()` sends only the value ids of a
 dictionary parameter (the labels are read-only — echoing them back is rejected by Allegro).
 
+### Product set (productized categories)
+
+Many categories are **productized**: an offer must be bound to a catalogue product. Add a
+`ProductSetElement` referencing the product by id — a single product for a normal offer, or
+several (each with its own `quantity`) for a set or multipack. A productized category also
+requires the GPSR **responsible producer**, referenced by id or by name:
+
+```java
+CreateOfferRequest request = CreateOfferRequest.builder()
+        .name("Wireless mouse")
+        .categoryId("325040")
+        .buyNowPrice(Money.of("79.99", "PLN"))
+        .availableStock(10)
+        .addProductSetElement(ProductSetElement.of("8f2b1c00-…-000000000001")  // product id
+                .withResponsibleProducer(ResponsibleProducerRef.byId("44444444-…"))
+                .withMarketedBeforeGpsrObligation(false))
+        .build();
+```
+
+Use `ProductSetElement.of(productId, quantity)` for a set element, and
+`ResponsibleProducerRef.byName("ACME Manufacturing")` to reference a producer by name instead of
+id (the SDK writes the `oneOf` discriminator for you). On the read side, `offer.productSet()`
+returns the bindings; each element's `productId()`, `quantity()`, `responsibleProducer()` (id-only
+on read) and `marketedBeforeGpsrObligation()` are populated. Register responsible producers via
+`client.settings()` (bucket K). This is the product-**reference** form; defining a brand-new
+product inline, `responsiblePerson`, the `safetyInformation` details and `deposits` are not
+modelled yet.
+
 ### External id, language and size table
 
 An offer can also carry the seller's own **external identifier** (your system's SKU/id for the
@@ -279,7 +413,34 @@ if (applied.basePackage() != null) {
 ```
 
 `availablePackages()` lists what can be applied (base + extra packages); `forOffer(offerId)`
-shows what an offer currently has, with each package's validity window.
+shows what an offer currently has, with each package's validity window. `forAllOffers()` streams
+that across every offer, and `modify(...)` applies changes to one offer:
+
+```java
+client.offers().promoOptions().forAllOffers()                 // Stream<OfferPromoOptions>
+        .forEach(promo -> System.out.println(promo.offerId() + ": base=" + promo.basePackage()));
+
+client.offers().promoOptions().modify("13579", List.of(
+        PromoOptionModification.change(PromoPackageType.BASE, "pkg-1"),   // set/change the base package
+        PromoOptionModification.removeNow(PromoPackageType.EXTRA, "pkg-2")));
+```
+
+To set packages across **many** offers at once, `modifyBatch(...)` runs a command (submit → poll →
+gather) and returns a terminal `BatchReport`. Give a base package and/or extra packages (available
+ids come from `availablePackages()`); omitting the extra packages preserves whatever the offers
+already have. Choose when it takes effect with `PromoModificationTiming`.
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPromoOptionsRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
+
+BatchReport report = client.offers().promoOptions().modifyBatch(
+        BatchPromoOptionsRequest.forOffers(List.of("13579", "24680"))
+                .basePackage("emphasized1d")
+                .addExtraPackage("bold30d")
+                .timing(PromoModificationTiming.END_OF_CYCLE)
+                .build());
+```
 
 ## Change the Buy Now price
 
@@ -290,6 +451,51 @@ client.offers().changeBuyNowPrice("13579", Money.of("149.50", "PLN"));
 The SDK issues Allegro's price-change command and returns once the change is accepted; a
 rejected price surfaces as an `AllegroBadRequestException` carrying the field-level error
 (e.g. `input.buyNowPrice` below the offer's minimum).
+
+## Images and attachments
+
+`client.offers().media()` uploads the images and document attachments an offer references.
+An image is one step and yields a hosted URL to put in a `CreateOfferRequest`'s image list:
+
+```java
+OfferMedia media = client.offers().media();
+
+OfferImage image = media.uploadImage(jpegBytes, ImageFormat.JPEG);  // or media.uploadImage(sourceUrl)
+String hostedUrl = image.location();                                // use in CreateOfferRequest.imageUrls
+```
+
+An attachment (a manual, energy label, competition rules, …) is two steps — declare it, then
+upload the file bytes to the returned id:
+
+```java
+OfferAttachment declared = media.createAttachment(
+        AttachmentDeclaration.of(AttachmentType.USER_MANUAL, "manual.pdf"));
+OfferAttachment uploaded = media.uploadAttachment(declared, pdfBytes, "application/pdf");
+String fileUrl = uploaded.fileUrl();                                // hosted once the upload completes
+```
+
+Pass the whole `declared` attachment (not just its id) to `uploadAttachment` — it carries the
+one-time upload URL Allegro returned, which the SDK PUTs the bytes to (the URL is single-use and
+its format may change, so it is never composed by hand). `media.getAttachment(id)` reads an
+attachment back. An attachment kind Allegro adds after this SDK release reads back as
+`AttachmentType.UNKNOWN`.
+
+## Offer events and operation status
+
+`client.offers().streamEvents(...)` is a lazy, resumable feed of what happened to your offers —
+activations, endings, price and stock changes, bids. Each `OfferEvent` carries its `type`, when it
+`occurredAt`, and the affected `offerId`:
+
+```java
+client.offers().streamEvents(OfferEventFilter.all())          // or .ofType("OFFER_PRICE_CHANGED")
+        .limit(50)
+        .forEach(event -> System.out.println(event.type() + " on offer " + event.offerId()));
+```
+
+The stream pages by event id under the hood; take what you need with `limit(...)`. A create or edit
+that Allegro processes asynchronously returns an operation id — poll it with
+`client.offers().operationStatus(offerId, operationId)` to get an `OfferProcessingStatus`
+(`PENDING` / `IN_PROGRESS` / `COMPLETED`).
 
 ## Errors
 

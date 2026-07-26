@@ -46,12 +46,18 @@ public final class ApiPaths {
     // ---- offers (bucket A) ----
     /** Product-offers collection ({@code /sale/product-offers}); POST to create. */
     public static final String SALE_PRODUCT_OFFERS = "/sale/product-offers";
+    private static final String PARTS_SEGMENT = "parts";
     private static final String OFFERS = "/offers";
     private static final String CHANGE_PRICE_COMMANDS = "change-price-commands";
     private static final String SMART_SEGMENT = "smart";
     private static final String SALE_OFFER_PUBLICATION_COMMANDS = "/sale/offer-publication-commands";
     private static final String SALE_OFFER_PRICE_CHANGE_COMMANDS = "/sale/offer-price-change-commands";
     private static final String SALE_OFFER_QUANTITY_CHANGE_COMMANDS = "/sale/offer-quantity-change-commands";
+    private static final String SALE_OFFER_MODIFICATION_COMMANDS = "/sale/offer-modification-commands";
+    /** Bulk price-and-stock modification commands ({@code /sale/offer-bulk-modification-commands}); POST to submit (beta). */
+    public static final String SALE_OFFER_BULK_MODIFICATION_COMMANDS = "/sale/offer-bulk-modification-commands";
+    /** Automatic-pricing-rules modification commands ({@code /sale/offer-price-automation-commands}); POST to submit. */
+    public static final String SALE_OFFER_PRICE_AUTOMATION_COMMANDS = "/sale/offer-price-automation-commands";
     private static final String TASKS_SEGMENT = "tasks";
 
     /** Seller's offers collection ({@code /sale/offers}); offset/limit paged. */
@@ -61,10 +67,26 @@ public final class ApiPaths {
     /** Promotion packages available to the seller ({@code /sale/offer-promotion-packages}). */
     public static final String OFFER_PROMOTION_PACKAGES = "/sale/offer-promotion-packages";
     private static final String PROMO_OPTIONS_SEGMENT = "promo-options";
+    private static final String PROMO_OPTIONS_MODIFICATION_SEGMENT = "promo-options-modification";
+    /** Seller-wide offer promotion packages ({@code /sale/offers/promo-options}); offset/limit paged. */
+    public static final String SALE_OFFERS_PROMO_OPTIONS = "/sale/offers/promo-options";
+    private static final String SALE_OFFERS_PROMO_OPTIONS_COMMANDS = "/sale/offers/promo-options-commands";
+    /** Offer image upload ({@code /sale/images}); on the upload host — POST binary or a URL. */
+    public static final String SALE_IMAGES = "/sale/images";
+    /** Offer attachments collection ({@code /sale/offer-attachments}); POST to declare. */
+    public static final String OFFER_ATTACHMENTS = "/sale/offer-attachments";
+    /** Seller offer-events feed ({@code /sale/offer-events}); cursor-paged by {@code from}. */
+    public static final String SALE_OFFER_EVENTS = "/sale/offer-events";
+    private static final String OPERATIONS_SEGMENT = "operations";
 
     /** Full data of a single product-offer ({@code /sale/product-offers/{offerId}}); PATCH to edit. */
     public static String productOffer(String offerId) {
         return subPath(SALE_PRODUCT_OFFERS, offerId);
+    }
+
+    /** Selected parts of a product-offer ({@code /sale/product-offers/{offerId}/parts}); {@code include} query. */
+    public static String productOfferParts(String offerId) {
+        return subPath(SALE_PRODUCT_OFFERS, offerId, PARTS_SEGMENT);
     }
 
     /** A single offer as a draft resource ({@code /sale/offers/{offerId}}); DELETE to remove a draft. */
@@ -85,6 +107,31 @@ public final class ApiPaths {
     /** Promotion packages applied to one offer ({@code /sale/offers/{offerId}/promo-options}). */
     public static String offerPromoOptions(String offerId) {
         return subPath(SALE_OFFERS, offerId, PROMO_OPTIONS_SEGMENT);
+    }
+
+    /** Apply a promo-options change to one offer ({@code /sale/offers/{offerId}/promo-options-modification}). */
+    public static String offerPromoOptionsModification(String offerId) {
+        return subPath(SALE_OFFERS, offerId, PROMO_OPTIONS_MODIFICATION_SEGMENT);
+    }
+
+    /** Batch promo-options command ({@code /sale/offers/promo-options-commands/{commandId}}). */
+    public static String offerPromoOptionsCommand(String commandId) {
+        return subPath(SALE_OFFERS_PROMO_OPTIONS_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of a promo-options command ({@code …/{commandId}/tasks}). */
+    public static String offerPromoOptionsCommandTasks(String commandId) {
+        return subPath(SALE_OFFERS_PROMO_OPTIONS_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** A single offer attachment ({@code /sale/offer-attachments/{attachmentId}}); GET, or PUT to upload. */
+    public static String offerAttachment(String attachmentId) {
+        return subPath(OFFER_ATTACHMENTS, attachmentId);
+    }
+
+    /** Processing status of an async offer operation ({@code /sale/product-offers/{offerId}/operations/{operationId}}). */
+    public static String offerOperation(String offerId, String operationId) {
+        return subPath(SALE_PRODUCT_OFFERS, offerId, OPERATIONS_SEGMENT, operationId);
     }
 
     /** Batch publish/unpublish command ({@code /sale/offer-publication-commands/{commandId}}). */
@@ -115,6 +162,36 @@ public final class ApiPaths {
     /** Per-offer tasks of a quantity-change command ({@code …/{commandId}/tasks}). */
     public static String offerQuantityChangeCommandTasks(String commandId) {
         return subPath(SALE_OFFER_QUANTITY_CHANGE_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Bulk price/stock modification command status ({@code /sale/offer-bulk-modification-commands/{commandId}}). */
+    public static String offerBulkModificationCommand(String commandId) {
+        return subPath(SALE_OFFER_BULK_MODIFICATION_COMMANDS, commandId);
+    }
+
+    /** Per-field tasks of a bulk price/stock command ({@code …/{commandId}/tasks}). */
+    public static String offerBulkModificationCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_BULK_MODIFICATION_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Automatic-pricing command status ({@code /sale/offer-price-automation-commands/{commandId}}). */
+    public static String offerPriceAutomationCommand(String commandId) {
+        return subPath(SALE_OFFER_PRICE_AUTOMATION_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of an automatic-pricing command ({@code …/{commandId}/tasks}). */
+    public static String offerPriceAutomationCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_PRICE_AUTOMATION_COMMANDS, commandId, TASKS_SEGMENT);
+    }
+
+    /** Batch offer-modification command ({@code /sale/offer-modification-commands/{commandId}}). */
+    public static String offerModificationCommand(String commandId) {
+        return subPath(SALE_OFFER_MODIFICATION_COMMANDS, commandId);
+    }
+
+    /** Per-offer tasks of an offer-modification command ({@code …/{commandId}/tasks}). */
+    public static String offerModificationCommandTasks(String commandId) {
+        return subPath(SALE_OFFER_MODIFICATION_COMMANDS, commandId, TASKS_SEGMENT);
     }
 
     // ---- orders (bucket B) ----
@@ -172,6 +249,13 @@ public final class ApiPaths {
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
     /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
     public static final String PRODUCTS = "/sale/products";
+    /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
+    public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
+            "/sale/compatibility-list/supported-categories";
+    /** Compatible-products database search ({@code /sale/compatible-products}). */
+    public static final String COMPATIBLE_PRODUCTS = "/sale/compatible-products";
+    /** Compatible-product groups ({@code /sale/compatible-products/groups}). */
+    public static final String COMPATIBLE_PRODUCTS_GROUPS = "/sale/compatible-products/groups";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
@@ -437,6 +521,12 @@ public final class ApiPaths {
     public static final String ADDITIONAL_SERVICES_CATEGORIES = "/sale/offer-additional-services/categories";
     /** Seller additional-services groups (and their translations). */
     public static final String ADDITIONAL_SERVICES_GROUPS = "/sale/offer-additional-services/groups";
+    /** Seller size tables ({@code /sale/size-tables}). */
+    public static final String SIZE_TABLES = "/sale/size-tables";
+    /** Allegro-provided size-table templates ({@code /sale/size-tables-templates}). */
+    public static final String SIZE_TABLES_TEMPLATES = "/sale/size-tables-templates";
+    /** Per-category tax (VAT) settings ({@code /sale/tax-settings}). */
+    public static final String TAX_SETTINGS = "/sale/tax-settings";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

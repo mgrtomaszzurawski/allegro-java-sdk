@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Catalog;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogCategories;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogProducts;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Compatibility;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 
 /**
@@ -19,10 +20,12 @@ public final class CatalogImpl implements Catalog {
 
     private final CatalogCategories categories;
     private final CatalogProducts products;
+    private final Compatibility compatibility;
 
     public CatalogImpl(HttpRuntime runtime) {
         this.categories = new CatalogCategoriesImpl(runtime);
         this.products = new CatalogProductsImpl(runtime);
+        this.compatibility = new CompatibilityImpl(runtime);
     }
 
     @Override
@@ -33,5 +36,10 @@ public final class CatalogImpl implements Catalog {
     @Override
     public CatalogProducts products() {
         return products;
+    }
+
+    @Override
+    public Compatibility compatibility() {
+        return compatibility;
     }
 }

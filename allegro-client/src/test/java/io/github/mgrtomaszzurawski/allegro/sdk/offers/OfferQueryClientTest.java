@@ -42,6 +42,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -75,13 +76,36 @@ class OfferQueryClientTest {
     private static final String AMOUNT = "199.99";
     private static final String CURRENCY_PLN = "PLN";
     private static final String IMAGE_URL = "https://img.example/x.jpg";
+    private static final String RETURN_POLICY_ID = "ca36b384-61de-48ca-b296-a0abe1f41930";
+    private static final String STARTED_AT = "2026-07-24T13:35:45Z";
+    private static final int WATCHERS = 42;
+    private static final int VISITS = 128;
+    private static final String EXTERNAL_ID = "SKU-9";
+    private static final String SHIPPING_RATES_ID = "2479b9fb-b52a-409d-b4d0-1aeb80b79368";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "camp-1";
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
             + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
-            + "\"stock\":{\"available\":%d,\"sold\":%d},\"publication\":{\"status\":\"ACTIVE\"},"
+            + "\"stock\":{\"available\":%d,\"sold\":%d},"
+            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\"},"
+            + "\"afterSalesServices\":{\"returnPolicy\":{\"id\":\"%s\"}},\"isFulfillment\":false,"
+            + "\"stats\":{\"watchersCount\":%d,\"visitsCount\":%d},"
+            + "\"external\":{\"id\":\"%s\"},\"b2b\":{\"buyableOnlyByBusiness\":true},"
+            + "\"delivery\":{\"shippingRates\":{\"id\":\"%s\"}},"
+            + "\"additionalServices\":{\"id\":\"%s\"},\"fundraisingCampaign\":{\"id\":\"%s\"},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
-            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD, IMAGE_URL);
+            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD,
+                    STARTED_AT, RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
+                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, IMAGE_URL);
+
+    // A lean listing item: a malformed publication timestamp and no after-sales / fulfillment
+    // blocks — the tolerant mapping must degrade these to null rather than fail the read.
+    private static final String LEAN_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"not-a-date\"}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, AMOUNT, CURRENCY_PLN);
 
     private static final String CONDITION_MET_CODE = "DELIVERY";
     private static final String CONDITION_MET_NAME = "Wysyłka";
@@ -219,6 +243,40 @@ class OfferQueryClientTest {
         assertEquals(AVAILABLE, summary.availableStock());
         assertEquals(SOLD, summary.soldCount());
         assertEquals(IMAGE_URL, summary.primaryImageUrl());
+        assertEquals(Boolean.FALSE, summary.fulfillment());
+        assertEquals(OffsetDateTime.parse(STARTED_AT), summary.publishedAt());
+        assertNull(summary.endedAt());
+        assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicy().id());
+        assertEquals(WATCHERS, summary.watchersCount());
+        assertEquals(VISITS, summary.visitsCount());
+        assertEquals(EXTERNAL_ID, summary.externalId());
+        assertEquals(Boolean.TRUE, summary.businessOnly());
+        assertEquals(SHIPPING_RATES_ID, summary.shippingRatesId());
+        assertEquals(ADDITIONAL_SERVICES_ID, summary.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, summary.fundraisingCampaignId());
+    }
+
+    @Test
+    void streamOffers_whenTimestampMalformedAndBlocksOmitted_toleratesToNull(WireMockRuntimeInfo wmInfo) {
+        // given — a lean listing item with a malformed startedAt and no after-sales/fulfillment
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(LEAN_OFFER_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the tolerant mapping degrades the absent/unparseable fields to null, not a failure
+        assertNull(summary.publishedAt());
+        assertNull(summary.endedAt());
+        assertNull(summary.afterSalesServices());
+        assertNull(summary.fulfillment());
+        assertNull(summary.watchersCount());
+        assertNull(summary.visitsCount());
+        assertNull(summary.externalId());
+        assertNull(summary.businessOnly());
+        assertNull(summary.shippingRatesId());
+        assertNull(summary.additionalServicesGroupId());
+        assertNull(summary.fundraisingCampaignId());
     }
 
     @Test

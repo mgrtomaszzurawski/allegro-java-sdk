@@ -14,24 +14,26 @@ import org.jspecify.annotations.Nullable;
 /**
  * The after-sales conditions attached to an offer: the implied-warranty statement,
  * the return policy, and the (commercial) warranty. Each references a template the
- * seller has configured under after-sales-service-conditions, by its id.
+ * seller has configured under after-sales-service-conditions, {@linkplain NamedReference
+ * by its id or its name}.
  *
  * <p>The same immutable value is used both ways: build one to attach conditions on
- * {@code CreateOfferRequest}, or read the attached ids back from an {@link Offer}.
- * Every field is optional. The ids are the UUIDs Allegro assigns to the seller's
- * conditions; each is validated as a UUID fail-fast when set on the builder
- * ({@link IllegalArgumentException} on a malformed id), so a bad id surfaces at
- * construction rather than deep in the request.
+ * {@code CreateOfferRequest}, or read the attached references back from an {@link Offer}
+ * (resolved to their id). Every field is optional. When a reference is given
+ * {@linkplain NamedReference#byId(String) by id} the id must be a UUID; this is validated
+ * fail-fast on the builder ({@link IllegalArgumentException} on a malformed id), so a bad id
+ * surfaces at construction rather than deep in the request. A reference
+ * {@linkplain NamedReference#byName(String) by name} is not UUID-checked.
  *
- * @param impliedWarrantyId id of the seller's implied-warranty statement, or {@code null}
- * @param returnPolicyId    id of the seller's return policy, or {@code null}
- * @param warrantyId        id of the seller's commercial warranty, or {@code null}
+ * @param impliedWarranty the seller's implied-warranty statement (by id or name), or {@code null}
+ * @param returnPolicy    the seller's return policy (by id or name), or {@code null}
+ * @param warranty        the seller's commercial warranty (by id or name), or {@code null}
  * @since 0.3.0
  */
 public record AfterSalesServices(
-        @Nullable String impliedWarrantyId,
-        @Nullable String returnPolicyId,
-        @Nullable String warrantyId) {
+        @Nullable NamedReference impliedWarranty,
+        @Nullable NamedReference returnPolicy,
+        @Nullable NamedReference warranty) {
 
     /** A new builder. */
     public static Builder builder() {
@@ -41,9 +43,9 @@ public record AfterSalesServices(
     /** A builder pre-populated with this value's fields. */
     public Builder toBuilder() {
         return new Builder()
-                .impliedWarrantyId(impliedWarrantyId)
-                .returnPolicyId(returnPolicyId)
-                .warrantyId(warrantyId);
+                .impliedWarranty(impliedWarranty)
+                .returnPolicy(returnPolicy)
+                .warranty(warranty);
     }
 
     /**
@@ -60,60 +62,61 @@ public record AfterSalesServices(
         ReturnPolicyRaw returnPolicy = raw.getReturnPolicy();
         WarrantyRaw warranty = raw.getWarranty();
         return builder()
-                .impliedWarrantyId(impliedWarranty == null ? null : asString(impliedWarranty.getId()))
-                .returnPolicyId(returnPolicy == null ? null : asString(returnPolicy.getId()))
-                .warrantyId(warranty == null ? null : asString(warranty.getId()))
+                .impliedWarranty(refById(impliedWarranty == null ? null : impliedWarranty.getId()))
+                .returnPolicy(refById(returnPolicy == null ? null : returnPolicy.getId()))
+                .warranty(refById(warranty == null ? null : warranty.getId()))
                 .build();
     }
 
-    private static @Nullable String asString(@Nullable UUID id) {
-        return id == null ? null : id.toString();
+    private static @Nullable NamedReference refById(@Nullable UUID id) {
+        return id == null ? null : NamedReference.byId(id.toString());
     }
 
     /** Fluent builder for {@link AfterSalesServices}. */
     public static final class Builder {
 
-        private static final String FIELD_IMPLIED_WARRANTY = "impliedWarrantyId";
-        private static final String FIELD_RETURN_POLICY = "returnPolicyId";
-        private static final String FIELD_WARRANTY = "warrantyId";
-        private static final String ERR_UUID_SUFFIX = " must be a valid UUID";
+        private static final String FIELD_IMPLIED_WARRANTY = "impliedWarranty";
+        private static final String FIELD_RETURN_POLICY = "returnPolicy";
+        private static final String FIELD_WARRANTY = "warranty";
+        private static final String ERR_UUID_SUFFIX = " id must be a valid UUID";
 
-        private @Nullable String impliedWarrantyId;
-        private @Nullable String returnPolicyId;
-        private @Nullable String warrantyId;
+        private @Nullable NamedReference impliedWarranty;
+        private @Nullable NamedReference returnPolicy;
+        private @Nullable NamedReference warranty;
 
-        /** Reference the seller's implied-warranty statement by id (a UUID). */
-        public Builder impliedWarrantyId(@Nullable String impliedWarrantyId) {
-            this.impliedWarrantyId = requireUuidOrNull(impliedWarrantyId, FIELD_IMPLIED_WARRANTY);
+        /** Reference the seller's implied-warranty statement (by id or name). */
+        public Builder impliedWarranty(@Nullable NamedReference impliedWarranty) {
+            this.impliedWarranty = requireUuidIdOrNull(impliedWarranty, FIELD_IMPLIED_WARRANTY);
             return this;
         }
 
-        /** Reference the seller's return policy by id (a UUID). */
-        public Builder returnPolicyId(@Nullable String returnPolicyId) {
-            this.returnPolicyId = requireUuidOrNull(returnPolicyId, FIELD_RETURN_POLICY);
+        /** Reference the seller's return policy (by id or name). */
+        public Builder returnPolicy(@Nullable NamedReference returnPolicy) {
+            this.returnPolicy = requireUuidIdOrNull(returnPolicy, FIELD_RETURN_POLICY);
             return this;
         }
 
-        /** Reference the seller's commercial warranty by id (a UUID). */
-        public Builder warrantyId(@Nullable String warrantyId) {
-            this.warrantyId = requireUuidOrNull(warrantyId, FIELD_WARRANTY);
+        /** Reference the seller's commercial warranty (by id or name). */
+        public Builder warranty(@Nullable NamedReference warranty) {
+            this.warranty = requireUuidIdOrNull(warranty, FIELD_WARRANTY);
             return this;
         }
 
         /** Build the after-sales conditions. */
         public AfterSalesServices build() {
-            return new AfterSalesServices(impliedWarrantyId, returnPolicyId, warrantyId);
+            return new AfterSalesServices(impliedWarranty, returnPolicy, warranty);
         }
 
-        private static @Nullable String requireUuidOrNull(@Nullable String value, String field) {
-            if (value != null) {
+        private static @Nullable NamedReference requireUuidIdOrNull(
+                @Nullable NamedReference reference, String field) {
+            if (reference != null && reference.id() != null) {
                 try {
-                    UUID.fromString(value);
+                    UUID.fromString(reference.id());
                 } catch (IllegalArgumentException ex) {
                     throw new IllegalArgumentException(field + ERR_UUID_SUFFIX, ex);
                 }
             }
-            return value;
+            return reference;
         }
     }
 }
