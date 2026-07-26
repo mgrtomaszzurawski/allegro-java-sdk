@@ -80,7 +80,9 @@ public record DescriptionItem(
         if (raw instanceof DescriptionSectionItemImageRaw imageRaw) {
             return new DescriptionItem(DescriptionItemType.IMAGE, null, imageRaw.getUrl());
         }
-        return new DescriptionItem(DescriptionItemType.UNKNOWN, null, null);
+        // Unknown subtype: fall back to the wire `type` discriminator so a TEXT/IMAGE item
+        // that failed polymorphic binding is still classified by its declared kind.
+        return new DescriptionItem(DescriptionItemType.from(raw.getType()), null, null);
     }
 
     /**

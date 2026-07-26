@@ -23,6 +23,7 @@ class DescriptionTest {
     private static final String TEXT_CONTENT = "<h1>Mechanical keyboard</h1>";
     private static final String IMAGE_URL = "https://img.example/keyboard.jpg";
     private static final String UNKNOWN_TYPE = "VIDEO";
+    private static final String TEXT_WIRE_TYPE = "TEXT";
 
     @Test
     void text_whenBuilt_carriesContentAndTextType() {
@@ -53,6 +54,18 @@ class DescriptionTest {
         assertEquals(DescriptionItemType.UNKNOWN, item.type());
         assertNull(item.content());
         assertNull(item.url());
+    }
+
+    @Test
+    void from_whenBaseRawCarriesKnownTypeDiscriminator_classifiesByIt() {
+        // given — a base item (subtype not bound) whose wire `type` discriminator is TEXT
+        DescriptionSectionItemRaw raw = new DescriptionSectionItemRaw().type(TEXT_WIRE_TYPE);
+
+        // when
+        DescriptionItem item = DescriptionItem.from(raw);
+
+        // then — the fallback reads the discriminator and classifies it as TEXT, not UNKNOWN
+        assertEquals(DescriptionItemType.TEXT, item.type());
     }
 
     @Test
