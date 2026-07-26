@@ -881,7 +881,9 @@ final class OffersDemo {
         String price = offer.buyNowPrice() == null ? "(no Buy Now price)"
                 : offer.buyNowPrice().amount() + " " + offer.buyNowPrice().currency();
         System.out.println(phase + ": id=" + offer.id() + ", status=" + offer.status()
-                + ", format=" + offer.format() + ", buyNow=" + price);
+                + ", format=" + offer.format() + ", buyNow=" + price
+                + ", images=" + offer.imageUrls().size()
+                + ", createdAt=" + offer.createdAt() + ", updatedAt=" + offer.updatedAt());
         if (!offer.aiCoCreatedImageUrls().isEmpty()) {
             System.out.println("  aiCoCreatedImageUrls=" + offer.aiCoCreatedImageUrls());
         }
