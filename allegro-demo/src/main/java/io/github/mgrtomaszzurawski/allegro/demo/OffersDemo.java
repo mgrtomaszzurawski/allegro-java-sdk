@@ -628,7 +628,7 @@ final class OffersDemo {
         AvailablePromotionPackages packages = client.offers().promoOptions().availablePackages();
         System.out.println("availablePackages: base=" + packages.basePackages().size()
                 + ", extra=" + packages.extraPackages().size());
-        packages.basePackages().forEach(pkg -> System.out.println("  basePackage id=" + pkg.id()));
+        packages.basePackages().forEach(basePackage -> System.out.println("  basePackage id=" + basePackage.id()));
     }
 
     private static void promoForOffer(AllegroClient client, String offerId) {
