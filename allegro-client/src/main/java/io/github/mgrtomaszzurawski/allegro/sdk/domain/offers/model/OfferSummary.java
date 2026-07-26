@@ -30,7 +30,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -171,7 +171,7 @@ public record OfferSummary(
         if (marketplaces == null || marketplaces.isEmpty()) {
             return Map.of();
         }
-        Map<String, ListingMarketplace> mapped = new LinkedHashMap<>();
+        Map<String, ListingMarketplace> mapped = new HashMap<>();
         marketplaces.forEach((marketplaceId, value) -> {
             if (value != null) {
                 mapped.put(marketplaceId, ListingMarketplace.from(value));

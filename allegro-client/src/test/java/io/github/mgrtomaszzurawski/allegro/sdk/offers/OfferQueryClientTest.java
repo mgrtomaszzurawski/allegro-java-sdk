@@ -104,6 +104,9 @@ class OfferQueryClientTest {
     private static final int MP_WATCHERS = 3;
     private static final int MP_VISITS = 9;
     private static final int MP_SOLD = 2;
+    private static final String ADDL_MP_NULL_VALUE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"additionalMarketplaces\":{\"%s\":null}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, ADDL_MP_ID);
     private static final String ADDL_MP_NULL_ID_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
             + "\"publication\":{\"status\":\"ACTIVE\",\"marketplaces\":{\"additional\":[{\"id\":\"%s\"},{}]}}}],"
             + "\"count\":1}")
@@ -348,6 +351,19 @@ class OfferQueryClientTest {
         assertNull(summary.scheduledEndAt());
         assertNull(summary.baseMarketplaceId());
         assertTrue(summary.additionalMarketplaceIds().isEmpty());
+        assertTrue(summary.additionalMarketplaces().isEmpty());
+    }
+
+    @Test
+    void streamOffers_whenAdditionalMarketplaceValueNull_skipsIt(WireMockRuntimeInfo wmInfo) {
+        // given — an additionalMarketplaces entry whose value is null (spec-legal)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ADDL_MP_NULL_VALUE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the null per-marketplace value is dropped, leaving no entry
         assertTrue(summary.additionalMarketplaces().isEmpty());
     }
 
