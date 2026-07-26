@@ -77,7 +77,7 @@ class PriceChangeRequestTest {
     }
 
     @Test
-    void increaseByPercent_whenAmountChangeAlreadySet_throwsSingleChange() {
+    void decreaseByPercent_whenAmountChangeAlreadySet_throwsSingleChange() {
         // given — an amount increase already set (the single change)
         PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(List.of(OFFER_ID))
                 .increaseBy(money(DELTA));

@@ -133,10 +133,11 @@ class PriceChangeMapperTest {
         // given — a relative percentage decrease
         PriceChangeRequest request = forOne().decreaseByPercent(PERCENTAGE).build();
 
-        // when/then — DECREASE_PERCENTAGE discriminator + flat percentage
+        // when/then — DECREASE_PERCENTAGE discriminator + flat percentage, no value holder
         JsonNode tree = tree(request);
         assertEquals(TYPE_DECREASE_PERCENTAGE, tree.at(TYPE_PATH).asText());
         assertEquals(PERCENTAGE, tree.at(PERCENTAGE_PATH).asText());
+        assertTrue(tree.at(CHANGE_AMOUNT_PATH).isMissingNode());
     }
 
     @Test
