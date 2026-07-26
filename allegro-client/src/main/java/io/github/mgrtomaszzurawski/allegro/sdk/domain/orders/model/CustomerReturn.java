@@ -25,7 +25,7 @@ import org.jspecify.annotations.Nullable;
  * @param buyerLogin the returning buyer's login, or {@code null}
  * @param buyerEmail the returning buyer's e-mail, or {@code null}
  * @param fulfillment {@code true} when the return is handled by Allegro fulfilment
- * @param itemCount number of returned items
+ * @param itemCount number of returned items (always equal to {@code items().size()})
  * @param items the returned items; empty when none
  * @param refundRejected {@code true} if the seller has rejected the refund
  * @param rejection the rejection detail, or {@code null} when not rejected

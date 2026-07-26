@@ -12,10 +12,12 @@ import org.jspecify.annotations.Nullable;
  * The seller's rejection of a customer return's refund, when one exists.
  *
  * <p>{@link #code()} is exposed as the raw Allegro string (e.g. {@code REFUND_REJECTED},
- * {@code ITEM_MISMATCH}) so the read surface stays forward-compatible with values Allegro
- * adds later; the write side uses the typed {@link ReturnRejectionCode} enum.
+ * {@code ITEM_MISMATCH}); the write side uses the typed {@link ReturnRejectionCode} enum. A
+ * rejection code newer than this SDK's generated model surfaces as {@code null} (the Layer-1
+ * enum collapses an unrecognized value to a sentinel, so the real string is not recoverable
+ * here) — treat {@code null} as "present but unknown to this version".
  *
- * @param code the rejection code (raw Allegro value), or {@code null}
+ * @param code the rejection code (raw Allegro value), or {@code null} when absent or unknown
  * @param reason the seller's reason, or {@code null}
  * @param createdAt when the rejection was created, or {@code null}
  *
@@ -28,9 +30,11 @@ public record ReturnRejection(
 
     /** Map the generated Layer-1 DTO to the public record. */
     public static ReturnRejection from(CustomerReturnRejectionRaw raw) {
-        var code = raw.getCode();
+        CustomerReturnRejectionRaw.CodeEnum code = raw.getCode();
+        boolean unknown = code == null
+                || code == CustomerReturnRejectionRaw.CodeEnum.UNKNOWN_DEFAULT_OPEN_API;
         return new ReturnRejection(
-                code == null ? null : code.getValue(),
+                unknown ? null : code.getValue(),
                 raw.getReason(),
                 raw.getCreatedAt());
     }

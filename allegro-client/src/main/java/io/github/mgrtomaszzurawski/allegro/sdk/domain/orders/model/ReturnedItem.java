@@ -9,6 +9,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CustomerReturnItemReason
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -50,6 +51,7 @@ public record ReturnedItem(
                 price == null ? null : Money.of(price.getAmount(), price.getCurrency()),
                 raw.getUrl(),
                 reason == null ? null : ReturnItemReason.from(reason),
-                raw.getSerialNumbers());
+                raw.getSerialNumbers() == null ? List.of()
+                        : raw.getSerialNumbers().stream().filter(Objects::nonNull).toList());
     }
 }

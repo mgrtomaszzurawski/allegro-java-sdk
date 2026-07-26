@@ -76,6 +76,17 @@ class CustomerReturnsClientTest {
     private static final String WAYBILL = "WB-123456";
     private static final String CARRIER_ID = "ALLEGRO";
     private static final String SENDER_PHONE = "+48500100200";
+    private static final String REFERENCE_NUMBER = "R-1";
+    private static final String MARKETPLACE_ID = "allegro-pl";
+    private static final String RETURN_STATUS = "CREATED";
+    private static final String BANK_ACCOUNT_NUMBER = "61109010140000071219812874";
+    private static final String BANK_SWIFT = "WBKPPLPP";
+    private static final String BANK_STREET = "ul. Testowa 1";
+    private static final String BANK_POST_CODE = "00-001";
+    private static final String BANK_COUNTRY = "PL";
+    private static final String CREATED_AT = "2026-01-01T00:00:00Z";
+    private static final String PARCEL_CREATED_AT = "2026-01-02T00:00:00Z";
+    private static final String REJECTION_CREATED_AT = "2026-01-03T00:00:00Z";
 
     private static final int PAGE_SIZE = 100;
     private static final int TOTAL_RETURNS = 150;
@@ -106,16 +117,17 @@ class CustomerReturnsClientTest {
     // spec-derived: not yet wire-verified (order-keyed; needs a seeded buyer return).
     private static String returnJson(String id) {
         return "{\"id\":\"" + id + "\",\"orderId\":\"" + ORDER_ID + "\","
-                + "\"referenceNumber\":\"R-1\",\"buyer\":{\"login\":\"" + BUYER_LOGIN
+                + "\"referenceNumber\":\"" + REFERENCE_NUMBER + "\",\"buyer\":{\"login\":\"" + BUYER_LOGIN
                 + "\",\"email\":\"" + BUYER_EMAIL + "\"},\"items\":[{}],"
-                + "\"createdAt\":\"2026-01-01T00:00:00Z\",\"marketplaceId\":\"allegro-pl\"}";
+                + "\"createdAt\":\"" + CREATED_AT + "\",\"marketplaceId\":\"" + MARKETPLACE_ID + "\"}";
     }
 
     // spec-derived: the full customer-return shape — one detailed item, a refund bank
     // account, a return parcel and a rejection — used to exercise the depth mapping.
     private static String deepReturnJson() {
         return "{\"id\":\"" + RETURN_ID + "\",\"orderId\":\"" + ORDER_ID + "\","
-                + "\"isFulfillment\":true,\"referenceNumber\":\"R-1\",\"status\":\"CREATED\","
+                + "\"isFulfillment\":true,\"referenceNumber\":\"" + REFERENCE_NUMBER
+                + "\",\"status\":\"" + RETURN_STATUS + "\","
                 + "\"buyer\":{\"login\":\"" + BUYER_LOGIN + "\",\"email\":\"" + BUYER_EMAIL + "\"},"
                 + "\"items\":[{\"offerId\":\"" + OFFER_ID + "\",\"quantity\":" + ITEM_QUANTITY + ","
                 + "\"name\":\"" + ITEM_NAME + "\",\"price\":{\"amount\":\"" + ITEM_PRICE_AMOUNT
@@ -123,15 +135,16 @@ class CustomerReturnsClientTest {
                 + "\"reason\":{\"type\":\"" + ITEM_REASON_TYPE + "\",\"userComment\":\"" + REASON + "\"},"
                 + "\"serialNumbers\":[\"" + SERIAL_NUMBER + "\"]}],"
                 + "\"refund\":{\"bankAccount\":{\"owner\":\"" + BANK_OWNER + "\","
-                + "\"accountNumber\":\"" + BANK_IBAN + "\",\"iban\":\"" + BANK_IBAN + "\","
-                + "\"swift\":\"WBKPPLPP\",\"address\":{\"street\":\"ul. Testowa 1\",\"city\":\""
-                + BANK_CITY + "\",\"postCode\":\"00-001\",\"countryCode\":\"PL\"}}},"
-                + "\"parcels\":[{\"createdAt\":\"2026-01-02T00:00:00Z\",\"waybill\":\"" + WAYBILL
+                + "\"accountNumber\":\"" + BANK_ACCOUNT_NUMBER + "\",\"iban\":\"" + BANK_IBAN + "\","
+                + "\"swift\":\"" + BANK_SWIFT + "\",\"address\":{\"street\":\"" + BANK_STREET
+                + "\",\"city\":\"" + BANK_CITY + "\",\"postCode\":\"" + BANK_POST_CODE
+                + "\",\"countryCode\":\"" + BANK_COUNTRY + "\"}}},"
+                + "\"parcels\":[{\"createdAt\":\"" + PARCEL_CREATED_AT + "\",\"waybill\":\"" + WAYBILL
                 + "\",\"carrierId\":\"" + CARRIER_ID + "\",\"sender\":{\"phoneNumber\":\""
                 + SENDER_PHONE + "\"}}],"
                 + "\"rejection\":{\"code\":\"" + REJECTION_CODE
-                + "\",\"reason\":\"" + REASON + "\",\"createdAt\":\"2026-01-03T00:00:00Z\"},"
-                + "\"createdAt\":\"2026-01-01T00:00:00Z\",\"marketplaceId\":\"allegro-pl\"}";
+                + "\",\"reason\":\"" + REASON + "\",\"createdAt\":\"" + REJECTION_CREATED_AT + "\"},"
+                + "\"createdAt\":\"" + CREATED_AT + "\",\"marketplaceId\":\"" + MARKETPLACE_ID + "\"}";
     }
 
     private static String returnsPage(int count) {
@@ -243,6 +256,7 @@ class CustomerReturnsClientTest {
             assertEquals(ITEM_NAME, item.name());
             assertNotNull(item.price());
             assertEquals(ITEM_PRICE_AMOUNT, item.price().amount());
+            assertEquals(CURRENCY, item.price().currency());
             assertEquals(ITEM_URL, item.url());
             assertNotNull(item.reason());
             assertEquals(ITEM_REASON_TYPE, item.reason().type());
