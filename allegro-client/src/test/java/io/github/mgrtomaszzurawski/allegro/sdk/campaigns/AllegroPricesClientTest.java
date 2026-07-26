@@ -146,6 +146,10 @@ class AllegroPricesClientTest {
                "completedAt":"%s","errors":%s}]}
             """;
 
+    // spec-derived: not yet wire-verified — a subsidy submit needs an offer with a discount
+    // opportunity, which the sandbox account cannot arrange; the sellerDiscountDeclaration echo
+    // shape here comes from the vendored OpenAPI spec, not a live capture (see SubsidyOfferResult
+    // "Alpha" note). Replace with a sandbox-captured body once an eligible offer is available.
     private static final String PREVIEW_WITH_DECLARATION_TEMPLATE = """
             {"commandId":"%s","createdAt":"2026-07-16T10:00:00Z",
              "offers":[{"id":"%s","marketplace":{"id":"%s"},"status":"%s",

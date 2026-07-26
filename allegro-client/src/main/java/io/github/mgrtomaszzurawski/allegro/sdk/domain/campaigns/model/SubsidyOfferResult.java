@@ -16,6 +16,12 @@ import org.jspecify.annotations.Nullable;
  * The outcome for a single offer within an Allegro Prices {@code submitOffers} or
  * {@code excludeOffers} command.
  *
+ * <p><strong>Alpha:</strong> {@link #maxContributionPercentage()} is mapped from the vendored
+ * OpenAPI spec but has not yet been confirmed against the live Allegro sandbox — a subsidy submit
+ * requires an offer with a discount opportunity, which the current sandbox account cannot arrange.
+ * Verify this field manually before relying on it, or treat it as alpha. The other components are
+ * exercised on the live sandbox.
+ *
  * @param offerId                   the offer
  * @param marketplaceId             the marketplace the offer was processed on
  * @param status                    per-offer outcome
