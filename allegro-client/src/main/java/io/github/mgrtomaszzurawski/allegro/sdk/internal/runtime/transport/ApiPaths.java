@@ -414,6 +414,9 @@ public final class ApiPaths {
     /** Shipment handover protocol rendering (returns binary). */
     public static final String SHIPMENT_PROTOCOL = "/shipment-management/protocol";
 
+    /** Delivery proposals for an order ({@code /shipment-management/delivery-proposals/{orderId}}); GET. */
+    public static final String DELIVERY_PROPOSALS = "/shipment-management/delivery-proposals";
+
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";

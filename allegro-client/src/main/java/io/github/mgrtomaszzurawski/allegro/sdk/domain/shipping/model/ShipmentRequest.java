@@ -61,6 +61,43 @@ public record ShipmentRequest(
                 .labelFormat(labelFormat);
     }
 
+    /**
+     * Reconstruct a request from the generated DTO echoed as a delivery
+     * proposal's suggested input, so the consumer receives a ready-to-submit
+     * {@link ShipmentRequest} they can adjust and pass to {@code createShipment}.
+     * The sender, receiver and packages are required by the spec on this echo.
+     *
+     * <p>{@code getCredentialsId()} is deprecated in the spec (the merchant-agreement
+     * WZA flow), but the field is still carried on the echo and surfaced by this
+     * record, so it is read faithfully for round-trip fidelity.
+     */
+    @SuppressWarnings("deprecation")
+    public static ShipmentRequest from(ShipmentCreateRequestDtoRaw raw) {
+        return new ShipmentRequest(
+                raw.getCredentialsId(),
+                PostalAddress.fromSender(raw.getSender()),
+                PostalAddress.fromReceiver(raw.getReceiver()),
+                raw.getReferenceNumber(),
+                raw.getPackages() == null
+                        ? List.of()
+                        : raw.getPackages().stream().map(ShipmentPackage::fromRequest).toList(),
+                insurance(raw),
+                CashOnDelivery.from(raw.getCashOnDelivery()),
+                raw.getLabelFormat() == null
+                        ? null
+                        : LabelFormat.fromWire(raw.getLabelFormat().getValue()));
+    }
+
+    private static @Nullable Money insurance(ShipmentCreateRequestDtoRaw raw) {
+        InsuranceDtoRaw insuranceRaw = raw.getInsurance();
+        if (insuranceRaw == null
+                || insuranceRaw.getAmount() == null
+                || insuranceRaw.getCurrency() == null) {
+            return null;
+        }
+        return Money.of(insuranceRaw.getAmount(), insuranceRaw.getCurrency());
+    }
+
     /** Build the generated Layer-1 DTO for the create-command request body. */
     public ShipmentCreateRequestDtoRaw toRaw() {
         ShipmentCreateRequestDtoRaw raw = new ShipmentCreateRequestDtoRaw();

@@ -234,6 +234,29 @@ package needs its type and its centimetre dimensions and kilogram weight. The
 print stream. `createShipment` reads the created shipment back once the command
 succeeds; a command that ends in a non-success state throws.
 
+## Delivery options for an order
+
+Ask Allegro how to ship a given order. The proposal carries a **ready-to-submit
+`ShipmentRequest`** in `suggestedInput()` — pass it straight to `createShipment`,
+or adjust it first — plus the delivery options available for the order (carrier
+limits, additional services and properties).
+
+```java
+DeliveryProposal proposal = client.shipping().deliveryOptionsFor(orderId);
+
+// Submit Allegro's suggestion as-is, or tweak it via toBuilder() first.
+ShipmentRequest suggested = proposal.suggestedInput();
+Shipment shipment = client.shipping().createShipment(suggested);
+
+for (DeliveryOption option : proposal.deliveryOptions()) {
+    DeliveryType type = option.deliveryType();          // DOOR / APM / PUDO
+    DeliveryLimits limits = option.limits();            // max CoD, insurance, size, weight
+}
+```
+
+This is the supported successor to the delivery-services resource, which Allegro
+deprecated and removes in Q1 2027; the SDK does not expose that older resource.
+
 ## Notes
 
 - **Conflict on create.** Allegro returns `409 Conflict` when a *similar* point
