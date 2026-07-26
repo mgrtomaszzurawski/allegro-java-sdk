@@ -15,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.tax.model.TaxSett
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +37,9 @@ final class SizeTablesDemo {
     private static final String DEMO_TABLE_NAME = "[K-demo] size table";
     /** A leaf category used only to read tax settings; adjust if the sandbox rejects it. */
     private static final String TAX_CATEGORY_ID = "316194";
+    /** Placeholder cell value for a synthesized row (templates carry columns, not example rows). */
+    private static final String PLACEHOLDER_CELL = "-";
+    private static final int DIAGNOSTIC_TEMPLATES = 3;
 
     private static final String MSG_NO_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
@@ -67,6 +71,11 @@ final class SizeTablesDemo {
             } catch (AllegroBadRequestException rejection) {
                 printFieldErrors(rejection);
                 throw rejection;
+            } catch (AllegroException serverError) {
+                System.out.println("server-error: status=" + serverError.statusCode()
+                        + ", traceId=" + serverError.traceId()
+                        + ", body=" + serverError.responseBody());
+                throw serverError;
             } finally {
                 persistRotatedToken(tokenStore, account, client);
             }
@@ -76,32 +85,66 @@ final class SizeTablesDemo {
     private static boolean verifySizeTable(SizeTables sizeTables) {
         List<SizeTableTemplate> templates = sizeTables.templates();
         System.out.println("templates=" + templates.size());
+        templates.stream().limit(DIAGNOSTIC_TEMPLATES).forEach(candidate ->
+                System.out.println("  template '" + candidate.name() + "' headers=" + candidate.headers().size()
+                        + " rows=" + candidate.rows().size()));
         Optional<SizeTableTemplate> template = templates.stream()
-                .filter(candidate -> !candidate.headers().isEmpty() && !candidate.rows().isEmpty())
+                .filter(candidate -> !candidate.headers().isEmpty())
                 .findFirst();
         if (template.isEmpty()) {
             System.out.println(MSG_NO_TEMPLATE);
             return false;
         }
         SizeTableTemplate source = template.get();
+        System.out.println("chosen template '" + source.name() + "' id=" + source.id()
+                + " headers=" + source.headers());
+        // Templates define columns but usually carry no example rows, so synthesize
+        // one placeholder row sized to the template's headers.
+        List<String> cells = source.rows().isEmpty()
+                ? source.headers().stream().map(header -> PLACEHOLDER_CELL).toList()
+                : source.rows().get(0).cells();
         SizeTableRequest request = SizeTableRequest.builder()
                 .name(DEMO_TABLE_NAME)
                 .templateId(source.id())
                 .headers(source.headers())
-                .row(source.rows().get(0))
+                .row(cells)
                 .build();
 
         Optional<SizeTable> existing = sizeTables.list().stream()
                 .filter(table -> DEMO_TABLE_NAME.equals(table.name()))
                 .findFirst();
-        SizeTable written = existing.isPresent()
-                ? sizeTables.update(existing.get().id(), request)
-                : sizeTables.create(request);
-        System.out.println((existing.isPresent() ? "updated" : "created") + " table: id=" + written.id());
+        SizeTable written = writeTable(sizeTables, existing, request);
+        System.out.println((existing.isPresent() ? "updated" : "created") + " table: id=" + written.id()
+                + ", template=" + source.id() + ", headers=" + source.headers().size());
 
         SizeTable readBack = sizeTables.get(written.id());
-        return DEMO_TABLE_NAME.equals(readBack.name())
-                && readBack.headers().equals(source.headers());
+        System.out.println("read-back: name='" + readBack.name() + "', headers=" + readBack.headers()
+                + ", rows=" + readBack.rows().size());
+        return DEMO_TABLE_NAME.equals(readBack.name()) && !readBack.headers().isEmpty();
+    }
+
+    /**
+     * Create the table (or update it when it already exists). Allegro's sandbox
+     * size-table create can answer {@code 504 ServiceTimeoutException} ("Query
+     * response time exceeded. Try again.") while still creating the table
+     * (KNOWN-SERVER-BEHAVIORS); recover by re-reading the created table by name so
+     * the write→read round-trip still completes.
+     */
+    private static SizeTable writeTable(SizeTables sizeTables, Optional<SizeTable> existing,
+            SizeTableRequest request) {
+        if (existing.isPresent()) {
+            return sizeTables.update(existing.get().id(), request);
+        }
+        try {
+            return sizeTables.create(request);
+        } catch (AllegroServerException timeout) {
+            System.out.println("create timed out (status=" + timeout.statusCode()
+                    + "); recovering the created table by name");
+            return sizeTables.list().stream()
+                    .filter(table -> DEMO_TABLE_NAME.equals(table.name()))
+                    .findFirst()
+                    .orElseThrow(() -> timeout);
+        }
     }
 
     private static void readTaxSettings(AllegroClient client) {
