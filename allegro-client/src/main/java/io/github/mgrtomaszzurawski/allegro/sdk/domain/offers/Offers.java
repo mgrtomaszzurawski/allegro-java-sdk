@@ -20,6 +20,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceChangeResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import java.util.stream.Stream;
@@ -59,13 +60,15 @@ public interface Offers {
     PartialOffer getFields(String offerId, OfferPart... parts);
 
     /**
-     * Change an offer's Buy Now price. The SDK issues the price-change command
-     * and returns once Allegro has accepted it.
+     * Change an offer's Buy Now price. A single-offer price change resolves
+     * synchronously, so the SDK returns the command's terminal result — the price
+     * it applied, the processing status, and any per-field errors.
      *
      * @param offerId     the offer identifier
      * @param buyNowPrice the new Buy Now price
+     * @return the terminal result of the price-change command
      */
-    void changeBuyNowPrice(String offerId, Money buyNowPrice);
+    PriceChangeResult changeBuyNowPrice(String offerId, Money buyNowPrice);
 
     /**
      * Create a new Buy Now offer. The offer is created as a draft; publish it
