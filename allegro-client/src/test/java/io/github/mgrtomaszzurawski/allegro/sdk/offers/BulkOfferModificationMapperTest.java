@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification.PriceChange;
@@ -17,17 +18,24 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceSt
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.BulkOfferModificationMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 
 /**
  * Wire-shape mapping of {@link BulkOfferModificationMapper}: each change kind's
  * discriminator/value, and the split of a combined price+stock modification into
  * two single-kind elements (Allegro rejects a combined element). Assertions are
- * on the serialized JSON tree; NON_EMPTY mirrors the SDK's partial write body so
- * unset optional branches are omitted, not sent.
+ * on the serialized JSON tree.
+ *
+ * <p>The mapper mirrors the SDK's partial write body: the production
+ * {@code JavaTimeModule} + {@code JsonNullableModule} plus {@code NON_EMPTY} inclusion,
+ * so unset optional branches are omitted and a later {@code java.time}/{@code JsonNullable}
+ * field cannot silently diverge from the wire while the assertions keep passing.
  */
 class BulkOfferModificationMapperTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new JsonNullableModule())
             .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     private static final String MARKETPLACE_PL = "allegro-pl";
     private static final String OFFER_ID = "123456789";
