@@ -6,24 +6,36 @@ package io.github.mgrtomaszzurawski.allegro.sdk.offers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.NoSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductDepositRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementQuantityQuantityRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsiblePersonRequestResponsiblePersonRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerIdRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerNameRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementResponsibleProducerRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductSetElementSafetyInformationResponseSafetyInformationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfProductSetRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfResponsiblePersonRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetAllOfResponsibleProducerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1AllOfProductSetRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductDeposit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePersonRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class ProductSetElementTest {
@@ -31,6 +43,14 @@ class ProductSetElementTest {
     private static final String PRODUCT_ID = "8f2b1c00-0000-4000-8000-000000000001";
     private static final String PRODUCER_ID = "44444444-4444-4444-4444-444444444444";
     private static final String PRODUCER_NAME = "ACME Manufacturing";
+    private static final String PERSON_ID = "817ab828-255e-4ca8-a4da-c6defa3e6918";
+    private static final String PERSON_NAME = "Responsible EU Operator";
+    private static final String DEPOSIT_ID = "b1f9d6d0-0000-4000-8000-000000000009";
+    private static final int DEPOSIT_QUANTITY = 3;
+    private static final String INLINE_NAME = "New product name";
+    private static final String INLINE_CATEGORY_ID = "66781";
+    private static final String INLINE_IMAGE = "https://example.test/image.jpg";
+    private static final String INLINE_PARAM_VALUE_ID = "223545_1";
     private static final int QUANTITY = 3;
     private static final String TYPE_ID = "ID";
     private static final String TYPE_NAME = "NAME";
@@ -51,6 +71,7 @@ class ProductSetElementTest {
         assertTrue(element.productParameters().isEmpty());
         assertNull(element.aiCoCreated());
         assertNull(element.idType());
+        assertNull(element.responsiblePerson());
     }
 
     @Test
@@ -225,6 +246,228 @@ class ProductSetElementTest {
         assertTrue(element.marketedBeforeGpsrObligation() == null);
         // the product carried no parameters block: the null-parameters branch degrades to empty
         assertTrue(element.productParameters().isEmpty());
+    }
+
+    @Test
+    void withResponsiblePerson_whenById_writesFlatIdForm() {
+        // given — a person referenced by its registered id
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withResponsiblePerson(ResponsiblePersonRef.byId(PERSON_ID));
+
+        // then — the flat {id} block is written, name omitted
+        assertEquals(PERSON_ID, requirePerson(element).id());
+        ProductSetElementResponsiblePersonRequestResponsiblePersonRaw person =
+                element.toRaw().getResponsiblePerson();
+        assertEquals(PERSON_ID, person.getId());
+        assertNull(person.getName());
+    }
+
+    @Test
+    void withResponsiblePerson_whenByName_writesFlatNameForm() {
+        // given — a person referenced by name (Allegro resolves it to a stored operator)
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withResponsiblePerson(ResponsiblePersonRef.byName(PERSON_NAME));
+
+        // then — the flat {name} block is written, id omitted
+        ProductSetElementResponsiblePersonRequestResponsiblePersonRaw person =
+                element.toRaw().getResponsiblePerson();
+        assertEquals(PERSON_NAME, person.getName());
+        assertNull(person.getId());
+    }
+
+    @Test
+    void withResponsiblePerson_preservedByLaterCopies() {
+        // given — a person set first, then another wither applied
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withResponsiblePerson(ResponsiblePersonRef.byId(PERSON_ID))
+                .withMarketedBeforeGpsrObligation(true);
+
+        // then — the later copy carries the earlier person forward
+        assertEquals(PERSON_ID, requirePerson(element).id());
+    }
+
+    @Test
+    void toRaw_whenNoResponsiblePerson_omitsIt() {
+        // then — a plain element writes no responsiblePerson block
+        assertNull(ProductSetElement.of(PRODUCT_ID).toRaw().getResponsiblePerson());
+    }
+
+    @Test
+    void from_whenResponsiblePersonPresent_mapsIdOnly() {
+        // given — Allegro returns the person id-only on read
+        SaleProductOfferResponseV1AllOfProductSetRaw raw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
+                        .responsiblePerson(new SaleProductOfferResponseV1AllOfProductSetAllOfResponsiblePersonRaw()
+                                .id(PERSON_ID));
+
+        // when
+        ProductSetElement element = ProductSetElement.from(raw);
+
+        // then
+        assertEquals(PERSON_ID, requirePerson(element).id());
+        assertNull(requirePerson(element).name());
+    }
+
+    @Test
+    void from_whenResponsiblePersonAbsent_leavesItNull() {
+        // given — a response element with no responsiblePerson block
+        SaleProductOfferResponseV1AllOfProductSetRaw raw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID));
+
+        // then
+        assertNull(ProductSetElement.from(raw).responsiblePerson());
+    }
+
+    @Test
+    void personRef_whenBothIdAndName_throws() {
+        // then — the canonical constructor enforces exactly one form
+        assertThrows(IllegalArgumentException.class,
+                () -> new ResponsiblePersonRef(PERSON_ID, PERSON_NAME));
+    }
+
+    @Test
+    void personRef_whenNeitherIdNorName_throws() {
+        // then
+        assertThrows(IllegalArgumentException.class,
+                () -> new ResponsiblePersonRef(null, null));
+    }
+
+    @Test
+    void withSafetyInformation_whenText_writesTheSafetyBlock() {
+        // given — an explicit TEXT safety declaration attached to the element
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withSafetyInformation(SafetyInformation.text("Keep dry."));
+
+        // then — the element exposes it and toRaw emits the request safety block
+        assertEquals(SafetyInformation.TEXT, element.safetyInformation().type());
+        assertNotNull(element.toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void withSafetyInformation_preservedByLaterCopies() {
+        // given — safety set first, then another wither applied
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withSafetyInformation(SafetyInformation.text("Keep dry."))
+                .withResponsiblePerson(ResponsiblePersonRef.byId(PERSON_ID));
+
+        // then — the later copy carries the earlier safety information forward
+        assertEquals(SafetyInformation.TEXT, element.safetyInformation().type());
+    }
+
+    @Test
+    void toRaw_whenNoSafetyInformation_omitsIt() {
+        // then — a plain element writes no safetyInformation block
+        assertNull(ProductSetElement.of(PRODUCT_ID).toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void toRaw_whenReadOriginNoneSafety_omitsItInsteadOfThrowing() {
+        // given — an element read back with the read-only NONE safety form, then re-submitted
+        SaleProductOfferResponseV1AllOfProductSetRaw responseRaw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
+                        .safetyInformation(new ProductSetElementSafetyInformationResponseSafetyInformationRaw(
+                                new NoSafetyInformationRaw()
+                                        .type(NoSafetyInformationRaw.TypeEnum.NO_SAFETY_INFORMATION)));
+        ProductSetElement element = ProductSetElement.from(responseRaw);
+
+        // then — the write omits the non-sendable NONE block (round-trip does not throw)
+        assertEquals(SafetyInformation.NONE, element.safetyInformation().type());
+        assertNull(element.toRaw().getSafetyInformation());
+    }
+
+    @Test
+    void withDeposits_setsThemAndToRawEmitsThem() {
+        // given — a returnable-packaging deposit attached to the element
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID)
+                .withDeposits(List.of(ProductDeposit.of(DEPOSIT_ID, DEPOSIT_QUANTITY)));
+
+        // then — the element exposes it and toRaw emits the deposit with the parsed UUID + quantity
+        assertEquals(1, element.deposits().size());
+        assertEquals(DEPOSIT_ID, element.deposits().get(0).id());
+        assertEquals(DEPOSIT_ID, element.toRaw().getDeposits().get(0).getId().toString());
+        assertEquals(DEPOSIT_QUANTITY, element.toRaw().getDeposits().get(0).getQuantity());
+    }
+
+    @Test
+    void toRaw_whenNoDeposits_writesNoDepositEntries() {
+        // then — a plain element leaves the deposits list empty (the generated raw defaults it
+        // to an empty list, so an empty element carries no deposit entries)
+        assertTrue(ProductSetElement.of(PRODUCT_ID).toRaw().getDeposits().isEmpty());
+    }
+
+    @Test
+    void of_whenOnlyProductId_hasNoDeposits() {
+        // then — deposits default to an empty immutable list
+        assertTrue(ProductSetElement.of(PRODUCT_ID).deposits().isEmpty());
+    }
+
+    @Test
+    void from_whenDepositsPresent_projectsThem() {
+        // given — a response element carrying a deposit
+        SaleProductOfferResponseV1AllOfProductSetRaw raw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID))
+                        .deposits(List.of(new ProductDepositRaw()
+                                .id(UUID.fromString(DEPOSIT_ID)).quantity(DEPOSIT_QUANTITY)));
+
+        // when
+        ProductSetElement element = ProductSetElement.from(raw);
+
+        // then — the deposit maps back through the value object
+        assertEquals(1, element.deposits().size());
+        assertEquals(DEPOSIT_ID, element.deposits().get(0).id());
+        assertEquals(DEPOSIT_QUANTITY, element.deposits().get(0).quantity());
+    }
+
+    @Test
+    void withInlineProduct_toRawAppliesNameCategoryImagesAndParametersOntoTheProduct() {
+        // given — an inline product definition attached alongside the product id
+        InlineProduct inline = InlineProduct.builder()
+                .name(INLINE_NAME)
+                .categoryId(INLINE_CATEGORY_ID)
+                .image(INLINE_IMAGE)
+                .parameter(OfferParameter.dictionary(PARAM_ID, List.of(INLINE_PARAM_VALUE_ID)))
+                .build();
+        ProductSetElement element = ProductSetElement.of(PRODUCT_ID).withInlineProduct(inline);
+
+        // then — toRaw applies every inline field onto the product request object
+        ProductOfferRaw product = element.toRaw().getProduct();
+        assertEquals(PRODUCT_ID, product.getId());
+        assertEquals(INLINE_NAME, product.getName());
+        assertEquals(INLINE_CATEGORY_ID, product.getCategory().getId());
+        assertEquals(List.of(INLINE_IMAGE), product.getImages());
+        assertEquals(PARAM_ID, product.getParameters().get(0).getId());
+        assertEquals(List.of(INLINE_PARAM_VALUE_ID), product.getParameters().get(0).getValuesIds());
+    }
+
+    @Test
+    void toRaw_whenNoInlineProduct_leavesProductDescriptiveFieldsUnset() {
+        // then — a plain by-id element writes no name/category/images/parameters on the product
+        ProductOfferRaw product = ProductSetElement.of(PRODUCT_ID).toRaw().getProduct();
+        assertNull(product.getName());
+        assertNull(product.getCategory());
+    }
+
+    @Test
+    void from_whenReadBack_leavesInlineProductNull() {
+        // given — a response element (inline product is write-only, never populated on a read)
+        SaleProductOfferResponseV1AllOfProductSetRaw raw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw().id(PRODUCT_ID));
+
+        // then
+        assertNull(ProductSetElement.from(raw).inlineProduct());
+    }
+
+    private static ResponsiblePersonRef requirePerson(ProductSetElement element) {
+        ResponsiblePersonRef person = element.responsiblePerson();
+        if (person == null) {
+            throw new AssertionError("expected a responsible person");
+        }
+        return person;
     }
 
     private static ResponsibleProducerRef requireProducer(ProductSetElement element) {
