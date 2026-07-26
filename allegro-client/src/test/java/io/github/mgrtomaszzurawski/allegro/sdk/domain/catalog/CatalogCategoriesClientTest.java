@@ -858,6 +858,9 @@ class CatalogCategoriesClientTest {
     private static final int EXPECTED_CHANGE_COUNT = 2;
 
     // A REQUIREMENT_CHANGE (the only modelled kind) plus a type this SDK does not model.
+    // spec-derived: the endpoint is live-reachable app-only and returns a valid (empty)
+    // feed in the sandbox (verified 2026-07-19), but the sandbox has no planned changes
+    // to exercise the item shape, so the REQUIREMENT_CHANGE mapping stays WireMock-pinned.
     private static final String SCHEDULED_CHANGES_PAGE = """
             {"scheduledChanges":[
               {"type":"REQUIREMENT_CHANGE","scheduledAt":"2026-07-05T09:00:00Z",
