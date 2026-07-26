@@ -72,6 +72,9 @@ public final class PromoBatchMapper {
         List<TaskResult> results = tasks.stream().map(PromoBatchMapper::taskResult).toList();
         return new BatchReport(
                 report.getId(),
+                // PromoGeneralReport carries no createdAt/completedAt (see class javadoc).
+                null,
+                null,
                 count == null ? 0 : orZero(count.getTotal()),
                 count == null ? 0 : orZero(count.getSuccess()),
                 count == null ? 0 : orZero(count.getFailed()),
