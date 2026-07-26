@@ -17,9 +17,14 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.Marketpl
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.WholeBundleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Live sandbox probe for bucket F flexible-bundle <em>writes</em> — a
@@ -43,6 +48,8 @@ public final class FlexibleBundleWriteDemo {
     private static final String ERR_NO_STORED_TOKEN =
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String MSG_TOKEN_EXPIRED = "(stored token expired - rerun auth-bootstrap)";
+    private static final String BUNDLE_OFFER_IDS_PROPERTY = "demo.bundleOfferIds";
+    private static final String OFFER_ID_SEPARATOR = ",";
     private static final String MARKETPLACE_ID = "allegro-pl";
     private static final int OFFERS_NEEDED = 2;
     private static final int MINIMUM_BOUGHT_OFFERS = 2;
@@ -66,18 +73,40 @@ public final class FlexibleBundleWriteDemo {
                 ignored -> System.out.println(MSG_TOKEN_EXPIRED),
                 storedRefreshToken);
         try (AllegroClient client = AllegroClient.create(credentials, AllegroEnvironment.SANDBOX)) {
-            List<String> offerIds = client.offers().streamOffers(OfferFilter.all())
-                    .limit(OFFERS_NEEDED)
-                    .map(OfferSummary::id)
-                    .toList();
+            List<String> offerIds = resolveOfferIds(client);
             persistRotatedToken(client, tokenStore, account);
             if (offerIds.size() < OFFERS_NEEDED) {
-                System.out.println("(need at least " + OFFERS_NEEDED + " offers to build a flexible bundle)");
+                System.out.println("(need at least " + OFFERS_NEEDED
+                        + " offers of distinct products to build a flexible bundle)");
                 return;
             }
+            System.out.println("bundling offers " + offerIds);
             createReadDelete(client.offers().flexibleBundles(), offerIds);
             persistRotatedToken(client, tokenStore, account);
         }
+    }
+
+    /**
+     * Explicit {@code -Pdemo.bundleOfferIds=a,b} wins (deterministic, lets the
+     * operator pick offers of known-distinct products); otherwise auto-discover,
+     * de-duplicating by offer name so two listings of the same product are not
+     * picked — the server rejects a same-product pair with
+     * {@code OffersRelatedToOneProductException}.
+     */
+    private static List<String> resolveOfferIds(AllegroClient client) {
+        String override = System.getProperty(BUNDLE_OFFER_IDS_PROPERTY);
+        if (override != null && !override.isBlank()) {
+            return Arrays.stream(override.split(OFFER_ID_SEPARATOR))
+                    .map(String::trim)
+                    .filter(candidate -> !candidate.isEmpty())
+                    .toList();
+        }
+        Set<String> seenNames = new HashSet<>();
+        return client.offers().streamOffers(OfferFilter.all())
+                .filter(summary -> seenNames.add(summary.name()))
+                .limit(OFFERS_NEEDED)
+                .map(OfferSummary::id)
+                .toList();
     }
 
     private static void createReadDelete(FlexibleBundles flexible, List<String> offerIds) {
@@ -101,6 +130,13 @@ public final class FlexibleBundleWriteDemo {
             System.out.println("read back bundle " + readBack.id() + " with " + readBack.slots().size() + " slot(s)");
             flexible.delete(created.id());
             System.out.println("deleted flexible bundle " + created.id());
+        } catch (AllegroBadRequestException rejected) {
+            System.out.println("create/read/delete rejected as invalid (traceId="
+                    + rejected.traceId() + "):");
+            for (AllegroFieldError error : rejected.errors()) {
+                System.out.println("  - [" + error.code() + "] path=" + error.path()
+                        + " userMessage=" + error.userMessage());
+            }
         } catch (AllegroException failure) {
             System.out.println("create/read/delete failed: " + failure.getMessage()
                     + " (traceId=" + failure.traceId() + ")");

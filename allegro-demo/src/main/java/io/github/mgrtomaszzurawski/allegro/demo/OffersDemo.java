@@ -283,7 +283,8 @@ final class OffersDemo {
                     + ", externalId=" + summary.externalId() + ", businessOnly=" + summary.businessOnly()
                     + ", shippingRatesId=" + summary.shippingRatesId()
                     + ", additionalServicesGroupId=" + summary.additionalServicesGroupId()
-                    + ", fundraisingCampaignId=" + summary.fundraisingCampaignId());
+                    + ", fundraisingCampaignId=" + summary.fundraisingCampaignId()
+                    + ", currentPrice=" + summary.currentPrice() + ", biddersCount=" + summary.biddersCount());
         }
     }
 
