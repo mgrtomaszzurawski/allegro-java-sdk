@@ -147,7 +147,13 @@ class PromoBatchMapperTest {
         assertEquals(OFFER_ONE, batchReport.tasks().get(0).offerId());
         assertEquals("DONE", batchReport.tasks().get(0).status());
         assertNull(batchReport.tasks().get(0).message());
+        // the successful task carries no errors and no field (promo is not field-scoped)
+        assertTrue(batchReport.tasks().get(0).errors().isEmpty());
+        assertNull(batchReport.tasks().get(0).field());
         assertEquals("ERROR", batchReport.tasks().get(1).status());
         assertEquals("package unavailable", batchReport.tasks().get(1).message());
+        // and the failed task exposes the same message as a structured typed error
+        assertEquals(1, batchReport.tasks().get(1).errors().size());
+        assertEquals("package unavailable", batchReport.tasks().get(1).errors().get(0).message());
     }
 }
