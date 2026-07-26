@@ -94,6 +94,10 @@ class OfferQueryClientTest {
     private static final String SCHEDULED_END = "2026-08-31T10:00:00Z";
     private static final String BASE_MP_ID = "allegro-pl";
     private static final String ADDL_MP_ID = "allegro-cz";
+    private static final String ADDL_MP_NULL_ID_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"publication\":{\"status\":\"ACTIVE\",\"marketplaces\":{\"additional\":[{\"id\":\"%s\"},{}]}}}],"
+            + "\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, ADDL_MP_ID);
     private static final String NO_SELLING_MODE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
             + "\"publication\":{\"status\":\"ACTIVE\"}}],\"count\":1}")
             .formatted(OFFER_ID, OFFER_NAME);
@@ -320,6 +324,19 @@ class OfferQueryClientTest {
         assertNull(summary.scheduledEndAt());
         assertNull(summary.baseMarketplaceId());
         assertTrue(summary.additionalMarketplaceIds().isEmpty());
+    }
+
+    @Test
+    void streamOffers_whenAdditionalMarketplaceHasNullId_skipsIt(WireMockRuntimeInfo wmInfo) {
+        // given — an additional-marketplace entry with no id (spec-legal: id is not required)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ADDL_MP_NULL_ID_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the null-id entry is dropped, the valid id survives
+        assertEquals(List.of(ADDL_MP_ID), summary.additionalMarketplaceIds());
     }
 
     @Test

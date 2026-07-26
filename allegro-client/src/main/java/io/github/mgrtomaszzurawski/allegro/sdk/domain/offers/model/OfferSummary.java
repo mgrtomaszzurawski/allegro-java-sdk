@@ -157,17 +157,20 @@ public record OfferSummary(
                 additionalMarketplaceIdsOf(publication));
     }
 
+    private static @Nullable OfferListingDtoV1PublicationMarketplacesRaw marketplacesOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        return publication == null ? null : publication.getMarketplaces();
+    }
+
     private static @Nullable String baseMarketplaceIdOf(@Nullable OfferListingDtoV1PublicationRaw publication) {
-        OfferListingDtoV1PublicationMarketplacesRaw marketplaces =
-                publication == null ? null : publication.getMarketplaces();
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
         MarketplaceReferenceRaw base = marketplaces == null ? null : marketplaces.getBase();
         return base == null ? null : base.getId();
     }
 
     private static List<String> additionalMarketplaceIdsOf(
             @Nullable OfferListingDtoV1PublicationRaw publication) {
-        OfferListingDtoV1PublicationMarketplacesRaw marketplaces =
-                publication == null ? null : publication.getMarketplaces();
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
         List<MarketplaceReferenceRaw> additional = marketplaces == null ? null : marketplaces.getAdditional();
         if (additional == null) {
             return List.of();
