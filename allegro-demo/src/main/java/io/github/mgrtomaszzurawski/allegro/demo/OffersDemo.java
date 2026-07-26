@@ -310,6 +310,11 @@ final class OffersDemo {
                     + ", additionalMarketplaceIds=" + summary.additionalMarketplaceIds()
                     + ", additionalMarketplaces=" + summary.additionalMarketplaces());
         }
+        // countOffers must equal the fully-paged total — the probe reads the server totalCount.
+        long total = client.offers().countOffers(OfferFilter.all());
+        long paged = client.offers().streamOffers(OfferFilter.all()).count();
+        System.out.println("countOffers: total=" + total + " (paged count=" + paged
+                + ", match=" + (total == paged) + ")");
     }
 
     private static void createOffer(AllegroClient client, String name) {

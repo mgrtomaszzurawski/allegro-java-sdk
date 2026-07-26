@@ -67,6 +67,7 @@ public final class OffersImpl implements Offers {
     private static final String OP_EDIT = "edit offer";
     private static final String OP_DELETE_DRAFT = "delete draft offer";
     private static final String OP_STREAM = "stream offers";
+    private static final String OP_COUNT = "count offers";
     private static final String OP_SMART = "get offer Smart classification";
     private static final String OP_UNFILLED = "stream offers with unfilled parameters";
     private static final String OP_RATING = "get offer rating";
@@ -76,6 +77,11 @@ public final class OffersImpl implements Offers {
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
+    // A count probe fetches the first page at the smallest legal size (Allegro's `limit`
+    // range is 1..1000) purely to read the response's `totalCount`.
+    private static final int COUNT_PROBE_OFFSET = 0;
+    private static final int COUNT_PROBE_LIMIT = 1;
+    private static final long EMPTY_COUNT = 0L;
 
     private static final String QUERY_NAME = "name";
     private static final String QUERY_STATUS = "publication.status";
@@ -205,13 +211,33 @@ public final class OffersImpl implements Offers {
         return PagedSpliterator.stream(pageIndex -> fetchPage(filter, pageIndex));
     }
 
-    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
-        Query query = Query.create()
+    @Override
+    public long countOffers(OfferFilter filter) {
+        // Fetch a single minimal page purely to read the server's totalCount — a constant
+        // number of matching offers is returned regardless of how large the result set is,
+        // so this stays O(1) rather than paging the whole listing.
+        Query query = filterQuery(filter)
+                .add(QUERY_OFFSET, COUNT_PROBE_OFFSET)
+                .add(QUERY_LIMIT, COUNT_PROBE_LIMIT);
+        OffersSearchResultDtoRaw response = http.request(OP_COUNT)
+                .get(ApiPaths.SALE_OFFERS)
+                .query(query)
+                .fetch(OffersSearchResultDtoRaw.class);
+        Integer totalCount = response.getTotalCount();
+        return totalCount == null ? EMPTY_COUNT : totalCount.longValue();
+    }
+
+    private Query filterQuery(OfferFilter filter) {
+        return Query.create()
                 .add(QUERY_NAME, filter.name())
                 .add(QUERY_STATUS, wireValueOf(filter.status()))
                 .add(QUERY_FORMAT, wireValueOf(filter.format()))
                 .add(QUERY_PRICE_FROM, filter.priceFrom())
-                .add(QUERY_PRICE_TO, filter.priceTo())
+                .add(QUERY_PRICE_TO, filter.priceTo());
+    }
+
+    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
+        Query query = filterQuery(filter)
                 .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
                 .add(QUERY_LIMIT, PAGE_SIZE);
         OffersSearchResultDtoRaw response = http.request(OP_STREAM)

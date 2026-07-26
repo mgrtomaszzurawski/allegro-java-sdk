@@ -106,6 +106,18 @@ public interface Offers {
     Stream<OfferSummary> streamOffers(OfferFilter filter);
 
     /**
+     * How many of the seller's offers match a filter — the total the server reports,
+     * without walking the result set. This is a single, constant-cost request (one
+     * minimal page fetched only to read the total), independent of how many offers the
+     * seller has: use it for a count (e.g. a dashboard total) instead of
+     * {@code streamOffers(filter).count()}, which would page through every match.
+     *
+     * @param filter which offers to count (use {@link OfferFilter#all()} for all)
+     * @return the total number of matching offers
+     */
+    long countOffers(OfferFilter filter);
+
+    /**
      * A lazy stream of events about the seller's offers (activated, ended, price/stock
      * changed, …), newest resumable by event id. Filter by type with the given filter.
      *
