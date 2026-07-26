@@ -37,6 +37,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSell
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
@@ -99,6 +100,7 @@ final class OffersDemo {
     private static final String CREATE_CATEGORY_PROPERTY = "demo.createCategory";
     private static final String CREATE_PRICE_PROPERTY = "demo.createPrice";
     private static final String CREATE_STOCK_PROPERTY = "demo.createStock";
+    private static final String CREATE_FORMAT_PROPERTY = "demo.createFormat";
     private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
     private static final String CREATE_PRODUCT_ID_TYPE_PROPERTY = "demo.createProductIdType";
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
@@ -321,8 +323,11 @@ final class OffersDemo {
         CreateOfferRequest.Builder builder = CreateOfferRequest.builder()
                 .name(name)
                 .categoryId(System.getProperty(CREATE_CATEGORY_PROPERTY))
-                .buyNowPrice(Money.of(System.getProperty(CREATE_PRICE_PROPERTY), CURRENCY_PLN))
-                .availableStock(Integer.parseInt(System.getProperty(CREATE_STOCK_PROPERTY)));
+                .buyNowPrice(Money.of(System.getProperty(CREATE_PRICE_PROPERTY), CURRENCY_PLN));
+        // Stock is a BUY_NOW concept; an ADVERTISEMENT offer carries none, so make it optional
+        // and let -Pdemo.createFormat select the selling format (default BUY_NOW).
+        applyIfPresent(CREATE_STOCK_PROPERTY, value -> builder.availableStock(Integer.parseInt(value)));
+        applyIfPresent(CREATE_FORMAT_PROPERTY, value -> builder.sellingFormat(OfferFormat.valueOf(value)));
         // With -Pdemo.createProductId the create carries a productSet (product binding +
         // optional GPSR producer): a productized-category create through the SDK, so the
         // server exercises the productSet wire mapping. Any business-rule rejection still

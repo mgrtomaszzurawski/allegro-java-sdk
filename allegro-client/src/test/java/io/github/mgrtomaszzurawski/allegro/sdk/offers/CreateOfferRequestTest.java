@@ -154,6 +154,41 @@ class CreateOfferRequestTest {
     }
 
     @Test
+    void build_whenAdvertisementWithoutStock_succeeds() {
+        // given — an ADVERTISEMENT offer carries no stock, so availableStock is not required
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(PRICE)
+                .sellingFormat(OfferFormat.ADVERTISEMENT)
+                .build();
+
+        // then — the build succeeds and stock is absent
+        assertEquals(OfferFormat.ADVERTISEMENT, request.sellingFormat());
+        assertNull(request.availableStock());
+    }
+
+    @Test
+    void build_whenAdvertisementWithStock_throwsIllegalState() {
+        // given — stock does not apply to an advertisement, so setting it is a fail-fast error
+        CreateOfferRequest.Builder builder = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(PRICE)
+                .sellingFormat(OfferFormat.ADVERTISEMENT)
+                .availableStock(STOCK);
+
+        // then
+        assertThrows(IllegalStateException.class, builder::build);
+    }
+
+    @Test
+    void build_whenBuyNowWithoutStock_throwsIllegalState() {
+        // given — a non-advertisement format still requires stock
+        CreateOfferRequest.Builder builder = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(PRICE);
+
+        // then
+        assertThrows(IllegalStateException.class, builder::build);
+    }
+
+    @Test
     void build_whenNameMissing_throwsIllegalState() {
         // given — every required field but name
         CreateOfferRequest.Builder builder = CreateOfferRequest.builder()

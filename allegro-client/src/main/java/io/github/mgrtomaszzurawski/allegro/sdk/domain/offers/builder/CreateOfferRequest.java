@@ -48,11 +48,13 @@ public final class CreateOfferRequest {
     private static final String ERR_PRICE = "buyNowPrice is required for a BUY_NOW offer";
     private static final String ERR_STARTING = "startingPrice is required for an AUCTION offer";
     private static final String ERR_STOCK = "availableStock is required and must not be negative";
+    private static final String ERR_STOCK_ADVERTISEMENT =
+            "availableStock does not apply to an ADVERTISEMENT offer";
 
     private final String name;
     private final String categoryId;
     private final @Nullable Money buyNowPrice;
-    private final int availableStock;
+    private final @Nullable Integer availableStock;
     private final List<String> imageUrls;
     private final @Nullable OfferFormat sellingFormat;
     private final @Nullable Money startingPrice;
@@ -131,7 +133,7 @@ public final class CreateOfferRequest {
     }
 
     /** The available quantity. */
-    public int availableStock() {
+    public @Nullable Integer availableStock() {
         return availableStock;
     }
 
@@ -548,7 +550,12 @@ public final class CreateOfferRequest {
             } else if (buyNowPrice == null) {
                 throw new IllegalStateException(ERR_PRICE);
             }
-            if (availableStock == null || availableStock < 0) {
+            // Stock is a Buy Now / auction quantity; an ADVERTISEMENT offer carries none.
+            if (sellingFormat == OfferFormat.ADVERTISEMENT) {
+                if (availableStock != null) {
+                    throw new IllegalStateException(ERR_STOCK_ADVERTISEMENT);
+                }
+            } else if (availableStock == null || availableStock < 0) {
                 throw new IllegalStateException(ERR_STOCK);
             }
             return new CreateOfferRequest(this);
