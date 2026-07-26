@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacePublicationStateRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValuePublicationRaw;
 import org.jspecify.annotations.Nullable;
 
@@ -30,6 +31,21 @@ public enum MarketplacePublicationState {
     /** Map the generated state, tolerating unknown future values; {@code null} maps to {@code null}. */
     public static @Nullable MarketplacePublicationState from(
             AdditionalMarketplacesResponseValuePublicationRaw.@Nullable StateEnum raw) {
+        if (raw == null) {
+            return null;
+        }
+        return switch (raw) {
+            case APPROVED -> APPROVED;
+            case REFUSED -> REFUSED;
+            case IN_PROGRESS -> IN_PROGRESS;
+            case NOT_REQUESTED -> NOT_REQUESTED;
+            case PENDING -> PENDING;
+            default -> UNKNOWN;
+        };
+    }
+
+    /** Map the generated per-listing state, tolerating unknown future values; {@code null} → {@code null}. */
+    public static @Nullable MarketplacePublicationState from(@Nullable AdditionalMarketplacePublicationStateRaw raw) {
         if (raw == null) {
             return null;
         }

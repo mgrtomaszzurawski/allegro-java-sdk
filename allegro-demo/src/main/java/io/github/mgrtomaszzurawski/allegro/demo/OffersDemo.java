@@ -290,7 +290,8 @@ final class OffersDemo {
                     + ", scheduledStartAt=" + summary.scheduledStartAt()
                     + ", scheduledEndAt=" + summary.scheduledEndAt()
                     + ", baseMarketplaceId=" + summary.baseMarketplaceId()
-                    + ", additionalMarketplaceIds=" + summary.additionalMarketplaceIds());
+                    + ", additionalMarketplaceIds=" + summary.additionalMarketplaceIds()
+                    + ", additionalMarketplaces=" + summary.additionalMarketplaces());
         }
     }
 
