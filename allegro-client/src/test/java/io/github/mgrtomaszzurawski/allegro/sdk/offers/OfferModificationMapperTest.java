@@ -30,11 +30,11 @@ import org.openapitools.jackson.nullable.JsonNullableModule;
  * (fixed vs unlimited), and the omission of the eight unset {@code Modification}
  * sub-objects. Assertions are on the serialized JSON tree.
  *
- * <p>The mapper mirrors the SDK's partial write body: the same {@code JavaTimeModule}
- * + {@code JsonNullableModule} the production {@code AllegroClient} mapper carries, plus
- * {@code NON_EMPTY} inclusion. Registering the modules — not just the inclusion — keeps a
- * later {@code java.time} or {@code JsonNullable} field on this command from silently
- * diverging from the wire while the assertions keep passing.
+ * <p>The mapper registers the production {@code JavaTimeModule} + {@code JsonNullableModule}
+ * (the serialization modules the {@code AllegroClient} mapper also carries) plus
+ * {@code NON_EMPTY} inclusion, so it matches the SDK's partial write body. Registering the
+ * modules — not just the inclusion — keeps a later {@code java.time} or {@code JsonNullable}
+ * field on this command from silently diverging from the wire while the assertions keep passing.
  */
 class OfferModificationMapperTest {
 
