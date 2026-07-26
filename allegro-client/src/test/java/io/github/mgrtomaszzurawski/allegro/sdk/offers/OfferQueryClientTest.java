@@ -90,6 +90,9 @@ class OfferQueryClientTest {
     private static final String MIN_PRICE = "10.00";
     private static final String START_PRICE = "5.00";
     private static final String PRICE_RULE_ID = "6a63f773-0000-4000-8000-0000000000aa";
+    private static final String NO_SELLING_MODE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"publication\":{\"status\":\"ACTIVE\"}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME);
     private static final String SALEINFO_NO_PRICE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
             + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
             + "\"saleInfo\":{\"biddersCount\":%d}}],\"count\":1}")
@@ -299,6 +302,22 @@ class OfferQueryClientTest {
         assertNull(summary.fundraisingCampaignId());
         assertNull(summary.currentPrice());
         assertNull(summary.biddersCount());
+        assertNull(summary.minimalPrice());
+        assertNull(summary.startingPrice());
+        assertNull(summary.priceAutomationRuleId());
+    }
+
+    @Test
+    void streamOffers_whenSellingModeAbsent_allSellingModePricesAreNull(WireMockRuntimeInfo wmInfo) {
+        // given — an offer with no sellingMode block at all
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NO_SELLING_MODE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — every sellingMode-derived price degrades to null (the sellingMode == null branch)
+        assertNull(summary.buyNowPrice());
         assertNull(summary.minimalPrice());
         assertNull(summary.startingPrice());
         assertNull(summary.priceAutomationRuleId());
