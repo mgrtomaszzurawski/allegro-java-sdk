@@ -13,13 +13,14 @@ import org.jspecify.annotations.Nullable;
  * A bulk Buy Now price change — the request passed to
  * {@code offers().batch().changePrices(...)}. It applies <em>one</em> price change
  * to every target offer (up to {@value #MAX_OFFERS}) in one command: set a fixed
- * price ({@link Builder#setPrice}), raise the current price by an amount
- * ({@link Builder#increaseBy}), or lower it by an amount ({@link Builder#decreaseBy}).
+ * price ({@link Builder#setPrice}), raise or lower the current price by an amount
+ * ({@link Builder#increaseBy} / {@link Builder#decreaseBy}), or raise or lower it by
+ * a percentage ({@link Builder#increaseByPercent} / {@link Builder#decreaseByPercent}).
  * The change may target a specific marketplace ({@link Builder#onMarketplace}); when
  * omitted, Allegro changes the price on each offer's base marketplace.
  *
- * <p>Exactly one of set / increase / decrease is required; the fixed price must be
- * positive and an increase/decrease amount must be non-negative.
+ * <p>Exactly one change is required; a fixed price must be positive, an increase/decrease
+ * amount must be non-negative, and a percentage must be non-blank.
  *
  * @since 0.6.0
  */
@@ -32,13 +33,14 @@ public final class PriceChangeRequest {
     private static final String ERR_OFFERS_TOO_MANY = "at most " + MAX_OFFERS + " offers per command";
     private static final String ERR_OFFER_ID = "offer id must not be null or blank";
     private static final String ERR_AMOUNT = "price amount must not be null";
+    private static final String ERR_PERCENTAGE = "percentage must not be null or blank";
     private static final String ERR_PRICE_POSITIVE = "price amount must be positive: ";
     private static final String ERR_AMOUNT_NON_NEGATIVE = "change amount must not be negative: ";
     private static final String ERR_MARKETPLACE = "marketplace id must not be null or blank";
     private static final String ERR_SINGLE_CHANGE =
-            "a price change sets exactly one of a fixed price, an increase, or a decrease";
+            "a price change sets exactly one of a fixed price, an amount change, or a percentage change";
     private static final String ERR_NO_CHANGE =
-            "a price change must set a fixed price, an increase, or a decrease";
+            "a price change must set a fixed price, an amount change, or a percentage change";
 
     /** How the target price is derived. */
     public enum Kind {
@@ -47,18 +49,24 @@ public final class PriceChangeRequest {
         /** Raise the current price by an amount. */
         INCREASE,
         /** Lower the current price by an amount. */
-        DECREASE
+        DECREASE,
+        /** Raise the current price by a percentage. */
+        INCREASE_PERCENTAGE,
+        /** Lower the current price by a percentage. */
+        DECREASE_PERCENTAGE
     }
 
     private final List<String> offerIds;
     private final Kind kind;
-    private final Money amount;
+    private final @Nullable Money amount;
+    private final @Nullable String percentage;
     private final @Nullable String marketplaceId;
 
     private PriceChangeRequest(Builder builder) {
         this.offerIds = List.copyOf(builder.offerIds);
         this.kind = Objects.requireNonNull(builder.kind, ERR_NO_CHANGE);
-        this.amount = Objects.requireNonNull(builder.amount, ERR_NO_CHANGE);
+        this.amount = builder.amount;
+        this.percentage = builder.percentage;
         this.marketplaceId = builder.marketplaceId;
     }
 
@@ -72,14 +80,19 @@ public final class PriceChangeRequest {
         return offerIds;
     }
 
-    /** How the target price is derived (fixed / increase / decrease). */
+    /** How the target price is derived (fixed / amount / percentage change). */
     public Kind kind() {
         return kind;
     }
 
-    /** The fixed price (for {@link Kind#FIXED}) or the increase/decrease amount. */
-    public Money amount() {
+    /** The fixed price or the increase/decrease amount, or {@code null} for a percentage change. */
+    public @Nullable Money amount() {
         return amount;
+    }
+
+    /** The increase/decrease percentage (e.g. {@code "10"}), or {@code null} for an amount change. */
+    public @Nullable String percentage() {
+        return percentage;
     }
 
     /** The marketplace to change the price on, or {@code null} for the offer's base marketplace. */
@@ -93,6 +106,7 @@ public final class PriceChangeRequest {
         private final List<String> offerIds;
         private @Nullable Kind kind;
         private @Nullable Money amount;
+        private @Nullable String percentage;
         private @Nullable String marketplaceId;
 
         private Builder(List<String> offerIds) {
@@ -101,17 +115,27 @@ public final class PriceChangeRequest {
 
         /** Set an absolute Buy Now price (the request's single change). Must be positive. */
         public Builder setPrice(Money price) {
-            return change(Kind.FIXED, requirePositive(price));
+            return amountChange(Kind.FIXED, requirePositive(price));
         }
 
         /** Raise the current price by {@code amount} (the request's single change). */
         public Builder increaseBy(Money amount) {
-            return change(Kind.INCREASE, requireNonNegative(amount));
+            return amountChange(Kind.INCREASE, requireNonNegative(amount));
         }
 
         /** Lower the current price by {@code amount} (the request's single change). */
         public Builder decreaseBy(Money amount) {
-            return change(Kind.DECREASE, requireNonNegative(amount));
+            return amountChange(Kind.DECREASE, requireNonNegative(amount));
+        }
+
+        /** Raise the current price by {@code percentage} (e.g. {@code "10"}); the single change. */
+        public Builder increaseByPercent(String percentage) {
+            return percentageChange(Kind.INCREASE_PERCENTAGE, percentage);
+        }
+
+        /** Lower the current price by {@code percentage} (e.g. {@code "10"}); the single change. */
+        public Builder decreaseByPercent(String percentage) {
+            return percentageChange(Kind.DECREASE_PERCENTAGE, percentage);
         }
 
         /** Target a specific marketplace; when unset, the offer's base marketplace is used. */
@@ -123,7 +147,7 @@ public final class PriceChangeRequest {
             return this;
         }
 
-        /** Build, requiring exactly one of set / increase / decrease. */
+        /** Build, requiring exactly one change. */
         public PriceChangeRequest build() {
             if (kind == null) {
                 throw new IllegalStateException(ERR_NO_CHANGE);
@@ -131,13 +155,27 @@ public final class PriceChangeRequest {
             return new PriceChangeRequest(this);
         }
 
-        private Builder change(Kind newKind, Money changeAmount) {
-            if (kind != null) {
-                throw new IllegalStateException(ERR_SINGLE_CHANGE);
-            }
+        private Builder amountChange(Kind newKind, Money changeAmount) {
+            requireNoChangeYet();
             this.kind = newKind;
             this.amount = changeAmount;
             return this;
+        }
+
+        private Builder percentageChange(Kind newKind, String changePercentage) {
+            requireNoChangeYet();
+            if (changePercentage == null || changePercentage.isBlank()) {
+                throw new IllegalArgumentException(ERR_PERCENTAGE);
+            }
+            this.kind = newKind;
+            this.percentage = changePercentage;
+            return this;
+        }
+
+        private void requireNoChangeYet() {
+            if (kind != null) {
+                throw new IllegalStateException(ERR_SINGLE_CHANGE);
+            }
         }
 
         private static Money requirePositive(Money price) {

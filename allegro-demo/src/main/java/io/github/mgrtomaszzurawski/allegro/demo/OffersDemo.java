@@ -178,6 +178,8 @@ final class OffersDemo {
     private static final String CHANGE_PRICES_VALUE_PROPERTY = "demo.changePricesValue";
     private static final String PRICE_INCREASE_BY_PROPERTY = "demo.priceIncreaseBy";
     private static final String PRICE_DECREASE_BY_PROPERTY = "demo.priceDecreaseBy";
+    private static final String PRICE_INCREASE_PERCENT_PROPERTY = "demo.priceIncreasePercent";
+    private static final String PRICE_DECREASE_PERCENT_PROPERTY = "demo.priceDecreasePercent";
     private static final String PRICE_MARKETPLACE_PROPERTY = "demo.priceMarketplace";
     private static final String AVAILABLE_PACKAGES_PROPERTY = "demo.availablePackages";
     private static final String PROMO_FOR_OFFER_ID_PROPERTY = "demo.promoForOfferId";
@@ -637,10 +639,16 @@ final class OffersDemo {
         PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(offerIds);
         String increaseBy = System.getProperty(PRICE_INCREASE_BY_PROPERTY);
         String decreaseBy = System.getProperty(PRICE_DECREASE_BY_PROPERTY);
+        String increasePercent = System.getProperty(PRICE_INCREASE_PERCENT_PROPERTY);
+        String decreasePercent = System.getProperty(PRICE_DECREASE_PERCENT_PROPERTY);
         if (increaseBy != null) {
             builder.increaseBy(Money.of(increaseBy, CURRENCY_PLN));
         } else if (decreaseBy != null) {
             builder.decreaseBy(Money.of(decreaseBy, CURRENCY_PLN));
+        } else if (increasePercent != null) {
+            builder.increaseByPercent(increasePercent);
+        } else if (decreasePercent != null) {
+            builder.decreaseByPercent(decreasePercent);
         } else {
             builder.setPrice(Money.of(System.getProperty(CHANGE_PRICES_VALUE_PROPERTY), CURRENCY_PLN));
         }

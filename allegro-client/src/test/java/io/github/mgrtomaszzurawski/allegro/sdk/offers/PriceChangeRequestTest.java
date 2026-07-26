@@ -25,6 +25,12 @@ class PriceChangeRequestTest {
     private static final String CURRENCY_PLN = "PLN";
     private static final String PRICE = "149.50";
     private static final String MARKETPLACE_PL = "allegro-pl";
+    private static final String DELTA = "10.00";
+    private static final String SMALL_DELTA = "5.00";
+    private static final String ZERO = "0";
+    private static final String NEGATIVE = "-1.00";
+    private static final String PERCENTAGE = "10";
+    private static final String OTHER_OFFER_ID = "999";
 
     private static Money money(String amount) {
         return Money.of(amount, CURRENCY_PLN);
@@ -67,19 +73,41 @@ class PriceChangeRequestTest {
                 .setPrice(money(PRICE));
 
         // when/then — a second kind of change is rejected
-        assertThrows(IllegalStateException.class, () -> builder.increaseBy(money("10.00")));
+        assertThrows(IllegalStateException.class, () -> builder.increaseBy(money(DELTA)));
+    }
+
+    @Test
+    void increaseByPercent_whenAmountChangeAlreadySet_throwsSingleChange() {
+        // given — an amount increase already set (the single change)
+        PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(List.of(OFFER_ID))
+                .increaseBy(money(DELTA));
+
+        // when/then — adding a percentage change too is rejected
+        assertThrows(IllegalStateException.class, () -> builder.decreaseByPercent(PERCENTAGE));
     }
 
     @Test
     void setPrice_whenNotPositive_throws() {
         PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(List.of(OFFER_ID));
-        assertThrows(IllegalArgumentException.class, () -> builder.setPrice(money("0")));
+        assertThrows(IllegalArgumentException.class, () -> builder.setPrice(money(ZERO)));
+    }
+
+    @Test
+    void increaseBy_whenNegative_throws() {
+        PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(List.of(OFFER_ID));
+        assertThrows(IllegalArgumentException.class, () -> builder.increaseBy(money(NEGATIVE)));
     }
 
     @Test
     void decreaseBy_whenNegative_throws() {
         PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(List.of(OFFER_ID));
-        assertThrows(IllegalArgumentException.class, () -> builder.decreaseBy(money("-1.00")));
+        assertThrows(IllegalArgumentException.class, () -> builder.decreaseBy(money(NEGATIVE)));
+    }
+
+    @Test
+    void increaseByPercent_whenBlank_throws() {
+        PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(List.of(OFFER_ID));
+        assertThrows(IllegalArgumentException.class, () -> builder.increaseByPercent(" "));
     }
 
     @Test
@@ -108,7 +136,7 @@ class PriceChangeRequestTest {
     void build_whenIncreaseWithoutMarketplace_marketplaceIsNull() {
         // given — a relative increase, no marketplace
         PriceChangeRequest request = PriceChangeRequest.forOffers(List.of(OFFER_ID))
-                .increaseBy(money("5.00"))
+                .increaseBy(money(SMALL_DELTA))
                 .build();
 
         // then — kind is INCREASE and marketplace defaults to null (base marketplace)
@@ -117,11 +145,24 @@ class PriceChangeRequestTest {
     }
 
     @Test
+    void build_whenDecreaseByPercent_exposesPercentageAndNoAmount() {
+        // given — a relative percentage decrease
+        PriceChangeRequest request = PriceChangeRequest.forOffers(List.of(OFFER_ID))
+                .decreaseByPercent(PERCENTAGE)
+                .build();
+
+        // then — kind is DECREASE_PERCENTAGE, percentage set, amount null
+        assertEquals(PriceChangeRequest.Kind.DECREASE_PERCENTAGE, request.kind());
+        assertEquals(PERCENTAGE, request.percentage());
+        assertNull(request.amount());
+    }
+
+    @Test
     void offerIds_whenReadFromRequest_isImmutable() {
         PriceChangeRequest request = PriceChangeRequest.forOffers(List.of(OFFER_ID))
                 .setPrice(money(PRICE))
                 .build();
         List<String> offerIds = request.offerIds();
-        assertThrows(UnsupportedOperationException.class, () -> offerIds.add("999"));
+        assertThrows(UnsupportedOperationException.class, () -> offerIds.add(OTHER_OFFER_ID));
     }
 }

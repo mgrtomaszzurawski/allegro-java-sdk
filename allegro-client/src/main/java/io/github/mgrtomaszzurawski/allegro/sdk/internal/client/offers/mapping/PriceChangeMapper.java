@@ -10,12 +10,15 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferPriceChangeCommandR
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationFixedPriceHolderRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationFixedPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationPercentageChangeDecreaseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationPercentageChangeIncreaseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationValueChangeDecreaseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationValueChangeHolderRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationValueChangeIncreaseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PriceChangeRequest;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Builds the generated offer-price-change command body from the SDK's
@@ -27,11 +30,16 @@ import java.util.List;
  */
 public final class PriceChangeMapper {
 
+    private static final String ERR_REQUEST = "price change request must not be null";
+    private static final String ERR_AMOUNT_MISSING = "an amount change requires an amount";
+    private static final String ERR_PERCENTAGE_MISSING = "a percentage change requires a percentage";
+
     private PriceChangeMapper() {
     }
 
     /** The command body for {@code request} (the command id travels in the path, not the body). */
     public static OfferPriceChangeCommandRaw toRaw(PriceChangeRequest request) {
+        Objects.requireNonNull(request, ERR_REQUEST);
         return new OfferPriceChangeCommandRaw()
                 .offerCriteria(criteria(request))
                 .modification(modification(request));
@@ -39,14 +47,26 @@ public final class PriceChangeMapper {
 
     private static PriceModificationRaw modification(PriceChangeRequest request) {
         PriceModificationRaw modification = switch (request.kind()) {
-            case FIXED -> new PriceModificationFixedPriceRaw().price(fixedHolder(request.amount()));
-            case INCREASE -> new PriceModificationValueChangeIncreaseRaw().value(changeHolder(request.amount()));
-            case DECREASE -> new PriceModificationValueChangeDecreaseRaw().value(changeHolder(request.amount()));
+            case FIXED -> new PriceModificationFixedPriceRaw().price(fixedHolder(amountOf(request)));
+            case INCREASE -> new PriceModificationValueChangeIncreaseRaw().value(changeHolder(amountOf(request)));
+            case DECREASE -> new PriceModificationValueChangeDecreaseRaw().value(changeHolder(amountOf(request)));
+            case INCREASE_PERCENTAGE ->
+                    new PriceModificationPercentageChangeIncreaseRaw().percentage(percentageOf(request));
+            case DECREASE_PERCENTAGE ->
+                    new PriceModificationPercentageChangeDecreaseRaw().percentage(percentageOf(request));
         };
         if (request.marketplaceId() != null) {
             modification.marketplaceId(request.marketplaceId());
         }
         return modification;
+    }
+
+    private static Money amountOf(PriceChangeRequest request) {
+        return Objects.requireNonNull(request.amount(), ERR_AMOUNT_MISSING);
+    }
+
+    private static String percentageOf(PriceChangeRequest request) {
+        return Objects.requireNonNull(request.percentage(), ERR_PERCENTAGE_MISSING);
     }
 
     private static PriceModificationFixedPriceHolderRaw fixedHolder(Money price) {
