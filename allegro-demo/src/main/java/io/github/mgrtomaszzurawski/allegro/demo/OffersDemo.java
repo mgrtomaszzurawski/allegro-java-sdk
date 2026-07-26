@@ -628,8 +628,10 @@ final class OffersDemo {
 
     private static void availablePackages(AllegroClient client) {
         AvailablePromotionPackages packages = client.offers().promoOptions().availablePackages();
-        System.out.println("availablePackages: base=" + packages.basePackages().size()
-                + ", extra=" + packages.extraPackages().size());
+        System.out.println("availablePackages: marketplaceId=" + packages.marketplaceId()
+                + ", base=" + packages.basePackages().size()
+                + ", extra=" + packages.extraPackages().size()
+                + ", additionalMarketplaces=" + packages.additionalMarketplaces().keySet());
         packages.basePackages().forEach(basePackage -> System.out.println("  basePackage id=" + basePackage.id()));
     }
 
