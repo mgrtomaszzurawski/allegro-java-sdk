@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValuePublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
@@ -33,8 +35,6 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
