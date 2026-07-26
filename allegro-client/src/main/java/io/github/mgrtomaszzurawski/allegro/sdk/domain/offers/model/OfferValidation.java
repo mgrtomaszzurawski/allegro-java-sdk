@@ -47,14 +47,14 @@ public record OfferValidation(
     private static List<AllegroFieldError> errorsOf(@Nullable List<ValidationErrorRaw> raws) {
         return raws == null ? List.of() : raws.stream()
                 .map(raw -> new AllegroFieldError(raw.getCode(), raw.getMessage(),
-                        raw.getUserMessage(), raw.getPath(), raw.getDetails()))
+                        raw.getUserMessage(), raw.getPath(), raw.getDetails(), raw.getMetadata()))
                 .toList();
     }
 
     private static List<AllegroFieldError> warningsOf(@Nullable List<ValidationWarningRaw> raws) {
         return raws == null ? List.of() : raws.stream()
                 .map(raw -> new AllegroFieldError(raw.getCode(), raw.getMessage(),
-                        raw.getUserMessage(), raw.getPath(), raw.getDetails()))
+                        raw.getUserMessage(), raw.getPath(), raw.getDetails(), raw.getMetadata()))
                 .toList();
     }
 }

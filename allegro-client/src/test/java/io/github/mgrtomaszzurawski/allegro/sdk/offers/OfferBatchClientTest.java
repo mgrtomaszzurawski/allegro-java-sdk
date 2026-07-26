@@ -93,11 +93,14 @@ class OfferBatchClientTest {
     private static final String TASK_ERROR_MESSAGE = "Offer cannot be published";
     private static final String TASK_ERROR_USER_MESSAGE = "Nie można wystawić oferty";
     private static final String TASK_ERROR_PATH = "offer";
+    private static final String TASK_ERROR_META_KEY = "offerId";
+    private static final String TASK_ERROR_META_VALUE = OFFER_ONE;
     private static final String ONE_FAILED_TASK =
             "{\"tasks\":[{\"offer\":{\"id\":\"" + OFFER_ONE + "\"},\"status\":\"ERROR\",\"field\":\""
                     + TASK_FIELD + "\",\"message\":\"" + TASK_ERROR_MESSAGE + "\",\"errors\":[{\"code\":\""
                     + TASK_ERROR_CODE + "\",\"message\":\"" + TASK_ERROR_MESSAGE + "\",\"userMessage\":\""
-                    + TASK_ERROR_USER_MESSAGE + "\",\"path\":\"" + TASK_ERROR_PATH + "\"}]}]}";
+                    + TASK_ERROR_USER_MESSAGE + "\",\"path\":\"" + TASK_ERROR_PATH + "\",\"metadata\":{\""
+                    + TASK_ERROR_META_KEY + "\":\"" + TASK_ERROR_META_VALUE + "\"}}]}]}";
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"unknown offer\",\"path\":\"offerCriteria\"}]}";
     // Provenance: the real error shape live-observed for this endpoint (KNOWN-SERVER-BEHAVIORS
@@ -282,6 +285,7 @@ class OfferBatchClientTest {
         assertEquals(TASK_ERROR_MESSAGE, error.message());
         assertEquals(TASK_ERROR_USER_MESSAGE, error.userMessage());
         assertEquals(TASK_ERROR_PATH, error.path());
+        assertEquals(TASK_ERROR_META_VALUE, error.metadata().get(TASK_ERROR_META_KEY));
     }
 
     @Test
