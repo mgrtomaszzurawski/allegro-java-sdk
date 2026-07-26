@@ -78,6 +78,19 @@ class OfferQueryClientTest {
     private static final String IMAGE_URL = "https://img.example/x.jpg";
     private static final String RETURN_POLICY_ID = "ca36b384-61de-48ca-b296-a0abe1f41930";
     private static final String STARTED_AT = "2026-07-24T13:35:45Z";
+    private static final int WATCHERS = 42;
+    private static final int VISITS = 128;
+    private static final String EXTERNAL_ID = "SKU-9";
+    private static final String SHIPPING_RATES_ID = "2479b9fb-b52a-409d-b4d0-1aeb80b79368";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "camp-1";
+    private static final String CURRENT_PRICE = "45.00";
+    private static final int BIDDERS = 4;
+    private static final int BIDDERS_ONLY = 2;
+    private static final String SALEINFO_NO_PRICE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+            + "\"saleInfo\":{\"biddersCount\":%d}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, AMOUNT, CURRENCY_PLN, BIDDERS_ONLY);
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
@@ -85,9 +98,15 @@ class OfferQueryClientTest {
             + "\"stock\":{\"available\":%d,\"sold\":%d},"
             + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\"},"
             + "\"afterSalesServices\":{\"returnPolicy\":{\"id\":\"%s\"}},\"isFulfillment\":false,"
+            + "\"stats\":{\"watchersCount\":%d,\"visitsCount\":%d},"
+            + "\"external\":{\"id\":\"%s\"},\"b2b\":{\"buyableOnlyByBusiness\":true},"
+            + "\"delivery\":{\"shippingRates\":{\"id\":\"%s\"}},"
+            + "\"additionalServices\":{\"id\":\"%s\"},\"fundraisingCampaign\":{\"id\":\"%s\"},"
+            + "\"saleInfo\":{\"currentPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},\"biddersCount\":%d},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
             .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD,
-                    STARTED_AT, RETURN_POLICY_ID, IMAGE_URL);
+                    STARTED_AT, RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
+                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS, IMAGE_URL);
 
     // A lean listing item: a malformed publication timestamp and no after-sales / fulfillment
     // blocks — the tolerant mapping must degrade these to null rather than fail the read.
@@ -236,6 +255,15 @@ class OfferQueryClientTest {
         assertEquals(OffsetDateTime.parse(STARTED_AT), summary.publishedAt());
         assertNull(summary.endedAt());
         assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicy().id());
+        assertEquals(WATCHERS, summary.watchersCount());
+        assertEquals(VISITS, summary.visitsCount());
+        assertEquals(EXTERNAL_ID, summary.externalId());
+        assertEquals(Boolean.TRUE, summary.businessOnly());
+        assertEquals(SHIPPING_RATES_ID, summary.shippingRatesId());
+        assertEquals(ADDITIONAL_SERVICES_ID, summary.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, summary.fundraisingCampaignId());
+        assertEquals(Money.of(CURRENT_PRICE, CURRENCY_PLN), summary.currentPrice());
+        assertEquals(BIDDERS, summary.biddersCount());
     }
 
     @Test
@@ -252,6 +280,30 @@ class OfferQueryClientTest {
         assertNull(summary.endedAt());
         assertNull(summary.afterSalesServices());
         assertNull(summary.fulfillment());
+        assertNull(summary.watchersCount());
+        assertNull(summary.visitsCount());
+        assertNull(summary.externalId());
+        assertNull(summary.businessOnly());
+        assertNull(summary.shippingRatesId());
+        assertNull(summary.additionalServicesGroupId());
+        assertNull(summary.fundraisingCampaignId());
+        assertNull(summary.currentPrice());
+        assertNull(summary.biddersCount());
+    }
+
+    @Test
+    void streamOffers_whenSaleInfoHasBiddersButNoCurrentPrice_readsBiddersAndNullPrice(
+            WireMockRuntimeInfo wmInfo) {
+        // given — saleInfo present with biddersCount but no currentPrice (the live BUY_NOW shape)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(SALEINFO_NO_PRICE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — biddersCount is read; currentPrice degrades to null (the saleInfo-present inner branch)
+        assertEquals(BIDDERS_ONLY, summary.biddersCount());
+        assertNull(summary.currentPrice());
     }
 
     @Test

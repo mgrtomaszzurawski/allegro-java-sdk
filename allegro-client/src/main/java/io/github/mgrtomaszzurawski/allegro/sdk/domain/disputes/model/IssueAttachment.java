@@ -8,7 +8,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueAttachm
 import org.jspecify.annotations.Nullable;
 
 /**
- * A file attached to a post-purchase issue chat entry.
+ * A file attached to a post-purchase issue — either to the issue itself (the
+ * evidence the buyer supplied when opening it) or to a chat entry.
  *
  * @param fileName the attachment's file name, or {@code null}
  * @param url a URL to fetch the attachment, or {@code null}

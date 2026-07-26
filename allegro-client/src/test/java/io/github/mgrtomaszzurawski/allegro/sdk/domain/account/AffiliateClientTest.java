@@ -28,6 +28,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.builder.Conversion
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.ConversionStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CpsConversion;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -58,6 +59,7 @@ class AffiliateClientTest {
     private static final String CLICK_ID_VALUE = "abc123";
     private static final String CONVERSIONS_RESPONSE = """
             {"conversions":[{"id":"conv-1","status":"CONFIRMED","quantity":2,
+              "lastModifiedAt":"2025-01-10T12:00:00Z","orderCreatedAt":"2025-01-09T12:00:00Z",
               "marketplace":{"id":"allegro-pl"},
               "offer":{"id":"o1","name":"Widget","category":{"id":"%s"},
                 "unitPrice":{"amount":"10.00","currency":"PLN"},
@@ -79,6 +81,9 @@ class AffiliateClientTest {
     // whole response must still deserialize.
     private static final String UNKNOWN_STATUS_RESPONSE = """
             {"conversions":[{"id":"conv-3","status":"SETTLED_LATER","quantity":1}]}
+            """;
+    private static final String REJECTED_STATUS_RESPONSE = """
+            {"conversions":[{"id":"conv-4","status":"REJECTED","quantity":1}]}
             """;
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
@@ -112,10 +117,17 @@ class AffiliateClientTest {
             // then — mapped incl. status enum, nested Money, seller
             assertEquals(1, conversions.size());
             CpsConversion conversion = conversions.get(0);
+            assertEquals("conv-1", conversion.id());
             assertEquals(ConversionStatus.CONFIRMED, conversion.status());
+            assertEquals(2, conversion.quantity().intValue());
+            assertEquals(OffsetDateTime.parse("2025-01-10T12:00:00Z"), conversion.lastModifiedAt());
+            assertEquals(OffsetDateTime.parse("2025-01-09T12:00:00Z"), conversion.orderCreatedAt());
             assertEquals("allegro-pl", conversion.marketplaceId());
+            assertEquals("o1", conversion.offer().id());
+            assertEquals("Widget", conversion.offer().name());
             assertEquals(Money.of("10.00", CURRENCY_PLN), conversion.offer().unitPrice());
             assertEquals(Money.of(PUBLISHER_AMOUNT, CURRENCY_PLN), conversion.commission().publisher());
+            assertEquals(Money.of("0.50", CURRENCY_PLN), conversion.commission().allegro());
             assertEquals("seller1", conversion.offer().sellerLogin());
             assertEquals(OFFER_CATEGORY_ID, conversion.offer().categoryId());
             // and — the affiliate tracking parameters are echoed back in full
@@ -148,8 +160,27 @@ class AffiliateClientTest {
 
             // then — the incomplete price maps to null, the conversion still yields
             assertEquals(1, conversions.size());
+            assertEquals(ConversionStatus.CREATED, conversions.get(0).status());
             assertNull(conversions.get(0).offer().unitPrice());
             assertNull(conversions.get(0).commission().publisher());
+        }
+    }
+
+    @Test
+    void streamCpsConversions_whenStatusRejected_mapsRejectedEnum(WireMockRuntimeInfo wmInfo) {
+        // given — a known REJECTED status (the remaining modelled branch)
+        stubFor(get(urlPathEqualTo(CONVERSIONS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(REJECTED_STATUS_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            List<CpsConversion> conversions =
+                    allegro.affiliate().streamCpsConversions(ConversionFilter.all()).toList();
+
+            // then — the REJECTED wire value maps to the modelled enum, not UNKNOWN
+            assertEquals(1, conversions.size());
+            assertEquals(ConversionStatus.REJECTED, conversions.get(0).status());
         }
     }
 

@@ -278,7 +278,13 @@ final class OffersDemo {
                     + ", format=" + summary.format() + ", stock=" + summary.availableStock()
                     + ", buyNow=" + price + ", fulfillment=" + summary.fulfillment()
                     + ", publishedAt=" + summary.publishedAt() + ", endedAt=" + summary.endedAt()
-                    + ", returnPolicy=" + returnPolicy);
+                    + ", returnPolicy=" + returnPolicy
+                    + ", watchers=" + summary.watchersCount() + ", visits=" + summary.visitsCount()
+                    + ", externalId=" + summary.externalId() + ", businessOnly=" + summary.businessOnly()
+                    + ", shippingRatesId=" + summary.shippingRatesId()
+                    + ", additionalServicesGroupId=" + summary.additionalServicesGroupId()
+                    + ", fundraisingCampaignId=" + summary.fundraisingCampaignId()
+                    + ", currentPrice=" + summary.currentPrice() + ", biddersCount=" + summary.biddersCount());
         }
     }
 

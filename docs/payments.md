@@ -87,3 +87,9 @@ PaymentRefund refund = client.payments().refund(RefundRequest.builder()
         .sellerComment("One item out of stock")
         .build());
 ```
+
+The returned `PaymentRefund` echoes back the breakdown the server actually applied:
+`refund.lineItems()` / `deposits()` / `surcharges()` (each a small read record carrying its id and
+`Money` amount — a line item is either by amount or by quantity) plus `delivery()` / `overpaid()` /
+`additionalServices()` (each a `Money`, or `null` when not refunded) and `sellerComment()`. For a
+full refund those collections are empty and the amounts `null`.

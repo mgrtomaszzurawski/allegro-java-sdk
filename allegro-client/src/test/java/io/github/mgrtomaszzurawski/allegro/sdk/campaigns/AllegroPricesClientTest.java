@@ -146,9 +146,26 @@ class AllegroPricesClientTest {
                "completedAt":"%s","errors":%s}]}
             """;
 
+    // spec-derived: not yet wire-verified — a subsidy submit needs an offer with a discount
+    // opportunity, which the sandbox account cannot arrange; the sellerDiscountDeclaration echo
+    // shape here comes from the vendored OpenAPI spec, not a live capture (see SubsidyOfferResult
+    // "Alpha" note). Replace with a sandbox-captured body once an eligible offer is available.
+    private static final String PREVIEW_WITH_DECLARATION_TEMPLATE = """
+            {"commandId":"%s","createdAt":"2026-07-16T10:00:00Z",
+             "offers":[{"id":"%s","marketplace":{"id":"%s"},"status":"%s",
+               "sellerDiscountDeclaration":{"maxContributionPercentage":"%s"},
+               "completedAt":"%s","errors":%s}]}
+            """;
+
     private static String preview(String status, String errorsJson) {
         return PREVIEW_TEMPLATE.formatted(
                 TEST_COMMAND_ID, TEST_OFFER_ID, MARKETPLACE_PL, status, TEST_COMPLETED_AT, errorsJson);
+    }
+
+    private static String previewWithDeclaration(String status, String maxContribution) {
+        return PREVIEW_WITH_DECLARATION_TEMPLATE.formatted(
+                TEST_COMMAND_ID, TEST_OFFER_ID, MARKETPLACE_PL, status, maxContribution,
+                TEST_COMPLETED_AT, ERRORS_EMPTY);
     }
 
     private static String failureErrors() {
@@ -402,9 +419,33 @@ class AllegroPricesClientTest {
             assertEquals(TEST_COMMAND_ID, report.commandId());
             assertEquals(1, report.offers().size());
             assertEquals(SubsidyOfferStatus.SUCCESS, report.offers().get(0).status());
+            assertNull(report.offers().get(0).maxContributionPercentage());
             verify(1, postRequestedFor(urlEqualTo(SUBMIT_PATH))
                     .withRequestBody(matchingJsonPath(JSON_MAX_CONTRIBUTION, equalTo(TEST_MAX_CONTRIBUTION))));
             verify(1, getRequestedFor(urlEqualTo(SUBMIT_POLL_PATH)));
+        }
+    }
+
+    @Test
+    void submitOffers_whenPreviewEchoesDeclaration_surfacesMaxContribution(WireMockRuntimeInfo wmInfo) {
+        // given — the submit poll echoes the seller's declared max contribution per offer
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(SUBMIT_PATH))
+                .willReturn(aResponse().withStatus(HTTP_ACCEPTED).withBody(ACCEPTED_RESPONSE)));
+        stubFor(get(urlEqualTo(SUBMIT_POLL_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(previewWithDeclaration(STATUS_SUCCESS, TEST_MAX_CONTRIBUTION))));
+        SubmitOffersRequest request = SubmitOffersRequest.builder()
+                .addOffer(TEST_OFFER_ID, MARKETPLACE_PL, TEST_MAX_CONTRIBUTION)
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            SubsidyCommandReport report = allegro.campaigns().allegroPrices().submitOffers(request);
+
+            // then — the contribution Allegro recorded is read back onto the result
+            assertEquals(TEST_MAX_CONTRIBUTION, report.offers().get(0).maxContributionPercentage());
         }
     }
 
@@ -536,8 +577,9 @@ class AllegroPricesClientTest {
             // when
             SubsidyCommandReport report = allegro.campaigns().allegroPrices().excludeOffers(request);
 
-            // then
+            // then — an exclusion carries no seller declaration to read back
             assertEquals(SubsidyOfferStatus.SUCCESS, report.offers().get(0).status());
+            assertNull(report.offers().get(0).maxContributionPercentage());
             verify(1, postRequestedFor(urlEqualTo(EXCLUSION_PATH)));
             verify(1, getRequestedFor(urlEqualTo(EXCLUSION_POLL_PATH)));
         }

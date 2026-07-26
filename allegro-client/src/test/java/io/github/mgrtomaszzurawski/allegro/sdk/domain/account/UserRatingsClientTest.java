@@ -34,6 +34,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.Removal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.UserRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.UserRatingSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -71,6 +72,7 @@ class UserRatingsClientTest {
     private static final String RATING_RESPONSE = """
             {"id":"%s","buyer":{"id":"b1","login":"buyer-login"},"recommended":true,
              "comment":"great","createdAt":"2025-01-15T08:36:57.292Z",
+             "editedAt":"2025-01-17T08:36:57.292Z","lastChangedAt":"2025-01-18T08:36:57.292Z",
              "answer":{"createdAt":"2025-01-16T08:36:57.292Z","message":"you are welcome"},
              "order":{"id":"order-1"}}
             """.formatted(RATING_ID);
@@ -95,6 +97,8 @@ class UserRatingsClientTest {
              "createdAt":"2025-01-15T08:36:57.292Z",
              "excludedFromAverageRates":true,"excludedFromAverageRatesReason":"%s",
              "rates":{"delivery":5,"deliveryCost":4,"description":9,"service":3},
+             "removal":{"possibleTo":"2025-03-01T00:00:00Z",
+               "request":{"createdAt":"2025-02-01T08:36:57.292Z","message":"admin removed","source":"ADMIN"}},
              "order":{"id":"order-1"}}
             """.formatted(RATING_ID, EXCLUSION_REASON);
     // A removal whose `source` is an unmodelled value — must map to null, never SELLER.
@@ -214,10 +218,17 @@ class UserRatingsClientTest {
             // when
             UserRating rating = allegro.user().ratings().get(RATING_ID);
 
-            // then
+            // then — identity + every scalar passthrough is pinned, not just buyer/answer
+            assertEquals(RATING_ID, rating.id());
+            assertEquals("b1", rating.buyer().id());
             assertEquals("buyer-login", rating.buyer().login());
             assertTrue(rating.recommended());
+            assertEquals("great", rating.comment());
+            assertEquals("2025-01-15T08:36:57.292Z", rating.createdAt());
+            assertEquals("2025-01-17T08:36:57.292Z", rating.editedAt());
+            assertEquals("2025-01-18T08:36:57.292Z", rating.lastChangedAt());
             assertEquals("order-1", rating.orderId());
+            assertEquals("2025-01-16T08:36:57.292Z", rating.answer().createdAt());
             assertEquals("you are welcome", rating.answer().message());
         }
     }
@@ -256,7 +267,10 @@ class UserRatingsClientTest {
             Removal removal = allegro.user().ratings()
                     .requestRemoval(RATING_ID, RatingRemoval.builder().message(REMOVAL_MESSAGE).build());
 
-            // then — nested {request:{message}} sent, response mapped incl. source enum
+            // then — nested {request:{message}} sent, response mapped incl. source enum,
+            // window and request-timestamp passthroughs
+            assertEquals("2025-02-01T00:00:00Z", removal.possibleTo());
+            assertEquals("2025-01-16T08:36:57.292Z", removal.request().createdAt());
             assertEquals(REMOVAL_MESSAGE, removal.request().message());
             assertEquals(Removal.Source.SELLER, removal.request().source());
             verify(1, putRequestedFor(urlEqualTo(REMOVAL_PATH)));
@@ -284,6 +298,12 @@ class UserRatingsClientTest {
             assertEquals(4, rates.deliveryCost().intValue());
             assertEquals(3, rates.service().intValue());
             assertNull(rates.description());
+            // and — a removal nested on the rating maps through UserRating (ADMIN branch)
+            Removal ratingRemoval = rating.removal();
+            assertEquals("2025-03-01T00:00:00Z", ratingRemoval.possibleTo());
+            assertEquals("2025-02-01T08:36:57.292Z", ratingRemoval.request().createdAt());
+            assertEquals("admin removed", ratingRemoval.request().message());
+            assertEquals(Removal.Source.ADMIN, ratingRemoval.request().source());
         }
     }
 
@@ -344,6 +364,7 @@ class UserRatingsClientTest {
             assertEquals(130L, summary.recommended().total());
             assertEquals(3L, summary.notRecommended().total());
             assertEquals("98.5", summary.recommendedPercentage());
+            assertEquals(LocalDate.of(2015, 6, 1), summary.userSince());
         }
     }
 }

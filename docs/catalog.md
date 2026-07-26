@@ -98,6 +98,26 @@ for (CategorySuggestion match : categories.suggest("wiertarka udarowa Bosch")) {
 }
 ```
 
+## Category changes
+
+The category tree evolves — categories are created, deleted, moved or renamed. `streamChanges`
+is a lazy feed of those events; the stream follows Allegro's `from` cursor for you (each event's id
+is the cursor), so a bounded consumer only fetches the pages it needs.
+
+```java
+categories.streamChanges(CategoryEventFilter.all())
+        .limit(100)
+        .forEach(event -> System.out.println(event.occurredAt() + "  " + event.type()
+                + "  " + (event.category() == null ? "?" : event.category().id())));
+```
+
+Each `CategoryEvent` carries its `id()` (also the cursor to resume from), the change `type()`
+(`CATEGORY_CREATED` / `CATEGORY_DELETED` / `CATEGORY_MOVED` / `CATEGORY_RENAMED`, or `UNKNOWN` for a
+kind this release does not model), when it `occurredAt()`, and the affected `category()` as it stood
+at the event. A `CATEGORY_DELETED` event also exposes `redirectCategoryId()` — where its offers were
+redirected. Restrict the feed to certain kinds with `CategoryEventFilter.ofTypes(...)`, or resume
+after a checkpoint with `CategoryEventFilter.since(lastSeenEventId)`.
+
 ## Products
 
 Products are the shared descriptions offers are built from. Search the database lazily — the
@@ -202,4 +222,5 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products             -Pdemo.account=seller
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility        -Pdemo.account=seller
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatible-products
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-category-events
 ```
