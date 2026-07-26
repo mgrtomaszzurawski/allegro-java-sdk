@@ -115,10 +115,16 @@ class AdvanceShipNoticesClientTest {
     private static final String JSON_SHIPPING_COURIER_ID = "$.shipping.courier.id";
     private static final String JSON_SHIPPING_COUNTRY = "$.shipping.countryCode";
     private static final String METHOD_COURIER = "COURIER_BY_SELLER";
+    private static final String METHOD_OWN = "OWN_TRANSPORT";
+    private static final String METHOD_THIRD = "THIRD_PARTY_DELIVERY";
     private static final String COURIER_ID = "DPD";
     private static final String COUNTRY_CODE = "PL";
     private static final String TRACK_NUMBER = "TRACK-1";
+    private static final String TRUCK_PLATE = "FZ12453";
+    private static final String CARRIER_NAME = "Company ABC";
     private static final String SHIPPING_ETA = "2026-07-15T08:00:00Z";
+    private static final String JSON_SHIPPING_TRUCK = "$.shipping.truckLicencePlate";
+    private static final String JSON_SHIPPING_TP_NAME = "$.shipping.thirdParty.name";
 
     private static final String SCENARIO_POLL = "submit-poll";
     private static final String STATE_RUNNING_SEEN = "running-seen";
@@ -418,6 +424,55 @@ class AdvanceShipNoticesClientTest {
             assertEquals(COURIER_ID, courier.courierId());
             assertEquals(COUNTRY_CODE, courier.countryCode());
             assertEquals(List.of(TRACK_NUMBER), courier.trackingNumbers());
+            assertEquals(OffsetDateTime.parse(SHIPPING_ETA), courier.estimatedTimeOfArrival());
+        }
+    }
+
+    @Test
+    void create_whenOwnTransportShipping_postsTruckPlate(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(ASN_BASE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withHeader(ETAG_HEADER, VERSION_ONE).withBody(ASN_CREATE_RESPONSE)));
+        AsnRequest request = AsnRequest.builder()
+                .addItem(PRODUCT_ID, ITEM_QUANTITY)
+                .shipping(new AsnShipping.OwnTransport(
+                        TRUCK_PLATE, OffsetDateTime.parse(SHIPPING_ETA), COUNTRY_CODE))
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.fulfillment().advanceShipNotices().create(request);
+
+            // then — the own-transport discriminator and truck plate reach the wire
+            verify(1, postRequestedFor(urlEqualTo(ASN_BASE))
+                    .withRequestBody(matchingJsonPath(JSON_SHIPPING_METHOD, equalTo(METHOD_OWN)))
+                    .withRequestBody(matchingJsonPath(JSON_SHIPPING_TRUCK, equalTo(TRUCK_PLATE))));
+        }
+    }
+
+    @Test
+    void create_whenThirdPartyShipping_postsCarrierName(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(ASN_BASE))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withHeader(ETAG_HEADER, VERSION_ONE).withBody(ASN_CREATE_RESPONSE)));
+        AsnRequest request = AsnRequest.builder()
+                .addItem(PRODUCT_ID, ITEM_QUANTITY)
+                .shipping(new AsnShipping.ThirdPartyDelivery(
+                        CARRIER_NAME, null, OffsetDateTime.parse(SHIPPING_ETA), COUNTRY_CODE))
+                .build();
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.fulfillment().advanceShipNotices().create(request);
+
+            // then — the third-party discriminator and carrier name reach the wire
+            verify(1, postRequestedFor(urlEqualTo(ASN_BASE))
+                    .withRequestBody(matchingJsonPath(JSON_SHIPPING_METHOD, equalTo(METHOD_THIRD)))
+                    .withRequestBody(matchingJsonPath(JSON_SHIPPING_TP_NAME, equalTo(CARRIER_NAME))));
         }
     }
 

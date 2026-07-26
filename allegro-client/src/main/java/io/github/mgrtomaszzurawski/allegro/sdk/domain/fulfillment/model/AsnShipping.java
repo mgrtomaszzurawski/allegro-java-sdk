@@ -38,13 +38,13 @@ public sealed interface AsnShipping
     /**
      * Delivered by a courier the seller booked.
      *
-     * @param courierId            the courier service identifier (e.g. {@code "DPD"})
+     * @param courierId            the courier service identifier (e.g. {@code "DPD"}), or {@code null}
      * @param trackingNumbers      the parcel tracking numbers (never {@code null}; may be empty)
      * @param estimatedTimeOfArrival estimated arrival at the warehouse
      * @param countryCode          the ISO country the shipment departs from
      */
     record CourierBySeller(
-            String courierId,
+            @Nullable String courierId,
             List<String> trackingNumbers,
             OffsetDateTime estimatedTimeOfArrival,
             String countryCode) implements AsnShipping {
@@ -70,13 +70,13 @@ public sealed interface AsnShipping
     /**
      * Delivered by a third-party carrier.
      *
-     * @param carrierName          the carrier's name
+     * @param carrierName          the carrier's name, or {@code null}
      * @param orderNumber          the carrier's order number, or {@code null}
      * @param estimatedTimeOfArrival estimated arrival at the warehouse
      * @param countryCode          the ISO country the shipment departs from
      */
     record ThirdPartyDelivery(
-            String carrierName,
+            @Nullable String carrierName,
             @Nullable String orderNumber,
             OffsetDateTime estimatedTimeOfArrival,
             String countryCode) implements AsnShipping {
@@ -107,9 +107,9 @@ public sealed interface AsnShipping
                     courier.getEstimatedTimeOfArrival(),
                     courier.getCountryCode());
         }
-        if (raw instanceof OwnTransportShippingRaw own) {
-            return new OwnTransport(
-                    own.getTruckLicencePlate(), own.getEstimatedTimeOfArrival(), own.getCountryCode());
+        if (raw instanceof OwnTransportShippingRaw ownTransport) {
+            return new OwnTransport(ownTransport.getTruckLicencePlate(),
+                    ownTransport.getEstimatedTimeOfArrival(), ownTransport.getCountryCode());
         }
         if (raw instanceof ThirdPartyDeliveryShippingRaw third) {
             return new ThirdPartyDelivery(

@@ -337,11 +337,11 @@ public final class AdvanceShipNoticesImpl implements AdvanceShipNotices {
                     .estimatedTimeOfArrival(courier.estimatedTimeOfArrival())
                     .countryCode(courier.countryCode());
         }
-        if (shipping instanceof AsnShipping.OwnTransport own) {
+        if (shipping instanceof AsnShipping.OwnTransport ownTransport) {
             return new OwnTransportShippingRaw()
-                    .truckLicencePlate(own.truckLicencePlate())
-                    .estimatedTimeOfArrival(own.estimatedTimeOfArrival())
-                    .countryCode(own.countryCode());
+                    .truckLicencePlate(ownTransport.truckLicencePlate())
+                    .estimatedTimeOfArrival(ownTransport.estimatedTimeOfArrival())
+                    .countryCode(ownTransport.countryCode());
         }
         if (shipping instanceof AsnShipping.ThirdPartyDelivery third) {
             return new ThirdPartyDeliveryShippingRaw()
