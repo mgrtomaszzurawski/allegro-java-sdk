@@ -234,6 +234,43 @@ package needs its type and its centimetre dimensions and kilogram weight. The
 print stream. `createShipment` reads the created shipment back once the command
 succeeds; a command that ends in a non-success state throws.
 
+## Pickups
+
+Book a carrier pickup for shipments. First ask which windows the carrier offers,
+then request a pickup for a chosen window. `requestPickup` is asynchronous on
+Allegro's side — the SDK submits and polls to a terminal state internally, so it
+is a plain blocking call (with an optional `Duration` timeout overload) that
+returns the booked pickup.
+
+```java
+PostalAddress collection = PostalAddress.builder()
+        .street("Grunwaldzka 100").postalCode("80-244").city("Gdansk")
+        .email("seller@example.com").phone("+48500100100").build();
+
+PickupProposals proposals = client.shipping().pickupProposals(
+        PickupProposalsRequest.builder()
+                .shipmentIds(List.of(shipmentId))
+                .address(collection)
+                .build());
+
+PickupTime window = proposals.proposals().get(0).pickupTimes().get(0);
+
+Pickup pickup = client.shipping().requestPickup(
+        PickupRequest.builder()
+                .shipmentIds(List.of(shipmentId))
+                .pickupTime(window)                    // or PickupTime.of(date, minTime, maxTime)
+                .address(collection)
+                .build());
+
+Pickup fetched = client.shipping().getPickup(pickup.id());
+```
+
+A pickup request requires the shipments, a pickup window and the collection
+address. A command that ends in a non-success state throws
+`AllegroBadRequestException` with the carrier's typed field errors. (The spec's
+older pickup-proposal-id mechanism is deprecated; the SDK uses the `PickupTime`
+window directly, in requests and in proposals.)
+
 ## Notes
 
 - **Conflict on create.** Allegro returns `409 Conflict` when a *similar* point

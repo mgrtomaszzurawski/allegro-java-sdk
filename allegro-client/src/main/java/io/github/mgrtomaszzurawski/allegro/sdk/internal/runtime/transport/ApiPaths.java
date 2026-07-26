@@ -419,6 +419,13 @@ public final class ApiPaths {
     public static final String SHIPMENT_LABEL = "/shipment-management/label";
     /** Shipment handover protocol rendering (returns binary). */
     public static final String SHIPMENT_PROTOCOL = "/shipment-management/protocol";
+    /** Async create-pickup commands; append {@code /{commandId}} via {@link #subPath}. */
+    public static final String PICKUP_CREATE_COMMANDS =
+            "/shipment-management/pickups/create-commands";
+    /** Booked pickups; append {@code /{pickupId}} via {@link #subPath}. */
+    public static final String PICKUPS = "/shipment-management/pickups";
+    /** Carrier pickup-time proposals for a set of shipments. */
+    public static final String PICKUP_PROPOSALS = "/shipment-management/pickup-proposals";
 
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */

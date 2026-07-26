@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.PickupAddressDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReceiverAddressDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SenderAddressDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.PostalAddressBuilder;
@@ -73,6 +74,13 @@ public record PostalAddress(
                 raw.getPhone(), raw.getPoint());
     }
 
+    /** Map a pickup-address DTO to the public record (a pickup address has no point). */
+    public static PostalAddress fromPickup(PickupAddressDtoRaw raw) {
+        return new PostalAddress(raw.getName(), raw.getCompany(), raw.getStreet(),
+                raw.getPostalCode(), raw.getCity(), raw.getState(), raw.getEmail(),
+                raw.getPhone(), null);
+    }
+
     /** Build the sender-address DTO for a request body. */
     public SenderAddressDtoRaw toSenderRaw() {
         SenderAddressDtoRaw raw = new SenderAddressDtoRaw();
@@ -100,6 +108,24 @@ public record PostalAddress(
         raw.setEmail(email);
         raw.setPhone(phone);
         raw.setPoint(point);
+        return raw;
+    }
+
+    /**
+     * Build the pickup-address DTO for a pickup request body. The point id does
+     * not apply to a pickup address; the country code keeps the generated DTO's
+     * default until the SDK maps it (a shared address-depth follow-up).
+     */
+    public PickupAddressDtoRaw toPickupRaw() {
+        PickupAddressDtoRaw raw = new PickupAddressDtoRaw();
+        raw.setName(name);
+        raw.setCompany(company);
+        raw.setStreet(street);
+        raw.setPostalCode(postalCode);
+        raw.setCity(city);
+        raw.setState(state);
+        raw.setEmail(email);
+        raw.setPhone(phone);
         return raw;
     }
 

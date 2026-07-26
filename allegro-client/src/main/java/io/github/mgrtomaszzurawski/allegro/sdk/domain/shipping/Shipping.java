@@ -6,6 +6,10 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.LabelRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Pickup;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupProposals;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupProposalsRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Shipment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentRequest;
 import java.time.Duration;
@@ -102,6 +106,49 @@ public interface Shipping {
      * @return the available delivery methods, possibly empty
      */
     List<DeliveryMethod> deliveryMethods();
+
+    /**
+     * Ask the carrier which pickup windows are available for a set of shipments.
+     *
+     * @param request the shipments, collection address and optional ready date
+     * @return the per-shipment pickup-window proposals
+     */
+    PickupProposals pickupProposals(PickupProposalsRequest request);
+
+    /**
+     * Book a carrier pickup for one or more shipments. This is an asynchronous
+     * command endpoint wrapped sync-default: the SDK submits the request, polls
+     * it to a terminal state internally, and returns the booked pickup.
+     *
+     * @param request the shipments, pickup window and collection address
+     * @return the booked pickup
+     * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException
+     *     if the command finishes in a non-success state (with the typed field errors)
+     */
+    Pickup requestPickup(PickupRequest request);
+
+    /**
+     * Book a carrier pickup, waiting at most {@code timeout} for the command to
+     * reach a terminal state.
+     *
+     * @param request the shipments, pickup window and collection address
+     * @param timeout the longest time to wait for the command to finish
+     * @return the booked pickup
+     * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException
+     *     if the command finishes in a non-success state (with the typed field errors)
+     * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAsyncTimeoutException
+     *     if the command does not finish within {@code timeout}
+     */
+    Pickup requestPickup(PickupRequest request, Duration timeout);
+
+    /**
+     * Read a booked pickup by its id.
+     *
+     * @param pickupId the pickup id
+     * @return the pickup
+     * @throws IllegalArgumentException if {@code pickupId} is null or blank
+     */
+    Pickup getPickup(String pickupId);
 
     /**
      * Points of service — the seller's personal-collection locations.

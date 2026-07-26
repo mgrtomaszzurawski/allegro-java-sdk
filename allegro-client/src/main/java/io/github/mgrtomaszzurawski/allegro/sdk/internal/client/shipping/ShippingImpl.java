@@ -9,6 +9,10 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CreateShipmentCommandSta
 import io.github.mgrtomaszzurawski.allegro.client.model.Error400Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CreatePickupCommandStatusDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PickupCreateCommandDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PickupDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PickupProposalsResponseDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShipmentCancelCommandDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShipmentCancelRequestDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShipmentCreateCommandDtoRaw;
@@ -20,6 +24,10 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.ShippingRates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.LabelRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Pickup;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupProposals;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupProposalsRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Shipment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
@@ -60,6 +68,10 @@ public final class ShippingImpl implements Shipping {
     private static final String OP_GET_SHIPMENT = "get shipment";
     private static final String OP_LABELS = "render shipment labels";
     private static final String OP_PROTOCOL = "render shipment protocol";
+    private static final String OP_PICKUP_PROPOSALS = "list pickup proposals";
+    private static final String OP_REQUEST_PICKUP = "request pickup";
+    private static final String OP_REQUEST_PICKUP_POLL = "poll pickup request";
+    private static final String OP_GET_PICKUP = "get pickup";
 
     private static final String OCTET_STREAM = "application/octet-stream";
     private static final String ERR_CREATE_FAILED =
@@ -68,6 +80,9 @@ public final class ShippingImpl implements Shipping {
             "Shipment cancellation command finished with a non-success status (%s)";
     private static final String ERR_NO_SHIPMENT_IDS = "At least one shipment id is required";
     private static final String ERR_NO_SHIPMENT_ID = "shipmentId is required";
+    private static final String ERR_NO_PICKUP_ID = "pickupId is required";
+    private static final String ERR_PICKUP_FAILED =
+            "Pickup request command finished with a non-success status (%s)";
     private static final String EMPTY = "";
     /**
      * Status code carried by the exception for an asynchronous command that
@@ -97,6 +112,54 @@ public final class ShippingImpl implements Shipping {
                 ApiPaths.DELIVERY_METHODS, GetListOfDeliveryMethodsUsingGET200ResponseRaw.class,
                 OP_DELIVERY_METHODS);
         return mapMethods(response.getDeliveryMethods());
+    }
+
+    @Override
+    public PickupProposals pickupProposals(PickupProposalsRequest request) {
+        PickupProposalsResponseDtoRaw response = http.postJsonAuthenticated(
+                ApiPaths.PICKUP_PROPOSALS, request.toRaw(), PickupProposalsResponseDtoRaw.class,
+                OP_PICKUP_PROPOSALS);
+        return PickupProposals.from(response);
+    }
+
+    @Override
+    public Pickup requestPickup(PickupRequest request) {
+        return runRequestPickup(request, null);
+    }
+
+    @Override
+    public Pickup requestPickup(PickupRequest request, Duration timeout) {
+        return runRequestPickup(request, timeout);
+    }
+
+    private Pickup runRequestPickup(PickupRequest request, @Nullable Duration timeout) {
+        PickupCreateCommandDtoRaw command = new PickupCreateCommandDtoRaw();
+        command.setInput(request.toRaw());
+        PickupCreateCommandDtoRaw accepted = http.postJsonAuthenticated(
+                ApiPaths.PICKUP_CREATE_COMMANDS, command, PickupCreateCommandDtoRaw.class,
+                OP_REQUEST_PICKUP);
+        String commandId = accepted.getCommandId();
+        CreatePickupCommandStatusDtoRaw status = await(
+                () -> pollPickupCreate(commandId), ShippingImpl::pickupTerminal,
+                OP_REQUEST_PICKUP, timeout);
+        if (status.getStatus() != CreatePickupCommandStatusDtoRaw.StatusEnum.SUCCESS) {
+            throw commandFailure(ERR_PICKUP_FAILED.formatted(status.getStatus()), status.getErrors());
+        }
+        return getPickup(status.getPickupId());
+    }
+
+    private CreatePickupCommandStatusDtoRaw pollPickupCreate(String commandId) {
+        return http.getAuthenticated(
+                ApiPaths.subPath(ApiPaths.PICKUP_CREATE_COMMANDS, commandId),
+                CreatePickupCommandStatusDtoRaw.class, OP_REQUEST_PICKUP_POLL);
+    }
+
+    @Override
+    public Pickup getPickup(String pickupId) {
+        requirePickupId(pickupId);
+        PickupDtoRaw raw = http.getAuthenticated(
+                ApiPaths.subPath(ApiPaths.PICKUPS, pickupId), PickupDtoRaw.class, OP_GET_PICKUP);
+        return Pickup.from(raw);
     }
 
     @Override
@@ -219,6 +282,12 @@ public final class ShippingImpl implements Shipping {
                 : commandPoller.await(fetchStatus, isTerminal, operationName, timeout);
     }
 
+    private static void requirePickupId(String pickupId) {
+        if (pickupId == null || pickupId.isBlank()) {
+            throw new IllegalArgumentException(ERR_NO_PICKUP_ID);
+        }
+    }
+
     private static void requireShipmentId(String shipmentId) {
         if (shipmentId == null || shipmentId.isBlank()) {
             throw new IllegalArgumentException(ERR_NO_SHIPMENT_ID);
@@ -252,6 +321,11 @@ public final class ShippingImpl implements Shipping {
     private static boolean createTerminal(CreateShipmentCommandStatusDtoRaw status) {
         return status.getStatus() != null
                 && status.getStatus() != CreateShipmentCommandStatusDtoRaw.StatusEnum.IN_PROGRESS;
+    }
+
+    private static boolean pickupTerminal(CreatePickupCommandStatusDtoRaw status) {
+        return status.getStatus() != null
+                && status.getStatus() != CreatePickupCommandStatusDtoRaw.StatusEnum.IN_PROGRESS;
     }
 
     /** A cancel command is terminal once it stops reporting {@code IN_PROGRESS}. */
