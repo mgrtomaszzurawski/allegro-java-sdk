@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,6 +25,9 @@ public final class PaymentsModification {
     private static final String ERR_EMPTY =
             "a payments modification must set the invoice type, the VAT rate, or both";
     private static final String ERR_VAT_RATE = "VAT rate must not be null or blank";
+    private static final String ERR_INVOICE_TYPE = "invoice type must not be null";
+    private static final String ERR_INVOICE_UNKNOWN =
+            "invoice type UNKNOWN is not a value a client can request";
 
     private final @Nullable InvoiceType invoiceType;
     private final @Nullable String vatRate;
@@ -57,8 +61,16 @@ public final class PaymentsModification {
         private Builder() {
         }
 
-        /** Set the invoice type the seller issues. */
+        /**
+         * Set the invoice type the seller issues. {@link InvoiceType#UNKNOWN} is an
+         * inbound-only sentinel and is rejected fail-fast — it is not a value a client
+         * can request.
+         */
         public Builder invoiceType(InvoiceType type) {
+            Objects.requireNonNull(type, ERR_INVOICE_TYPE);
+            if (type == InvoiceType.UNKNOWN) {
+                throw new IllegalArgumentException(ERR_INVOICE_UNKNOWN);
+            }
             this.invoiceType = type;
             return this;
         }

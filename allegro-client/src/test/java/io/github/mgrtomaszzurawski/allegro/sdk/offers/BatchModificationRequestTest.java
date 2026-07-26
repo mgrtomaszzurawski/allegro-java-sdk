@@ -214,6 +214,27 @@ class BatchModificationRequestTest {
     }
 
     @Test
+    void paymentsModification_whenNullVatRate_throws() {
+        // given/when/then — a null VAT rate is rejected
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.vatRate(null));
+    }
+
+    @Test
+    void paymentsModification_whenNullInvoiceType_throws() {
+        // given/when/then — a null invoice type is rejected fail-fast at the setter
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(NullPointerException.class, () -> builder.invoiceType(null));
+    }
+
+    @Test
+    void paymentsModification_whenUnknownInvoiceType_throws() {
+        // given/when/then — the inbound-only UNKNOWN sentinel is rejected fail-fast (not wire-settable)
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.invoiceType(InvoiceType.UNKNOWN));
+    }
+
+    @Test
     void build_whenPaymentsOnly_exposesPaymentsAsSingleChange() {
         // given — a payments change carrying both invoice type and VAT rate (one element)
         PaymentsModification payments = PaymentsModification.builder()
