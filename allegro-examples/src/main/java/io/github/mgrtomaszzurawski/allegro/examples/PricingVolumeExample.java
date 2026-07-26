@@ -38,6 +38,7 @@ public final class PricingVolumeExample {
         return client.pricing().feePreview(OfferFeePreviewRequest.builder()
                 .categoryId(CATEGORY_ID)
                 .price(Money.of("99.99", CURRENCY))
+                .marketplaceId(MARKETPLACE_ID)
                 .build());
     }
 
