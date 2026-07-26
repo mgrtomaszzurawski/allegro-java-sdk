@@ -848,6 +848,9 @@ class CatalogCategoriesClientTest {
     private static final int SCHEDULED_PAGE_SIZE = 100;
     private static final String SCHEDULED_CHANGE_CATEGORY_ID = "CAT1";
     private static final String SCHEDULED_CHANGE_PARAMETER_ID = "PARAM1";
+    private static final String REQUIREMENT_SCHEDULED_AT = "2026-07-05T09:00:00Z";
+    private static final String REQUIREMENT_SCHEDULED_FOR = "2026-08-15T00:00:00Z";
+    private static final String UNKNOWN_SCHEDULED_FOR = "2026-08-16T00:00:00Z";
     // Non-zero seconds so OffsetDateTime.parse(...).toString() round-trips exactly
     // (OffsetDateTime.toString() omits zero seconds, e.g. renders midnight as "...T00:00Z").
     private static final String SCHEDULED_FOR_FROM = "2026-08-01T08:30:15Z";
@@ -886,8 +889,9 @@ class CatalogCategoriesClientTest {
             assertEquals(EXPECTED_CHANGE_COUNT, changes.size());
             CategoryParameterScheduledChange requirement = changes.get(0);
             assertEquals(ScheduledChangeType.REQUIREMENT_CHANGE, requirement.type());
-            assertNotNull(requirement.scheduledAt());
-            assertNotNull(requirement.scheduledFor());
+            // exact dates (not just non-null) so a scheduledAt/scheduledFor swap is caught
+            assertEquals(OffsetDateTime.parse(REQUIREMENT_SCHEDULED_AT), requirement.scheduledAt());
+            assertEquals(OffsetDateTime.parse(REQUIREMENT_SCHEDULED_FOR), requirement.scheduledFor());
             assertEquals(SCHEDULED_CHANGE_CATEGORY_ID, requirement.categoryId());
             assertEquals(SCHEDULED_CHANGE_PARAMETER_ID, requirement.parameterId());
 
@@ -896,7 +900,7 @@ class CatalogCategoriesClientTest {
             assertEquals(ScheduledChangeType.UNKNOWN, unknown.type());
             assertNull(unknown.categoryId());
             assertNull(unknown.parameterId());
-            assertNotNull(unknown.scheduledFor());
+            assertEquals(OffsetDateTime.parse(UNKNOWN_SCHEDULED_FOR), unknown.scheduledFor());
         }
     }
 

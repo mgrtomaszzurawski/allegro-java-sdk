@@ -107,7 +107,11 @@ public final class CategoryParameterChangeFilter {
             return this;
         }
 
-        /** Restrict to these change kinds (empty for all). */
+        /**
+         * Restrict to these change kinds (empty for all).
+         * {@link ScheduledChangeType#UNKNOWN} cannot be sent as a filter and is
+         * dropped from the query if passed.
+         */
         public Builder types(ScheduledChangeType... types) {
             this.types = List.of(types);
             return this;
