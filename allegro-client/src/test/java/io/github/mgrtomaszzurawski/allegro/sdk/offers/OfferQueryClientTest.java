@@ -84,6 +84,8 @@ class OfferQueryClientTest {
     private static final String SHIPPING_RATES_ID = "2479b9fb-b52a-409d-b4d0-1aeb80b79368";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "camp-1";
+    private static final String CURRENT_PRICE = "45.00";
+    private static final int BIDDERS = 4;
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
@@ -95,10 +97,11 @@ class OfferQueryClientTest {
             + "\"external\":{\"id\":\"%s\"},\"b2b\":{\"buyableOnlyByBusiness\":true},"
             + "\"delivery\":{\"shippingRates\":{\"id\":\"%s\"}},"
             + "\"additionalServices\":{\"id\":\"%s\"},\"fundraisingCampaign\":{\"id\":\"%s\"},"
+            + "\"saleInfo\":{\"currentPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},\"biddersCount\":%d},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
             .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD,
                     STARTED_AT, RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
-                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, IMAGE_URL);
+                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS, IMAGE_URL);
 
     // A lean listing item: a malformed publication timestamp and no after-sales / fulfillment
     // blocks — the tolerant mapping must degrade these to null rather than fail the read.
@@ -254,6 +257,8 @@ class OfferQueryClientTest {
         assertEquals(SHIPPING_RATES_ID, summary.shippingRatesId());
         assertEquals(ADDITIONAL_SERVICES_ID, summary.additionalServicesGroupId());
         assertEquals(FUNDRAISING_ID, summary.fundraisingCampaignId());
+        assertEquals(Money.of(CURRENT_PRICE, CURRENCY_PLN), summary.currentPrice());
+        assertEquals(BIDDERS, summary.biddersCount());
     }
 
     @Test
@@ -277,6 +282,8 @@ class OfferQueryClientTest {
         assertNull(summary.shippingRatesId());
         assertNull(summary.additionalServicesGroupId());
         assertNull(summary.fundraisingCampaignId());
+        assertNull(summary.currentPrice());
+        assertNull(summary.biddersCount());
     }
 
     @Test
