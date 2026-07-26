@@ -87,6 +87,9 @@ class OfferQueryClientTest {
     private static final String CURRENT_PRICE = "45.00";
     private static final int BIDDERS = 4;
     private static final int BIDDERS_ONLY = 2;
+    private static final String MIN_PRICE = "10.00";
+    private static final String START_PRICE = "5.00";
+    private static final String PRICE_RULE_ID = "6a63f773-0000-4000-8000-0000000000aa";
     private static final String SALEINFO_NO_PRICE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
             + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
             + "\"saleInfo\":{\"biddersCount\":%d}}],\"count\":1}")
@@ -94,7 +97,10 @@ class OfferQueryClientTest {
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
-            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"minimalPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"startingPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"priceAutomation\":{\"rule\":{\"id\":\"%s\"}}},"
             + "\"stock\":{\"available\":%d,\"sold\":%d},"
             + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\"},"
             + "\"afterSalesServices\":{\"returnPolicy\":{\"id\":\"%s\"}},\"isFulfillment\":false,"
@@ -104,7 +110,8 @@ class OfferQueryClientTest {
             + "\"additionalServices\":{\"id\":\"%s\"},\"fundraisingCampaign\":{\"id\":\"%s\"},"
             + "\"saleInfo\":{\"currentPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},\"biddersCount\":%d},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
-            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD,
+            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN,
+                    MIN_PRICE, CURRENCY_PLN, START_PRICE, CURRENCY_PLN, PRICE_RULE_ID, AVAILABLE, SOLD,
                     STARTED_AT, RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
                     ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS, IMAGE_URL);
 
@@ -264,6 +271,9 @@ class OfferQueryClientTest {
         assertEquals(FUNDRAISING_ID, summary.fundraisingCampaignId());
         assertEquals(Money.of(CURRENT_PRICE, CURRENCY_PLN), summary.currentPrice());
         assertEquals(BIDDERS, summary.biddersCount());
+        assertEquals(Money.of(MIN_PRICE, CURRENCY_PLN), summary.minimalPrice());
+        assertEquals(Money.of(START_PRICE, CURRENCY_PLN), summary.startingPrice());
+        assertEquals(PRICE_RULE_ID, summary.priceAutomationRuleId());
     }
 
     @Test
@@ -289,6 +299,9 @@ class OfferQueryClientTest {
         assertNull(summary.fundraisingCampaignId());
         assertNull(summary.currentPrice());
         assertNull(summary.biddersCount());
+        assertNull(summary.minimalPrice());
+        assertNull(summary.startingPrice());
+        assertNull(summary.priceAutomationRuleId());
     }
 
     @Test
