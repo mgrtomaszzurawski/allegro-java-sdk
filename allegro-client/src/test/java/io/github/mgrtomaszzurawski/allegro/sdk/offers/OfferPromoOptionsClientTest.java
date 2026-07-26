@@ -23,6 +23,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplaceAvailablePackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplacePromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -51,9 +52,14 @@ class OfferPromoOptionsClientTest {
     private static final String ADDL_MARKETPLACE_ID = "allegro-cz";
     private static final String PENDING_BASE_ID = "BOLD_NEXT";
 
-    private static final String AVAILABLE_BODY = "{\"basePackages\":[{\"id\":\"" + BASE_ID
+    private static final String AVAILABLE_BODY = "{\"marketplaceId\":\"" + MARKETPLACE_ID + "\","
+            + "\"basePackages\":[{\"id\":\"" + BASE_ID
             + "\",\"name\":\"" + BASE_NAME + "\",\"cycleDuration\":\"" + BASE_CYCLE + "\"}],"
-            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\",\"name\":\"Highlight\"}]}";
+            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\",\"name\":\"Highlight\"}],"
+            + "\"additionalMarketplaces\":[{\"marketplaceId\":\"" + ADDL_MARKETPLACE_ID + "\","
+            + "\"basePackages\":[{\"id\":\"" + BASE_ID + "\",\"name\":\"" + BASE_NAME
+            + "\",\"cycleDuration\":\"" + BASE_CYCLE + "\"}],"
+            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\",\"name\":\"Highlight\"}]}]}";
     private static final String FOR_OFFER_BODY = "{\"offerId\":\"" + OFFER_ID + "\","
             + "\"marketplaceId\":\"" + MARKETPLACE_ID + "\","
             + "\"basePackage\":{\"id\":\"" + BASE_ID + "\",\"validFrom\":\"2026-01-01T00:00:00Z\","
@@ -119,13 +125,21 @@ class OfferPromoOptionsClientTest {
         // when
         AvailablePromotionPackages available = promoOptions(wmInfo).availablePackages();
 
-        // then
+        // then — base marketplace packages map
+        assertEquals(MARKETPLACE_ID, available.marketplaceId());
         assertEquals(1, available.basePackages().size());
         assertEquals(BASE_ID, available.basePackages().get(0).id());
         assertEquals(BASE_NAME, available.basePackages().get(0).name());
         assertEquals(BASE_CYCLE, available.basePackages().get(0).cycleDuration());
         assertEquals(1, available.extraPackages().size());
         assertEquals(EXTRA_ID, available.extraPackages().get(0).id());
+        // and the per-additional-marketplace packages, keyed by marketplace id
+        assertEquals(1, available.additionalMarketplaces().size());
+        MarketplaceAvailablePackages additional = available.additionalMarketplaces().get(ADDL_MARKETPLACE_ID);
+        assertNotNull(additional);
+        assertEquals(BASE_ID, additional.basePackages().get(0).id());
+        assertEquals(BASE_CYCLE, additional.basePackages().get(0).cycleDuration());
+        assertEquals(EXTRA_ID, additional.extraPackages().get(0).id());
     }
 
     @Test
