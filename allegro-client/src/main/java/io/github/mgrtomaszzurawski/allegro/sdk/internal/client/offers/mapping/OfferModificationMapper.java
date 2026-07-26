@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalServicesGroupR
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationDeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationDiscountsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationDiscountsWholesalePriceListRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ModificationPaymentsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationPublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationResponsiblePersonRaw;
@@ -17,9 +18,12 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferCriteriumRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.TaxRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PaymentsModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import java.util.List;
 
 /**
@@ -31,6 +35,9 @@ import java.util.List;
  * attached; the rest stay absent (the body is written partial).
  */
 public final class OfferModificationMapper {
+
+    private static final String ERR_INVOICE_NOT_SETTABLE =
+            "invoice type is not a value a client can request: ";
 
     private OfferModificationMapper() {
     }
@@ -80,7 +87,32 @@ public final class OfferModificationMapper {
             modification.responsiblePerson(
                     new ModificationResponsiblePersonRaw().id(request.responsiblePersonId()));
         }
+        if (request.payments() != null) {
+            modification.payments(paymentsRaw(request.payments()));
+        }
         return modification;
+    }
+
+    private static ModificationPaymentsRaw paymentsRaw(PaymentsModification payments) {
+        ModificationPaymentsRaw raw = new ModificationPaymentsRaw();
+        InvoiceType invoiceType = payments.invoiceType();
+        if (invoiceType != null) {
+            raw.invoice(invoiceEnum(invoiceType));
+        }
+        if (payments.vatRate() != null) {
+            raw.tax(new TaxRaw().percentage(payments.vatRate()));
+        }
+        return raw;
+    }
+
+    private static ModificationPaymentsRaw.InvoiceEnum invoiceEnum(InvoiceType invoiceType) {
+        return switch (invoiceType) {
+            case VAT -> ModificationPaymentsRaw.InvoiceEnum.VAT;
+            case VAT_MARGIN -> ModificationPaymentsRaw.InvoiceEnum.VAT_MARGIN;
+            case WITHOUT_VAT -> ModificationPaymentsRaw.InvoiceEnum.WITHOUT_VAT;
+            case NO_INVOICE -> ModificationPaymentsRaw.InvoiceEnum.NO_INVOICE;
+            case UNKNOWN -> throw new IllegalArgumentException(ERR_INVOICE_NOT_SETTABLE + invoiceType);
+        };
     }
 
     private static ModificationPublicationRaw.DurationEnum durationEnum(OfferDuration duration) {
