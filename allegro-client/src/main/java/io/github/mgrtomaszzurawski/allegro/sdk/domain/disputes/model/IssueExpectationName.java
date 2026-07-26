@@ -25,17 +25,20 @@ public enum IssueExpectationName {
     /** An expectation this SDK release does not model yet. */
     UNKNOWN;
 
-    /** Map the generated expectation name, tolerating unknown future values. */
+    /**
+     * Map the generated expectation name, tolerating unknown future values. The domain
+     * constant names mirror the wire values one-to-one, so a name lookup suffices; an
+     * unmodelled value (including the generated {@code UNKNOWN_DEFAULT_OPEN_API} sentinel)
+     * degrades to {@link #UNKNOWN}. Mirrors {@link IssueReasonType#from} for consistency.
+     */
     public static IssueExpectationName from(PostPurchaseIssueExpectationRaw.@Nullable NameEnum raw) {
         if (raw == null) {
             return UNKNOWN;
         }
-        return switch (raw) {
-            case REPAIR -> REPAIR;
-            case EXCHANGE -> EXCHANGE;
-            case REFUND -> REFUND;
-            case PARTIAL_REFUND -> PARTIAL_REFUND;
-            default -> UNKNOWN;
-        };
+        try {
+            return valueOf(raw.name());
+        } catch (IllegalArgumentException unmodelledValue) {
+            return UNKNOWN;
+        }
     }
 }

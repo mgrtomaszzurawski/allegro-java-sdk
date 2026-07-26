@@ -14,7 +14,6 @@ import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueStateRa
 import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueUserRaw;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -63,10 +62,10 @@ public record Issue(
         List<IssueAttachment> attachments,
         @Nullable IssueState state) {
 
-    /** Canonical constructor defensively copies the collection fields. */
+    /** Canonical constructor normalizes null collections to empty and defensively copies. */
     public Issue {
-        expectations = List.copyOf(expectations);
-        attachments = List.copyOf(attachments);
+        expectations = expectations == null ? List.of() : List.copyOf(expectations);
+        attachments = attachments == null ? List.of() : List.copyOf(attachments);
     }
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
@@ -99,8 +98,7 @@ public record Issue(
         if (product == null || product.getId() == null) {
             return null;
         }
-        UUID productUuid = product.getId();
-        return productUuid.toString();
+        return product.getId().toString();
     }
 
     private static List<IssueExpectation> expectationsOf(

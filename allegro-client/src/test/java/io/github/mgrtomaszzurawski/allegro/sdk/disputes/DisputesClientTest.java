@@ -13,6 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -353,8 +354,12 @@ class DisputesClientTest {
 
             // then — both unknown wire values degrade to UNKNOWN end-to-end
             assertEquals(IssueReasonType.UNKNOWN, issue.reason().type());
+            // and the free-text description survives even when the enum type is unknown
+            assertEquals(REASON_DESCRIPTION, issue.reason().description());
             assertEquals(ONE_ELEMENT, issue.expectations().size());
             assertEquals(IssueExpectationName.UNKNOWN, issue.expectations().get(0).name());
+            // no refund quoted in this fixture → the mapper leaves it null, not a zero Money
+            assertNull(issue.expectations().get(0).refund());
         }
     }
 
