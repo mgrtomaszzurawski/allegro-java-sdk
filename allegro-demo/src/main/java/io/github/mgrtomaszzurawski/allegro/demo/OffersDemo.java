@@ -542,9 +542,11 @@ final class OffersDemo {
                 List.of(PromoOptionModification.change(PromoPackageType.BASE, basePackage)));
         System.out.println("promoOptions.modify: offer " + offerId + " base package set to " + basePackage);
         OfferPromoOptions after = client.offers().promoOptions().forOffer(offerId);
-        System.out.println("  read-back: base="
-                + (after.basePackage() == null ? "(none/pending)" : after.basePackage().id())
-                + ", extras=" + after.extraPackages().size());
+        System.out.println("  read-back: marketplaceId=" + after.marketplaceId()
+                + ", base=" + (after.basePackage() == null ? "(none/pending)" : after.basePackage().id())
+                + ", extras=" + after.extraPackages().size()
+                + ", pendingChanges=" + after.pendingChanges()
+                + ", additionalMarketplaces=" + after.additionalMarketplaces().keySet());
     }
 
     private static void promoOptions(AllegroClient client) {
@@ -633,9 +635,11 @@ final class OffersDemo {
 
     private static void promoForOffer(AllegroClient client, String offerId) {
         OfferPromoOptions promo = client.offers().promoOptions().forOffer(offerId);
-        System.out.println("forOffer " + offerId + ": base="
-                + (promo.basePackage() == null ? "(none)" : promo.basePackage().id())
-                + ", extras=" + promo.extraPackages().size());
+        System.out.println("forOffer " + offerId + ": marketplaceId=" + promo.marketplaceId()
+                + ", base=" + (promo.basePackage() == null ? "(none)" : promo.basePackage().id())
+                + ", extras=" + promo.extraPackages().size()
+                + ", pendingChanges=" + promo.pendingChanges()
+                + ", additionalMarketplaces=" + promo.additionalMarketplaces().keySet());
     }
 
     private static void deleteDraft(AllegroClient client, String offerId) {
