@@ -17,6 +17,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPromoO
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaskResult;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -87,7 +88,10 @@ public final class PromoBatchMapper {
         return new TaskResult(
                 offer == null ? null : offer.getId(),
                 status == null ? null : status.getValue(),
-                firstErrorMessage(task.getErrors()));
+                firstErrorMessage(task.getErrors()),
+                // a promotion-package task is not field-scoped
+                null,
+                errorsOf(task.getErrors()));
     }
 
     private static @Nullable String firstErrorMessage(@Nullable List<ErrorRaw> errors) {
@@ -95,6 +99,15 @@ public final class PromoBatchMapper {
             return null;
         }
         return errors.get(0).getMessage();
+    }
+
+    private static List<AllegroFieldError> errorsOf(@Nullable List<ErrorRaw> errors) {
+        return errors == null
+                ? List.of()
+                : errors.stream()
+                        .map(error -> new AllegroFieldError(error.getCode(), error.getMessage(),
+                                error.getUserMessage(), error.getPath(), error.getDetails()))
+                        .toList();
     }
 
     private static PromoOptionsCommandModificationRaw.ModificationTimeEnum timingEnum(

@@ -628,6 +628,7 @@ final class OffersDemo {
         AvailablePromotionPackages packages = client.offers().promoOptions().availablePackages();
         System.out.println("availablePackages: base=" + packages.basePackages().size()
                 + ", extra=" + packages.extraPackages().size());
+        packages.basePackages().forEach(pkg -> System.out.println("  basePackage id=" + pkg.id()));
     }
 
     private static void promoForOffer(AllegroClient client, String offerId) {
@@ -798,8 +799,9 @@ final class OffersDemo {
             System.out.println("promoBatch: " + report.success() + "/" + report.total()
                     + " ok, " + report.failed() + " failed");
             report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
-                    + ", status=" + task.status()
-                    + (task.message() == null ? "" : ", message=" + task.message())));
+                    + ", status=" + task.status() + ", field=" + task.field()
+                    + (task.message() == null ? "" : ", message=" + task.message())
+                    + ", errors=" + task.errors()));
         } catch (AllegroBadRequestException e) {
             System.out.println("promoBatch rejected — " + e.errors().size() + " error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()

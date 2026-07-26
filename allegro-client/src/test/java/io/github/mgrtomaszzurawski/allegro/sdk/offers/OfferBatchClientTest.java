@@ -35,6 +35,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTim
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaskResult;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OfferBatchImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
@@ -86,6 +88,16 @@ class OfferBatchClientTest {
             "{\"tasks\":[{\"offer\":{\"id\":\"" + OFFER_ONE + "\"},\"status\":\"SUCCESS\"},"
                     + "{\"offer\":{\"id\":\"" + OFFER_TWO + "\"},\"status\":\"SUCCESS\"}]}";
     private static final String EMPTY_TASKS = "{\"tasks\":[]}";
+    private static final String TASK_FIELD = "publication";
+    private static final String TASK_ERROR_CODE = "OFFER_NOT_MODIFIABLE";
+    private static final String TASK_ERROR_MESSAGE = "Offer cannot be published";
+    private static final String TASK_ERROR_USER_MESSAGE = "Nie można wystawić oferty";
+    private static final String TASK_ERROR_PATH = "offer";
+    private static final String ONE_FAILED_TASK =
+            "{\"tasks\":[{\"offer\":{\"id\":\"" + OFFER_ONE + "\"},\"status\":\"ERROR\",\"field\":\""
+                    + TASK_FIELD + "\",\"message\":\"" + TASK_ERROR_MESSAGE + "\",\"errors\":[{\"code\":\""
+                    + TASK_ERROR_CODE + "\",\"message\":\"" + TASK_ERROR_MESSAGE + "\",\"userMessage\":\""
+                    + TASK_ERROR_USER_MESSAGE + "\",\"path\":\"" + TASK_ERROR_PATH + "\"}]}]}";
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"unknown offer\",\"path\":\"offerCriteria\"}]}";
     // Provenance: the real error shape live-observed for this endpoint (KNOWN-SERVER-BEHAVIORS
@@ -247,6 +259,29 @@ class OfferBatchClientTest {
         assertEquals(0, report.failed());
         assertEquals(2, report.tasks().size());
         assertEquals(OFFER_ONE, report.tasks().get(0).offerId());
+    }
+
+    @Test
+    void publish_whenTaskFails_mapsFieldAndTypedErrors(WireMockRuntimeInfo wmInfo) {
+        // given — a completed command whose single task failed with a typed error
+        stubCompletedCommand();
+        stubFor(get(urlPathMatching(TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ONE_FAILED_TASK)));
+
+        // when
+        BatchReport report = batchClient(wmInfo).publish(List.of(OFFER_ONE));
+
+        // then — the failed task carries its field and the full typed errors[], not just a message
+        TaskResult task = report.tasks().get(0);
+        assertEquals(OFFER_ONE, task.offerId());
+        assertEquals(TASK_FIELD, task.field());
+        assertEquals(TASK_ERROR_MESSAGE, task.message());
+        assertEquals(1, task.errors().size());
+        AllegroFieldError error = task.errors().get(0);
+        assertEquals(TASK_ERROR_CODE, error.code());
+        assertEquals(TASK_ERROR_MESSAGE, error.message());
+        assertEquals(TASK_ERROR_USER_MESSAGE, error.userMessage());
+        assertEquals(TASK_ERROR_PATH, error.path());
     }
 
     @Test
