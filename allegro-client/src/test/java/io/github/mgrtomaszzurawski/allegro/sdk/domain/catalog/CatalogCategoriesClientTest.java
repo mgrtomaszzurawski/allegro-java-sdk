@@ -644,6 +644,7 @@ class CatalogCategoriesClientTest {
     private static final String DELETED_REDIRECT_ID = "C9";
     private static final String RESUME_CURSOR = "evt-42";
     private static final int EXPECTED_EVENT_COUNT = 5;
+    private static final int EXPECTED_SECOND_PAGE = 2;
 
     // A small page (fewer than the page size) ends the stream. Covers all four
     // modelled event types plus one type this SDK version does not model. The common
@@ -664,7 +665,8 @@ class CatalogCategoriesClientTest {
             """;
 
     @Test
-    void streamChanges_mapsEachEventTypeAndDegradesUnknown(WireMockRuntimeInfo wmInfo) {
+    void streamChanges_whenPageHasAllTypesPlusUnmodelled_mapsEachAndDegradesUnknown(
+            WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);
         stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
@@ -691,6 +693,7 @@ class CatalogCategoriesClientTest {
             assertNull(created.redirectCategoryId());
 
             CategoryEvent deleted = events.get(1);
+            assertEquals(EVENT_ID_DELETED, deleted.id());
             assertEquals(CategoryEventType.CATEGORY_DELETED, deleted.type());
             assertEquals(DELETED_REDIRECT_ID, deleted.redirectCategoryId());
             assertNull(deleted.category().parentId());
@@ -716,14 +719,9 @@ class CatalogCategoriesClientTest {
         // given — a full page (so the cursor advances to the last event id) then an empty page
         stubToken(TEST_TOKEN);
         String lastId = "e" + (EVENTS_PAGE_SIZE - 1);
-        String fullPage = "{\"events\":[" + IntStream.range(0, EVENTS_PAGE_SIZE)
-                .mapToObj(index -> "{\"type\":\"CATEGORY_CREATED\",\"id\":\"e" + index
-                        + "\",\"occurredAt\":\"2026-07-01T10:00:00Z\","
-                        + "\"category\":{\"id\":\"C" + index + "\",\"name\":\"c\"}}")
-                .collect(Collectors.joining(",")) + "]}";
         stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
                 .withQueryParam(FROM_QUERY, absent())
-                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(fullPage)));
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(fullEventsPage())));
         stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
                 .withQueryParam(FROM_QUERY, equalTo(lastId))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{\"events\":[]}")));
@@ -739,6 +737,45 @@ class CatalogCategoriesClientTest {
             verify(0, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
                     .withQueryParam(FROM_QUERY, equalTo(lastId)));
         }
+    }
+
+    @Test
+    void streamChanges_whenConsumedPastFirstPage_advancesFromCursorToLastEventId(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a full first page (cursor advances to e99) then a short second page
+        stubToken(TEST_TOKEN);
+        String lastId = "e" + (EVENTS_PAGE_SIZE - 1);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withQueryParam(FROM_QUERY, absent())
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(fullEventsPage())));
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withQueryParam(FROM_QUERY, equalTo(lastId))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("""
+                        {"events":[
+                          {"type":"CATEGORY_CREATED","id":"e100","occurredAt":"2026-07-01T11:00:00Z",
+                           "category":{"id":"C100","name":"c"}},
+                          {"type":"CATEGORY_CREATED","id":"e101","occurredAt":"2026-07-01T11:00:01Z",
+                           "category":{"id":"C101","name":"c"}}]}
+                        """)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — a full consumer drains both pages
+            long total = allegro.catalog().categories()
+                    .streamChanges(CategoryEventFilter.all()).count();
+
+            // then — the second page was fetched with the last event id as the `from` cursor
+            assertEquals(EVENTS_PAGE_SIZE + EXPECTED_SECOND_PAGE, total);
+            verify(1, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                    .withQueryParam(FROM_QUERY, equalTo(lastId)));
+        }
+    }
+
+    private static String fullEventsPage() {
+        return "{\"events\":[" + IntStream.range(0, EVENTS_PAGE_SIZE)
+                .mapToObj(index -> "{\"type\":\"CATEGORY_CREATED\",\"id\":\"e" + index
+                        + "\",\"occurredAt\":\"2026-07-01T10:00:00Z\","
+                        + "\"category\":{\"id\":\"C" + index + "\",\"name\":\"c\"}}")
+                .collect(Collectors.joining(",")) + "]}";
     }
 
     @Test
