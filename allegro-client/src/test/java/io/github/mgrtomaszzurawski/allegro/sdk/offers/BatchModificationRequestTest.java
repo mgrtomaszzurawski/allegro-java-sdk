@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PaymentsModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -177,6 +179,74 @@ class BatchModificationRequestTest {
         // then — unlimited is set, no fixed duration, no handling time
         assertTrue(request.unlimitedListing());
         assertNull(request.listingDuration());
+        assertNull(request.handlingTime());
+    }
+
+    @Test
+    void payments_whenDurationAlreadySet_throwsSingleChange() {
+        // given — a listing duration already set (the single change)
+        BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID))
+                .listingDuration(OfferDuration.DAYS_7);
+
+        // when/then — adding a payments change too is rejected (exactly one per command)
+        PaymentsModification payments = PaymentsModification.builder().invoiceType(InvoiceType.VAT).build();
+        assertThrows(IllegalStateException.class, () -> builder.payments(payments));
+    }
+
+    @Test
+    void payments_whenNull_throws() {
+        // given/when/then — a null payments modification is rejected
+        BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID));
+        assertThrows(NullPointerException.class, () -> builder.payments(null));
+    }
+
+    @Test
+    void paymentsModification_whenNeitherInvoiceNorVatRate_throws() {
+        // given/when/then — a payments modification with no change is rejected fail-fast
+        assertThrows(IllegalStateException.class, () -> PaymentsModification.builder().build());
+    }
+
+    @Test
+    void paymentsModification_whenBlankVatRate_throws() {
+        // given/when/then — a blank VAT rate is rejected
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.vatRate(" "));
+    }
+
+    @Test
+    void paymentsModification_whenNullVatRate_throws() {
+        // given/when/then — a null VAT rate is rejected
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.vatRate(null));
+    }
+
+    @Test
+    void paymentsModification_whenNullInvoiceType_throws() {
+        // given/when/then — a null invoice type is rejected fail-fast at the setter
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(NullPointerException.class, () -> builder.invoiceType(null));
+    }
+
+    @Test
+    void paymentsModification_whenUnknownInvoiceType_throws() {
+        // given/when/then — the inbound-only UNKNOWN sentinel is rejected fail-fast (not wire-settable)
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        assertThrows(IllegalArgumentException.class, () -> builder.invoiceType(InvoiceType.UNKNOWN));
+    }
+
+    @Test
+    void build_whenPaymentsOnly_exposesPaymentsAsSingleChange() {
+        // given — a payments change carrying both invoice type and VAT rate (one element)
+        PaymentsModification payments = PaymentsModification.builder()
+                .invoiceType(InvoiceType.VAT).vatRate("23")
+                .build();
+        BatchModificationRequest request = BatchModificationRequest.forOffers(List.of(OFFER_ID))
+                .payments(payments)
+                .build();
+
+        // then — the payments intent reads back and no other change is set
+        assertEquals(InvoiceType.VAT, request.payments().invoiceType());
+        assertEquals("23", request.payments().vatRate());
         assertNull(request.handlingTime());
     }
 

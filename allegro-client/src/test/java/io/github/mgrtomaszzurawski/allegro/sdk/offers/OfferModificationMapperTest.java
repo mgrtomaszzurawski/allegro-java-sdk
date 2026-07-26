@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PaymentsModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.OfferModificationMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,9 @@ class OfferModificationMapperTest {
     private static final String SERVICES_GROUP_PATH = "/modification/additionalServicesGroup/id";
     private static final String RESPONSIBLE_PRODUCER_PATH = "/modification/responsibleProducer/id";
     private static final String RESPONSIBLE_PERSON_PATH = "/modification/responsiblePerson/id";
+    private static final String PAYMENTS_INVOICE_PATH = "/modification/payments/invoice";
+    private static final String PAYMENTS_TAX_PERCENTAGE_PATH = "/modification/payments/tax/percentage";
+    private static final String VAT_RATE = "23";
 
     private static JsonNode tree(BatchModificationRequest request) {
         return MAPPER.valueToTree(OfferModificationMapper.toRaw(request));
@@ -181,5 +186,52 @@ class OfferModificationMapperTest {
     void toRaw_whenResponsiblePersonAssigned_mapsIdUnderResponsiblePerson() {
         BatchModificationRequest request = forOne().responsiblePerson(REFERENCE_ID).build();
         assertEquals(REFERENCE_ID, tree(request).at(RESPONSIBLE_PERSON_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenPaymentsInvoiceAndVatRate_mapsBothUnderPayments() {
+        // given — both invoice type and VAT rate change together (one payments element)
+        PaymentsModification payments = PaymentsModification.builder()
+                .invoiceType(InvoiceType.VAT).vatRate(VAT_RATE)
+                .build();
+        BatchModificationRequest request = forOne().payments(payments).build();
+
+        // when
+        JsonNode tree = tree(request);
+
+        // then — invoice enum token and tax.percentage both present under payments
+        assertEquals("VAT", tree.at(PAYMENTS_INVOICE_PATH).asText());
+        assertEquals(VAT_RATE, tree.at(PAYMENTS_TAX_PERCENTAGE_PATH).asText());
+        assertTrue(tree.at("/modification/publication").isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenPaymentsInvoiceOnly_omitsTax() {
+        // given — only the invoice type changes
+        PaymentsModification payments = PaymentsModification.builder()
+                .invoiceType(InvoiceType.VAT_MARGIN)
+                .build();
+        BatchModificationRequest request = forOne().payments(payments).build();
+
+        // when
+        JsonNode tree = tree(request);
+
+        // then — invoice present, tax absent (partial payments body)
+        assertEquals("VAT_MARGIN", tree.at(PAYMENTS_INVOICE_PATH).asText());
+        assertTrue(tree.at("/modification/payments/tax").isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenPaymentsVatRateOnly_omitsInvoice() {
+        // given — only the VAT rate changes
+        PaymentsModification payments = PaymentsModification.builder().vatRate(VAT_RATE).build();
+        BatchModificationRequest request = forOne().payments(payments).build();
+
+        // when
+        JsonNode tree = tree(request);
+
+        // then — tax.percentage present, invoice absent
+        assertEquals(VAT_RATE, tree.at(PAYMENTS_TAX_PERCENTAGE_PATH).asText());
+        assertTrue(tree.at(PAYMENTS_INVOICE_PATH).isMissingNode());
     }
 }

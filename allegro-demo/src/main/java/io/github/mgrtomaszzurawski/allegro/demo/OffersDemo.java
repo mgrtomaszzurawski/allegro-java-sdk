@@ -23,6 +23,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDurati
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PaymentsModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
@@ -156,6 +157,8 @@ final class OffersDemo {
     private static final String MODIFY_UNLIMITED_PROPERTY = "demo.modifyUnlimited";
     private static final String MODIFY_HANDLING_TIME_PROPERTY = "demo.modifyHandlingTime";
     private static final String MODIFY_SHIPPING_RATES_PROPERTY = "demo.modifyShippingRates";
+    private static final String MODIFY_INVOICE_PROPERTY = "demo.modifyInvoiceType";
+    private static final String MODIFY_VAT_RATE_PROPERTY = "demo.modifyVatRate";
     private static final String PROMO_BATCH_OFFER_IDS_PROPERTY = "demo.promoBatchOfferIds";
     private static final String PROMO_BATCH_BASE_PACKAGE_PROPERTY = "demo.promoBatchBasePackage";
     private static final String PROMO_BATCH_EXTRA_PACKAGE_PROPERTY = "demo.promoBatchExtraPackage";
@@ -840,6 +843,7 @@ final class OffersDemo {
         String duration = System.getProperty(MODIFY_DURATION_PROPERTY);
         String handlingTime = System.getProperty(MODIFY_HANDLING_TIME_PROPERTY);
         String shippingRatesId = System.getProperty(MODIFY_SHIPPING_RATES_PROPERTY);
+        PaymentsModification payments = paymentsModification();
         if (System.getProperty(MODIFY_UNLIMITED_PROPERTY) != null) {
             builder.unlimitedListing();
         } else if (duration != null) {
@@ -848,6 +852,8 @@ final class OffersDemo {
             builder.handlingTime(HandlingTime.valueOf(handlingTime));
         } else if (shippingRatesId != null) {
             builder.shippingRates(shippingRatesId);
+        } else if (payments != null) {
+            builder.payments(payments);
         }
         System.out.println("modify: applying a setting to " + offerIds.size() + " offer(s)");
         try {
@@ -857,11 +863,38 @@ final class OffersDemo {
             report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
                     + ", status=" + task.status()
                     + (task.message() == null ? "" : ", message=" + task.message())));
+            printOfferSettings("read-back", client, offerIds.get(0));
         } catch (AllegroBadRequestException e) {
             System.out.println("modify rejected — " + e.errors().size() + " error(s):");
             e.errors().forEach(fieldError -> System.out.println("  - path=" + fieldError.path()
                     + " code=" + fieldError.code() + " userMessage=" + fieldError.userMessage()));
         }
+    }
+
+    /** Build a payments modification from the demo properties, or {@code null} if neither is set. */
+    private static PaymentsModification paymentsModification() {
+        String invoiceType = System.getProperty(MODIFY_INVOICE_PROPERTY);
+        String vatRate = System.getProperty(MODIFY_VAT_RATE_PROPERTY);
+        if (invoiceType == null && vatRate == null) {
+            return null;
+        }
+        PaymentsModification.Builder builder = PaymentsModification.builder();
+        if (invoiceType != null) {
+            builder.invoiceType(InvoiceType.valueOf(invoiceType));
+        }
+        if (vatRate != null) {
+            builder.vatRate(vatRate);
+        }
+        return builder.build();
+    }
+
+    /** Read the offer back and print its ship-from location and payment settings (write→read proof). */
+    private static void printOfferSettings(String phase, AllegroClient client, String offerId) {
+        Offer offer = client.offers().get(offerId);
+        System.out.println(phase + ": offer " + offerId
+                + ", location=" + offer.location()
+                + ", payments=" + (offer.payments() == null ? "null" : offer.payments().invoice())
+                + ", taxSettings=" + (offer.taxSettings() == null ? "null" : offer.taxSettings().rates()));
     }
 
     private static BatchPricingRulesRequest assignRuleRequest(List<String> offerIds,

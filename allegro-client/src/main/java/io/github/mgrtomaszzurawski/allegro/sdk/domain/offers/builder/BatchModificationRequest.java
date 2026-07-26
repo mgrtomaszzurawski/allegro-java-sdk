@@ -13,10 +13,11 @@ import org.jspecify.annotations.Nullable;
  * {@code offers().batch().modify(...)}. It applies <em>exactly one</em> supported
  * field change to every target offer (up to {@value #MAX_OFFERS}) in one command:
  * the listing duration (a fixed {@link OfferDuration} or unlimited), the
- * {@link HandlingTime dispatch time}, or an id-reference assignment — the shipping
- * rate table, wholesale price list, size table, additional-services group, or the
- * GPSR responsible producer/person. Exactly one is required — Allegro rejects a
- * command whose modification carries more than one element (live-verified:
+ * {@link HandlingTime dispatch time}, the {@link PaymentsModification payment
+ * settings} (invoice type and/or VAT rate), or an id-reference assignment — the
+ * shipping rate table, wholesale price list, size table, additional-services group,
+ * or the GPSR responsible producer/person. Exactly one is required — Allegro rejects
+ * a command whose modification carries more than one element (live-verified:
  * {@code VALIDATION_ERROR}, <em>"modification should contain exactly 1 element"</em>),
  * so to change two aspects submit two commands.
  *
@@ -37,6 +38,7 @@ public final class BatchModificationRequest {
     private static final String ERR_DURATION = "listing duration must not be null";
     private static final String ERR_HANDLING_TIME = "handling time must not be null";
     private static final String ERR_REFERENCE_ID = "reference id must not be null or blank";
+    private static final String ERR_PAYMENTS = "payments modification must not be null";
     private static final String ERR_SINGLE_CHANGE =
             "a modification changes exactly one field — Allegro rejects a command with more than one";
     private static final String ERR_NO_CHANGE = "a modification must change exactly one field";
@@ -51,6 +53,7 @@ public final class BatchModificationRequest {
     private final @Nullable String additionalServicesGroupId;
     private final @Nullable String responsibleProducerId;
     private final @Nullable String responsiblePersonId;
+    private final @Nullable PaymentsModification payments;
 
     private BatchModificationRequest(Builder builder) {
         this.offerIds = List.copyOf(builder.offerIds);
@@ -63,6 +66,7 @@ public final class BatchModificationRequest {
         this.additionalServicesGroupId = builder.additionalServicesGroupId;
         this.responsibleProducerId = builder.responsibleProducerId;
         this.responsiblePersonId = builder.responsiblePersonId;
+        this.payments = builder.payments;
     }
 
     /** Start building a modification for {@code offerIds}. */
@@ -120,6 +124,11 @@ public final class BatchModificationRequest {
         return responsiblePersonId;
     }
 
+    /** The payment-settings change to apply, or {@code null} if the payments are unchanged. */
+    public @Nullable PaymentsModification payments() {
+        return payments;
+    }
+
     /** Fluent builder; validates fail-fast on {@link #build()}. */
     public static final class Builder {
 
@@ -133,6 +142,7 @@ public final class BatchModificationRequest {
         private @Nullable String additionalServicesGroupId;
         private @Nullable String responsibleProducerId;
         private @Nullable String responsiblePersonId;
+        private @Nullable PaymentsModification payments;
 
         private Builder(List<String> offerIds) {
             this.offerIds = validatedOfferIds(offerIds);
@@ -201,6 +211,13 @@ public final class BatchModificationRequest {
             return this;
         }
 
+        /** Set the payment settings — invoice type and/or VAT rate (the request's single change). */
+        public Builder payments(PaymentsModification paymentSettings) {
+            requireNoChangeYet();
+            this.payments = Objects.requireNonNull(paymentSettings, ERR_PAYMENTS);
+            return this;
+        }
+
         /** Build, requiring exactly one field change. */
         public BatchModificationRequest build() {
             if (!hasChange()) {
@@ -220,7 +237,7 @@ public final class BatchModificationRequest {
             return listingDuration != null || unlimitedListing || handlingTime != null
                     || shippingRatesId != null || wholesalePriceListId != null || sizeTableId != null
                     || additionalServicesGroupId != null || responsibleProducerId != null
-                    || responsiblePersonId != null;
+                    || responsiblePersonId != null || payments != null;
         }
 
         private static String validatedId(String referenceId) {
