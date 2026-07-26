@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PriceChangeRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import java.time.OffsetDateTime;
@@ -51,13 +52,27 @@ public interface OfferBatch {
     BatchReport unpublish(List<String> offerIds);
 
     /**
-     * Set a fixed Buy Now price on the given offers in one command.
+     * Set a fixed Buy Now price on the given offers in one command, on each offer's
+     * base marketplace. For a relative change (raise/lower by an amount) or to target
+     * a specific marketplace, use {@link #changePrices(PriceChangeRequest)}.
      *
      * @param offerIds the offers to reprice
      * @param price    the new fixed Buy Now price
      * @return the command report once every offer has been processed
      */
     BatchReport changePrices(List<String> offerIds, Money price);
+
+    /**
+     * Apply a Buy Now price change to the request's offers in one command: a fixed
+     * price, or a relative raise/lower by an amount, optionally on a specific
+     * marketplace. Unlike {@link #changePrices(List, Money)} (which always sets one
+     * fixed price on the base marketplace), the change is described by a
+     * {@link PriceChangeRequest}.
+     *
+     * @param request the offers and the single price change to apply
+     * @return the command report once every offer has been processed
+     */
+    BatchReport changePrices(PriceChangeRequest request);
 
     /**
      * Set the available quantity of the given offers in one command.
