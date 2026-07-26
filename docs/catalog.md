@@ -118,6 +118,21 @@ at the event. A `CATEGORY_DELETED` event also exposes `redirectCategoryId()` —
 redirected. Restrict the feed to certain kinds with `CategoryEventFilter.ofTypes(...)`, or resume
 after a checkpoint with `CategoryEventFilter.since(lastSeenEventId)`.
 
+Allegro also announces **planned** parameter changes ahead of time, so sellers can prepare —
+`scheduledParameterChanges` is that (offset-paginated) feed:
+
+```java
+categories.scheduledParameterChanges(CategoryParameterChangeFilter.all())
+        .forEach(change -> System.out.println(change.scheduledFor() + "  " + change.type()
+                + "  category=" + change.categoryId() + " parameter=" + change.parameterId()));
+```
+
+Each `CategoryParameterScheduledChange` states the change `type()` (today only
+`REQUIREMENT_CHANGE` — a parameter's requirement changing; `UNKNOWN` for a kind this release does not
+model), when it was announced (`scheduledAt()`) and when it takes effect (`scheduledFor()`), and the
+affected `categoryId()` / `parameterId()`. Narrow the feed by effective- or announcement-date range
+and by kind with `CategoryParameterChangeFilter.builder()`.
+
 ## Products
 
 Products are the shared descriptions offers are built from. Search the database lazily — the
@@ -223,4 +238,5 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility        -Pdemo.account=seller
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatible-products
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-category-events
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-parameter-changes
 ```
