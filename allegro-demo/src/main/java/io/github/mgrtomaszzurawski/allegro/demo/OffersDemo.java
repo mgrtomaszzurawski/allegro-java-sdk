@@ -884,6 +884,11 @@ final class OffersDemo {
                 + ", format=" + offer.format() + ", buyNow=" + price
                 + ", images=" + offer.imageUrls().size()
                 + ", createdAt=" + offer.createdAt() + ", updatedAt=" + offer.updatedAt());
+        if (offer.publication() != null) {
+            System.out.println("  publication: duration=" + offer.publication().duration()
+                    + ", baseMarketplaceId=" + offer.publication().baseMarketplaceId()
+                    + ", additionalMarketplaceIds=" + offer.publication().additionalMarketplaceIds());
+        }
         if (!offer.aiCoCreatedImageUrls().isEmpty()) {
             System.out.println("  aiCoCreatedImageUrls=" + offer.aiCoCreatedImageUrls());
         }
