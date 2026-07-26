@@ -68,6 +68,11 @@ class OfferQueryClientTest {
     private static final int FULL_PAGE = 100;
     private static final int SECOND_PAGE = 30;
     private static final int TOTAL = FULL_PAGE + SECOND_PAGE;
+    private static final String COUNT_LIMIT = "1";
+    private static final int OFFERS_TOTAL = 157;
+    private static final String COUNT_PAGE =
+            "{\"offers\":[{\"id\":\"1\"}],\"count\":1,\"totalCount\":" + OFFERS_TOTAL + "}";
+    private static final String NO_TOTAL_PAGE = "{\"offers\":[],\"count\":0}";
 
     private static final String FILTER_NAME = "klawiatura";
     private static final String STATUS_ACTIVE_WIRE = "ACTIVE";
@@ -434,6 +439,40 @@ class OfferQueryClientTest {
         AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
                 () -> offers(wmInfo).streamOffers(OfferFilter.all()).findFirst());
         assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
+    }
+
+    @Test
+    void countOffers_returnsServerTotalWithASingleMinimalRequest(WireMockRuntimeInfo wmInfo) {
+        // given — the listing reports a large total; the probe fetches a single item
+        stubFor(get(urlPathEqualTo(OFFERS_PATH)).withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COUNT_PAGE)));
+        OfferFilter filter = OfferFilter.builder()
+                .name(FILTER_NAME).status(OfferStatus.ACTIVE).format(OfferFormat.BUY_NOW).build();
+
+        // when
+        long total = offers(wmInfo).countOffers(filter);
+
+        // then — the server total, fetched with limit=1 (not a full page) and the filter forwarded
+        assertEquals(OFFERS_TOTAL, total);
+        verify(1, getRequestedFor(urlPathEqualTo(OFFERS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
+                .withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT))
+                .withQueryParam(QUERY_NAME, equalTo(FILTER_NAME))
+                .withQueryParam(QUERY_STATUS, equalTo(STATUS_ACTIVE_WIRE))
+                .withQueryParam(QUERY_FORMAT, equalTo(FORMAT_BUY_NOW_WIRE)));
+    }
+
+    @Test
+    void countOffers_whenResponseHasNoTotalCount_returnsZero(WireMockRuntimeInfo wmInfo) {
+        // given — a listing that omits totalCount
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NO_TOTAL_PAGE)));
+
+        // when / then — the missing total degrades to zero rather than throwing, still via one probe
+        assertEquals(0L, offers(wmInfo).countOffers(OfferFilter.all()));
+        verify(1, getRequestedFor(urlPathEqualTo(OFFERS_PATH)).withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT)));
     }
 
     @Test
