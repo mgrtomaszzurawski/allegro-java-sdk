@@ -24,6 +24,7 @@ class DescriptionTest {
     private static final String IMAGE_URL = "https://img.example/keyboard.jpg";
     private static final String UNKNOWN_TYPE = "VIDEO";
     private static final String TEXT_WIRE_TYPE = "TEXT";
+    private static final String IMAGE_WIRE_TYPE = "IMAGE";
 
     @Test
     void text_whenBuilt_carriesContentAndTextType() {
@@ -66,6 +67,19 @@ class DescriptionTest {
 
         // then — the fallback reads the discriminator and classifies it as TEXT, not UNKNOWN
         assertEquals(DescriptionItemType.TEXT, item.type());
+    }
+
+    @Test
+    void from_whenBaseRawCarriesImageTypeDiscriminator_classifiesByIt() {
+        // given — a base item whose wire `type` discriminator is IMAGE
+        DescriptionSectionItemRaw raw = new DescriptionSectionItemRaw().type(IMAGE_WIRE_TYPE);
+
+        // when
+        DescriptionItem item = DescriptionItem.from(raw);
+
+        // then — the fallback classifies it as IMAGE (with no url, none was bound)
+        assertEquals(DescriptionItemType.IMAGE, item.type());
+        assertNull(item.url());
     }
 
     @Test
