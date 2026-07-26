@@ -40,6 +40,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ArrayForObjectHandler;
@@ -74,6 +75,15 @@ class OffersClientTest {
     private static final String CHANGE_PRICE_RESPONSE = "{\"id\":\"" + PRICE_COMMAND_ID
             + "\",\"input\":{\"buyNowPrice\":{\"amount\":\"" + NEW_AMOUNT + "\",\"currency\":\""
             + CURRENCY_PLN + "\"}},\"output\":{\"status\":\"" + PRICE_STATUS_SUCCESSFUL + "\",\"errors\":[]}}";
+    private static final String PRICE_STATUS_ERROR = "ERROR";
+    private static final String PRICE_ERROR_CODE = "PRICE_OUT_OF_RANGE";
+    private static final String PRICE_ERROR_MESSAGE = "Price is outside the allowed range";
+    private static final String PRICE_ERROR_PATH = "input.buyNowPrice";
+    private static final String CHANGE_PRICE_FAILED_RESPONSE = "{\"id\":\"" + PRICE_COMMAND_ID
+            + "\",\"input\":{\"buyNowPrice\":{\"amount\":\"" + NEW_AMOUNT + "\",\"currency\":\""
+            + CURRENCY_PLN + "\"}},\"output\":{\"status\":\"" + PRICE_STATUS_ERROR + "\",\"errors\":[{\"code\":\""
+            + PRICE_ERROR_CODE + "\",\"message\":\"" + PRICE_ERROR_MESSAGE + "\",\"path\":\""
+            + PRICE_ERROR_PATH + "\"}]}}";
     private static final String PARTS_BOTH_URL =
             "/sale/product-offers/" + OFFER_ID + "/parts?include=stock&include=price";
     private static final String PARTS_STOCK_URL =
@@ -237,6 +247,26 @@ class OffersClientTest {
         assertEquals(NEW_AMOUNT, result.buyNowPrice().amount());
         assertEquals(CURRENCY_PLN, result.buyNowPrice().currency());
         assertTrue(result.errors().isEmpty());
+    }
+
+    @Test
+    void changeBuyNowPrice_whenCommandFailsWithErrors_mapsErrorStatusAndTypedErrors(
+            WireMockRuntimeInfo wmInfo) {
+        // given — the command is accepted (200) but its terminal output reports a failure
+        stubFor(put(urlPathMatching(CHANGE_PRICE_PATH_PATTERN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(CHANGE_PRICE_FAILED_RESPONSE)));
+
+        // when
+        PriceChangeResult result = offers(wmInfo).changeBuyNowPrice(OFFER_ID, Money.of(NEW_AMOUNT, CURRENCY_PLN));
+
+        // then — the error status and the typed output.errors[] are surfaced on the result, not thrown
+        assertEquals(PRICE_STATUS_ERROR, result.status());
+        assertEquals(1, result.errors().size());
+        AllegroFieldError error = result.errors().get(0);
+        assertEquals(PRICE_ERROR_CODE, error.code());
+        assertEquals(PRICE_ERROR_MESSAGE, error.message());
+        assertEquals(PRICE_ERROR_PATH, error.path());
     }
 
     @Test
