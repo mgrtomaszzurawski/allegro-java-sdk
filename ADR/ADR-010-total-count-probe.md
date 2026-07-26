@@ -28,7 +28,8 @@ This ADR **extends** ADR-006 (which is immutable and still holds — lazy stream
 default and nothing here materializes a result set).
 
 - Where a listing's response carries a server `totalCount`, the facade MAY expose a
-  `long <feature>Count(filter)` accessor. It issues **one** request for the smallest legal
+  `long count<Feature>(filter)` accessor (verb-first, matching the `stream<Feature>` list
+  methods — e.g. `countOffers` beside `streamOffers`). It issues **one** request for the smallest legal
   page (`offset = 0`, `limit = 1` — Allegro's `limit` range is 1..1000) purely to read
   `totalCount`. This is **O(1) in requests**, independent of how large the result set is.
 - Where the server reports **no** total (cursor resources, or offset resources without
@@ -40,7 +41,7 @@ default and nothing here materializes a result set).
   to `0`).
 
 `offers().countOffers(OfferFilter)` is the reference implementation (bucket A). Sibling buckets
-add `<feature>Count(filter)` only on resources whose response carries `totalCount`.
+add `count<Feature>(filter)` only on resources whose response carries `totalCount`.
 
 ## Consequences
 

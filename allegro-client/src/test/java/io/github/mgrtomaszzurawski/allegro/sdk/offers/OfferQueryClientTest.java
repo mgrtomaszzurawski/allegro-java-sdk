@@ -470,8 +470,9 @@ class OfferQueryClientTest {
         stubFor(get(urlPathEqualTo(OFFERS_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NO_TOTAL_PAGE)));
 
-        // when / then — the missing total degrades to zero rather than throwing
+        // when / then — the missing total degrades to zero rather than throwing, still via one probe
         assertEquals(0L, offers(wmInfo).countOffers(OfferFilter.all()));
+        verify(1, getRequestedFor(urlPathEqualTo(OFFERS_PATH)).withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT)));
     }
 
     @Test

@@ -224,6 +224,8 @@ public final class OffersImpl implements Offers {
                 .query(query)
                 .fetch(OffersSearchResultDtoRaw.class);
         Integer totalCount = response.getTotalCount();
+        // The offers listing always carries totalCount (ADR-010 only wires this accessor where the
+        // server reports one); the null branch is a defensive guard, not a supported "no total" signal.
         return totalCount == null ? EMPTY_COUNT : totalCount.longValue();
     }
 
