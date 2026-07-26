@@ -86,6 +86,11 @@ class OfferQueryClientTest {
     private static final String FUNDRAISING_ID = "camp-1";
     private static final String CURRENT_PRICE = "45.00";
     private static final int BIDDERS = 4;
+    private static final int BIDDERS_ONLY = 2;
+    private static final String SALEINFO_NO_PRICE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+            + "\"saleInfo\":{\"biddersCount\":%d}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, AMOUNT, CURRENCY_PLN, BIDDERS_ONLY);
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
@@ -284,6 +289,21 @@ class OfferQueryClientTest {
         assertNull(summary.fundraisingCampaignId());
         assertNull(summary.currentPrice());
         assertNull(summary.biddersCount());
+    }
+
+    @Test
+    void streamOffers_whenSaleInfoHasBiddersButNoCurrentPrice_readsBiddersAndNullPrice(
+            WireMockRuntimeInfo wmInfo) {
+        // given — saleInfo present with biddersCount but no currentPrice (the live BUY_NOW shape)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(SALEINFO_NO_PRICE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — biddersCount is read; currentPrice degrades to null (the saleInfo-present inner branch)
+        assertEquals(BIDDERS_ONLY, summary.biddersCount());
+        assertNull(summary.currentPrice());
     }
 
     @Test
