@@ -676,7 +676,8 @@ final class OffersDemo {
         List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
         BatchReport report = client.offers().batch().publish(offerIds);
         System.out.println("batch publish: " + report.success() + "/" + report.total()
-                + " ok, " + report.failed() + " failed");
+                + " ok, " + report.failed() + " failed"
+                + ", createdAt=" + report.createdAt() + ", completedAt=" + report.completedAt());
     }
 
     /**

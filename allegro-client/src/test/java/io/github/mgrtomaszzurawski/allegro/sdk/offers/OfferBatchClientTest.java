@@ -43,6 +43,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -79,6 +80,8 @@ class OfferBatchClientTest {
             "{\"id\":\"cmd-1\",\"createdAt\":\"2026-01-01T00:00:00Z\","
                     + "\"completedAt\":\"2026-01-01T00:00:05Z\","
                     + "\"taskCount\":{\"total\":2,\"success\":2,\"failed\":0}}";
+    private static final OffsetDateTime REPORT_CREATED_AT = OffsetDateTime.parse("2026-01-01T00:00:00Z");
+    private static final OffsetDateTime REPORT_COMPLETED_AT = OffsetDateTime.parse("2026-01-01T00:00:05Z");
     private static final String TWO_TASKS =
             "{\"tasks\":[{\"offer\":{\"id\":\"" + OFFER_ONE + "\"},\"status\":\"SUCCESS\"},"
                     + "{\"offer\":{\"id\":\"" + OFFER_TWO + "\"},\"status\":\"SUCCESS\"}]}";
@@ -237,6 +240,8 @@ class OfferBatchClientTest {
                 .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE)))
                 .withRequestBody(matchingJsonPath(OFFERS_SECOND_JSON_PATH, equalTo(OFFER_TWO))));
         // and the terminal report is mapped
+        assertEquals(REPORT_CREATED_AT, report.createdAt());
+        assertEquals(REPORT_COMPLETED_AT, report.completedAt());
         assertEquals(2, report.total());
         assertEquals(2, report.success());
         assertEquals(0, report.failed());
@@ -395,7 +400,9 @@ class OfferBatchClientTest {
                 .withRequestBody(matchingJsonPath(MOD_STOCK_TYPE_JSON_PATH, equalTo(CHANGE_TYPE_FIXED)))
                 .withRequestBody(matchingJsonPath(MOD_STOCK_VALUE_JSON_PATH,
                         equalTo(String.valueOf(STOCK_VALUE)))));
-        // and the terminal report carries the per-field task subjects
+        // and the terminal report carries the per-field task subjects and its timestamps
+        assertEquals(REPORT_CREATED_AT, report.createdAt());
+        assertEquals(REPORT_COMPLETED_AT, report.completedAt());
         assertEquals(2, report.total());
         assertEquals(2, report.tasks().size());
         assertEquals(OFFER_ONE, report.tasks().get(0).offerId());

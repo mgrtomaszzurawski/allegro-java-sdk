@@ -138,6 +138,9 @@ class PromoBatchMapperTest {
 
         // then — counts from taskCount, tasks projected onto TaskResult
         assertEquals("cmd-1", batchReport.id());
+        // the promotion-package report type carries no timestamps (see PromoBatchMapper javadoc)
+        assertNull(batchReport.createdAt());
+        assertNull(batchReport.completedAt());
         assertEquals(2, batchReport.total());
         assertEquals(1, batchReport.success());
         assertEquals(1, batchReport.failed());
