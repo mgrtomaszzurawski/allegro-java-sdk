@@ -50,6 +50,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPublication;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
@@ -884,10 +885,11 @@ final class OffersDemo {
                 + ", format=" + offer.format() + ", buyNow=" + price
                 + ", images=" + offer.imageUrls().size()
                 + ", createdAt=" + offer.createdAt() + ", updatedAt=" + offer.updatedAt());
-        if (offer.publication() != null) {
-            System.out.println("  publication: duration=" + offer.publication().duration()
-                    + ", baseMarketplaceId=" + offer.publication().baseMarketplaceId()
-                    + ", additionalMarketplaceIds=" + offer.publication().additionalMarketplaceIds());
+        OfferPublication publication = offer.publication();
+        if (publication != null) {
+            System.out.println("  publication: duration=" + publication.duration()
+                    + ", baseMarketplaceId=" + publication.baseMarketplaceId()
+                    + ", additionalMarketplaceIds=" + publication.additionalMarketplaceIds());
         }
         if (!offer.aiCoCreatedImageUrls().isEmpty()) {
             System.out.println("  aiCoCreatedImageUrls=" + offer.aiCoCreatedImageUrls());
