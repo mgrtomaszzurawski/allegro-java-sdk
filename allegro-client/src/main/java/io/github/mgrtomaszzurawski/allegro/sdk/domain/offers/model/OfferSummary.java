@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CurrentPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferAdditionalServicesRaw;
@@ -14,6 +15,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1DeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SaleInfoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StatsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StockRaw;
@@ -57,6 +59,8 @@ import org.jspecify.annotations.Nullable;
  * @param shippingRatesId the id of the offer's shipping-rates table, or {@code null}
  * @param additionalServicesGroupId the id of the offer's additional-services group, or {@code null}
  * @param fundraisingCampaignId the id of the offer's fundraising campaign, or {@code null}
+ * @param currentPrice    the offer's current price (the auction/live price), or {@code null}
+ * @param biddersCount    how many buyers have bid, or {@code null} when the payload omits it
  * @since 0.2.0
  */
 public record OfferSummary(
@@ -79,7 +83,9 @@ public record OfferSummary(
         @Nullable Boolean businessOnly,
         @Nullable String shippingRatesId,
         @Nullable String additionalServicesGroupId,
-        @Nullable String fundraisingCampaignId) {
+        @Nullable String fundraisingCampaignId,
+        @Nullable Money currentPrice,
+        @Nullable Integer biddersCount) {
 
     /** Project a generated listing item onto the consumer record. */
     public static OfferSummary from(OfferListingDtoRaw raw) {
@@ -89,6 +95,7 @@ public record OfferSummary(
         OfferListingDtoV1StockRaw stock = raw.getStock();
         OfferListingDtoImageRaw primaryImage = raw.getPrimaryImage();
         OfferListingDtoV1StatsRaw stats = raw.getStats();
+        OfferListingDtoV1SaleInfoRaw saleInfo = raw.getSaleInfo();
         return new OfferSummary(
                 raw.getId(),
                 raw.getName(),
@@ -109,7 +116,17 @@ public record OfferSummary(
                 businessOnlyOf(raw),
                 shippingRatesIdOf(raw),
                 additionalServicesGroupIdOf(raw),
-                fundraisingCampaignIdOf(raw));
+                fundraisingCampaignIdOf(raw),
+                currentPriceOf(saleInfo),
+                saleInfo == null ? null : saleInfo.getBiddersCount());
+    }
+
+    private static @Nullable Money currentPriceOf(@Nullable OfferListingDtoV1SaleInfoRaw saleInfo) {
+        if (saleInfo == null) {
+            return null;
+        }
+        CurrentPriceRaw price = saleInfo.getCurrentPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
     }
 
     private static @Nullable String externalIdOf(OfferListingDtoRaw raw) {
