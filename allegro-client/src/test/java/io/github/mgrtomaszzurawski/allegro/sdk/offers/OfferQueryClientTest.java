@@ -158,6 +158,7 @@ class OfferQueryClientTest {
     private static final String CONDITION_MET_CODE = "DELIVERY";
     private static final String CONDITION_MET_NAME = "Wysyłka";
     private static final String CONDITION_MET_DESCRIPTION = "szybko";
+    private static final OffsetDateTime SMART_LAST_CHANGED = OffsetDateTime.parse("2026-01-01T00:00:00Z");
     private static final String UNFILLED_PATH = "/sale/offers/unfilled-parameters";
     private static final String PARAM_ID_ONE = "p-100";
     private static final String PARAM_ID_TWO = "p-200";
@@ -482,6 +483,7 @@ class OfferQueryClientTest {
         // then — the qualification flag and the per-condition breakdown map through
         assertTrue(report.fulfilled());
         assertFalse(report.scheduledForReclassification());
+        assertEquals(SMART_LAST_CHANGED, report.lastChanged());
         assertEquals(2, report.conditions().size());
         SmartClassification.Condition met = report.conditions().get(0);
         assertEquals(CONDITION_MET_CODE, met.code());

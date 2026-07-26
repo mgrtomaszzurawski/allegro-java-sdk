@@ -876,6 +876,7 @@ final class OffersDemo {
         SmartClassification smart = client.offers().smartClassification(offerId);
         System.out.println("smart: fulfilled=" + smart.fulfilled()
                 + ", scheduledForReclassification=" + smart.scheduledForReclassification()
+                + ", lastChanged=" + smart.lastChanged()
                 + ", conditions=" + smart.conditions().size());
     }
 
