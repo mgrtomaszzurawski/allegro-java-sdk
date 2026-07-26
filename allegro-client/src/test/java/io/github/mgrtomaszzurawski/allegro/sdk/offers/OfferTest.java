@@ -33,6 +33,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
@@ -73,6 +75,8 @@ class OfferTest {
     private static final String MARKETPLACE_CURRENCY = "CZK";
     private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
     private static final String ATTACHMENT_ID_2 = "5c7d1e20-0000-4000-8000-000000000def";
+    private static final String AI_IMAGE_URL = "https://a.allegroimg.com/original/11ea99/ai-one";
+    private static final String AI_IMAGE_URL_2 = "https://a.allegroimg.com/original/11ea99/ai-two";
     private static final String CATEGORY_ID = "257";
     private static final String TEST_UNKNOWN_FORMAT = "FUTURE_FORMAT";
     private static final String TEST_UNKNOWN_STATUS = "FUTURE_STATUS";
@@ -255,6 +259,38 @@ class OfferTest {
 
         // then — the null id is dropped and the surviving ids keep their order
         assertEquals(List.of(ATTACHMENT_ID, ATTACHMENT_ID_2), Offer.from(raw).attachmentIds());
+    }
+
+    @Test
+    void from_whenAiCoCreatedImagesPresent_readsUrlsAndSkipsNullUrlKeepingOrder() {
+        // given — an offer whose aiCoCreatedContent lists two AI images plus one with no url
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .aiCoCreatedContent(new AiCoCreatedContentRaw().images(List.of(
+                        new AiCoCreatedImageRaw().url(AI_IMAGE_URL),
+                        new AiCoCreatedImageRaw(),
+                        new AiCoCreatedImageRaw().url(AI_IMAGE_URL_2))));
+
+        // then — the null-url entry is dropped and the surviving urls keep their order
+        assertEquals(List.of(AI_IMAGE_URL, AI_IMAGE_URL_2), Offer.from(raw).aiCoCreatedImageUrls());
+    }
+
+    @Test
+    void from_whenNoAiCoCreatedContent_isEmpty() {
+        // then — an offer with no aiCoCreatedContent exposes an empty list
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw().id(OFFER_ID).name(NAME_FULL);
+        assertTrue(Offer.from(raw).aiCoCreatedImageUrls().isEmpty());
+    }
+
+    @Test
+    void from_whenAiCoCreatedContentHasNullImages_isEmpty() {
+        // given — the block is present but its images list is null (spec-legal: images is optional)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .aiCoCreatedContent(new AiCoCreatedContentRaw().images(null));
+
+        // then — an empty list, no NullPointerException
+        assertTrue(Offer.from(raw).aiCoCreatedImageUrls().isEmpty());
     }
 
     @Test
