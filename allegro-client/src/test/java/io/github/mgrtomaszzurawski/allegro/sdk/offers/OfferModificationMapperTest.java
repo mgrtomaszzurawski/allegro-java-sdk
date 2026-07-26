@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
@@ -21,17 +22,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 
 /**
  * Wire-shape mapping of {@link OfferModificationMapper}: each domain duration /
  * handling-time value maps to its ISO 8601 wire token, the two publication modes
  * (fixed vs unlimited), and the omission of the eight unset {@code Modification}
- * sub-objects. Assertions are on the serialized JSON tree; NON_EMPTY mirrors the
- * SDK's partial write body.
+ * sub-objects. Assertions are on the serialized JSON tree.
+ *
+ * <p>The mapper registers the production {@code JavaTimeModule} + {@code JsonNullableModule}
+ * (the serialization modules the {@code AllegroClient} mapper also carries) plus
+ * {@code NON_EMPTY} inclusion, so it matches the SDK's partial write body. Registering the
+ * modules — not just the inclusion — keeps a later {@code java.time} or {@code JsonNullable}
+ * field on this command from silently diverging from the wire while the assertions keep passing.
  */
 class OfferModificationMapperTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new JsonNullableModule())
             .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     private static final String OFFER_ONE = "111";
     private static final String OFFER_TWO = "222";
