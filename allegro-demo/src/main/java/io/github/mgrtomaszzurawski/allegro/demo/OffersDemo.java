@@ -40,6 +40,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceChangeResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoOptionModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoPackageType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
@@ -256,8 +257,12 @@ final class OffersDemo {
                 printSmart(client, offerId);
                 String newPrice = System.getProperty(NEW_PRICE_PROPERTY);
                 if (newPrice != null) {
-                    client.offers().changeBuyNowPrice(offerId, Money.of(newPrice, CURRENCY_PLN));
-                    System.out.println("changeBuyNowPrice submitted: " + newPrice + " " + CURRENCY_PLN);
+                    PriceChangeResult priceResult =
+                            client.offers().changeBuyNowPrice(offerId, Money.of(newPrice, CURRENCY_PLN));
+                    System.out.println("changeBuyNowPrice: status=" + priceResult.status()
+                            + ", applied=" + (priceResult.buyNowPrice() == null ? "(none)"
+                                    : priceResult.buyNowPrice().amount() + " " + priceResult.buyNowPrice().currency())
+                            + ", errors=" + priceResult.errors().size());
                     printOffer("read-back", client.offers().get(offerId));
                 }
             }
