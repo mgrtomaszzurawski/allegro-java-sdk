@@ -16,7 +16,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -56,7 +59,23 @@ class CustomerReturnsClientTest {
     private static final String PARAM_OFFSET = "offset";
     private static final String ORDER_ID = "a8f6c3e2-1111-2222-3333-444455556666";
     private static final String BUYER_LOGIN = "test-buyer";
+    private static final String BUYER_EMAIL = "buyer@example.com";
     private static final String REASON = "Repaired under warranty";
+    private static final String OFFER_ID = "112233";
+    private static final long ITEM_QUANTITY = 2L;
+    private static final String ITEM_NAME = "Wireless mouse";
+    private static final String ITEM_PRICE_AMOUNT = "49.99";
+    private static final String CURRENCY = "PLN";
+    private static final String ITEM_URL = "https://allegro.pl/oferta/112233";
+    private static final String ITEM_REASON_TYPE = "MALFUNCTION";
+    private static final String SERIAL_NUMBER = "SN-0001";
+    private static final String REJECTION_CODE = "REFUND_REJECTED";
+    private static final String BANK_OWNER = "Jan Kowalski";
+    private static final String BANK_IBAN = "PL61109010140000071219812874";
+    private static final String BANK_CITY = "Warszawa";
+    private static final String WAYBILL = "WB-123456";
+    private static final String CARRIER_ID = "ALLEGRO";
+    private static final String SENDER_PHONE = "+48500100200";
 
     private static final int PAGE_SIZE = 100;
     private static final int TOTAL_RETURNS = 150;
@@ -88,7 +107,30 @@ class CustomerReturnsClientTest {
     private static String returnJson(String id) {
         return "{\"id\":\"" + id + "\",\"orderId\":\"" + ORDER_ID + "\","
                 + "\"referenceNumber\":\"R-1\",\"buyer\":{\"login\":\"" + BUYER_LOGIN
-                + "\",\"email\":\"buyer@example.com\"},\"items\":[{}],"
+                + "\",\"email\":\"" + BUYER_EMAIL + "\"},\"items\":[{}],"
+                + "\"createdAt\":\"2026-01-01T00:00:00Z\",\"marketplaceId\":\"allegro-pl\"}";
+    }
+
+    // spec-derived: the full customer-return shape — one detailed item, a refund bank
+    // account, a return parcel and a rejection — used to exercise the depth mapping.
+    private static String deepReturnJson() {
+        return "{\"id\":\"" + RETURN_ID + "\",\"orderId\":\"" + ORDER_ID + "\","
+                + "\"isFulfillment\":true,\"referenceNumber\":\"R-1\",\"status\":\"CREATED\","
+                + "\"buyer\":{\"login\":\"" + BUYER_LOGIN + "\",\"email\":\"" + BUYER_EMAIL + "\"},"
+                + "\"items\":[{\"offerId\":\"" + OFFER_ID + "\",\"quantity\":" + ITEM_QUANTITY + ","
+                + "\"name\":\"" + ITEM_NAME + "\",\"price\":{\"amount\":\"" + ITEM_PRICE_AMOUNT
+                + "\",\"currency\":\"" + CURRENCY + "\"},\"url\":\"" + ITEM_URL + "\","
+                + "\"reason\":{\"type\":\"" + ITEM_REASON_TYPE + "\",\"userComment\":\"" + REASON + "\"},"
+                + "\"serialNumbers\":[\"" + SERIAL_NUMBER + "\"]}],"
+                + "\"refund\":{\"bankAccount\":{\"owner\":\"" + BANK_OWNER + "\","
+                + "\"accountNumber\":\"" + BANK_IBAN + "\",\"iban\":\"" + BANK_IBAN + "\","
+                + "\"swift\":\"WBKPPLPP\",\"address\":{\"street\":\"ul. Testowa 1\",\"city\":\""
+                + BANK_CITY + "\",\"postCode\":\"00-001\",\"countryCode\":\"PL\"}}},"
+                + "\"parcels\":[{\"createdAt\":\"2026-01-02T00:00:00Z\",\"waybill\":\"" + WAYBILL
+                + "\",\"carrierId\":\"" + CARRIER_ID + "\",\"sender\":{\"phoneNumber\":\""
+                + SENDER_PHONE + "\"}}],"
+                + "\"rejection\":{\"code\":\"" + REJECTION_CODE
+                + "\",\"reason\":\"" + REASON + "\",\"createdAt\":\"2026-01-03T00:00:00Z\"},"
                 + "\"createdAt\":\"2026-01-01T00:00:00Z\",\"marketplaceId\":\"allegro-pl\"}";
     }
 
@@ -177,6 +219,80 @@ class CustomerReturnsClientTest {
             verify(1, getRequestedFor(urlEqualTo(RETURN_PATH))
                     .withHeader(TestHttpConstants.ACCEPT_HEADER,
                             equalTo(TestHttpConstants.VND_ALLEGRO_BETA_V1)));
+        }
+    }
+
+    @Test
+    void get_whenDeepReturn_mapsItemsRejectionBankAccountAndParcels(WireMockRuntimeInfo wmInfo) {
+        // given — a fully populated return
+        stubToken();
+        stubFor(get(urlEqualTo(RETURN_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(deepReturnJson())));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            CustomerReturn customerReturn = allegro.orders().returns().get(RETURN_ID);
+
+            // then — the returned item maps in full
+            assertEquals(1, customerReturn.items().size());
+            var item = customerReturn.items().get(0);
+            assertEquals(OFFER_ID, item.offerId());
+            assertEquals(ITEM_QUANTITY, item.quantity());
+            assertEquals(ITEM_NAME, item.name());
+            assertNotNull(item.price());
+            assertEquals(ITEM_PRICE_AMOUNT, item.price().amount());
+            assertEquals(ITEM_URL, item.url());
+            assertNotNull(item.reason());
+            assertEquals(ITEM_REASON_TYPE, item.reason().type());
+            assertEquals(1, item.serialNumbers().size());
+            assertEquals(SERIAL_NUMBER, item.serialNumbers().get(0));
+            // and buyer e-mail, fulfilment flag, rejection, bank account and parcel map
+            assertEquals(BUYER_EMAIL, customerReturn.buyerEmail());
+            assertTrue(customerReturn.fulfillment());
+            assertTrue(customerReturn.refundRejected());
+            assertNotNull(customerReturn.rejection());
+            assertEquals(REJECTION_CODE, customerReturn.rejection().code());
+            assertNotNull(customerReturn.refundBankAccount());
+            assertEquals(BANK_IBAN, customerReturn.refundBankAccount().iban());
+            assertEquals(BANK_OWNER, customerReturn.refundBankAccount().owner());
+            assertNotNull(customerReturn.refundBankAccount().address());
+            assertEquals(BANK_CITY, customerReturn.refundBankAccount().address().city());
+            assertEquals(1, customerReturn.parcels().size());
+            var parcel = customerReturn.parcels().get(0);
+            assertEquals(WAYBILL, parcel.waybill());
+            assertEquals(CARRIER_ID, parcel.carrierId());
+            assertEquals(SENDER_PHONE, parcel.senderPhoneNumber());
+        }
+    }
+
+    @Test
+    void get_whenDeepReturn_redactsPersonalDataInToString(WireMockRuntimeInfo wmInfo) {
+        // given — a return carrying an IBAN, a sender phone and buyer identity
+        stubToken();
+        stubFor(get(urlEqualTo(RETURN_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(deepReturnJson())));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            CustomerReturn customerReturn = allegro.orders().returns().get(RETURN_ID);
+
+            // then — toString never leaks the sensitive fields, but the accessors still return them
+            String bankAccount = customerReturn.refundBankAccount().toString();
+            assertFalse(bankAccount.contains(BANK_IBAN));
+            assertFalse(bankAccount.contains(BANK_OWNER));
+            String parcel = customerReturn.parcels().get(0).toString();
+            assertFalse(parcel.contains(SENDER_PHONE));
+            assertTrue(parcel.contains(WAYBILL));
+            String summary = customerReturn.toString();
+            assertFalse(summary.contains(BUYER_EMAIL));
+            assertFalse(summary.contains(BUYER_LOGIN));
+            // the values are still reachable deliberately
+            assertEquals(BANK_IBAN, customerReturn.refundBankAccount().iban());
+            assertEquals(SENDER_PHONE, customerReturn.parcels().get(0).senderPhoneNumber());
         }
     }
 
