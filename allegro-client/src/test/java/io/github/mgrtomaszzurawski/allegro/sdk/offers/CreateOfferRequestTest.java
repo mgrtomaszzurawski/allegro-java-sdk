@@ -13,15 +13,19 @@ import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
@@ -35,6 +39,9 @@ class CreateOfferRequestTest {
     private static final String NAME = "Mechanical keyboard";
     private static final String CATEGORY_ID = "257";
     private static final Money PRICE = Money.of("199.99", "PLN");
+    private static final String MARKETPLACE_ID = "allegro-cz";
+    private static final Money MARKETPLACE_PRICE = Money.of("899.00", "CZK");
+    private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
     private static final int STOCK = 10;
     private static final String IMAGE_URL = "https://img.example/x.jpg";
     private static final String SHIPPING_RATES_ID = "a1b2c3d4-0000-0000-0000-000000000001";
@@ -52,6 +59,7 @@ class CreateOfferRequestTest {
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
     private static final String CONTACT_ID = "contact-1";
+    private static final String CONTACT_NAME = "Main contact card";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "campaign-1";
     private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
@@ -91,7 +99,7 @@ class CreateOfferRequestTest {
         // given
         OfferDelivery delivery = OfferDelivery.builder().shippingRatesId(SHIPPING_RATES_ID).build();
         AfterSalesServices afterSales =
-                AfterSalesServices.builder().impliedWarrantyId(IMPLIED_WARRANTY_ID).build();
+                AfterSalesServices.builder().impliedWarranty(NamedReference.byId(IMPLIED_WARRANTY_ID)).build();
 
         // when
         CreateOfferRequest request = validBuilder()
@@ -287,6 +295,33 @@ class CreateOfferRequestTest {
     }
 
     @Test
+    void aiCoCreatedImageUrls_whenSet_exposesThem() {
+        // when — an offer image is declared as AI co-created
+        CreateOfferRequest request = validBuilder()
+                .aiCoCreatedImageUrls(List.of(IMAGE_URL)).build();
+
+        // then
+        assertEquals(List.of(IMAGE_URL), request.aiCoCreatedImageUrls());
+    }
+
+    @Test
+    void compatibilityList_whenSetAsList_replacesTheAddedEntries() {
+        // given — a builder that already has one "fits to" entry added
+        CreateOfferRequest.Builder builder = validBuilder()
+                .addCompatibilityEntry(CompatibilityEntry.text("first line"));
+
+        // when — a bulk set replaces (does not append to) the accumulated entries
+        CreateOfferRequest request = builder
+                .compatibilityList(List.of(CompatibilityEntry.productId(PRODUCT_ID_B)))
+                .build();
+
+        // then — only the list's entry remains
+        assertEquals(1, request.compatibilityList().size());
+        assertEquals(CompatibilityEntry.Kind.PRODUCT_ID, request.compatibilityList().get(0).kind());
+        assertEquals(PRODUCT_ID_B, request.compatibilityList().get(0).productId());
+    }
+
+    @Test
     void build_whenOfferRefsSet_exposesThem() {
         // when — the external id, listing language and size-table id are set
         CreateOfferRequest request = validBuilder()
@@ -372,32 +407,121 @@ class CreateOfferRequestTest {
     }
 
     @Test
-    void build_whenReferenceIdsSet_exposeThem() {
-        // when — the contact, additional-services group and fundraising campaign are attached by id
-        CreateOfferRequest request = validBuilder()
-                .contactId(CONTACT_ID)
-                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
-                .fundraisingCampaignId(FUNDRAISING_ID)
-                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
-                .build();
+    void build_whenPaymentsSet_exposesIt() {
+        // given
+        OfferPayments payments = OfferPayments.of(InvoiceType.VAT);
+
+        // when
+        CreateOfferRequest request = validBuilder().payments(payments).build();
 
         // then
-        assertEquals(CONTACT_ID, request.contactId());
-        assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServicesGroupId());
-        assertEquals(FUNDRAISING_ID, request.fundraisingCampaignId());
-        assertEquals(WHOLESALE_PRICE_LIST_ID, request.wholesalePriceListId());
+        assertEquals(payments, request.payments());
     }
 
     @Test
-    void build_whenReferenceIdsNotSet_leaveThemNull() {
+    void build_whenPaymentsNotSet_leavesItNull() {
         // when
         CreateOfferRequest request = validBuilder().build();
 
         // then
-        assertNull(request.contactId());
-        assertNull(request.additionalServicesGroupId());
-        assertNull(request.fundraisingCampaignId());
-        assertNull(request.wholesalePriceListId());
+        assertNull(request.payments());
+    }
+
+    @Test
+    void build_whenAdditionalMarketplacePriceSet_exposesItByMarketplaceId() {
+        // when — a Buy Now price is set for a foreign marketplace
+        CreateOfferRequest request = validBuilder()
+                .additionalMarketplacePrice(MARKETPLACE_ID, MARKETPLACE_PRICE)
+                .build();
+
+        // then
+        assertEquals(1, request.additionalMarketplacePrices().size());
+        assertEquals(MARKETPLACE_PRICE, request.additionalMarketplacePrices().get(MARKETPLACE_ID));
+    }
+
+    @Test
+    void build_whenNoAdditionalMarketplaces_isEmpty() {
+        // then — the map is empty when nothing is cross-listed
+        assertTrue(validBuilder().build().additionalMarketplacePrices().isEmpty());
+    }
+
+    @Test
+    void additionalMarketplacePrices_whenExposed_isImmutable() {
+        // given — a request with one cross-listing
+        CreateOfferRequest request = validBuilder()
+                .additionalMarketplacePrice(MARKETPLACE_ID, MARKETPLACE_PRICE).build();
+
+        // then — the exposed map cannot be mutated by the caller
+        assertThrows(UnsupportedOperationException.class,
+                () -> request.additionalMarketplacePrices().put("allegro-sk", MARKETPLACE_PRICE));
+    }
+
+    @Test
+    void additionalMarketplacePrice_whenPriceNull_throws() {
+        // then — a null price is rejected fail-fast
+        assertThrows(NullPointerException.class,
+                () -> CreateOfferRequest.builder().additionalMarketplacePrice(MARKETPLACE_ID, null));
+    }
+
+    @Test
+    void additionalMarketplacePrice_whenMarketplaceIdNull_throws() {
+        // then — a null marketplace id is rejected fail-fast
+        assertThrows(NullPointerException.class,
+                () -> CreateOfferRequest.builder().additionalMarketplacePrice(null, MARKETPLACE_PRICE));
+    }
+
+    @Test
+    void build_whenAttachmentIdsSet_exposesThemInOrder() {
+        // when — uploaded attachments are linked to the offer by id
+        CreateOfferRequest request = validBuilder().attachmentIds(List.of(ATTACHMENT_ID)).build();
+
+        // then
+        assertEquals(List.of(ATTACHMENT_ID), request.attachmentIds());
+    }
+
+    @Test
+    void build_whenNoAttachments_isEmpty() {
+        // then — the list is empty when none are linked
+        assertTrue(validBuilder().build().attachmentIds().isEmpty());
+    }
+
+    @Test
+    void build_whenReferencesByIdSet_exposeThem() {
+        // when — the contact, additional-services group and fundraising campaign are attached by id
+        CreateOfferRequest request = validBuilder()
+                .contact(NamedReference.byId(CONTACT_ID))
+                .additionalServices(NamedReference.byId(ADDITIONAL_SERVICES_ID))
+                .fundraisingCampaign(NamedReference.byId(FUNDRAISING_ID))
+                .wholesalePriceList(NamedReference.byId(WHOLESALE_PRICE_LIST_ID))
+                .build();
+
+        // then
+        assertEquals(CONTACT_ID, request.contact().id());
+        assertEquals(ADDITIONAL_SERVICES_ID, request.additionalServices().id());
+        assertEquals(FUNDRAISING_ID, request.fundraisingCampaign().id());
+        assertEquals(WHOLESALE_PRICE_LIST_ID, request.wholesalePriceList().id());
+    }
+
+    @Test
+    void build_whenContactByName_exposesTheNameForm() {
+        // when — the contact is attached by name instead of id
+        CreateOfferRequest request = validBuilder().contact(NamedReference.byName(CONTACT_NAME)).build();
+
+        // then — the reference carries the name and no id
+        assertEquals(CONTACT_NAME, request.contact().name());
+        assertNull(request.contact().id());
+    }
+
+    @Test
+    void build_whenReferencesNotSet_leaveThemNull() {
+        // when
+        CreateOfferRequest request = validBuilder().build();
+
+        // then
+        assertNull(request.contact());
+        assertNull(request.additionalServices());
+        assertNull(request.fundraisingCampaign());
+        assertNull(request.wholesalePriceList());
     }
 
     @Test
