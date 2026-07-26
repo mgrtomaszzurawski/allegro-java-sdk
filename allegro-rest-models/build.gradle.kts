@@ -130,6 +130,35 @@ val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
             logger.lifecycle("patchOpenApiSpec: linked ${fixEntry.subtypes} under ${fixEntry.parentName}")
         }
 
+        // Shipping / ShippingExtended (ASN): both discriminate on `method`, but the three shared
+        // method subtypes (OWN_TRANSPORT / COURIER_BY_SELLER / THIRD_PARTY_DELIVERY) allOf-reference
+        // the write base `Shipping` ONLY. A `ShippingExtended`-typed read field therefore resolves
+        // those methods to classes that are not its subtypes, and Jackson throws
+        // InvalidTypeIdException — failing the whole Advance Ship Notice read (and the create/update
+        // echo, which returns the same type). Collapse to a single `Shipping` hierarchy: retarget
+        // every `ShippingExtended` reference to `Shipping` (this also re-parents ALREADY_IN_WAREHOUSE),
+        // add that method to `Shipping`'s discriminator mapping, and drop the now-orphaned schema.
+        // `Shipping` then carries all four method subtypes and every ASN shipping field reads.
+        if (schemas.has("ShippingExtended")) {
+            fun retargetRefs(node: JsonNode, from: String, to: String) {
+                if (node is ObjectNode) {
+                    val ref = node.get("\$ref")
+                    if (ref != null && ref.isTextual && ref.asText() == from) {
+                        node.put("\$ref", to)
+                    }
+                    node.fields().forEach { retargetRefs(it.value, from, to) }
+                } else if (node.isArray) {
+                    node.forEach { retargetRefs(it, from, to) }
+                }
+            }
+            retargetRefs(root, schemaRefPrefix + "ShippingExtended", schemaRefPrefix + "Shipping")
+            val shippingMapping = (schemas.get("Shipping") as ObjectNode)
+                .get("discriminator").get("mapping") as ObjectNode
+            shippingMapping.put("ALREADY_IN_WAREHOUSE", schemaRefPrefix + "AlreadyInWarehouseShipping")
+            schemas.remove("ShippingExtended")
+            logger.lifecycle("patchOpenApiSpec: collapsed ShippingExtended into Shipping (4 methods)")
+        }
+
         target.get().asFile.also { it.parentFile.mkdirs() }
         mapper.writeValue(target.get().asFile, root)
     }

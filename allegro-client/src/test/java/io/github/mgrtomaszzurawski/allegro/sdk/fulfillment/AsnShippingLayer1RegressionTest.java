@@ -5,63 +5,44 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.fulfillment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.mgrtomaszzurawski.allegro.client.model.AlreadyInWarehouseShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CourierBySellerShippingRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ShippingExtendedRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OwnTransportShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ThirdPartyDeliveryShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.UnknownSubtypeToBaseHandler;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.openapitools.jackson.nullable.JsonNullableModule;
 
 /**
- * Pins a Layer-1 generation defect that blocks the Advance Ship Notice
- * {@code shipping} declaration, and documents the executable evidence behind the
- * bucket-I deferral of that feature.
+ * Guards the Layer-1 shipping hierarchy behind the Advance Ship Notice {@code shipping} field.
  *
- * <p><b>The defect.</b> The ASN read DTOs type their {@code shipping} field as
- * {@code ShippingExtendedRaw} (the spec's {@code ShippingExtended}, four methods
- * including the read-only {@code ALREADY_IN_WAREHOUSE}). The generator (OpenAPI
- * Generator 7.12.0, {@code native} library) emits the three shared write methods —
- * {@code COURIER_BY_SELLER}, {@code OWN_TRANSPORT}, {@code THIRD_PARTY_DELIVERY} —
- * as classes extending {@code ShippingRaw} (the write base {@code Shipping}), NOT
- * {@code ShippingExtendedRaw}, because their {@code allOf} lists {@code Shipping}
- * first. {@code ShippingExtendedRaw} still lists those classes in its
- * {@code @JsonSubTypes}, so Jackson resolves the {@code method} to a class that is
- * not a subtype of the field type and throws {@link InvalidTypeIdException}, failing
- * the WHOLE ASN response. Only {@code ALREADY_IN_WAREHOUSE} (which does extend
- * {@code ShippingExtendedRaw}) reads. The core {@code UnknownSubtypeToBaseHandler}
- * does not help: it rescues an <i>unknown</i> type id, whereas here the id is known
- * and resolves — to a wrong-parent class.
+ * <p><b>The former defect (fixed).</b> The ASN read DTOs typed {@code shipping} as
+ * {@code ShippingExtended} while the three shared write methods — {@code COURIER_BY_SELLER},
+ * {@code OWN_TRANSPORT}, {@code THIRD_PARTY_DELIVERY} — generated as classes extending the write
+ * base {@code Shipping}, not {@code ShippingExtended}. Jackson resolved those methods to
+ * non-subtype classes and threw {@code InvalidTypeIdException}, failing the WHOLE ASN response.
  *
- * <p><b>Consequence.</b> Any real ASN carrying courier / own-transport /
- * third-party shipping cannot be read, and {@code create} / {@code updateSubmitted}
- * echo {@code ShippingExtendedRaw} too, so even a write cannot round-trip. The
- * {@code shipping} declaration therefore stays deferred (see {@code CHANGELOG} I and
- * {@code docs/fulfillment.md}) until Layer-1 is regenerated so the three methods
- * extend {@code ShippingExtendedRaw}. That fix is owned by the build/core agent
- * (Layer-1 is frozen for domain buckets) — tracked in the shared {@code BACKLOG}.
- *
- * <p><b>Signal.</b> When Layer-1 is fixed, {@link #readExtendedShipping_whenSharedWriteMethod_throwsUntilLayer1Fixed}
- * flips from passing to failing — that is the cue to build the domain shipping model
- * and wire it into the ASN read/write paths. The write base {@code ShippingRaw} is
- * already sound, as {@link #readWriteBaseShipping_whenCourierBySeller_deserializes}
- * shows, so the write mapping needs no Layer-1 change.
+ * <p><b>The fix.</b> The generation-time spec patch collapses {@code ShippingExtended} into a
+ * single {@code Shipping} discriminated base carrying all four methods (the read-only
+ * {@code ALREADY_IN_WAREHOUSE} included); every ASN {@code shipping} field is typed
+ * {@code ShippingRaw}. This test pins that every method now deserializes to its concrete subtype
+ * through the SDK's response {@code ObjectMapper}; a Layer-1 regeneration that reintroduced the
+ * split would fail it. The write base was always sound, so writes round-trip unchanged.
  */
 class AsnShippingLayer1RegressionTest {
 
-    private static final String METHOD_COURIER = "COURIER_BY_SELLER";
-    private static final String METHOD_OWN_TRANSPORT = "OWN_TRANSPORT";
-    private static final String METHOD_THIRD_PARTY = "THIRD_PARTY_DELIVERY";
     private static final String COUNTRY_PL = "PL";
 
     private static final String COURIER_JSON =
@@ -93,49 +74,34 @@ class AsnShippingLayer1RegressionTest {
                 .addHandler(new UnknownSubtypeToBaseHandler());
     }
 
+    private static Stream<Arguments> shippingMethods() {
+        return Stream.of(
+                arguments(COURIER_JSON, CourierBySellerShippingRaw.class),
+                arguments(OWN_TRANSPORT_JSON, OwnTransportShippingRaw.class),
+                arguments(THIRD_PARTY_JSON, ThirdPartyDeliveryShippingRaw.class),
+                arguments(WAREHOUSE_JSON, AlreadyInWarehouseShippingRaw.class));
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {METHOD_COURIER, METHOD_OWN_TRANSPORT, METHOD_THIRD_PARTY})
-    void readExtendedShipping_whenSharedWriteMethod_throwsUntilLayer1Fixed(String method) throws Exception {
-        // given: a ShippingExtended payload for one of the three shared write methods
-        String json = switch (method) {
-            case METHOD_COURIER -> COURIER_JSON;
-            case METHOD_OWN_TRANSPORT -> OWN_TRANSPORT_JSON;
-            default -> THIRD_PARTY_JSON;
-        };
-        ObjectMapper mapper = sdkMapper();
+    @MethodSource("shippingMethods")
+    void readShipping_deserializesEveryMethodToItsConcreteSubtype(String json, Class<?> expectedType)
+            throws Exception {
+        // given: an ASN shipping payload for one of the four methods
+        // when: read through the field type used by every ASN DTO (ShippingRaw)
+        ShippingRaw raw = sdkMapper().readValue(json, ShippingRaw.class);
 
-        // when / then: the generated subtype is not a ShippingExtendedRaw, so read fails fast.
-        // Anchor the assertion to structure (the unresolved type id + the base type), not to
-        // Jackson's message wording — a message reword must NOT masquerade as "Layer-1 fixed".
-        InvalidTypeIdException failure = assertThrows(InvalidTypeIdException.class,
-                () -> mapper.readValue(json, ShippingExtendedRaw.class));
-        assertEquals(method, failure.getTypeId());
-        assertEquals(ShippingExtendedRaw.class, failure.getBaseType().getRawClass());
+        // then: the method discriminator resolves to the concrete subtype (no InvalidTypeIdException)
+        assertEquals(expectedType, raw.getClass());
     }
 
     @Test
-    void readExtendedShipping_whenAlreadyInWarehouse_deserializes() throws Exception {
-        // given: the one method whose generated subtype does extend ShippingExtendedRaw
-        ObjectMapper mapper = sdkMapper();
-
+    void readShipping_whenCourierBySeller_populatesTheBody() throws Exception {
+        // given: a COURIER_BY_SELLER payload
         // when
-        ShippingExtendedRaw raw = mapper.readValue(WAREHOUSE_JSON, ShippingExtendedRaw.class);
+        ShippingRaw raw = sdkMapper().readValue(COURIER_JSON, ShippingRaw.class);
 
-        // then
-        assertEquals(AlreadyInWarehouseShippingRaw.class, raw.getClass());
-        assertEquals(COUNTRY_PL, ((AlreadyInWarehouseShippingRaw) raw).getCountryCode());
-    }
-
-    @Test
-    void readWriteBaseShipping_whenCourierBySeller_deserializes() throws Exception {
-        // given: the write base ShippingRaw, whose subtypes are correctly generated
-        ObjectMapper mapper = sdkMapper();
-
-        // when
-        ShippingRaw raw = mapper.readValue(COURIER_JSON, ShippingRaw.class);
-
-        // then: the write path is sound and needs no Layer-1 change
-        assertEquals(CourierBySellerShippingRaw.class, raw.getClass());
-        assertEquals(COUNTRY_PL, ((CourierBySellerShippingRaw) raw).getCountryCode());
+        // then: the concrete subtype's own fields are populated, not just the discriminator
+        CourierBySellerShippingRaw courier = (CourierBySellerShippingRaw) raw;
+        assertEquals(COUNTRY_PL, courier.getCountryCode());
     }
 }
