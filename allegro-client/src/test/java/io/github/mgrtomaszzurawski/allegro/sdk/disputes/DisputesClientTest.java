@@ -13,6 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,6 +30,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.builder.IssueFilt
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.ChatAuthorRole;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.Issue;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueChatEntry;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueExpectationName;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueReasonType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueRight;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model.IssueType;
@@ -63,6 +66,14 @@ class DisputesClientTest {
 
     private static final String ORDER_ID = "order-9";
     private static final String BUYER_LOGIN = "buyer-login";
+    private static final String OFFER_ID = "6789012345";
+    private static final String PRODUCT_ID = "5f4e3d2c-1b0a-4988-8776-655443322110";
+    private static final String REASON_DESCRIPTION = "Broke on second use";
+    private static final String EXPECTED_REFUND_AMOUNT = "19.99";
+    private static final String EXPECTED_REFUND_CURRENCY = "PLN";
+    private static final String ISSUE_ATTACHMENT_FILENAME = "evidence.jpg";
+    private static final String ISSUE_ATTACHMENT_URL = "https://x.allegro.pl/evidence.jpg";
+    private static final int ONE_ELEMENT = 1;
     private static final String TEST_TRACE_ID = "4631702648f0524e";
     private static final String OFFSET_PARAM = "offset";
     private static final String LIMIT_PARAM = "limit";
@@ -88,12 +99,17 @@ class DisputesClientTest {
     private static final String ISSUE_RESPONSE = """
             {"id":"%s","type":"CLAIM","right":"COMPLAINT","referenceNumber":"REF-123",
              "subject":"Damaged item","description":"Arrived broken",
+             "reason":{"type":"DEFECT_FOUND_DURING_USE","description":"%s"},
+             "expectations":[{"name":"PARTIAL_REFUND","refund":{"amount":"%s","currency":"%s"}}],
              "openedDate":"2026-07-15T10:00:00Z","decisionDueDate":"2026-07-22T10:00:00Z",
              "buyer":{"id":"b1","login":"%s"},
              "checkoutForm":{"id":"%s","createdAt":"2026-07-10T08:00:00Z"},
+             "offer":{"id":"%s"},"product":{"id":"%s"},
+             "attachments":[{"fileName":"%s","url":"%s"}],
              "currentState":{"status":"CLAIM_SUBMITTED","statusDueDate":"2026-07-20T10:00:00Z",
                "returnRequired":true,"chatActive":true}}
-            """.formatted(ISSUE_ID, BUYER_LOGIN, ORDER_ID);
+            """.formatted(ISSUE_ID, REASON_DESCRIPTION, EXPECTED_REFUND_AMOUNT, EXPECTED_REFUND_CURRENCY,
+            BUYER_LOGIN, ORDER_ID, OFFER_ID, PRODUCT_ID, ISSUE_ATTACHMENT_FILENAME, ISSUE_ATTACHMENT_URL);
     // spec-derived: not yet wire-verified
     private static final String CHAT_RESPONSE = """
             {"chat":[{"id":"chat-1","text":"Please return the item.",
@@ -115,10 +131,17 @@ class DisputesClientTest {
     // not fail deserialization (Layer-1 enumUnknownDefaultCase → the mappers' `default -> UNKNOWN`).
     private static final String FUTURE_WIRE_STATUS = "FUTURE_DISPUTE_STATUS";
     private static final String FUTURE_WIRE_ROLE = "FUTURE_AUTHOR_ROLE";
+    private static final String FUTURE_WIRE_REASON = "FUTURE_ISSUE_REASON";
+    private static final String FUTURE_WIRE_EXPECTATION = "FUTURE_ISSUE_EXPECTATION";
     private static final String UNKNOWN_STATUS_ISSUE_RESPONSE = """
             {"id":"%s","type":"CLAIM","right":"COMPLAINT",
              "currentState":{"status":"%s"}}
             """.formatted(ISSUE_ID, FUTURE_WIRE_STATUS);
+    private static final String UNKNOWN_REASON_EXPECTATION_ISSUE_RESPONSE = """
+            {"id":"%s","type":"CLAIM","right":"COMPLAINT",
+             "reason":{"type":"%s","description":"%s"},
+             "expectations":[{"name":"%s"}]}
+            """.formatted(ISSUE_ID, FUTURE_WIRE_REASON, REASON_DESCRIPTION, FUTURE_WIRE_EXPECTATION);
     private static final String UNKNOWN_ROLE_CHAT_RESPONSE = """
             {"chat":[{"id":"chat-1","text":"hello",
               "author":{"login":"someone","role":"%s"}}]}
@@ -282,6 +305,18 @@ class DisputesClientTest {
             assertEquals(ORDER_ID, issue.checkoutFormId());
             assertEquals(IssueStatus.CLAIM_SUBMITTED, issue.state().status());
             assertTrue(issue.state().returnRequired());
+            // then — the depth facets map too: reason, expectations (with refund), refs, attachments
+            assertEquals(IssueReasonType.DEFECT_FOUND_DURING_USE, issue.reason().type());
+            assertEquals(REASON_DESCRIPTION, issue.reason().description());
+            assertEquals(ONE_ELEMENT, issue.expectations().size());
+            assertEquals(IssueExpectationName.PARTIAL_REFUND, issue.expectations().get(0).name());
+            assertEquals(EXPECTED_REFUND_AMOUNT, issue.expectations().get(0).refund().amount());
+            assertEquals(EXPECTED_REFUND_CURRENCY, issue.expectations().get(0).refund().currency());
+            assertEquals(OFFER_ID, issue.offerId());
+            assertEquals(PRODUCT_ID, issue.productId());
+            assertEquals(ONE_ELEMENT, issue.attachments().size());
+            assertEquals(ISSUE_ATTACHMENT_FILENAME, issue.attachments().get(0).fileName());
+            assertEquals(ISSUE_ATTACHMENT_URL, issue.attachments().get(0).url());
             verify(1, getRequestedFor(urlEqualTo(ISSUE_PATH)));
         }
     }
@@ -302,6 +337,29 @@ class DisputesClientTest {
 
             // then — the unknown wire value degrades to UNKNOWN end-to-end
             assertEquals(IssueStatus.UNKNOWN, issue.state().status());
+        }
+    }
+
+    @Test
+    void get_whenReasonAndExpectationWireValuesUnknown_mapBothToUnknown(WireMockRuntimeInfo wmInfo) {
+        // given — the server introduces a reason and an expectation this SDK version predates
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(ISSUE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(UNKNOWN_REASON_EXPECTATION_ISSUE_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — deserialization must not throw on the unrecognized enum values
+            Issue issue = allegro.disputes().get(ISSUE_ID);
+
+            // then — both unknown wire values degrade to UNKNOWN end-to-end
+            assertEquals(IssueReasonType.UNKNOWN, issue.reason().type());
+            // and the free-text description survives even when the enum type is unknown
+            assertEquals(REASON_DESCRIPTION, issue.reason().description());
+            assertEquals(ONE_ELEMENT, issue.expectations().size());
+            assertEquals(IssueExpectationName.UNKNOWN, issue.expectations().get(0).name());
+            // no refund quoted in this fixture → the mapper leaves it null, not a zero Money
+            assertNull(issue.expectations().get(0).refund());
         }
     }
 
