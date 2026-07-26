@@ -284,7 +284,9 @@ final class OffersDemo {
                     + ", shippingRatesId=" + summary.shippingRatesId()
                     + ", additionalServicesGroupId=" + summary.additionalServicesGroupId()
                     + ", fundraisingCampaignId=" + summary.fundraisingCampaignId()
-                    + ", currentPrice=" + summary.currentPrice() + ", biddersCount=" + summary.biddersCount());
+                    + ", currentPrice=" + summary.currentPrice() + ", biddersCount=" + summary.biddersCount()
+                    + ", minimalPrice=" + summary.minimalPrice() + ", startingPrice=" + summary.startingPrice()
+                    + ", priceAutomationRuleId=" + summary.priceAutomationRuleId());
         }
     }
 
