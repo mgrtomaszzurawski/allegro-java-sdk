@@ -27,6 +27,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.CurrentUser;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroAuthException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -102,11 +103,13 @@ class AllegroClientMeTest {
             // when
             CurrentUser currentUser = allegro.user().me();
 
-            // then — Raw mapped to the immutable domain record
+            // then — Raw mapped to the immutable domain record, every scalar pinned
             assertEquals("123", currentUser.id());
             assertEquals("seller-login", currentUser.login());
+            assertEquals("Jan", currentUser.firstName());
+            assertEquals("Tester", currentUser.lastName());
             assertEquals("seller@example.com", currentUser.email());
-            assertEquals(1, currentUser.features().size());
+            assertEquals(List.of("feature-a"), currentUser.features());
             // and — company (VAT) block + base marketplace are mapped
             assertEquals("test", currentUser.company().name());
             assertNull(currentUser.company().taxId());
