@@ -33,6 +33,8 @@ public interface OfferBatch {
 
     /**
      * Schedule the given offers to publish (activate) at a future time, in one command.
+     * Scheduling applies to activation only — Allegro ignores a schedule on the end/unpublish
+     * action, so there is no scheduled {@code unpublish} counterpart.
      *
      * @param offerIds     the offers to publish
      * @param scheduledFor when the activation should take effect (must be in the future)
@@ -47,15 +49,6 @@ public interface OfferBatch {
      * @return the command report once every offer has been processed
      */
     BatchReport unpublish(List<String> offerIds);
-
-    /**
-     * Schedule the given offers to unpublish (end) at a future time, in one command.
-     *
-     * @param offerIds     the offers to unpublish
-     * @param scheduledFor when the ending should take effect (must be in the future)
-     * @return the command report once the schedule has been accepted for every offer
-     */
-    BatchReport unpublish(List<String> offerIds, OffsetDateTime scheduledFor);
 
     /**
      * Set a fixed Buy Now price on the given offers in one command.

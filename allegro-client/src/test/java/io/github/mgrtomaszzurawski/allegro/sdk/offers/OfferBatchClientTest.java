@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -116,6 +116,7 @@ class OfferBatchClientTest {
     private static final String POLL_SCENARIO = "poll";
     private static final String STATE_COMPLETED = "completed";
     private static final String ACTION_JSON_PATH = "$.publication.action";
+    private static final String SCHEDULED_FOR_JSON_PATH = "$.publication.scheduledFor";
     private static final String OFFERS_JSON_PATH = "$.offerCriteria[0].offers[0].id";
     private static final String OFFERS_SECOND_JSON_PATH = "$.offerCriteria[0].offers[1].id";
     private static final String TYPE_JSON_PATH = "$.offerCriteria[0].type";
@@ -283,7 +284,7 @@ class OfferBatchClientTest {
         // then — the command body carries the ACTIVATE action and the scheduledFor timestamp
         verify(1, putRequestedFor(urlPathMatching(COMMAND_PATH))
                 .withRequestBody(matchingJsonPath(ACTION_JSON_PATH, equalTo("ACTIVATE")))
-                .withRequestBody(matchingJsonPath("$.publication.scheduledFor", equalTo(SCHEDULED_FOR))));
+                .withRequestBody(matchingJsonPath(SCHEDULED_FOR_JSON_PATH, equalTo(SCHEDULED_FOR))));
     }
 
     @Test

@@ -108,11 +108,6 @@ public final class OfferBatchImpl implements OfferBatch {
     }
 
     @Override
-    public BatchReport unpublish(List<String> offerIds, OffsetDateTime scheduledFor) {
-        return publication(offerIds, PublicationModificationRaw.ActionEnum.END, scheduledFor, OP_UNPUBLISH);
-    }
-
-    @Override
     public BatchReport changePrices(List<String> offerIds, Money price) {
         String commandId = UUID.randomUUID().toString();
         OfferPriceChangeCommandRaw body = new OfferPriceChangeCommandRaw()
