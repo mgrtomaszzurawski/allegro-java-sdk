@@ -126,6 +126,15 @@ class FlexibleBundlesClientTest {
                  "discounts":[{"marketplaceId":"%s","percentage":%d}]}]}}}
             """.formatted(TEST_FLEX_ID, OFFER_A, MARKETPLACE_PL, MARKETPLACE_CZ, REASON_ENDED,
                     MARKETPLACE_PL, SLOT_PERCENTAGE);
+    // A get response whose offer omits the marketplaces[] array — the mapper must
+    // yield an empty list, never null (defensive null-guard coverage).
+    private static final String BUNDLE_OFFER_NO_MARKETPLACES = """
+            {"id":"%s","createdBy":"USER","createdAt":"2026-07-01T10:15:30Z",
+             "slots":[{"id":"22222222-2222-2222-2222-222222222222","order":1,"entryPoint":true,
+               "requiredQuantity":1,
+               "offers":[{"id":"%s","excludedFromDiscount":false,"entryPoint":true}]}],
+             "discount":null}
+            """.formatted(TEST_FLEX_ID, OFFER_A);
     // spec-derived: not yet wire-verified (errors[] contract shape).
     private static final String BAD_REQUEST_RESPONSE = """
             {"errors":[{"code":"ConstraintViolationException","message":"invalid",
@@ -293,6 +302,24 @@ class FlexibleBundlesClientTest {
             assertEquals(SLOT_PERCENTAGE,
                     bundle.discount().slotDiscounts().get(0).marketplaceDiscounts().get(0).percentage());
             verify(1, getRequestedFor(urlPathEqualTo(FLEX_BUNDLE_PATH)));
+        }
+    }
+
+    @Test
+    void get_whenOfferHasNoMarketplaces_mapsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(get(urlPathEqualTo(FLEX_BUNDLE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(BUNDLE_OFFER_NO_MARKETPLACES)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FlexibleBundle bundle = allegro.offers().flexibleBundles().get(TEST_FLEX_ID);
+
+            // then — a missing marketplaces[] maps to an empty list, never null
+            assertTrue(bundle.slots().get(0).offers().get(0).marketplaces().isEmpty());
         }
     }
 
