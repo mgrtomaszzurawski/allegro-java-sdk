@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CurrentPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MarketplaceReferenceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferAdditionalServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
@@ -15,6 +16,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1DeliveryRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationMarketplacesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SaleInfoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SellingModeRaw;
@@ -27,6 +29,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -68,6 +72,11 @@ import org.jspecify.annotations.Nullable;
  * @param minimalPrice    the auction minimal (reserve) price, or {@code null}
  * @param startingPrice   the auction starting price, or {@code null}
  * @param priceAutomationRuleId the id of the automatic-pricing rule applied to the offer, or {@code null}
+ * @param scheduledStartAt when the offer's publication is scheduled to start, or {@code null}
+ * @param scheduledEndAt  when the offer's publication is scheduled to end, or {@code null}
+ * @param baseMarketplaceId the id of the marketplace the offer is primarily published on, or {@code null}
+ * @param additionalMarketplaceIds the ids of the additional marketplaces the offer is published on,
+ *                        in order (possibly empty)
  * @since 0.2.0
  */
 public record OfferSummary(
@@ -95,7 +104,17 @@ public record OfferSummary(
         @Nullable Integer biddersCount,
         @Nullable Money minimalPrice,
         @Nullable Money startingPrice,
-        @Nullable String priceAutomationRuleId) {
+        @Nullable String priceAutomationRuleId,
+        @Nullable OffsetDateTime scheduledStartAt,
+        @Nullable OffsetDateTime scheduledEndAt,
+        @Nullable String baseMarketplaceId,
+        List<String> additionalMarketplaceIds) {
+
+    /** Canonical constructor: defensively copies {@code additionalMarketplaceIds} to an immutable list. */
+    public OfferSummary {
+        additionalMarketplaceIds =
+                additionalMarketplaceIds == null ? List.of() : List.copyOf(additionalMarketplaceIds);
+    }
 
     /** Project a generated listing item onto the consumer record. */
     public static OfferSummary from(OfferListingDtoRaw raw) {
@@ -131,7 +150,32 @@ public record OfferSummary(
                 saleInfo == null ? null : saleInfo.getBiddersCount(),
                 minimalPriceOf(sellingMode),
                 startingPriceOf(sellingMode),
-                priceAutomationRuleIdOf(sellingMode));
+                priceAutomationRuleIdOf(sellingMode),
+                publication == null ? null : parseDateTime(publication.getStartingAt()),
+                publication == null ? null : parseDateTime(publication.getEndingAt()),
+                baseMarketplaceIdOf(publication),
+                additionalMarketplaceIdsOf(publication));
+    }
+
+    private static @Nullable OfferListingDtoV1PublicationMarketplacesRaw marketplacesOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        return publication == null ? null : publication.getMarketplaces();
+    }
+
+    private static @Nullable String baseMarketplaceIdOf(@Nullable OfferListingDtoV1PublicationRaw publication) {
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
+        MarketplaceReferenceRaw base = marketplaces == null ? null : marketplaces.getBase();
+        return base == null ? null : base.getId();
+    }
+
+    private static List<String> additionalMarketplaceIdsOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
+        List<MarketplaceReferenceRaw> additional = marketplaces == null ? null : marketplaces.getAdditional();
+        if (additional == null) {
+            return List.of();
+        }
+        return additional.stream().map(MarketplaceReferenceRaw::getId).filter(Objects::nonNull).toList();
     }
 
     private static @Nullable Money currentPriceOf(@Nullable OfferListingDtoV1SaleInfoRaw saleInfo) {

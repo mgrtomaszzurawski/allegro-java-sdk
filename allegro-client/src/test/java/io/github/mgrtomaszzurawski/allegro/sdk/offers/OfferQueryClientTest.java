@@ -90,6 +90,14 @@ class OfferQueryClientTest {
     private static final String MIN_PRICE = "10.00";
     private static final String START_PRICE = "5.00";
     private static final String PRICE_RULE_ID = "6a63f773-0000-4000-8000-0000000000aa";
+    private static final String SCHEDULED_START = "2026-08-01T10:00:00Z";
+    private static final String SCHEDULED_END = "2026-08-31T10:00:00Z";
+    private static final String BASE_MP_ID = "allegro-pl";
+    private static final String ADDL_MP_ID = "allegro-cz";
+    private static final String ADDL_MP_NULL_ID_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"publication\":{\"status\":\"ACTIVE\",\"marketplaces\":{\"additional\":[{\"id\":\"%s\"},{}]}}}],"
+            + "\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, ADDL_MP_ID);
     private static final String NO_SELLING_MODE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
             + "\"publication\":{\"status\":\"ACTIVE\"}}],\"count\":1}")
             .formatted(OFFER_ID, OFFER_NAME);
@@ -105,7 +113,9 @@ class OfferQueryClientTest {
             + "\"startingPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
             + "\"priceAutomation\":{\"rule\":{\"id\":\"%s\"}}},"
             + "\"stock\":{\"available\":%d,\"sold\":%d},"
-            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\"},"
+            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\",\"startingAt\":\"%s\","
+            + "\"endingAt\":\"%s\",\"marketplaces\":{\"base\":{\"id\":\"%s\"},"
+            + "\"additional\":[{\"id\":\"%s\"}]}},"
             + "\"afterSalesServices\":{\"returnPolicy\":{\"id\":\"%s\"}},\"isFulfillment\":false,"
             + "\"stats\":{\"watchersCount\":%d,\"visitsCount\":%d},"
             + "\"external\":{\"id\":\"%s\"},\"b2b\":{\"buyableOnlyByBusiness\":true},"
@@ -115,7 +125,8 @@ class OfferQueryClientTest {
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
             .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN,
                     MIN_PRICE, CURRENCY_PLN, START_PRICE, CURRENCY_PLN, PRICE_RULE_ID, AVAILABLE, SOLD,
-                    STARTED_AT, RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
+                    STARTED_AT, SCHEDULED_START, SCHEDULED_END, BASE_MP_ID, ADDL_MP_ID,
+                    RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
                     ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS, IMAGE_URL);
 
     // A lean listing item: a malformed publication timestamp and no after-sales / fulfillment
@@ -277,6 +288,10 @@ class OfferQueryClientTest {
         assertEquals(Money.of(MIN_PRICE, CURRENCY_PLN), summary.minimalPrice());
         assertEquals(Money.of(START_PRICE, CURRENCY_PLN), summary.startingPrice());
         assertEquals(PRICE_RULE_ID, summary.priceAutomationRuleId());
+        assertEquals(OffsetDateTime.parse(SCHEDULED_START), summary.scheduledStartAt());
+        assertEquals(OffsetDateTime.parse(SCHEDULED_END), summary.scheduledEndAt());
+        assertEquals(BASE_MP_ID, summary.baseMarketplaceId());
+        assertEquals(List.of(ADDL_MP_ID), summary.additionalMarketplaceIds());
     }
 
     @Test
@@ -305,6 +320,23 @@ class OfferQueryClientTest {
         assertNull(summary.minimalPrice());
         assertNull(summary.startingPrice());
         assertNull(summary.priceAutomationRuleId());
+        assertNull(summary.scheduledStartAt());
+        assertNull(summary.scheduledEndAt());
+        assertNull(summary.baseMarketplaceId());
+        assertTrue(summary.additionalMarketplaceIds().isEmpty());
+    }
+
+    @Test
+    void streamOffers_whenAdditionalMarketplaceHasNullId_skipsIt(WireMockRuntimeInfo wmInfo) {
+        // given — an additional-marketplace entry with no id (spec-legal: id is not required)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ADDL_MP_NULL_ID_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the null-id entry is dropped, the valid id survives
+        assertEquals(List.of(ADDL_MP_ID), summary.additionalMarketplaceIds());
     }
 
     @Test

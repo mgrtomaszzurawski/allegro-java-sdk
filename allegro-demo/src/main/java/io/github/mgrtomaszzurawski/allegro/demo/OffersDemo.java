@@ -286,7 +286,11 @@ final class OffersDemo {
                     + ", fundraisingCampaignId=" + summary.fundraisingCampaignId()
                     + ", currentPrice=" + summary.currentPrice() + ", biddersCount=" + summary.biddersCount()
                     + ", minimalPrice=" + summary.minimalPrice() + ", startingPrice=" + summary.startingPrice()
-                    + ", priceAutomationRuleId=" + summary.priceAutomationRuleId());
+                    + ", priceAutomationRuleId=" + summary.priceAutomationRuleId()
+                    + ", scheduledStartAt=" + summary.scheduledStartAt()
+                    + ", scheduledEndAt=" + summary.scheduledEndAt()
+                    + ", baseMarketplaceId=" + summary.baseMarketplaceId()
+                    + ", additionalMarketplaceIds=" + summary.additionalMarketplaceIds());
         }
     }
 
