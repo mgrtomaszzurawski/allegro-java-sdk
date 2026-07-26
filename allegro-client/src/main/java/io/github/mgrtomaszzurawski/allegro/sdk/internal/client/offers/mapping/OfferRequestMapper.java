@@ -4,12 +4,17 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesRequestValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesRequestValueSellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListManualRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferRequestWholesalePriceListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
@@ -17,7 +22,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesRequestRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestBaseAllOfContactRaw;
@@ -34,11 +41,17 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Builds the generated {@code SaleProductOfferRequestV1Raw} request body from the SDK's
@@ -64,8 +77,20 @@ public final class OfferRequestMapper {
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
                 .sellingMode(sellingModeOf(request))
                 .stock(stockOf(request));
+        applyContentFields(body, request);
+        applyOfferMetadata(body, request);
+        applyReferencesAndSettings(body, request);
+        return body;
+    }
+
+    /** Media, delivery, description, location, parameters and the product set. */
+    private static void applyContentFields(SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
         if (!request.imageUrls().isEmpty()) {
             body.images(request.imageUrls());
+        }
+        if (!request.attachmentIds().isEmpty()) {
+            body.attachments(request.attachmentIds().stream()
+                    .map(attachmentId -> new ProductOfferAttachmentInnerRaw().id(attachmentId)).toList());
         }
         if (request.delivery() != null) {
             body.delivery(deliveryRawOf(request.delivery()));
@@ -85,6 +110,24 @@ public final class OfferRequestMapper {
         if (!request.productSet().isEmpty()) {
             body.productSet(productSetRawOf(request.productSet()));
         }
+        if (!request.compatibilityList().isEmpty()) {
+            body.compatibilityList(compatibilityListRawOf(request.compatibilityList()));
+        }
+        if (!request.aiCoCreatedImageUrls().isEmpty()) {
+            body.aiCoCreatedContent(new AiCoCreatedContentRaw().images(
+                    request.aiCoCreatedImageUrls().stream()
+                            .map(url -> new AiCoCreatedImageRaw().url(url)).toList()));
+        }
+    }
+
+    /** The generated manual "fits to" request body: each SDK entry becomes one union item, in order. */
+    private static CompatibilityListManualRequestRaw compatibilityListRawOf(List<CompatibilityEntry> entries) {
+        return new CompatibilityListManualRequestRaw()
+                .items(entries.stream().map(CompatibilityEntry::toRaw).toList());
+    }
+
+    /** Identity, language, size table, B2B, publication and VAT settings. */
+    private static void applyOfferMetadata(SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
         if (request.externalId() != null) {
             body.external(new ExternalIdRaw().id(request.externalId()));
         }
@@ -103,22 +146,84 @@ public final class OfferRequestMapper {
         if (request.taxSettings() != null) {
             body.taxSettings(request.taxSettings().toRaw());
         }
-        if (request.contactId() != null) {
-            body.contact(new SaleProductOfferRequestBaseAllOfContactRaw().id(request.contactId()));
+    }
+
+    /** Seller-registered references (contact, services, fundraising, discounts) and buyer/payment settings. */
+    private static void applyReferencesAndSettings(
+            SaleProductOfferRequestV1Raw body, CreateOfferRequest request) {
+        if (request.contact() != null) {
+            body.contact(namedRaw(request.contact(), SaleProductOfferRequestBaseAllOfContactRaw::new,
+                    SaleProductOfferRequestBaseAllOfContactRaw::setId,
+                    SaleProductOfferRequestBaseAllOfContactRaw::setName));
         }
-        if (request.additionalServicesGroupId() != null) {
-            body.additionalServices(
-                    new ProductOfferAdditionalServicesRequestRaw().id(request.additionalServicesGroupId()));
+        if (request.additionalServices() != null) {
+            body.additionalServices(namedRaw(request.additionalServices(),
+                    ProductOfferAdditionalServicesRequestRaw::new,
+                    ProductOfferAdditionalServicesRequestRaw::setId,
+                    ProductOfferAdditionalServicesRequestRaw::setName));
         }
-        if (request.fundraisingCampaignId() != null) {
-            body.fundraisingCampaign(
-                    new ProductOfferFundraisingCampaignRequestRaw().id(request.fundraisingCampaignId()));
+        if (request.fundraisingCampaign() != null) {
+            body.fundraisingCampaign(namedRaw(request.fundraisingCampaign(),
+                    ProductOfferFundraisingCampaignRequestRaw::new,
+                    ProductOfferFundraisingCampaignRequestRaw::setId,
+                    ProductOfferFundraisingCampaignRequestRaw::setName));
         }
-        if (request.wholesalePriceListId() != null) {
+        if (request.wholesalePriceList() != null) {
             body.discounts(new DiscountsProductOfferRequestRaw().wholesalePriceList(
-                    new DiscountsProductOfferRequestWholesalePriceListRaw().id(request.wholesalePriceListId())));
+                    namedRaw(request.wholesalePriceList(), DiscountsProductOfferRequestWholesalePriceListRaw::new,
+                            DiscountsProductOfferRequestWholesalePriceListRaw::setId,
+                            DiscountsProductOfferRequestWholesalePriceListRaw::setName)));
         }
-        return body;
+        if (request.messageToSellerSettings() != null) {
+            body.messageToSellerSettings(request.messageToSellerSettings().toRaw());
+        }
+        if (request.payments() != null) {
+            body.payments(request.payments().toRaw());
+        }
+        if (!request.additionalMarketplacePrices().isEmpty()) {
+            body.additionalMarketplaces(additionalMarketplacesRawOf(request.additionalMarketplacePrices()));
+        }
+    }
+
+    /** The generated per-marketplace request values: each marketplace id maps to its Buy Now price. */
+    private static Map<String, AdditionalMarketplacesRequestValueRaw> additionalMarketplacesRawOf(
+            Map<String, Money> prices) {
+        Map<String, AdditionalMarketplacesRequestValueRaw> raw = new LinkedHashMap<>();
+        prices.forEach((marketplaceId, price) -> raw.put(marketplaceId,
+                new AdditionalMarketplacesRequestValueRaw().sellingMode(
+                        new AdditionalMarketplacesRequestValueSellingModeRaw()
+                                .price(new PriceRaw().amount(price.amount()).currency(price.currency())))));
+        return raw;
+    }
+
+    /**
+     * Build a generated id-or-name reference DTO: sets the id when the reference carries one, else
+     * the name. The exactly-one-of invariant is enforced by {@link NamedReference} at construction.
+     */
+    private static <R> R namedRaw(NamedReference reference, Supplier<R> factory,
+            BiConsumer<R, String> setId, BiConsumer<R, String> setName) {
+        R raw = factory.get();
+        if (reference.id() != null) {
+            setId.accept(raw, reference.id());
+        } else {
+            setName.accept(raw, reference.name());
+        }
+        return raw;
+    }
+
+    /**
+     * As {@link #namedRaw} but for DTOs whose {@code id} is a {@code UUID} on the wire: the id form
+     * is parsed to a {@link UUID} (its UUID shape is already validated fail-fast by the builder).
+     */
+    private static <R> R namedUuidRaw(NamedReference reference, Supplier<R> factory,
+            BiConsumer<R, UUID> setId, BiConsumer<R, String> setName) {
+        R raw = factory.get();
+        if (reference.id() != null) {
+            setId.accept(raw, UUID.fromString(reference.id()));
+        } else {
+            setName.accept(raw, reference.name());
+        }
+        return raw;
     }
 
     /** The generated publication block for the SDK settings (only set fields are written). */
@@ -213,17 +318,23 @@ public final class OfferRequestMapper {
     /** The generated after-sales block for the SDK conditions; the ids are parsed as Allegro UUIDs. */
     private static AfterSalesServicesProductOfferRequestRaw afterSalesRawOf(AfterSalesServices services) {
         AfterSalesServicesProductOfferRequestRaw raw = new AfterSalesServicesProductOfferRequestRaw();
-        if (services.impliedWarrantyId() != null) {
-            raw.impliedWarranty(new AfterSalesServicesProductOfferRequestImpliedWarrantyRaw()
-                    .id(UUID.fromString(services.impliedWarrantyId())));
+        if (services.impliedWarranty() != null) {
+            raw.impliedWarranty(namedUuidRaw(services.impliedWarranty(),
+                    AfterSalesServicesProductOfferRequestImpliedWarrantyRaw::new,
+                    AfterSalesServicesProductOfferRequestImpliedWarrantyRaw::setId,
+                    AfterSalesServicesProductOfferRequestImpliedWarrantyRaw::setName));
         }
-        if (services.returnPolicyId() != null) {
-            raw.returnPolicy(new AfterSalesServicesProductOfferRequestReturnPolicyRaw()
-                    .id(UUID.fromString(services.returnPolicyId())));
+        if (services.returnPolicy() != null) {
+            raw.returnPolicy(namedUuidRaw(services.returnPolicy(),
+                    AfterSalesServicesProductOfferRequestReturnPolicyRaw::new,
+                    AfterSalesServicesProductOfferRequestReturnPolicyRaw::setId,
+                    AfterSalesServicesProductOfferRequestReturnPolicyRaw::setName));
         }
-        if (services.warrantyId() != null) {
-            raw.warranty(new AfterSalesServicesProductOfferRequestWarrantyRaw()
-                    .id(UUID.fromString(services.warrantyId())));
+        if (services.warranty() != null) {
+            raw.warranty(namedUuidRaw(services.warranty(),
+                    AfterSalesServicesProductOfferRequestWarrantyRaw::new,
+                    AfterSalesServicesProductOfferRequestWarrantyRaw::setId,
+                    AfterSalesServicesProductOfferRequestWarrantyRaw::setName));
         }
         return raw;
     }

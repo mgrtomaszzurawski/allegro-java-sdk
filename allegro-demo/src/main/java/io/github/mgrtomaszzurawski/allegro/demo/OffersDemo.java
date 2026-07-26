@@ -28,7 +28,12 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.Publication
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferAttachment;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxRate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
@@ -40,16 +45,21 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PromoPackageT
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferImage;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductDeposit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductIdType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsiblePersonRef;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SafetyInformation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -87,6 +97,11 @@ final class OffersDemo {
     private static final String CREATE_PRODUCT_ID_PROPERTY = "demo.createProductId";
     private static final String CREATE_PRODUCT_ID_TYPE_PROPERTY = "demo.createProductIdType";
     private static final String CREATE_PRODUCER_ID_PROPERTY = "demo.createProducerId";
+    private static final String CREATE_RESPONSIBLE_PERSON_ID_PROPERTY = "demo.createResponsiblePersonId";
+    private static final String CREATE_SAFETY_TEXT_PROPERTY = "demo.createSafetyText";
+    private static final String CREATE_DEPOSIT_ID_PROPERTY = "demo.createDepositId";
+    private static final String CREATE_INLINE_PRODUCT_NAME_PROPERTY = "demo.createInlineProductName";
+    private static final String CREATE_INLINE_PRODUCT_CATEGORY_PROPERTY = "demo.createInlineProductCategory";
     private static final String CREATE_QUANTITY_PROPERTY = "demo.createQuantity";
     private static final String CREATE_SHIPPING_RATES_ID_PROPERTY = "demo.createShippingRatesId";
     private static final String CREATE_PROVINCE_PROPERTY = "demo.createProvince";
@@ -96,14 +111,27 @@ final class OffersDemo {
     private static final String CREATE_IMPLIED_WARRANTY_ID_PROPERTY = "demo.createImpliedWarrantyId";
     private static final String CREATE_RETURN_POLICY_ID_PROPERTY = "demo.createReturnPolicyId";
     private static final String CREATE_WARRANTY_ID_PROPERTY = "demo.createWarrantyId";
+    private static final String CREATE_IMPLIED_WARRANTY_NAME_PROPERTY = "demo.createImpliedWarrantyName";
     private static final String CREATE_BUSINESS_ONLY_PROPERTY = "demo.createBusinessOnly";
     private static final String CREATE_REPUBLISH_PROPERTY = "demo.createRepublish";
     private static final String CREATE_TAX_RATE_PROPERTY = "demo.createTaxRate";
     private static final String CREATE_TAX_COUNTRY_PROPERTY = "demo.createTaxCountry";
     private static final String CREATE_CONTACT_ID_PROPERTY = "demo.createContactId";
+    private static final String CREATE_CONTACT_NAME_PROPERTY = "demo.createContactName";
     private static final String CREATE_ADDITIONAL_SERVICES_ID_PROPERTY = "demo.createAdditionalServicesId";
     private static final String CREATE_FUNDRAISING_ID_PROPERTY = "demo.createFundraisingId";
     private static final String CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY = "demo.createWholesalePriceListId";
+    private static final String CREATE_MESSAGE_MODE_PROPERTY = "demo.createMessageMode";
+    private static final String CREATE_MESSAGE_HINT_PROPERTY = "demo.createMessageHint";
+    private static final String CREATE_INVOICE_TYPE_PROPERTY = "demo.createInvoiceType";
+    private static final String CREATE_MARKETPLACE_ID_PROPERTY = "demo.createMarketplaceId";
+    private static final String CREATE_ATTACHMENT_ID_PROPERTY = "demo.createAttachmentId";
+    private static final String CREATE_UPLOAD_ATTACHMENT_PROPERTY = "demo.createUploadAttachment";
+    private static final String CREATE_MARKETPLACE_PRICE_PROPERTY = "demo.createMarketplacePrice";
+    private static final String CREATE_MARKETPLACE_CURRENCY_PROPERTY = "demo.createMarketplaceCurrency";
+    private static final String CREATE_COMPAT_TEXT_PROPERTY = "demo.createCompatText";
+    private static final String CREATE_COMPAT_PRODUCT_ID_PROPERTY = "demo.createCompatProductId";
+    private static final String CREATE_AI_IMAGE_URL_PROPERTY = "demo.createAiImageUrl";
     private static final String DELETE_AFTER_CREATE_PROPERTY = "demo.deleteAfterCreate";
     private static final String PROMO_MODIFY_OFFER_ID_PROPERTY = "demo.promoModifyOfferId";
     private static final String PROMO_MODIFY_BASE_PACKAGE_PROPERTY = "demo.promoModifyBasePackage";
@@ -243,13 +271,19 @@ final class OffersDemo {
         for (OfferSummary summary : firstOffers) {
             String price = summary.buyNowPrice() == null ? "(no Buy Now price)"
                     : summary.buyNowPrice().amount() + " " + summary.buyNowPrice().currency();
-            String returnPolicy = summary.afterSalesServices() == null ? "(none)"
-                    : summary.afterSalesServices().returnPolicyId();
+            NamedReference returnPolicyRef =
+                    summary.afterSalesServices() == null ? null : summary.afterSalesServices().returnPolicy();
+            String returnPolicy = returnPolicyRef == null ? "(none)" : returnPolicyRef.id();
             System.out.println("  id=" + summary.id() + ", status=" + summary.status()
                     + ", format=" + summary.format() + ", stock=" + summary.availableStock()
                     + ", buyNow=" + price + ", fulfillment=" + summary.fulfillment()
                     + ", publishedAt=" + summary.publishedAt() + ", endedAt=" + summary.endedAt()
-                    + ", returnPolicy=" + returnPolicy);
+                    + ", returnPolicy=" + returnPolicy
+                    + ", watchers=" + summary.watchersCount() + ", visits=" + summary.visitsCount()
+                    + ", externalId=" + summary.externalId() + ", businessOnly=" + summary.businessOnly()
+                    + ", shippingRatesId=" + summary.shippingRatesId()
+                    + ", additionalServicesGroupId=" + summary.additionalServicesGroupId()
+                    + ", fundraisingCampaignId=" + summary.fundraisingCampaignId());
         }
     }
 
@@ -278,6 +312,24 @@ final class OffersDemo {
             if (productIdType != null) {
                 element = element.withIdType(ProductIdType.valueOf(productIdType));
             }
+            String responsiblePersonId = System.getProperty(CREATE_RESPONSIBLE_PERSON_ID_PROPERTY);
+            if (responsiblePersonId != null) {
+                element = element.withResponsiblePerson(ResponsiblePersonRef.byId(responsiblePersonId));
+            }
+            String safetyText = System.getProperty(CREATE_SAFETY_TEXT_PROPERTY);
+            if (safetyText != null) {
+                element = element.withSafetyInformation(SafetyInformation.text(safetyText));
+            }
+            String depositId = System.getProperty(CREATE_DEPOSIT_ID_PROPERTY);
+            if (depositId != null) {
+                element = element.withDeposits(List.of(ProductDeposit.of(depositId)));
+            }
+            String inlineProductName = System.getProperty(CREATE_INLINE_PRODUCT_NAME_PROPERTY);
+            String inlineProductCategory = System.getProperty(CREATE_INLINE_PRODUCT_CATEGORY_PROPERTY);
+            if (inlineProductName != null || inlineProductCategory != null) {
+                element = element.withInlineProduct(InlineProduct.builder()
+                        .name(inlineProductName).categoryId(inlineProductCategory).build());
+            }
             builder.addProductSetElement(element);
             System.out.println("create: sending productSet product=" + productId
                     + " quantity=" + quantity + (producerId == null ? "" : " producer=" + producerId));
@@ -298,14 +350,15 @@ final class OffersDemo {
                     .postCode(System.getProperty(CREATE_POST_CODE_PROPERTY))
                     .build());
         }
-        String impliedWarrantyId = System.getProperty(CREATE_IMPLIED_WARRANTY_ID_PROPERTY);
-        String returnPolicyId = System.getProperty(CREATE_RETURN_POLICY_ID_PROPERTY);
-        String warrantyId = System.getProperty(CREATE_WARRANTY_ID_PROPERTY);
-        if (impliedWarrantyId != null || returnPolicyId != null || warrantyId != null) {
+        NamedReference impliedWarranty = afterSalesRef(
+                CREATE_IMPLIED_WARRANTY_ID_PROPERTY, CREATE_IMPLIED_WARRANTY_NAME_PROPERTY);
+        NamedReference returnPolicy = afterSalesRef(CREATE_RETURN_POLICY_ID_PROPERTY, null);
+        NamedReference warranty = afterSalesRef(CREATE_WARRANTY_ID_PROPERTY, null);
+        if (impliedWarranty != null || returnPolicy != null || warranty != null) {
             builder.afterSalesServices(AfterSalesServices.builder()
-                    .impliedWarrantyId(impliedWarrantyId)
-                    .returnPolicyId(returnPolicyId)
-                    .warrantyId(warrantyId)
+                    .impliedWarranty(impliedWarranty)
+                    .returnPolicy(returnPolicy)
+                    .warranty(warranty)
                     .build());
         }
         if (System.getProperty(CREATE_BUSINESS_ONLY_PROPERTY) != null) {
@@ -325,10 +378,43 @@ final class OffersDemo {
             builder.taxSettings(TaxSettings.builder()
                     .rates(List.of(TaxRate.of(taxRate, taxCountry))).build());
         }
-        applyIfPresent(CREATE_CONTACT_ID_PROPERTY, builder::contactId);
-        applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY, builder::additionalServicesGroupId);
-        applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY, builder::fundraisingCampaignId);
-        applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY, builder::wholesalePriceListId);
+        applyIfPresent(CREATE_CONTACT_ID_PROPERTY, value -> builder.contact(NamedReference.byId(value)));
+        applyIfPresent(CREATE_CONTACT_NAME_PROPERTY, value -> builder.contact(NamedReference.byName(value)));
+        applyIfPresent(CREATE_ADDITIONAL_SERVICES_ID_PROPERTY,
+                value -> builder.additionalServices(NamedReference.byId(value)));
+        applyIfPresent(CREATE_FUNDRAISING_ID_PROPERTY,
+                value -> builder.fundraisingCampaign(NamedReference.byId(value)));
+        applyIfPresent(CREATE_WHOLESALE_PRICE_LIST_ID_PROPERTY,
+                value -> builder.wholesalePriceList(NamedReference.byId(value)));
+        applyIfPresent(CREATE_ATTACHMENT_ID_PROPERTY, value -> builder.attachmentIds(List.of(value)));
+        String uploadAttachmentName = System.getProperty(CREATE_UPLOAD_ATTACHMENT_PROPERTY);
+        if (uploadAttachmentName != null) {
+            builder.attachmentIds(List.of(uploadAttachmentAndGetId(client, uploadAttachmentName)));
+        }
+        String messageMode = System.getProperty(CREATE_MESSAGE_MODE_PROPERTY);
+        if (messageMode != null) {
+            MessageToSellerMode mode = MessageToSellerMode.valueOf(messageMode);
+            String messageHint = System.getProperty(CREATE_MESSAGE_HINT_PROPERTY);
+            builder.messageToSellerSettings(messageHint == null
+                    ? MessageToSellerSettings.of(mode)
+                    : MessageToSellerSettings.of(mode, messageHint));
+        }
+        String invoiceType = System.getProperty(CREATE_INVOICE_TYPE_PROPERTY);
+        if (invoiceType != null) {
+            builder.payments(OfferPayments.of(InvoiceType.valueOf(invoiceType)));
+        }
+        String marketplaceId = System.getProperty(CREATE_MARKETPLACE_ID_PROPERTY);
+        String marketplacePrice = System.getProperty(CREATE_MARKETPLACE_PRICE_PROPERTY);
+        if (marketplaceId != null && marketplacePrice != null) {
+            String marketplaceCurrency = System.getProperty(CREATE_MARKETPLACE_CURRENCY_PROPERTY, CURRENCY_PLN);
+            builder.additionalMarketplacePrice(marketplaceId, Money.of(marketplacePrice, marketplaceCurrency));
+        }
+        applyIfPresent(CREATE_COMPAT_TEXT_PROPERTY,
+                value -> builder.addCompatibilityEntry(CompatibilityEntry.text(value)));
+        applyIfPresent(CREATE_COMPAT_PRODUCT_ID_PROPERTY,
+                value -> builder.addCompatibilityEntry(CompatibilityEntry.productId(value)));
+        applyIfPresent(CREATE_AI_IMAGE_URL_PROPERTY,
+                value -> builder.aiCoCreatedImageUrls(List.of(value)));
         CreateOfferRequest request = builder.build();
         try {
             Offer created = client.offers().create(request);
@@ -345,8 +431,38 @@ final class OffersDemo {
                         + ", exemption=" + created.taxSettings().exemption()
                         + ", rates=" + created.taxSettings().rates());
             }
+            if (messageMode != null && created.messageToSellerSettings() != null) {
+                System.out.println("create messageToSeller: mode=" + created.messageToSellerSettings().mode()
+                        + ", hint=" + created.messageToSellerSettings().hint());
+            }
+            if (invoiceType != null && created.payments() != null) {
+                System.out.println("create payments: invoice=" + created.payments().invoice());
+            }
+            if (marketplaceId != null) {
+                System.out.println("create additionalMarketplaces: " + created.additionalMarketplaces());
+            }
+            if (!created.attachmentIds().isEmpty()) {
+                System.out.println("create attachmentIds: " + created.attachmentIds());
+            }
+            if (!created.aiCoCreatedImageUrls().isEmpty()) {
+                System.out.println("create aiCoCreatedImageUrls: " + created.aiCoCreatedImageUrls());
+            }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
+            if (System.getProperty(CREATE_RESPONSIBLE_PERSON_ID_PROPERTY) != null
+                    && !created.productSet().isEmpty()) {
+                System.out.println("create responsiblePerson: "
+                        + created.productSet().get(0).responsiblePerson());
+            }
+            if (System.getProperty(CREATE_SAFETY_TEXT_PROPERTY) != null
+                    && !created.productSet().isEmpty()) {
+                System.out.println("create safetyInformation: "
+                        + created.productSet().get(0).safetyInformation());
+            }
+            if (System.getProperty(CREATE_DEPOSIT_ID_PROPERTY) != null
+                    && !created.productSet().isEmpty()) {
+                System.out.println("create deposits: " + created.productSet().get(0).deposits());
+            }
             if (created.validation() != null) {
                 System.out.println("create validation: " + created.validation().errors().size()
                         + " error(s), " + created.validation().warnings().size() + " warning(s)"
@@ -387,6 +503,16 @@ final class OffersDemo {
         if (value != null) {
             setter.accept(value);
         }
+    }
+
+    /** Build a reference from an optional id property, else an optional name property, else null. */
+    private static NamedReference afterSalesRef(String idProperty, String nameProperty) {
+        String id = System.getProperty(idProperty);
+        if (id != null) {
+            return NamedReference.byId(id);
+        }
+        String name = nameProperty == null ? null : System.getProperty(nameProperty);
+        return name == null ? null : NamedReference.byName(name);
     }
 
     private static void uploadImage(AllegroClient client, String imageUrl) {
@@ -505,6 +631,16 @@ final class OffersDemo {
     private static void deleteDraft(AllegroClient client, String offerId) {
         client.offers().deleteDraft(offerId);
         System.out.println("deleteDraft: " + offerId + " deleted");
+    }
+
+    /** Declare + upload a minimal attachment and return its id, for linking on a create. */
+    private static String uploadAttachmentAndGetId(AllegroClient client, String fileName) {
+        OfferMedia media = client.offers().media();
+        OfferAttachment declared = media.createAttachment(
+                AttachmentDeclaration.of(AttachmentType.USER_MANUAL, fileName));
+        media.uploadAttachment(declared, MINIMAL_PDF.getBytes(StandardCharsets.UTF_8), PDF_CONTENT_TYPE);
+        System.out.println("uploadAttachment: id=" + declared.id() + " uploaded");
+        return declared.id();
     }
 
     private static void attachmentFlow(AllegroClient client, String fileName) {
@@ -738,6 +874,9 @@ final class OffersDemo {
                 : offer.buyNowPrice().amount() + " " + offer.buyNowPrice().currency();
         System.out.println(phase + ": id=" + offer.id() + ", status=" + offer.status()
                 + ", format=" + offer.format() + ", buyNow=" + price);
+        if (!offer.aiCoCreatedImageUrls().isEmpty()) {
+            System.out.println("  aiCoCreatedImageUrls=" + offer.aiCoCreatedImageUrls());
+        }
         if (!offer.productSet().isEmpty()) {
             ProductSetElement element = offer.productSet().get(0);
             String params = element.productParameters().stream()

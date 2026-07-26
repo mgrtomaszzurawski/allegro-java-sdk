@@ -34,14 +34,21 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOffer
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionSection;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InlineProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ResponsibleProducerRef;
@@ -84,6 +91,15 @@ class OfferWriteClientTest {
     private static final String CATEGORY_ID = "257";
     private static final String AMOUNT = "199.99";
     private static final String CURRENCY_PLN = "PLN";
+    private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
+    private static final String ATTACHMENT_ID_JSON_PATH = "$.attachments[0].id";
+    private static final String MARKETPLACE_ID = "allegro-cz";
+    private static final String MARKETPLACE_AMOUNT = "899.00";
+    private static final String MARKETPLACE_CURRENCY = "CZK";
+    private static final String MARKETPLACE_AMOUNT_JSON_PATH =
+            "$.additionalMarketplaces['allegro-cz'].sellingMode.price.amount";
+    private static final String MARKETPLACE_CURRENCY_JSON_PATH =
+            "$.additionalMarketplaces['allegro-cz'].sellingMode.price.currency";
     private static final int STOCK = 10;
 
     private static final String PRICE_JSON_PATH = "$.sellingMode.price.amount";
@@ -103,6 +119,8 @@ class OfferWriteClientTest {
     private static final String DELIVERY_INFO_JSON_PATH = "$.delivery.additionalInfo";
     private static final String SHIPMENT_DATE_JSON_PATH = "$.delivery.shipmentDate";
     private static final String IMPLIED_WARRANTY_JSON_PATH = "$.afterSalesServices.impliedWarranty.id";
+    private static final String IMPLIED_WARRANTY_NAME_JSON_PATH = "$.afterSalesServices.impliedWarranty.name";
+    private static final String IMPLIED_WARRANTY_NAME = "Standard implied warranty";
     private static final String RETURN_POLICY_JSON_PATH = "$.afterSalesServices.returnPolicy.id";
     private static final String WARRANTY_JSON_PATH = "$.afterSalesServices.warranty.id";
 
@@ -157,13 +175,36 @@ class OfferWriteClientTest {
     private static final String TAX_SUBJECT = "GOODS";
     private static final String TAX_EXEMPTION = "NONE";
     private static final String CONTACT_ID_JSON_PATH = "$.contact.id";
+    private static final String CONTACT_NAME_JSON_PATH = "$.contact.name";
     private static final String ADDITIONAL_SERVICES_ID_JSON_PATH = "$.additionalServices.id";
     private static final String FUNDRAISING_ID_JSON_PATH = "$.fundraisingCampaign.id";
     private static final String CONTACT_ID = "contact-1";
+    private static final String CONTACT_NAME = "Main contact card";
+    private static final String ADDITIONAL_SERVICES_NAME_JSON_PATH = "$.additionalServices.name";
+    private static final String ADDITIONAL_SERVICES_NAME = "Standard services group";
     private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
     private static final String FUNDRAISING_ID = "campaign-1";
     private static final String WHOLESALE_PRICE_LIST_ID_JSON_PATH = "$.discounts.wholesalePriceList.id";
     private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
+    private static final String MESSAGE_MODE_JSON_PATH = "$.messageToSellerSettings.mode";
+    private static final String MESSAGE_HINT_JSON_PATH = "$.messageToSellerSettings.hint";
+    private static final String MESSAGE_MODE_REQUIRED = "REQUIRED";
+    private static final String MESSAGE_HINT = "Leave your note here.";
+    private static final String PAYMENTS_INVOICE_JSON_PATH = "$.payments.invoice";
+    private static final String INVOICE_VAT = "VAT";
+    private static final String COMPAT_TEXT_TYPE_JSON_PATH = "$.compatibilityList.items[0].type";
+    private static final String COMPAT_TEXT_VALUE_JSON_PATH = "$.compatibilityList.items[0].text";
+    private static final String COMPAT_ID_TYPE_JSON_PATH = "$.compatibilityList.items[1].type";
+    private static final String COMPAT_ID_VALUE_JSON_PATH = "$.compatibilityList.items[1].id";
+    private static final String COMPAT_ID_INFO_JSON_PATH =
+            "$.compatibilityList.items[1].additionalInfo[0].value";
+    private static final String COMPAT_TEXT_LINE = "CITROEN C6 (TD_) 2005/09-2011/12 2.7 HDi 204KM/150kW";
+    private static final String COMPAT_PRODUCT_ID = "d04e8a0c-40a1-4c53-8902-ffee7261845e";
+    private static final String COMPAT_INFO_VALUE = "engine-2.7-HDi";
+    private static final String COMPAT_TYPE_TEXT = "TEXT";
+    private static final String COMPAT_TYPE_ID = "ID";
+    private static final String AI_IMAGE_URL_JSON_PATH = "$.aiCoCreatedContent.images[0].url";
+    private static final String AI_IMAGE_URL = "https://a.allegroimg.com/original/11ea99/ai-co-created";
     private static final String PARAM_ID_JSON_PATH = "$.parameters[0].id";
     private static final String PARAM_DICT_VALUE_JSON_PATH = "$.parameters[0].valuesIds[0]";
     private static final String PARAM_RANGE_ID_JSON_PATH = "$.parameters[1].id";
@@ -179,6 +220,15 @@ class OfferWriteClientTest {
     private static final String PRODUCER_ID_JSON_PATH = "$.productSet[0].responsibleProducer.id";
     private static final String MARKETED_BEFORE_JSON_PATH = "$.productSet[0].marketedBeforeGPSRObligation";
     private static final String PRODUCER_TYPE_ID = "ID";
+    private static final String INLINE_NAME = "Inline product name";
+    private static final String INLINE_CATEGORY_ID = "302";
+    private static final String INLINE_IMAGE = "https://example.test/inline.jpg";
+    private static final String INLINE_PARAM_ID = "223545";
+    private static final String INLINE_PARAM_VALUE_ID = "223545_1";
+    private static final String INLINE_NAME_JSON_PATH = "$.productSet[0].product.name";
+    private static final String INLINE_CATEGORY_JSON_PATH = "$.productSet[0].product.category.id";
+    private static final String INLINE_IMAGE_JSON_PATH = "$.productSet[0].product.images[0]";
+    private static final String INLINE_PARAM_JSON_PATH = "$.productSet[0].product.parameters[0].id";
     private static final String PRODUCT_SET_RESPONSE_BODY = ("{\"id\":\"%s\",\"name\":\"%s\","
             + "\"productSet\":[{\"product\":{\"id\":\"%s\"},\"quantity\":{\"value\":%d},"
             + "\"responsibleProducer\":{\"id\":\"%s\"},\"marketedBeforeGPSRObligation\":true}]}")
@@ -303,6 +353,53 @@ class OfferWriteClientTest {
     }
 
     @Test
+    void create_whenCompatibilityListSet_serializesTextAndProductIdItems(WireMockRuntimeInfo wmInfo) {
+        // given — a create carrying a manual "fits to" list: one free-text line and one product id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addCompatibilityEntry(CompatibilityEntry.text(COMPAT_TEXT_LINE))
+                .addCompatibilityEntry(
+                        CompatibilityEntry.productId(COMPAT_PRODUCT_ID, List.of(COMPAT_INFO_VALUE)))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — both union kinds reach the body with their discriminator (TEXT+text, ID+id);
+        // the id item also carries its additional-info value
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(COMPAT_TEXT_TYPE_JSON_PATH, equalTo(COMPAT_TYPE_TEXT)))
+                .withRequestBody(matchingJsonPath(COMPAT_TEXT_VALUE_JSON_PATH, equalTo(COMPAT_TEXT_LINE)))
+                .withRequestBody(matchingJsonPath(COMPAT_ID_TYPE_JSON_PATH, equalTo(COMPAT_TYPE_ID)))
+                .withRequestBody(matchingJsonPath(COMPAT_ID_VALUE_JSON_PATH, equalTo(COMPAT_PRODUCT_ID)))
+                .withRequestBody(matchingJsonPath(COMPAT_ID_INFO_JSON_PATH, equalTo(COMPAT_INFO_VALUE))));
+    }
+
+    @Test
+    void create_whenAiCoCreatedImagesSet_serializesThem(WireMockRuntimeInfo wmInfo) {
+        // given — a create declaring one offer image as AI co-created
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .aiCoCreatedImageUrls(List.of(AI_IMAGE_URL))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the image URL reaches the aiCoCreatedContent.images[] block
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(AI_IMAGE_URL_JSON_PATH, equalTo(AI_IMAGE_URL))));
+    }
+
+    @Test
     void create_whenImagesProvided_serializesThemInBody(WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(post(urlEqualTo(CREATE_PATH))
@@ -333,8 +430,9 @@ class OfferWriteClientTest {
                         .shippingRatesId(SHIPPING_RATES_ID).handlingTime(HANDLING_TIME)
                         .shipmentDate(SHIPMENT_DATE).additionalInfo(DELIVERY_INFO).build())
                 .afterSalesServices(AfterSalesServices.builder()
-                        .impliedWarrantyId(IMPLIED_WARRANTY_ID).returnPolicyId(RETURN_POLICY_ID)
-                        .warrantyId(WARRANTY_ID).build())
+                        .impliedWarranty(NamedReference.byId(IMPLIED_WARRANTY_ID))
+                        .returnPolicy(NamedReference.byId(RETURN_POLICY_ID))
+                        .warranty(NamedReference.byId(WARRANTY_ID)).build())
                 .build();
 
         // when
@@ -585,10 +683,10 @@ class OfferWriteClientTest {
         CreateOfferRequest request = CreateOfferRequest.builder()
                 .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
                 .availableStock(STOCK)
-                .contactId(CONTACT_ID)
-                .additionalServicesGroupId(ADDITIONAL_SERVICES_ID)
-                .fundraisingCampaignId(FUNDRAISING_ID)
-                .wholesalePriceListId(WHOLESALE_PRICE_LIST_ID)
+                .contact(NamedReference.byId(CONTACT_ID))
+                .additionalServices(NamedReference.byId(ADDITIONAL_SERVICES_ID))
+                .fundraisingCampaign(NamedReference.byId(FUNDRAISING_ID))
+                .wholesalePriceList(NamedReference.byId(WHOLESALE_PRICE_LIST_ID))
                 .build();
 
         // when
@@ -600,6 +698,182 @@ class OfferWriteClientTest {
                 .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_ID_JSON_PATH, equalTo(ADDITIONAL_SERVICES_ID)))
                 .withRequestBody(matchingJsonPath(FUNDRAISING_ID_JSON_PATH, equalTo(FUNDRAISING_ID)))
                 .withRequestBody(matchingJsonPath(WHOLESALE_PRICE_LIST_ID_JSON_PATH, equalTo(WHOLESALE_PRICE_LIST_ID))));
+    }
+
+    @Test
+    void create_whenAfterSalesImpliedWarrantyByName_serializesTheNameForm(WireMockRuntimeInfo wmInfo) {
+        // given — the implied warranty is referenced by name (a UUID-id DTO via namedUuidRaw)
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .afterSalesServices(AfterSalesServices.builder()
+                        .impliedWarranty(NamedReference.byName(IMPLIED_WARRANTY_NAME)).build())
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the implied warranty is written as a {name:...} object (no UUID parsing on the name path)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(IMPLIED_WARRANTY_NAME_JSON_PATH,
+                        equalTo(IMPLIED_WARRANTY_NAME))));
+    }
+
+    @Test
+    void create_whenContactByName_serializesTheNameForm(WireMockRuntimeInfo wmInfo) {
+        // given — the contact is attached by name instead of id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .contact(NamedReference.byName(CONTACT_NAME))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the contact is written as a {name:...} object (the exactly-one-of NamedReference
+        // invariant, unit-tested, guarantees no id accompanies it)
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(CONTACT_NAME_JSON_PATH, equalTo(CONTACT_NAME))));
+    }
+
+    @Test
+    void create_whenAdditionalServicesByName_serializesTheNameForm(WireMockRuntimeInfo wmInfo) {
+        // given — the additional-services group is attached by name (a second ref through the
+        // shared namedRaw helper, so its per-type setName reference is locked too)
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .additionalServices(NamedReference.byName(ADDITIONAL_SERVICES_NAME))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the group is written as a {name:...} object at its own path
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(ADDITIONAL_SERVICES_NAME_JSON_PATH,
+                        equalTo(ADDITIONAL_SERVICES_NAME))));
+    }
+
+    @Test
+    void create_whenMessageToSellerSettingsSet_serializesModeAndHint(WireMockRuntimeInfo wmInfo) {
+        // given — a create requiring a buyer note with a hint
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .messageToSellerSettings(MessageToSellerSettings.of(MessageToSellerMode.REQUIRED, MESSAGE_HINT))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the mode maps to its enum name and the hint is a scalar
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(MESSAGE_MODE_JSON_PATH, equalTo(MESSAGE_MODE_REQUIRED)))
+                .withRequestBody(matchingJsonPath(MESSAGE_HINT_JSON_PATH, equalTo(MESSAGE_HINT))));
+    }
+
+    @Test
+    void create_whenInlineProductSet_serializesProductDefinitionFields(WireMockRuntimeInfo wmInfo) {
+        // given — a productSet element carrying an inline product definition
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .addProductSetElement(ProductSetElement.of(PRODUCT_ID)
+                        .withInlineProduct(InlineProduct.builder()
+                                .name(INLINE_NAME)
+                                .categoryId(INLINE_CATEGORY_ID)
+                                .image(INLINE_IMAGE)
+                                .parameter(OfferParameter.dictionary(INLINE_PARAM_ID, INLINE_PARAM_VALUE_ID))
+                                .build()))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the inline name/category/images/parameters ride the product object on the wire
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(INLINE_NAME_JSON_PATH, equalTo(INLINE_NAME)))
+                .withRequestBody(matchingJsonPath(INLINE_CATEGORY_JSON_PATH, equalTo(INLINE_CATEGORY_ID)))
+                .withRequestBody(matchingJsonPath(INLINE_IMAGE_JSON_PATH, equalTo(INLINE_IMAGE)))
+                .withRequestBody(matchingJsonPath(INLINE_PARAM_JSON_PATH, equalTo(INLINE_PARAM_ID))));
+    }
+
+    @Test
+    void create_whenAttachmentIdsSet_serializesThemAsIdObjects(WireMockRuntimeInfo wmInfo) {
+        // given — a create linking an uploaded attachment by id
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .attachmentIds(List.of(ATTACHMENT_ID))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — each attachment is wrapped as an {id:...} object in the attachments array
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(ATTACHMENT_ID_JSON_PATH, equalTo(ATTACHMENT_ID))));
+    }
+
+    @Test
+    void create_whenAdditionalMarketplacePriceSet_serializesPerMarketplacePrice(WireMockRuntimeInfo wmInfo) {
+        // given — a Buy Now price to publish on a foreign marketplace
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .additionalMarketplacePrice(MARKETPLACE_ID, Money.of(MARKETPLACE_AMOUNT, MARKETPLACE_CURRENCY))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the price rides the map under the marketplace-id key at sellingMode.price
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(MARKETPLACE_AMOUNT_JSON_PATH, equalTo(MARKETPLACE_AMOUNT)))
+                .withRequestBody(matchingJsonPath(MARKETPLACE_CURRENCY_JSON_PATH, equalTo(MARKETPLACE_CURRENCY))));
+    }
+
+    @Test
+    void create_whenPaymentsSet_serializesInvoiceType(WireMockRuntimeInfo wmInfo) {
+        // given — a create declaring the seller's invoice type
+        stubFor(post(urlEqualTo(CREATE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_CREATED)
+                        .withBodyFile(OFFER_FIXTURE)));
+        CreateOfferRequest request = CreateOfferRequest.builder()
+                .name(NAME).categoryId(CATEGORY_ID).buyNowPrice(Money.of(AMOUNT, CURRENCY_PLN))
+                .availableStock(STOCK)
+                .payments(OfferPayments.of(InvoiceType.VAT))
+                .build();
+
+        // when
+        offers(wmInfo).create(request);
+
+        // then — the invoice type maps to its wire enum name at the payments path
+        verify(1, postRequestedFor(urlEqualTo(CREATE_PATH))
+                .withRequestBody(matchingJsonPath(PAYMENTS_INVOICE_JSON_PATH, equalTo(INVOICE_VAT))));
     }
 
     @Test
