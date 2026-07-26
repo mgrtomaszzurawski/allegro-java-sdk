@@ -4,10 +4,13 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CategoryEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategorySuggestion;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * The Allegro category tree — reached via {@code AllegroClient.catalog().categories()}.
@@ -65,4 +68,15 @@ public interface CatalogCategories {
      *     possibly empty
      */
     List<CategorySuggestion> suggest(String productName);
+
+    /**
+     * Streams changes to the category tree — categories created, deleted, moved or
+     * renamed — as a lazy feed. The stream follows Allegro's {@code from} cursor
+     * internally (each event's id is the cursor); a bounded consumer only fetches the
+     * pages it needs.
+     *
+     * @param filter which change kinds to include and where to resume from
+     * @return a lazy stream of category changes, oldest first
+     */
+    Stream<CategoryEvent> streamChanges(CategoryEventFilter filter);
 }
