@@ -24,6 +24,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventF
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PaymentsModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PriceChangeRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PromoModificationTiming;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PublicationSettings;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AttachmentDeclaration;
@@ -175,6 +176,9 @@ final class OffersDemo {
     private static final String EDIT_STOCK_PROPERTY = "demo.editStock";
     private static final String CHANGE_PRICES_OFFER_IDS_PROPERTY = "demo.changePricesOfferIds";
     private static final String CHANGE_PRICES_VALUE_PROPERTY = "demo.changePricesValue";
+    private static final String PRICE_INCREASE_BY_PROPERTY = "demo.priceIncreaseBy";
+    private static final String PRICE_DECREASE_BY_PROPERTY = "demo.priceDecreaseBy";
+    private static final String PRICE_MARKETPLACE_PROPERTY = "demo.priceMarketplace";
     private static final String AVAILABLE_PACKAGES_PROPERTY = "demo.availablePackages";
     private static final String PROMO_FOR_OFFER_ID_PROPERTY = "demo.promoForOfferId";
     private static final String DELETE_DRAFT_OFFER_ID_PROPERTY = "demo.deleteDraftOfferId";
@@ -630,10 +634,30 @@ final class OffersDemo {
 
     private static void changePricesBatch(AllegroClient client, String csvOfferIds) {
         List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
-        Money price = Money.of(System.getProperty(CHANGE_PRICES_VALUE_PROPERTY), CURRENCY_PLN);
-        BatchReport report = client.offers().batch().changePrices(offerIds, price);
-        System.out.println("batch changePrices to " + price.amount() + " " + price.currency() + ": "
-                + report.success() + "/" + report.total() + " ok, " + report.failed() + " failed");
+        PriceChangeRequest.Builder builder = PriceChangeRequest.forOffers(offerIds);
+        String increaseBy = System.getProperty(PRICE_INCREASE_BY_PROPERTY);
+        String decreaseBy = System.getProperty(PRICE_DECREASE_BY_PROPERTY);
+        if (increaseBy != null) {
+            builder.increaseBy(Money.of(increaseBy, CURRENCY_PLN));
+        } else if (decreaseBy != null) {
+            builder.decreaseBy(Money.of(decreaseBy, CURRENCY_PLN));
+        } else {
+            builder.setPrice(Money.of(System.getProperty(CHANGE_PRICES_VALUE_PROPERTY), CURRENCY_PLN));
+        }
+        String marketplace = System.getProperty(PRICE_MARKETPLACE_PROPERTY);
+        if (marketplace != null) {
+            builder.onMarketplace(marketplace);
+        }
+        System.out.println("before: offer " + offerIds.get(0)
+                + " buyNowPrice=" + client.offers().get(offerIds.get(0)).buyNowPrice());
+        BatchReport report = client.offers().batch().changePrices(builder.build());
+        System.out.println("batch changePrices: " + report.success() + "/" + report.total()
+                + " ok, " + report.failed() + " failed");
+        report.tasks().forEach(task -> System.out.println("  offerId=" + task.offerId()
+                + ", status=" + task.status()
+                + (task.message() == null ? "" : ", message=" + task.message())));
+        System.out.println("read-back: offer " + offerIds.get(0)
+                + " buyNowPrice=" + client.offers().get(offerIds.get(0)).buyNowPrice());
     }
 
     private static void availablePackages(AllegroClient client) {
