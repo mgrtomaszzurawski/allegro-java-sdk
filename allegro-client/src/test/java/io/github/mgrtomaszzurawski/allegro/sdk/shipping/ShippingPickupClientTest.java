@@ -85,6 +85,8 @@ class ShippingPickupClientTest {
 
     private static final String POLL_SCENARIO = "poll-pickup";
     private static final String STATE_DONE = "done";
+    private static final int EXPECTED_WINDOW_COUNT = 2;
+    private static final int MIN_POLLS = 2;
 
     private static final String PROPOSALS_FIXTURE = "shipping/pickup-proposals.json";
     private static final String CREATE_ACCEPTED = "shipping/pickup-create-accepted.json";
@@ -119,7 +121,7 @@ class ShippingPickupClientTest {
             assertEquals(1, proposals.proposals().size());
             assertEquals(SHIPMENT_ID, proposals.proposals().get(0).shipmentId());
             List<PickupTime> windows = proposals.proposals().get(0).pickupTimes();
-            assertEquals(2, windows.size());
+            assertEquals(EXPECTED_WINDOW_COUNT, windows.size());
             assertEquals(PICKUP_DATE, windows.get(0).date());
             assertEquals(MIN_TIME, windows.get(0).minTime());
             assertEquals(MAX_TIME, windows.get(0).maxTime());
@@ -185,7 +187,7 @@ class ShippingPickupClientTest {
 
             // then — the SDK polled more than once before resolving
             assertEquals(PICKUP_ID, pickup.id());
-            verify(moreThanOrExactly(2), getRequestedFor(urlEqualTo(CREATE_POLL_PATH)));
+            verify(moreThanOrExactly(MIN_POLLS), getRequestedFor(urlEqualTo(CREATE_POLL_PATH)));
         }
     }
 
@@ -208,6 +210,9 @@ class ShippingPickupClientTest {
             assertThrows(AllegroAsyncTimeoutException.class,
                     () -> shipping.requestPickup(request, TINY_TIMEOUT));
         }
+
+        // and — the pickup was never booked (no read of the booked-pickup resource)
+        verify(0, getRequestedFor(urlEqualTo(PICKUP_PATH)));
     }
 
     @Test

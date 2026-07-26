@@ -5,11 +5,11 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.CancelShipmentCommandStatusDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CreatePickupCommandStatusDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CreateShipmentCommandStatusDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.Error400Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.CreatePickupCommandStatusDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PickupCreateCommandDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PickupDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PickupProposalsResponseDtoRaw;
