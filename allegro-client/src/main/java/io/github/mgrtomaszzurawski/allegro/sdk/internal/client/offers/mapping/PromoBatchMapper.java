@@ -106,7 +106,8 @@ public final class PromoBatchMapper {
                 ? List.of()
                 : errors.stream()
                         .map(error -> new AllegroFieldError(error.getCode(), error.getMessage(),
-                                error.getUserMessage(), error.getPath(), error.getDetails()))
+                                error.getUserMessage(), error.getPath(), error.getDetails(),
+                                error.getMetadata()))
                         .toList();
     }
 

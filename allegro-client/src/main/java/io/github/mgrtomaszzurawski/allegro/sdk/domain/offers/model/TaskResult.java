@@ -53,7 +53,7 @@ public record TaskResult(
                 ? List.of()
                 : raws.stream()
                         .map(raw -> new AllegroFieldError(raw.getCode(), raw.getMessage(),
-                                raw.getUserMessage(), raw.getPath(), raw.getDetails()))
+                                raw.getUserMessage(), raw.getPath(), raw.getDetails(), raw.getMetadata()))
                         .toList();
     }
 }
