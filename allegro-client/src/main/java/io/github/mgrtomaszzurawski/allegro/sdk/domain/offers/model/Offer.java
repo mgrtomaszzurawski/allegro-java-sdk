@@ -5,6 +5,8 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
@@ -79,6 +81,7 @@ import org.jspecify.annotations.Nullable;
  *                       keyed by marketplace id; empty when the offer is not cross-listed
  * @param attachmentIds  the ids of the attachments linked to the offer; empty when none. Resolve
  *                       an id to its file name/url/type via {@code offers().media().getAttachment(id)}
+ * @param aiCoCreatedImageUrls the URLs of the offer images declared as AI co-created; empty when none
  * @since 0.2.0
  */
 public record Offer(
@@ -113,7 +116,8 @@ public record Offer(
         @Nullable String wholesalePriceListId,
         @Nullable String operationId,
         Map<String, OfferMarketplace> additionalMarketplaces,
-        List<String> attachmentIds) {
+        List<String> attachmentIds,
+        List<String> aiCoCreatedImageUrls) {
 
     /**
      * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists and the
@@ -126,6 +130,7 @@ public record Offer(
         productSet = List.copyOf(productSet);
         additionalMarketplaces = Map.copyOf(additionalMarketplaces);
         attachmentIds = List.copyOf(attachmentIds);
+        aiCoCreatedImageUrls = List.copyOf(aiCoCreatedImageUrls);
     }
 
     /** Project a generated product-offer response onto the consumer record (a plain read). */
@@ -173,7 +178,8 @@ public record Offer(
                 wholesalePriceListIdOf(raw),
                 operationId,
                 additionalMarketplacesOf(raw),
-                attachmentIdsOf(raw));
+                attachmentIdsOf(raw),
+                aiCoCreatedImageUrlsOf(raw));
     }
 
     private static List<String> attachmentIdsOf(SaleProductOfferResponseV1Raw raw) {
@@ -183,6 +189,15 @@ public record Offer(
         }
         return attachments.stream()
                 .map(ProductOfferAttachmentInnerRaw::getId).filter(Objects::nonNull).toList();
+    }
+
+    private static List<String> aiCoCreatedImageUrlsOf(SaleProductOfferResponseV1Raw raw) {
+        AiCoCreatedContentRaw aiCoCreated = raw.getAiCoCreatedContent();
+        if (aiCoCreated == null || aiCoCreated.getImages() == null) {
+            return List.of();
+        }
+        return aiCoCreated.getImages().stream()
+                .map(AiCoCreatedImageRaw::getUrl).filter(Objects::nonNull).toList();
     }
 
     private static Map<String, OfferMarketplace> additionalMarketplacesOf(SaleProductOfferResponseV1Raw raw) {

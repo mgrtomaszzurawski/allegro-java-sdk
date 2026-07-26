@@ -439,6 +439,9 @@ final class OffersDemo {
             if (!created.attachmentIds().isEmpty()) {
                 System.out.println("create attachmentIds: " + created.attachmentIds());
             }
+            if (!created.aiCoCreatedImageUrls().isEmpty()) {
+                System.out.println("create aiCoCreatedImageUrls: " + created.aiCoCreatedImageUrls());
+            }
             System.out.println("create: id=" + created.id() + ", status=" + created.status()
                     + ", name=" + created.name() + ", productSet=" + created.productSet().size());
             if (System.getProperty(CREATE_RESPONSIBLE_PERSON_ID_PROPERTY) != null
@@ -866,6 +869,9 @@ final class OffersDemo {
                 : offer.buyNowPrice().amount() + " " + offer.buyNowPrice().currency();
         System.out.println(phase + ": id=" + offer.id() + ", status=" + offer.status()
                 + ", format=" + offer.format() + ", buyNow=" + price);
+        if (!offer.aiCoCreatedImageUrls().isEmpty()) {
+            System.out.println("  aiCoCreatedImageUrls=" + offer.aiCoCreatedImageUrls());
+        }
         if (!offer.productSet().isEmpty()) {
             ProductSetElement element = offer.productSet().get(0);
             String params = element.productParameters().stream()
