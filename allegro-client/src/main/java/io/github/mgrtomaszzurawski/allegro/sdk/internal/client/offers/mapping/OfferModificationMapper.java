@@ -4,12 +4,19 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalServicesGroupRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationDeliveryRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ModificationDiscountsRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ModificationDiscountsWholesalePriceListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationPublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ModificationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ModificationResponsiblePersonRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ModificationResponsibleProducerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferChangeCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCriteriumRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
@@ -49,6 +56,29 @@ public final class OfferModificationMapper {
         if (request.handlingTime() != null) {
             modification.delivery(new ModificationDeliveryRaw()
                     .handlingTime(handlingTimeEnum(request.handlingTime())));
+        }
+        if (request.shippingRatesId() != null) {
+            modification.delivery(new ModificationDeliveryRaw()
+                    .shippingRates(new ShippingRatesRaw().id(request.shippingRatesId())));
+        }
+        if (request.wholesalePriceListId() != null) {
+            modification.discounts(new ModificationDiscountsRaw().wholesalePriceList(
+                    new ModificationDiscountsWholesalePriceListRaw().id(request.wholesalePriceListId())));
+        }
+        if (request.sizeTableId() != null) {
+            modification.sizeTable(new SizeTableRaw().id(request.sizeTableId()));
+        }
+        if (request.additionalServicesGroupId() != null) {
+            modification.additionalServicesGroup(
+                    new AdditionalServicesGroupRaw().id(request.additionalServicesGroupId()));
+        }
+        if (request.responsibleProducerId() != null) {
+            modification.responsibleProducer(
+                    new ModificationResponsibleProducerRaw().id(request.responsibleProducerId()));
+        }
+        if (request.responsiblePersonId() != null) {
+            modification.responsiblePerson(
+                    new ModificationResponsiblePersonRaw().id(request.responsiblePersonId()));
         }
         return modification;
     }

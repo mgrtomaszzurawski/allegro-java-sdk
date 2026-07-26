@@ -103,6 +103,35 @@ class BatchModificationRequestTest {
     }
 
     @Test
+    void build_whenShippingRatesAssigned_exposesIdAsSingleChange() {
+        // given — a shipping-rate table assignment (the single change)
+        BatchModificationRequest request = BatchModificationRequest.forOffers(List.of(OFFER_ID))
+                .shippingRates("rates-1")
+                .build();
+
+        // then — the id reads back and no other change is set
+        assertEquals("rates-1", request.shippingRatesId());
+        assertNull(request.sizeTableId());
+        assertNull(request.handlingTime());
+    }
+
+    @Test
+    void shippingRates_whenBlankId_throws() {
+        BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID));
+        assertThrows(IllegalArgumentException.class, () -> builder.shippingRates(" "));
+    }
+
+    @Test
+    void sizeTable_whenAnotherReferenceAlreadySet_throwsSingleChange() {
+        // given — a size-table assignment already set
+        BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID))
+                .sizeTable("table-1");
+
+        // when/then — a second reference assignment is rejected (exactly one per command)
+        assertThrows(IllegalStateException.class, () -> builder.responsiblePerson("person-1"));
+    }
+
+    @Test
     void build_whenNoFieldChanged_throws() {
         // given — a builder with no field change
         BatchModificationRequest.Builder builder = BatchModificationRequest.forOffers(List.of(OFFER_ID));

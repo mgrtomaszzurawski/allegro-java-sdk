@@ -36,6 +36,13 @@ class OfferModificationMapperTest {
     private static final String DURATION_PATH = "/modification/publication/duration";
     private static final String UNLIMITED_PATH = "/modification/publication/durationUnlimited";
     private static final String HANDLING_TIME_PATH = "/modification/delivery/handlingTime";
+    private static final String REFERENCE_ID = "ref-9f3a";
+    private static final String SHIPPING_RATES_PATH = "/modification/delivery/shippingRates/id";
+    private static final String WHOLESALE_PATH = "/modification/discounts/wholesalePriceList/id";
+    private static final String SIZE_TABLE_PATH = "/modification/sizeTable/id";
+    private static final String SERVICES_GROUP_PATH = "/modification/additionalServicesGroup/id";
+    private static final String RESPONSIBLE_PRODUCER_PATH = "/modification/responsibleProducer/id";
+    private static final String RESPONSIBLE_PERSON_PATH = "/modification/responsiblePerson/id";
 
     private static JsonNode tree(BatchModificationRequest request) {
         return MAPPER.valueToTree(OfferModificationMapper.toRaw(request));
@@ -135,5 +142,44 @@ class OfferModificationMapperTest {
         // then — delivery is present and publication is absent (single-element command)
         assertEquals("P2D", tree.at(HANDLING_TIME_PATH).asText());
         assertTrue(tree.at("/modification/publication").isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenShippingRatesAssigned_mapsIdUnderDeliveryShippingRates() {
+        BatchModificationRequest request = forOne().shippingRates(REFERENCE_ID).build();
+        JsonNode tree = tree(request);
+        assertEquals(REFERENCE_ID, tree.at(SHIPPING_RATES_PATH).asText());
+        // the single-element rule holds: no handling time rides along under delivery
+        assertTrue(tree.at(HANDLING_TIME_PATH).isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenWholesalePriceListAssigned_mapsIdUnderDiscounts() {
+        BatchModificationRequest request = forOne().wholesalePriceList(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(WHOLESALE_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenSizeTableAssigned_mapsIdUnderSizeTable() {
+        BatchModificationRequest request = forOne().sizeTable(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(SIZE_TABLE_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenAdditionalServicesGroupAssigned_mapsIdUnderAdditionalServicesGroup() {
+        BatchModificationRequest request = forOne().additionalServicesGroup(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(SERVICES_GROUP_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenResponsibleProducerAssigned_mapsIdUnderResponsibleProducer() {
+        BatchModificationRequest request = forOne().responsibleProducer(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(RESPONSIBLE_PRODUCER_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenResponsiblePersonAssigned_mapsIdUnderResponsiblePerson() {
+        BatchModificationRequest request = forOne().responsiblePerson(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(RESPONSIBLE_PERSON_PATH).asText());
     }
 }
