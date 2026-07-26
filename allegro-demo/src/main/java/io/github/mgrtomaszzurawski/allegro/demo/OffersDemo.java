@@ -92,6 +92,7 @@ final class OffersDemo {
     private static final String OFFER_ID_PROPERTY = "demo.offerId";
     private static final String NEW_PRICE_PROPERTY = "demo.newPrice";
     private static final String PUBLISH_IDS_PROPERTY = "demo.publishIds";
+    private static final String PUBLISH_SCHEDULED_FOR_PROPERTY = "demo.publishScheduledFor";
     private static final String CREATE_NAME_PROPERTY = "demo.createName";
     private static final String CREATE_CATEGORY_PROPERTY = "demo.createCategory";
     private static final String CREATE_PRICE_PROPERTY = "demo.createPrice";
@@ -687,8 +688,12 @@ final class OffersDemo {
 
     private static void publishBatch(AllegroClient client, String csvOfferIds) {
         List<String> offerIds = List.of(csvOfferIds.split(OFFER_ID_SEPARATOR));
-        BatchReport report = client.offers().batch().publish(offerIds);
-        System.out.println("batch publish: " + report.success() + "/" + report.total()
+        String scheduledFor = System.getProperty(PUBLISH_SCHEDULED_FOR_PROPERTY);
+        BatchReport report = scheduledFor == null
+                ? client.offers().batch().publish(offerIds)
+                : client.offers().batch().publish(offerIds, OffsetDateTime.parse(scheduledFor));
+        System.out.println("batch publish" + (scheduledFor == null ? "" : " (scheduledFor=" + scheduledFor + ")")
+                + ": " + report.success() + "/" + report.total()
                 + " ok, " + report.failed() + " failed"
                 + ", createdAt=" + report.createdAt() + ", completedAt=" + report.completedAt());
     }

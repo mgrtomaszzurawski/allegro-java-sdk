@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -71,6 +72,7 @@ class OfferBatchClientTest {
 
     private static final String OFFER_ONE = "111";
     private static final String OFFER_TWO = "222";
+    private static final String SCHEDULED_FOR = "2030-01-01T12:00:00Z";
     private static final int TASKS_PAGE_SIZE = 100;
     private static final int SECOND_TASKS_PAGE = 30;
     private static final int TOTAL_TASKS = TASKS_PAGE_SIZE + SECOND_TASKS_PAGE;
@@ -114,6 +116,7 @@ class OfferBatchClientTest {
     private static final String POLL_SCENARIO = "poll";
     private static final String STATE_COMPLETED = "completed";
     private static final String ACTION_JSON_PATH = "$.publication.action";
+    private static final String SCHEDULED_FOR_JSON_PATH = "$.publication.scheduledFor";
     private static final String OFFERS_JSON_PATH = "$.offerCriteria[0].offers[0].id";
     private static final String OFFERS_SECOND_JSON_PATH = "$.offerCriteria[0].offers[1].id";
     private static final String TYPE_JSON_PATH = "$.offerCriteria[0].type";
@@ -171,6 +174,9 @@ class OfferBatchClientTest {
         ObjectMapper mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .registerModule(new org.openapitools.jackson.nullable.JsonNullableModule())
+                // mirror the production mapper (AllegroClient) so dates serialize as ISO-8601,
+                // not epoch — otherwise scheduledFor would go on the wire as a numeric timestamp
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         RetryHandler retryHandler = new RetryHandler(HttpClient.newHttpClient(),
                 RetryPolicy.builder().enabled(false).build());
@@ -262,6 +268,23 @@ class OfferBatchClientTest {
         assertEquals(0, report.failed());
         assertEquals(2, report.tasks().size());
         assertEquals(OFFER_ONE, report.tasks().get(0).offerId());
+    }
+
+    @Test
+    void publish_whenScheduled_putsScheduledForInCommandBody(WireMockRuntimeInfo wmInfo) {
+        // given — a completed command and a future activation time
+        stubCompletedCommand();
+        stubFor(get(urlPathMatching(TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TWO_TASKS)));
+        OffsetDateTime scheduledFor = OffsetDateTime.parse(SCHEDULED_FOR);
+
+        // when
+        batchClient(wmInfo).publish(List.of(OFFER_ONE), scheduledFor);
+
+        // then — the command body carries the ACTIVATE action and the scheduledFor timestamp
+        verify(1, putRequestedFor(urlPathMatching(COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(ACTION_JSON_PATH, equalTo("ACTIVATE")))
+                .withRequestBody(matchingJsonPath(SCHEDULED_FOR_JSON_PATH, equalTo(SCHEDULED_FOR))));
     }
 
     @Test

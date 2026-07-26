@@ -10,6 +10,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricin
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -29,6 +30,17 @@ public interface OfferBatch {
      * @return the command report once every offer has been processed
      */
     BatchReport publish(List<String> offerIds);
+
+    /**
+     * Schedule the given offers to publish (activate) at a future time, in one command.
+     * Scheduling applies to activation only — Allegro ignores a schedule on the end/unpublish
+     * action, so there is no scheduled {@code unpublish} counterpart.
+     *
+     * @param offerIds     the offers to publish
+     * @param scheduledFor when the activation should take effect (must be in the future)
+     * @return the command report once the schedule has been accepted for every offer
+     */
+    BatchReport publish(List<String> offerIds, OffsetDateTime scheduledFor);
 
     /**
      * Unpublish (end) the given offers in one command.
