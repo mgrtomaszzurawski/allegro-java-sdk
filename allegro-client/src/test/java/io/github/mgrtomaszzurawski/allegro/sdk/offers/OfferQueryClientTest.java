@@ -14,6 +14,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,6 +28,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionIntercepto
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ListingMarketplace;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplacePublicationState;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -94,6 +97,16 @@ class OfferQueryClientTest {
     private static final String SCHEDULED_END = "2026-08-31T10:00:00Z";
     private static final String BASE_MP_ID = "allegro-pl";
     private static final String ADDL_MP_ID = "allegro-cz";
+    private static final String MP_STATE = "APPROVED";
+    private static final String MP_PRICE = "899.00";
+    private static final String MP_CURRENCY = "CZK";
+    private static final String MP_RULE_ID = "aa11bb22-0000-4000-8000-0000000000bb";
+    private static final int MP_WATCHERS = 3;
+    private static final int MP_VISITS = 9;
+    private static final int MP_SOLD = 2;
+    private static final String ADDL_MP_NULL_VALUE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"additionalMarketplaces\":{\"%s\":null}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, ADDL_MP_ID);
     private static final String ADDL_MP_NULL_ID_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
             + "\"publication\":{\"status\":\"ACTIVE\",\"marketplaces\":{\"additional\":[{\"id\":\"%s\"},{}]}}}],"
             + "\"count\":1}")
@@ -122,12 +135,18 @@ class OfferQueryClientTest {
             + "\"delivery\":{\"shippingRates\":{\"id\":\"%s\"}},"
             + "\"additionalServices\":{\"id\":\"%s\"},\"fundraisingCampaign\":{\"id\":\"%s\"},"
             + "\"saleInfo\":{\"currentPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},\"biddersCount\":%d},"
+            + "\"additionalMarketplaces\":{\"%s\":{\"publication\":{\"state\":\"%s\"},"
+            + "\"sellingMode\":{\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"priceAutomation\":{\"rule\":{\"id\":\"%s\"}}},"
+            + "\"stats\":{\"watchersCount\":%d,\"visitsCount\":%d},\"stock\":{\"sold\":%d}}},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
             .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN,
                     MIN_PRICE, CURRENCY_PLN, START_PRICE, CURRENCY_PLN, PRICE_RULE_ID, AVAILABLE, SOLD,
                     STARTED_AT, SCHEDULED_START, SCHEDULED_END, BASE_MP_ID, ADDL_MP_ID,
                     RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
-                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS, IMAGE_URL);
+                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS,
+                    ADDL_MP_ID, MP_STATE, MP_PRICE, MP_CURRENCY, MP_RULE_ID, MP_WATCHERS, MP_VISITS, MP_SOLD,
+                    IMAGE_URL);
 
     // A lean listing item: a malformed publication timestamp and no after-sales / fulfillment
     // blocks — the tolerant mapping must degrade these to null rather than fail the read.
@@ -292,6 +311,14 @@ class OfferQueryClientTest {
         assertEquals(OffsetDateTime.parse(SCHEDULED_END), summary.scheduledEndAt());
         assertEquals(BASE_MP_ID, summary.baseMarketplaceId());
         assertEquals(List.of(ADDL_MP_ID), summary.additionalMarketplaceIds());
+        ListingMarketplace marketplace = summary.additionalMarketplaces().get(ADDL_MP_ID);
+        assertNotNull(marketplace);
+        assertEquals(MarketplacePublicationState.APPROVED, marketplace.publicationState());
+        assertEquals(Money.of(MP_PRICE, MP_CURRENCY), marketplace.price());
+        assertEquals(MP_RULE_ID, marketplace.priceAutomationRuleId());
+        assertEquals(MP_WATCHERS, marketplace.watchersCount());
+        assertEquals(MP_VISITS, marketplace.visitsCount());
+        assertEquals(MP_SOLD, marketplace.soldCount());
     }
 
     @Test
@@ -324,6 +351,20 @@ class OfferQueryClientTest {
         assertNull(summary.scheduledEndAt());
         assertNull(summary.baseMarketplaceId());
         assertTrue(summary.additionalMarketplaceIds().isEmpty());
+        assertTrue(summary.additionalMarketplaces().isEmpty());
+    }
+
+    @Test
+    void streamOffers_whenAdditionalMarketplaceValueNull_skipsIt(WireMockRuntimeInfo wmInfo) {
+        // given — an additionalMarketplaces entry whose value is null (spec-legal)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ADDL_MP_NULL_VALUE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the null per-marketplace value is dropped, leaving no entry
+        assertTrue(summary.additionalMarketplaces().isEmpty());
     }
 
     @Test

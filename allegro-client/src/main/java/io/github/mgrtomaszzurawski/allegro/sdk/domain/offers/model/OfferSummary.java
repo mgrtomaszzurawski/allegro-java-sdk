@@ -14,6 +14,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferAdditionalServicesR
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1AdditionalMarketplaceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1DeliveryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationMarketplacesRaw;
@@ -29,7 +30,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -77,6 +80,8 @@ import org.jspecify.annotations.Nullable;
  * @param baseMarketplaceId the id of the marketplace the offer is primarily published on, or {@code null}
  * @param additionalMarketplaceIds the ids of the additional marketplaces the offer is published on,
  *                        in order (possibly empty)
+ * @param additionalMarketplaces the per-marketplace listing details (state, price, stats, sold),
+ *                        keyed by marketplace id (possibly empty)
  * @since 0.2.0
  */
 public record OfferSummary(
@@ -108,12 +113,15 @@ public record OfferSummary(
         @Nullable OffsetDateTime scheduledStartAt,
         @Nullable OffsetDateTime scheduledEndAt,
         @Nullable String baseMarketplaceId,
-        List<String> additionalMarketplaceIds) {
+        List<String> additionalMarketplaceIds,
+        Map<String, ListingMarketplace> additionalMarketplaces) {
 
-    /** Canonical constructor: defensively copies {@code additionalMarketplaceIds} to an immutable list. */
+    /** Canonical constructor: defensively copies the marketplace collections to immutable views. */
     public OfferSummary {
         additionalMarketplaceIds =
                 additionalMarketplaceIds == null ? List.of() : List.copyOf(additionalMarketplaceIds);
+        additionalMarketplaces =
+                additionalMarketplaces == null ? Map.of() : Map.copyOf(additionalMarketplaces);
     }
 
     /** Project a generated listing item onto the consumer record. */
@@ -154,7 +162,22 @@ public record OfferSummary(
                 publication == null ? null : parseDateTime(publication.getStartingAt()),
                 publication == null ? null : parseDateTime(publication.getEndingAt()),
                 baseMarketplaceIdOf(publication),
-                additionalMarketplaceIdsOf(publication));
+                additionalMarketplaceIdsOf(publication),
+                additionalMarketplacesOf(raw));
+    }
+
+    private static Map<String, ListingMarketplace> additionalMarketplacesOf(OfferListingDtoRaw raw) {
+        Map<String, OfferListingDtoV1AdditionalMarketplaceRaw> marketplaces = raw.getAdditionalMarketplaces();
+        if (marketplaces == null || marketplaces.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, ListingMarketplace> mapped = new HashMap<>();
+        marketplaces.forEach((marketplaceId, value) -> {
+            if (value != null) {
+                mapped.put(marketplaceId, ListingMarketplace.from(value));
+            }
+        });
+        return mapped;
     }
 
     private static @Nullable OfferListingDtoV1PublicationMarketplacesRaw marketplacesOf(
