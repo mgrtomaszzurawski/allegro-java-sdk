@@ -67,14 +67,14 @@ public record ShipmentRequest(
      * {@link ShipmentRequest} they can adjust and pass to {@code createShipment}.
      * The sender, receiver and packages are required by the spec on this echo.
      *
-     * <p>{@code getCredentialsId()} is deprecated in the spec (the merchant-agreement
+     * <p>{@code credentialsId} is deprecated in the spec (the merchant-agreement
      * WZA flow), but the field is still carried on the echo and surfaced by this
-     * record, so it is read faithfully for round-trip fidelity.
+     * record, so it is read faithfully for round-trip fidelity — see
+     * {@link #credentialsId(ShipmentCreateRequestDtoRaw)}.
      */
-    @SuppressWarnings("deprecation")
     public static ShipmentRequest from(ShipmentCreateRequestDtoRaw raw) {
         return new ShipmentRequest(
-                raw.getCredentialsId(),
+                credentialsId(raw),
                 PostalAddress.fromSender(raw.getSender()),
                 PostalAddress.fromReceiver(raw.getReceiver()),
                 raw.getReferenceNumber(),
@@ -86,6 +86,15 @@ public record ShipmentRequest(
                 raw.getLabelFormat() == null
                         ? null
                         : LabelFormat.fromWire(raw.getLabelFormat().getValue()));
+    }
+
+    /**
+     * Read the deprecated {@code credentialsId} field off the echo. Isolated so
+     * the deprecation suppression stays confined to the single deprecated call.
+     */
+    @SuppressWarnings("deprecation")
+    private static @Nullable String credentialsId(ShipmentCreateRequestDtoRaw raw) {
+        return raw.getCredentialsId();
     }
 
     private static @Nullable Money insurance(ShipmentCreateRequestDtoRaw raw) {

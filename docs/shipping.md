@@ -245,8 +245,10 @@ limits, additional services and properties).
 DeliveryProposal proposal = client.shipping().deliveryOptionsFor(orderId);
 
 // Submit Allegro's suggestion as-is, or tweak it via toBuilder() first.
-ShipmentRequest suggested = proposal.suggestedInput();
-Shipment shipment = client.shipping().createShipment(suggested);
+// suggestedInput() is null when the server returns no suggestion for the order.
+if (proposal.suggestedInput() != null) {
+    Shipment shipment = client.shipping().createShipment(proposal.suggestedInput());
+}
 
 for (DeliveryOption option : proposal.deliveryOptions()) {
     DeliveryType type = option.deliveryType();          // DOOR / APM / PUDO

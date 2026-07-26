@@ -110,8 +110,10 @@ public interface Shipping {
      * straight to {@link #createShipment(ShipmentRequest)} or adjusted first) plus
      * the delivery options available for that order.
      *
-     * <p>Read-only. This is the supported successor to the deprecated
-     * delivery-services resource.
+     * <p>This call has no side effects, but Allegro serves the resource under the
+     * {@code shipments:write} scope (it belongs to the shipment-creation flow), so
+     * the app must be authorized for that scope. It is the supported successor to
+     * the deprecated delivery-services resource.
      *
      * @param orderId the order to retrieve delivery options for
      * @return the delivery proposal for the order

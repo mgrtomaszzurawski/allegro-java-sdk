@@ -11,8 +11,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
@@ -64,11 +66,18 @@ class ShippingDeliveryProposalsClientTest {
     private static final String RECEIVER_POINT = "POP-42";
     private static final String CREDENTIALS_ID = "CRED-77";
     private static final String CURRENCY = "PLN";
+    private static final String INSURANCE_AMOUNT = "199.99";
+    private static final String IBAN = "PL61109010140000071219812874";
     private static final String COD_LIMIT = "5000.00";
+    private static final String INSURANCE_LIMIT = "20000.00";
     private static final String WEIGHT_LIMIT = "30.0";
     private static final String LENGTH_LIMIT = "120.0";
+    private static final String WIDTH_LIMIT = "80.0";
+    private static final String ORIGIN_COUNTRY = "PL";
     private static final String SERVICE_ID = "SAT_DELIVERY";
+    private static final String SERVICE_NAME = "Saturday delivery";
     private static final String PROPERTY_ID = "REF_NUMBER";
+    private static final String PROPOSALS_PATH_PATTERN = "/shipment-management/delivery-proposals/.*";
     private static final BigDecimal WEIGHT_KG = new BigDecimal("2.5");
 
     private static final String TOKEN_RESPONSE = """
@@ -95,6 +104,8 @@ class ShippingDeliveryProposalsClientTest {
             assertEquals(SENDER_CITY, suggested.sender().city());
             assertEquals(RECEIVER_POINT, suggested.receiver().point());
             assertEquals(LabelFormat.PDF, suggested.labelFormat());
+            assertEquals(Money.of(INSURANCE_AMOUNT, CURRENCY), suggested.insurance());
+            assertEquals(IBAN, suggested.cashOnDelivery().iban());
             ShipmentPackage parcel = suggested.packages().get(0);
             assertEquals(PackageType.PACKAGE, parcel.type());
             assertEquals(WEIGHT_KG, parcel.weightKg());
@@ -105,12 +116,17 @@ class ShippingDeliveryProposalsClientTest {
             assertEquals(DeliveryType.DOOR, option.deliveryType());
             assertEquals(DeliveryPayment.PREPAID, option.paymentType());
             assertEquals(PackageType.PACKAGE, option.packageType());
+            assertEquals(ORIGIN_COUNTRY, option.originCountry());
             DeliveryLimits limits = option.limits();
             assertEquals(Money.of(COD_LIMIT, CURRENCY), limits.cashOnDelivery());
+            assertEquals(Money.of(INSURANCE_LIMIT, CURRENCY), limits.insurance());
             assertEquals(WEIGHT_LIMIT, limits.weight().value());
             assertEquals(LENGTH_LIMIT, limits.dimensions().length().value());
+            assertEquals(WIDTH_LIMIT, limits.dimensions().width().value());
             assertEquals(SERVICE_ID, option.additionalServices().get(0).id());
+            assertEquals(SERVICE_NAME, option.additionalServices().get(0).name());
             assertEquals(PROPERTY_ID, option.additionalProperties().get(0).id());
+            assertFalse(option.additionalProperties().get(0).required());
         }
 
         // and — the read went out authenticated on the order-keyed path
@@ -130,6 +146,9 @@ class ShippingDeliveryProposalsClientTest {
             // then — the id guard fails fast without a network call
             assertThrows(IllegalArgumentException.class, () -> shipping.deliveryOptionsFor(" "));
         }
+
+        // and — no proposal request ever left the client
+        verify(0, getRequestedFor(urlMatching(PROPOSALS_PATH_PATTERN)));
     }
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
