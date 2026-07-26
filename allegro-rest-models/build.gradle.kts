@@ -140,15 +140,15 @@ val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
         // add that method to `Shipping`'s discriminator mapping, and drop the now-orphaned schema.
         // `Shipping` then carries all four method subtypes and every ASN shipping field reads.
         if (schemas.has("ShippingExtended")) {
-            fun retargetRefs(node: JsonNode, from: String, to: String) {
+            fun retargetRefs(node: JsonNode, fromRef: String, toRef: String) {
                 if (node is ObjectNode) {
-                    val ref = node.get("\$ref")
-                    if (ref != null && ref.isTextual && ref.asText() == from) {
-                        node.put("\$ref", to)
+                    val refNode = node.get("\$ref")
+                    if (refNode != null && refNode.isTextual && refNode.asText() == fromRef) {
+                        node.put("\$ref", toRef)
                     }
-                    node.fields().forEach { retargetRefs(it.value, from, to) }
+                    node.fields().forEach { retargetRefs(it.value, fromRef, toRef) }
                 } else if (node.isArray) {
-                    node.forEach { retargetRefs(it, from, to) }
+                    node.forEach { retargetRefs(it, fromRef, toRef) }
                 }
             }
             retargetRefs(root, schemaRefPrefix + "ShippingExtended", schemaRefPrefix + "Shipping")

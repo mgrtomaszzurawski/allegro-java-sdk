@@ -16,6 +16,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CourierBySellerShippingR
 import io.github.mgrtomaszzurawski.allegro.client.model.OwnTransportShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ThirdPartyDeliveryShippingRaw;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ArrayForObjectHandler;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.StrictOneOfModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.UnknownSubtypeToBaseHandler;
 import java.util.stream.Stream;
@@ -71,7 +72,8 @@ class AsnShippingLayer1RegressionTest {
                 .registerModule(new StrictOneOfModule())
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-                .addHandler(new UnknownSubtypeToBaseHandler());
+                .addHandler(new UnknownSubtypeToBaseHandler())
+                .addHandler(new ArrayForObjectHandler());
     }
 
     private static Stream<Arguments> shippingMethods() {
@@ -84,7 +86,7 @@ class AsnShippingLayer1RegressionTest {
 
     @ParameterizedTest
     @MethodSource("shippingMethods")
-    void readShipping_deserializesEveryMethodToItsConcreteSubtype(String json, Class<?> expectedType)
+    void readShipping_whenAnyAsnMethod_deserializesToConcreteSubtype(String json, Class<?> expectedType)
             throws Exception {
         // given: an ASN shipping payload for one of the four methods
         // when: read through the field type used by every ASN DTO (ShippingRaw)
