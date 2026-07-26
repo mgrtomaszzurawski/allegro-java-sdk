@@ -49,6 +49,7 @@ public final class FlexibleBundleWriteDemo {
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String MSG_TOKEN_EXPIRED = "(stored token expired - rerun auth-bootstrap)";
     private static final String BUNDLE_OFFER_IDS_PROPERTY = "demo.bundleOfferIds";
+    private static final String OFFER_ID_SEPARATOR = ",";
     private static final String MARKETPLACE_ID = "allegro-pl";
     private static final int OFFERS_NEEDED = 2;
     private static final int MINIMUM_BOUGHT_OFFERS = 2;
@@ -95,7 +96,7 @@ public final class FlexibleBundleWriteDemo {
     private static List<String> resolveOfferIds(AllegroClient client) {
         String override = System.getProperty(BUNDLE_OFFER_IDS_PROPERTY);
         if (override != null && !override.isBlank()) {
-            return Arrays.stream(override.split(","))
+            return Arrays.stream(override.split(OFFER_ID_SEPARATOR))
                     .map(String::trim)
                     .filter(candidate -> !candidate.isEmpty())
                     .toList();
