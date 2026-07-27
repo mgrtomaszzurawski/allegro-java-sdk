@@ -8,6 +8,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyUpdateRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.WarrantyRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.AfterSalesAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarrantySummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
@@ -18,8 +19,9 @@ import java.util.stream.Stream;
 /**
  * After-sale service conditions — reached via {@code settings().afterSale()}.
  *
- * <p>Covers seller warranties, implied warranties (rękojmia) and return policies.
- * Warranty attachments land in a following bucket-K PR.
+ * <p>Covers seller warranties, implied warranties (rękojmia), return policies, and
+ * the warranty-document {@link #uploadAttachment(byte[], String) attachments} they
+ * reference.
  *
  * @since 0.2.0
  */
@@ -147,4 +149,16 @@ public interface AfterSaleConditions {
      * @param returnPolicyId the return-policy definition identifier
      */
     void deleteReturnPolicy(String returnPolicyId);
+
+    /**
+     * Upload a warranty-document attachment. The SDK declares the attachment
+     * (obtaining its id) and uploads the file bytes in one call, returning the
+     * hosted attachment whose {@link AfterSalesAttachment#id() id} can be referenced
+     * from a {@code WarrantyRequest}.
+     *
+     * @param content the file bytes (e.g. a PDF)
+     * @param contentType the file's MIME type (e.g. {@code application/pdf})
+     * @return the uploaded attachment (id, name, url)
+     */
+    AfterSalesAttachment uploadAttachment(byte[] content, String contentType);
 }

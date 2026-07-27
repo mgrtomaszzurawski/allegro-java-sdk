@@ -534,6 +534,9 @@ public final class ApiPaths {
     /** Seller after-sale return-policy definitions. */
     public static final String AFTER_SALES_RETURN_POLICIES =
             "/after-sales-service-conditions/return-policies";
+    /** Seller after-sale attachment documents ({@code /after-sales-service-conditions/attachments}). */
+    public static final String AFTER_SALES_ATTACHMENTS =
+            "/after-sales-service-conditions/attachments";
     /** Product-compliance (GPSR) responsible persons dictionary. */
     public static final String RESPONSIBLE_PERSONS = "/sale/responsible-persons";
     /** Product-compliance (GPSR) responsible producers dictionary. */

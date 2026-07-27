@@ -4,9 +4,9 @@ Seller-side configuration for your Allegro account (bucket K): after-sale servic
 conditions, additional services, product-compliance parties, size tables and tax settings.
 Every operation is seller-scoped and uses the standard vendor media type.
 
-> **Status:** covers after-sale conditions (warranties, implied warranties, return policies),
-> product compliance (responsible persons/producers), additional services (read **and** write),
-> and size tables / tax settings. After-sales attachment upload is the remaining bucket-K slice.
+> **Status:** covers the full bucket-K surface — after-sale conditions (warranties, implied
+> warranties, return policies, and their document attachments), product compliance (responsible
+> persons/producers), additional services (read and write), and size tables / tax settings.
 
 ## After-sale conditions — warranties
 
@@ -68,6 +68,23 @@ afterSale.streamWarranties()
 ```java
 Warranty updated = afterSale.updateWarranty(warrantyId,
         request.toBuilder().description("Updated terms").build());
+```
+
+### Warranty attachments
+
+A warranty can reference a hosted document (e.g. a PDF). Upload the file first — the SDK declares
+the attachment and PUTs the bytes in one call — then reference the returned id from a
+`WarrantyRequest`:
+
+```java
+byte[] pdf = Files.readAllBytes(Path.of("warranty.pdf"));
+AfterSalesAttachment attachment = afterSale.uploadAttachment(pdf, "application/pdf");
+
+Warranty warranty = afterSale.createWarranty(WarrantyRequest.builder()
+        .name("2-year manufacturer warranty")
+        .attachment(attachment.id(), attachment.name())
+        // ... periods ...
+        .build());
 ```
 
 ## Implied warranties (rękojmia)
