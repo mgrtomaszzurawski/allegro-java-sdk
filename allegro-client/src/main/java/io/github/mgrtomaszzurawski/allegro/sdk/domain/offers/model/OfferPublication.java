@@ -8,6 +8,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationMarketplacesResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,6 +26,10 @@ import org.jspecify.annotations.Nullable;
  *                          if it has not ended
  * @param baseMarketplaceId the id of the base marketplace the offer is published on (e.g.
  *                          {@code allegro-pl}), or {@code null} if the payload omits it
+ * @param duration          the ISO-8601 duration the offer is published for (e.g. {@code PT720H}),
+ *                          or {@code null} for an unlimited/unset duration
+ * @param additionalMarketplaceIds the ids of the additional marketplaces the offer is published on,
+ *                          in order (possibly empty)
  * @since 0.6.0
  */
 public record OfferPublication(
@@ -31,7 +37,15 @@ public record OfferPublication(
         @Nullable OffsetDateTime startingAt,
         @Nullable OffsetDateTime endingAt,
         @Nullable String endedBy,
-        @Nullable String baseMarketplaceId) {
+        @Nullable String baseMarketplaceId,
+        @Nullable String duration,
+        List<String> additionalMarketplaceIds) {
+
+    /** Canonical constructor: defensively copies {@code additionalMarketplaceIds} to an immutable list. */
+    public OfferPublication {
+        additionalMarketplaceIds =
+                additionalMarketplaceIds == null ? List.of() : List.copyOf(additionalMarketplaceIds);
+    }
 
     /** Project a generated publication response onto the consumer value, or {@code null}. */
     public static @Nullable OfferPublication from(@Nullable SaleProductOfferPublicationResponseRaw raw) {
@@ -45,6 +59,17 @@ public record OfferPublication(
                 raw.getStartingAt(),
                 raw.getEndingAt(),
                 raw.getEndedBy() == null ? null : raw.getEndedBy().getValue(),
-                base == null ? null : base.getId());
+                base == null ? null : base.getId(),
+                raw.getDuration(),
+                additionalMarketplaceIdsOf(marketplaces));
+    }
+
+    private static List<String> additionalMarketplaceIdsOf(
+            @Nullable SaleProductOfferPublicationMarketplacesResponseRaw marketplaces) {
+        List<JustIdRaw> additional = marketplaces == null ? null : marketplaces.getAdditional();
+        if (additional == null) {
+            return List.of();
+        }
+        return additional.stream().map(JustIdRaw::getId).filter(Objects::nonNull).toList();
     }
 }

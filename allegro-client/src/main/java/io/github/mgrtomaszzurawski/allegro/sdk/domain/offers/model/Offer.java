@@ -19,6 +19,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.StockRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +83,9 @@ import org.jspecify.annotations.Nullable;
  * @param attachmentIds  the ids of the attachments linked to the offer; empty when none. Resolve
  *                       an id to its file name/url/type via {@code offers().media().getAttachment(id)}
  * @param aiCoCreatedImageUrls the URLs of the offer images declared as AI co-created; empty when none
+ * @param imageUrls       the URLs of the offer's images, in display order (possibly empty)
+ * @param createdAt       when the offer was created, or {@code null} when the payload omits it
+ * @param updatedAt       when the offer was last updated, or {@code null} when the payload omits it
  * @since 0.2.0
  */
 public record Offer(
@@ -117,7 +121,10 @@ public record Offer(
         @Nullable String operationId,
         Map<String, OfferMarketplace> additionalMarketplaces,
         List<String> attachmentIds,
-        List<String> aiCoCreatedImageUrls) {
+        List<String> aiCoCreatedImageUrls,
+        List<String> imageUrls,
+        @Nullable OffsetDateTime createdAt,
+        @Nullable OffsetDateTime updatedAt) {
 
     /**
      * Canonical constructor. Normalizes the {@code parameters} and {@code productSet} lists and the
@@ -131,6 +138,7 @@ public record Offer(
         additionalMarketplaces = Map.copyOf(additionalMarketplaces);
         attachmentIds = List.copyOf(attachmentIds);
         aiCoCreatedImageUrls = List.copyOf(aiCoCreatedImageUrls);
+        imageUrls = List.copyOf(imageUrls);
     }
 
     /** Project a generated product-offer response onto the consumer record (a plain read). */
@@ -179,7 +187,15 @@ public record Offer(
                 operationId,
                 additionalMarketplacesOf(raw),
                 attachmentIdsOf(raw),
-                aiCoCreatedImageUrlsOf(raw));
+                aiCoCreatedImageUrlsOf(raw),
+                imageUrlsOf(raw),
+                raw.getCreatedAt(),
+                raw.getUpdatedAt());
+    }
+
+    private static List<String> imageUrlsOf(SaleProductOfferResponseV1Raw raw) {
+        List<String> images = raw.getImages();
+        return images == null ? List.of() : List.copyOf(images);
     }
 
     private static List<String> attachmentIdsOf(SaleProductOfferResponseV1Raw raw) {

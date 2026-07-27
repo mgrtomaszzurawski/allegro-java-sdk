@@ -36,7 +36,9 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 
 ## Documentation
 
-- [`docs/offers.md`](docs/offers.md) — offers: read an offer, change the Buy Now price
+- [`docs/offers.md`](docs/offers.md) — offers: read/create/edit an offer, product sets, images and
+  attachments, events; bulk publish/unpublish (incl. scheduled), price (fixed/relative/percentage),
+  stock, settings, payment settings, automatic-pricing rules and promotion packages
 - [`docs/orders.md`](docs/orders.md) — orders: listing, events, seller status, tracking, dictionaries
 - [`docs/payments.md`](docs/payments.md) — payment operations, refunded payments, refund initiation
 - [`docs/billing.md`](docs/billing.md) — billing entries and the billing-type dictionary

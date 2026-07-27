@@ -4,11 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SalePartialProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
@@ -40,6 +37,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessi
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceChangeResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.FlexibleBundlesImpl;
@@ -54,7 +52,6 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
@@ -69,8 +66,8 @@ public final class OffersImpl implements Offers {
     private static final String OP_CREATE = "create offer";
     private static final String OP_EDIT = "edit offer";
     private static final String OP_DELETE_DRAFT = "delete draft offer";
-    private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
     private static final String OP_STREAM = "stream offers";
+    private static final String OP_COUNT = "count offers";
     private static final String OP_SMART = "get offer Smart classification";
     private static final String OP_UNFILLED = "stream offers with unfilled parameters";
     private static final String OP_RATING = "get offer rating";
@@ -80,6 +77,11 @@ public final class OffersImpl implements Offers {
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
+    // A count probe fetches the first page at the smallest legal size (Allegro's `limit`
+    // range is 1..1000) purely to read the response's `totalCount`.
+    private static final int COUNT_PROBE_OFFSET = 0;
+    private static final int COUNT_PROBE_LIMIT = 1;
+    private static final long EMPTY_COUNT = 0L;
 
     private static final String QUERY_NAME = "name";
     private static final String QUERY_STATUS = "publication.status";
@@ -198,18 +200,10 @@ public final class OffersImpl implements Offers {
     }
 
     @Override
-    public void changeBuyNowPrice(String offerId, Money buyNowPrice) {
-        // Allegro's price change is a command keyed by a client-generated id;
-        // for a single offer it resolves synchronously, so one PUT suffices.
-        String commandId = UUID.randomUUID().toString();
-        ChangePriceWithoutOutputRaw body = new ChangePriceWithoutOutputRaw()
-                .id(commandId)
-                .input(new ChangePriceInputRaw().buyNowPrice(
-                        new PriceRaw().amount(buyNowPrice.amount()).currency(buyNowPrice.currency())));
-        http.request(OP_CHANGE_PRICE)
-                .put(ApiPaths.changePriceCommand(offerId, commandId))
-                .jsonBody(body)
-                .send();
+    public PriceChangeResult changeBuyNowPrice(String offerId, Money buyNowPrice) {
+        // A single-offer price change resolves synchronously; the command's *Raw
+        // request/response assembly lives in ChangePriceCommand to keep this wrapper lean.
+        return ChangePriceCommand.apply(http, offerId, buyNowPrice);
     }
 
     @Override
@@ -217,13 +211,35 @@ public final class OffersImpl implements Offers {
         return PagedSpliterator.stream(pageIndex -> fetchPage(filter, pageIndex));
     }
 
-    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
-        Query query = Query.create()
+    @Override
+    public long countOffers(OfferFilter filter) {
+        // Fetch a single minimal page purely to read the server's totalCount — a constant
+        // number of matching offers is returned regardless of how large the result set is,
+        // so this stays O(1) rather than paging the whole listing.
+        Query query = filterQuery(filter)
+                .add(QUERY_OFFSET, COUNT_PROBE_OFFSET)
+                .add(QUERY_LIMIT, COUNT_PROBE_LIMIT);
+        OffersSearchResultDtoRaw response = http.request(OP_COUNT)
+                .get(ApiPaths.SALE_OFFERS)
+                .query(query)
+                .fetch(OffersSearchResultDtoRaw.class);
+        Integer totalCount = response.getTotalCount();
+        // The offers listing always carries totalCount (ADR-010 only wires this accessor where the
+        // server reports one); the null branch is a defensive guard, not a supported "no total" signal.
+        return totalCount == null ? EMPTY_COUNT : totalCount.longValue();
+    }
+
+    private Query filterQuery(OfferFilter filter) {
+        return Query.create()
                 .add(QUERY_NAME, filter.name())
                 .add(QUERY_STATUS, wireValueOf(filter.status()))
                 .add(QUERY_FORMAT, wireValueOf(filter.format()))
                 .add(QUERY_PRICE_FROM, filter.priceFrom())
-                .add(QUERY_PRICE_TO, filter.priceTo())
+                .add(QUERY_PRICE_TO, filter.priceTo());
+    }
+
+    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
+        Query query = filterQuery(filter)
                 .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
                 .add(QUERY_LIMIT, PAGE_SIZE);
         OffersSearchResultDtoRaw response = http.request(OP_STREAM)

@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnShipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.HandlingUnit;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -18,15 +19,14 @@ import org.jspecify.annotations.Nullable;
  * line's quantity must be between {@code 1} and {@code 1000000}, enforced
  * fail-fast so an out-of-range value never reaches the server.
  *
- * <p>Declaring the notice's polymorphic {@code shipping} details is deferred: the
- * write body is sound, but the create response echoes the shipping declaration
- * through the same Layer-1 read DTO that cannot deserialize the courier /
- * own-transport / third-party methods, so a write cannot round-trip until that
- * Layer-1 defect is fixed.
+ * <p>How the goods reach the warehouse is declared with {@link Builder#shipping} —
+ * one of the writable {@link AsnShipping} methods (courier, own transport, or third
+ * party). {@link AsnShipping.AlreadyInWarehouse} is read-only and is rejected.
  *
  * <pre>{@code
  * AsnRequest request = AsnRequest.builder()
  *         .addItem("2f1e...-product-uuid", 12)
+ *         .shipping(new AsnShipping.OwnTransport("FZ12453", eta, "PL"))
  *         .build();
  * }</pre>
  *
@@ -35,10 +35,13 @@ import org.jspecify.annotations.Nullable;
 public final class AsnRequest {
 
     private static final String ERR_ITEMS_EMPTY = "an ASN request needs at least one item";
+    private static final String ERR_SHIPPING_READ_ONLY =
+            "ALREADY_IN_WAREHOUSE shipping is read-only and cannot be declared on a request";
 
     private final List<AsnItem> items;
     private final @Nullable HandlingUnit handlingUnit;
     private final @Nullable BigDecimal declaredVolumeInCc;
+    private final @Nullable AsnShipping shipping;
 
     private AsnRequest(Builder builder) {
         if (builder.items.isEmpty()) {
@@ -47,6 +50,7 @@ public final class AsnRequest {
         this.items = List.copyOf(builder.items);
         this.handlingUnit = builder.handlingUnit;
         this.declaredVolumeInCc = builder.declaredVolumeInCc;
+        this.shipping = builder.shipping;
     }
 
     /** The product lines (never empty). */
@@ -64,6 +68,11 @@ public final class AsnRequest {
         return declaredVolumeInCc;
     }
 
+    /** How the goods reach the warehouse, or {@code null}. */
+    public @Nullable AsnShipping shipping() {
+        return shipping;
+    }
+
     /** A new builder. */
     public static Builder builder() {
         return new Builder();
@@ -74,7 +83,8 @@ public final class AsnRequest {
         return new Builder()
                 .items(items)
                 .handlingUnit(handlingUnit)
-                .declaredVolumeInCc(declaredVolumeInCc);
+                .declaredVolumeInCc(declaredVolumeInCc)
+                .shipping(shipping);
     }
 
     /** Fluent builder for {@link AsnRequest}. */
@@ -83,6 +93,7 @@ public final class AsnRequest {
         private final List<AsnItem> items = new ArrayList<>();
         private @Nullable HandlingUnit handlingUnit;
         private @Nullable BigDecimal declaredVolumeInCc;
+        private @Nullable AsnShipping shipping;
 
         /** Add a product line by product id and unit quantity. */
         public Builder addItem(String productId, int quantity) {
@@ -108,6 +119,18 @@ public final class AsnRequest {
         /** Declare the volume in cubic centimetres. */
         public Builder declaredVolumeInCc(@Nullable BigDecimal declaredVolumeInCc) {
             this.declaredVolumeInCc = declaredVolumeInCc;
+            return this;
+        }
+
+        /**
+         * Declare how the goods reach the warehouse. Rejects the read-only
+         * {@link AsnShipping.AlreadyInWarehouse} method, which is never sent.
+         */
+        public Builder shipping(@Nullable AsnShipping shipping) {
+            if (shipping instanceof AsnShipping.AlreadyInWarehouse) {
+                throw new IllegalArgumentException(ERR_SHIPPING_READ_ONLY);
+            }
+            this.shipping = shipping;
             return this;
         }
 

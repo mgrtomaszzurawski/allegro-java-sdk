@@ -14,6 +14,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +26,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OffersImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryHandler;
@@ -57,6 +60,8 @@ class OfferMetadataClientTest {
     private static final String OPERATION_RESPONSE = "{\"offer\":{\"id\":\"" + OFFER_ID + "\"},"
             + "\"operation\":{\"id\":\"" + OPERATION_ID + "\",\"status\":\"COMPLETED\","
             + "\"startedAt\":\"2026-08-01T10:00:00Z\"}}";
+    private static final String NOT_FOUND_BODY =
+            "{\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"Operation not found\"}]}";
 
     private static OffersImpl offers(WireMockRuntimeInfo wmInfo) {
         ObjectMapper mapper = new ObjectMapper()
@@ -164,6 +169,28 @@ class OfferMetadataClientTest {
         assertEquals(OFFER_ID, status.offerId());
         assertEquals(OPERATION_ID, status.operationId());
         assertEquals("COMPLETED", status.status());
+    }
+
+    @Test
+    void operationStatus_whenOperationMissing_throwsNotFound(WireMockRuntimeInfo wmInfo) {
+        // given — the operation id is unknown to the server
+        stubFor(get(urlEqualTo(OPERATION_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_NOT_FOUND).withBody(NOT_FOUND_BODY)));
+
+        // when / then
+        assertThrows(AllegroNotFoundException.class,
+                () -> offers(wmInfo).operationStatus(OFFER_ID, OPERATION_ID));
+    }
+
+    @Test
+    void operationStatus_whenServerError_throwsServerException(WireMockRuntimeInfo wmInfo) {
+        // given — the server fails the read
+        stubFor(get(urlEqualTo(OPERATION_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_SERVER_ERROR)));
+
+        // when / then
+        assertThrows(AllegroServerException.class,
+                () -> offers(wmInfo).operationStatus(OFFER_ID, OPERATION_ID));
     }
 
     private static void stubEvents(String body, com.github.tomakehurst.wiremock.matching.StringValuePattern from) {

@@ -35,7 +35,9 @@ import org.jspecify.annotations.Nullable;
  * read one back from an {@link Offer}. Optional fields are added with the {@code with…}
  * copies.
  *
- * @param productId                    the catalogue product id (required)
+ * @param productId                    the catalogue product id; {@code null} when the element is
+ *                                     product-by-data (inline product) or an advertisement
+ *                                     response's proposed product that has no catalogue id yet
  * @param quantity                     units of the product in this element (at least 1)
  * @param responsibleProducer          the GPSR responsible producer, or {@code null}
  * @param marketedBeforeGpsrObligation {@code true}/{@code false} to declare the product was
@@ -63,7 +65,7 @@ import org.jspecify.annotations.Nullable;
  * @since 0.4.0
  */
 public record ProductSetElement(
-        String productId,
+        @Nullable String productId,
         int quantity,
         @Nullable ResponsibleProducerRef responsibleProducer,
         @Nullable Boolean marketedBeforeGpsrObligation,
@@ -79,12 +81,14 @@ public record ProductSetElement(
     private static final int DEFAULT_QUANTITY = 1;
 
     /**
-     * Canonical constructor: the product id is required and the quantity must be positive;
+     * Canonical constructor: the product id may be absent (inline / advertisement-proposed
+     * product) but the quantity must be positive;
      * {@code productParameters} and {@code deposits} are normalized to immutable copies (empty
      * when the payload, or a build path that only references the product by id, omits them).
      */
     public ProductSetElement {
-        Objects.requireNonNull(productId, "productId");
+        // productId is absent when the element carries an inline product (product-by-data) or
+        // when a response echoes an advertisement's proposed product that has no catalogue id yet.
         if (quantity < DEFAULT_QUANTITY) {
             throw new IllegalArgumentException(ERR_QUANTITY);
         }
@@ -94,12 +98,14 @@ public record ProductSetElement(
 
     /** A single unit of the given catalogue product. */
     public static ProductSetElement of(String productId) {
+        Objects.requireNonNull(productId, "productId");
         return new ProductSetElement(
                 productId, DEFAULT_QUANTITY, null, null, List.of(), null, null, null, null, List.of(), null);
     }
 
     /** {@code quantity} units of the given catalogue product. */
     public static ProductSetElement of(String productId, int quantity) {
+        Objects.requireNonNull(productId, "productId");
         return new ProductSetElement(
                 productId, quantity, null, null, List.of(), null, null, null, null, List.of(), null);
     }
@@ -176,7 +182,7 @@ public record ProductSetElement(
         var producer = raw.getResponsibleProducer();
         var person = raw.getResponsiblePerson();
         return new ProductSetElement(
-                Objects.requireNonNull(product == null ? null : product.getId(), "product.id"),
+                product == null ? null : product.getId(),
                 units,
                 producer == null ? null : ResponsibleProducerRef.from(producer),
                 raw.getMarketedBeforeGPSRObligation(),
