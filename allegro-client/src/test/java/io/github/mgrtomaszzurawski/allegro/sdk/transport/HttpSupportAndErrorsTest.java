@@ -63,7 +63,8 @@ class HttpSupportAndErrorsTest {
     private static final String VALIDATION_BODY = """
             {"errors":[
               {"code":"VALIDATION_ERROR","message":"price too low",
-               "userMessage":"Cena za niska","path":"sellingMode.price","details":"MinPrice"},
+               "userMessage":"Cena za niska","path":"sellingMode.price","details":"MinPrice",
+               "metadata":{"minPrice":"9.99"}},
               {"code":"MISSING_PARAMETER","message":"ean required","userMessage":null,
                "path":"parameters.ean"}
             ]}
@@ -164,7 +165,10 @@ class HttpSupportAndErrorsTest {
         assertEquals("VALIDATION_ERROR", errors.get(0).code());
         assertEquals("sellingMode.price", errors.get(0).path());
         assertEquals("Cena za niska", errors.get(0).userMessage());
+        assertEquals("9.99", errors.get(0).metadata().get("minPrice"));
         assertEquals("parameters.ean", errors.get(1).path());
+        // an error without a metadata object maps to an empty (non-null) map
+        assertTrue(errors.get(1).metadata().isEmpty());
     }
 
     @Test

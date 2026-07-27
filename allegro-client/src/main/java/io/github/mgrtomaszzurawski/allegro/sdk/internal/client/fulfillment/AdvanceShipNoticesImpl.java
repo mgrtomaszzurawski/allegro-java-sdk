@@ -8,15 +8,21 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AdvanceShipNoticeListIte
 import io.github.mgrtomaszzurawski.allegro.client.model.AdvanceShipNoticeListRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdvanceShipNoticeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdvanceShipNoticeResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CourierBySellerShippingRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CourierRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CreateAdvanceShipNoticeRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CreateAdvanceShipNoticeResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.HandlingUnitRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OwnTransportShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductItemRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ProductRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReceivingStateRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubmitCommandInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubmitCommandOutputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SubmitCommandRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ThirdPartyDeliveryShippingRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ThirdPartyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UpdateSubmittedAdvanceShipNoticeRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.AdvanceShipNotices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.AsnFilter;
@@ -24,6 +30,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.AsnReq
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.SubmittedAsnUpdate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AdvanceShipNotice;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnShipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.HandlingUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.ReceivingState;
@@ -278,20 +285,23 @@ public final class AdvanceShipNoticesImpl implements AdvanceShipNotices {
         return new CreateAdvanceShipNoticeRequestRaw()
                 .items(toItemRaws(request.items()))
                 .handlingUnit(toHandlingUnitRaw(request.handlingUnit()))
-                .declaredVolumeInCc(request.declaredVolumeInCc());
+                .declaredVolumeInCc(request.declaredVolumeInCc())
+                .shipping(toShippingRaw(request.shipping()));
     }
 
     private static AdvanceShipNoticeRaw toUpdateRaw(AsnRequest request) {
         return new AdvanceShipNoticeRaw()
                 .items(toItemRaws(request.items()))
                 .handlingUnit(toHandlingUnitRaw(request.handlingUnit()))
-                .declaredVolumeInCc(request.declaredVolumeInCc());
+                .declaredVolumeInCc(request.declaredVolumeInCc())
+                .shipping(toShippingRaw(request.shipping()));
     }
 
     private static UpdateSubmittedAdvanceShipNoticeRequestRaw toSubmittedRaw(SubmittedAsnUpdate update) {
         UpdateSubmittedAdvanceShipNoticeRequestRaw raw = new UpdateSubmittedAdvanceShipNoticeRequestRaw()
                 .handlingUnit(toHandlingUnitRaw(update.handlingUnit()))
-                .declaredVolumeInCc(update.declaredVolumeInCc());
+                .declaredVolumeInCc(update.declaredVolumeInCc())
+                .shipping(toShippingRaw(update.shipping()));
         if (!update.items().isEmpty()) {
             raw.setItems(toItemRaws(update.items()));
         }
@@ -316,5 +326,29 @@ public final class AdvanceShipNoticesImpl implements AdvanceShipNotices {
                 .unitType(handlingUnit.unitType())
                 .amount(handlingUnit.amount())
                 .labelsType(handlingUnit.labelsType());
+    }
+
+    // The read-only ALREADY_IN_WAREHOUSE method is rejected by the builders, so it never
+    // reaches here; a null shipping (or that method) maps to no wire shipping element.
+    private static @Nullable ShippingRaw toShippingRaw(@Nullable AsnShipping shipping) {
+        if (shipping instanceof AsnShipping.CourierBySeller courier) {
+            return new CourierBySellerShippingRaw()
+                    .courier(new CourierRaw().id(courier.courierId()).trackingNumbers(courier.trackingNumbers()))
+                    .estimatedTimeOfArrival(courier.estimatedTimeOfArrival())
+                    .countryCode(courier.countryCode());
+        }
+        if (shipping instanceof AsnShipping.OwnTransport ownTransport) {
+            return new OwnTransportShippingRaw()
+                    .truckLicencePlate(ownTransport.truckLicencePlate())
+                    .estimatedTimeOfArrival(ownTransport.estimatedTimeOfArrival())
+                    .countryCode(ownTransport.countryCode());
+        }
+        if (shipping instanceof AsnShipping.ThirdPartyDelivery third) {
+            return new ThirdPartyDeliveryShippingRaw()
+                    .thirdParty(new ThirdPartyRaw().name(third.carrierName()).orderNumber(third.orderNumber()))
+                    .estimatedTimeOfArrival(third.estimatedTimeOfArrival())
+                    .countryCode(third.countryCode());
+        }
+        return null;
     }
 }

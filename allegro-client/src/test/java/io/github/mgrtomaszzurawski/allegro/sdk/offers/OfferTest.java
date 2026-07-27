@@ -62,6 +62,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParamete
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ParameterRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -76,6 +77,10 @@ class OfferTest {
     private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
     private static final String ATTACHMENT_ID_2 = "5c7d1e20-0000-4000-8000-000000000def";
     private static final String AI_IMAGE_URL = "https://a.allegroimg.com/original/11ea99/ai-one";
+    private static final String IMAGE_URL_A = "https://a.allegroimg.com/original/img/a";
+    private static final String IMAGE_URL_B = "https://a.allegroimg.com/original/img/b";
+    private static final OffsetDateTime CREATED_AT = OffsetDateTime.parse("2026-07-20T08:00:00Z");
+    private static final OffsetDateTime UPDATED_AT = OffsetDateTime.parse("2026-07-24T09:30:00Z");
     private static final String AI_IMAGE_URL_2 = "https://a.allegroimg.com/original/11ea99/ai-two";
     private static final String CATEGORY_ID = "257";
     private static final String TEST_UNKNOWN_FORMAT = "FUTURE_FORMAT";
@@ -291,6 +296,34 @@ class OfferTest {
 
         // then — an empty list, no NullPointerException
         assertTrue(Offer.from(raw).aiCoCreatedImageUrls().isEmpty());
+    }
+
+    @Test
+    void from_whenImagesAndTimestampsPresent_readsThem() {
+        // given — an offer with a gallery and create/update timestamps
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .images(List.of(IMAGE_URL_A, IMAGE_URL_B))
+                .createdAt(CREATED_AT).updatedAt(UPDATED_AT);
+
+        // then — the image urls (in order) and both timestamps are surfaced
+        Offer offer = Offer.from(raw);
+        assertEquals(List.of(IMAGE_URL_A, IMAGE_URL_B), offer.imageUrls());
+        assertEquals(CREATED_AT, offer.createdAt());
+        assertEquals(UPDATED_AT, offer.updatedAt());
+    }
+
+    @Test
+    void from_whenImagesNullAndTimestampsAbsent_isEmptyAndNull() {
+        // given — the images list is null and the timestamps are omitted
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL).images(null);
+
+        // then — an empty list (no NPE) and null timestamps
+        Offer offer = Offer.from(raw);
+        assertTrue(offer.imageUrls().isEmpty());
+        assertNull(offer.createdAt());
+        assertNull(offer.updatedAt());
     }
 
     @Test

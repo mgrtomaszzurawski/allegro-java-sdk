@@ -77,6 +77,8 @@ public final class DemoApp {
         SCENARIOS.put(CatalogDemo.SCENARIO, CatalogDemo::run);
         SCENARIOS.put(CatalogProductsDemo.SCENARIO, CatalogProductsDemo::run);
         SCENARIOS.put(CatalogCompatibilityDemo.SCENARIO, CatalogCompatibilityDemo::run);
+        SCENARIOS.put(CatalogCategoryEventsDemo.SCENARIO, CatalogCategoryEventsDemo::run);
+        SCENARIOS.put(CatalogParameterChangesDemo.SCENARIO, CatalogParameterChangesDemo::run);
         SCENARIOS.put(CatalogCompatibleProductsDemo.SCENARIO, CatalogCompatibleProductsDemo::run);
         SCENARIOS.put(SCENARIO_CLASSIFIEDS, ClassifiedsDemo::run);
         SCENARIOS.put(OfferTagsDemo.SCENARIO, OfferTagsDemo::run);

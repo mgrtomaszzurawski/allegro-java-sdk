@@ -27,9 +27,13 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.ClassifiedsExtraPackage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.ClassifiedsPackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreview;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreviewSellingMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferFeePreviewRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferQuote;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -78,6 +82,18 @@ class PricingClientTest {
     private static final String COMMISSION_FEE_AMOUNT = "2.50";
     private static final String QUOTE_CYCLE = "P1M";
     private static final String BUY_NOW_FORMAT = "BUY_NOW";
+    private static final String AUCTION_FORMAT = "AUCTION";
+    private static final String NET_AMOUNT = "81.29";
+    private static final String STARTING_AMOUNT = "10.00";
+    private static final String MINIMAL_AMOUNT = "50.00";
+    private static final String FEE_MARKETPLACE = "allegro-pl";
+    private static final String PUBLICATION_DURATION = "P30D";
+    private static final String FUNDRAISING_ID = "camp-9";
+    private static final String BASE_PACKAGE_ID = "base-1";
+    private static final String EXTRA_PACKAGE_ID = "extra-1";
+    private static final String PARAM_ID = "11323";
+    private static final String PARAM_VALUE = "Red";
+    private static final String TRUE_LITERAL = "true";
 
     private static final String SCENARIO_REPLAY = "replay-401";
     private static final String STATE_REAUTHED = "reauthed";
@@ -303,6 +319,79 @@ class PricingClientTest {
 
             // then
             assertEquals(1, preview.commissions().size());
+            verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
+        }
+    }
+
+    @Test
+    void feePreview_whenFullBuyNowBody_mapsEveryFeeAffectingInputToTheWire(WireMockRuntimeInfo wmInfo) {
+        // given — every optional fee-affecting input must reach the request body
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(FEE_PREVIEW_PATH))
+                .withRequestBody(matchingJsonPath("$.marketplaceId", equalTo(FEE_MARKETPLACE)))
+                .withRequestBody(matchingJsonPath("$.offer.sellingMode.format", equalTo(BUY_NOW_FORMAT)))
+                .withRequestBody(matchingJsonPath("$.offer.sellingMode.price.amount", equalTo(PRICE_AMOUNT)))
+                .withRequestBody(matchingJsonPath("$.offer.sellingMode.netPrice.amount", equalTo(NET_AMOUNT)))
+                .withRequestBody(matchingJsonPath("$.offer.fundraisingCampaign.id", equalTo(FUNDRAISING_ID)))
+                .withRequestBody(matchingJsonPath("$.offer.publication.duration", equalTo(PUBLICATION_DURATION)))
+                .withRequestBody(matchingJsonPath("$.offer.promotion.emphasized10d", equalTo(TRUE_LITERAL)))
+                .withRequestBody(matchingJsonPath("$.offer.promotion.departmentPage", equalTo(TRUE_LITERAL)))
+                .withRequestBody(matchingJsonPath("$.offer.parameters[0].id", equalTo(PARAM_ID)))
+                .withRequestBody(matchingJsonPath("$.offer.parameters[0].values[0]", equalTo(PARAM_VALUE)))
+                .withRequestBody(matchingJsonPath(
+                        "$.classifiedsPackages.basePackage.id", equalTo(BASE_PACKAGE_ID)))
+                .withRequestBody(matchingJsonPath(
+                        "$.classifiedsPackages.extraPackages[0].id", equalTo(EXTRA_PACKAGE_ID)))
+                .withRequestBody(matchingJsonPath(
+                        "$.classifiedsPackages.extraPackages[0].republish", equalTo(TRUE_LITERAL)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(FEE_PREVIEW_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.pricing().feePreview(OfferFeePreviewRequest.builder()
+                    .categoryId(TEST_CATEGORY_ID)
+                    .sellingMode(FeePreviewSellingMode.buyNow(
+                            Money.of(PRICE_AMOUNT, TEST_CURRENCY), Money.of(NET_AMOUNT, TEST_CURRENCY)))
+                    .marketplaceId(FEE_MARKETPLACE)
+                    .fundraisingCampaignId(FUNDRAISING_ID)
+                    .publicationDuration(PUBLICATION_DURATION)
+                    .emphasizedForTenDays()
+                    .onDepartmentPage()
+                    .addParameter(OfferParameter.ofValues(PARAM_ID, List.of(PARAM_VALUE)))
+                    .classifiedsPackages(new ClassifiedsPackages(BASE_PACKAGE_ID,
+                            List.of(new ClassifiedsExtraPackage(EXTRA_PACKAGE_ID, true))))
+                    .build());
+
+            // then — the single mapped POST carried the whole body
+            verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
+        }
+    }
+
+    @Test
+    void feePreview_whenAuctionSellingMode_mapsStartingAndMinimalPrice(WireMockRuntimeInfo wmInfo) {
+        // given — an auction body carries the auction format and both prices
+        stubToken(TEST_TOKEN);
+        stubFor(post(urlEqualTo(FEE_PREVIEW_PATH))
+                .withRequestBody(matchingJsonPath("$.offer.sellingMode.format", equalTo(AUCTION_FORMAT)))
+                .withRequestBody(matchingJsonPath(
+                        "$.offer.sellingMode.startingPrice.amount", equalTo(STARTING_AMOUNT)))
+                .withRequestBody(matchingJsonPath(
+                        "$.offer.sellingMode.minimalPrice.amount", equalTo(MINIMAL_AMOUNT)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(FEE_PREVIEW_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            allegro.pricing().feePreview(OfferFeePreviewRequest.builder()
+                    .categoryId(TEST_CATEGORY_ID)
+                    .sellingMode(FeePreviewSellingMode.auction(
+                            Money.of(STARTING_AMOUNT, TEST_CURRENCY), Money.of(MINIMAL_AMOUNT, TEST_CURRENCY)))
+                    .build());
+
+            // then
             verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
         }
     }

@@ -247,6 +247,11 @@ public final class ApiPaths {
     public static final String PRODUCT_PARAMETERS_SEGMENT = "product-parameters";
     /** Category suggestions matched by name ({@code /sale/matching-categories}). */
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
+    /** Category-change event feed ({@code /sale/category-events}); cursor-paged by {@code from}. */
+    public static final String CATEGORY_EVENTS = "/sale/category-events";
+    /** Planned category-parameter changes ({@code /sale/category-parameters-scheduled-changes}); offset-paged. */
+    public static final String CATEGORY_PARAMETERS_SCHEDULED_CHANGES =
+            "/sale/category-parameters-scheduled-changes";
     /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
     public static final String PRODUCTS = "/sale/products";
     /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */

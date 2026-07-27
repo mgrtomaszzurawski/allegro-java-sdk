@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -35,6 +36,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTim
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaskResult;
+import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroFieldError;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.OfferBatchImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
@@ -43,6 +46,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.RetryH
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -68,6 +72,7 @@ class OfferBatchClientTest {
 
     private static final String OFFER_ONE = "111";
     private static final String OFFER_TWO = "222";
+    private static final String SCHEDULED_FOR = "2030-01-01T12:00:00Z";
     private static final int TASKS_PAGE_SIZE = 100;
     private static final int SECOND_TASKS_PAGE = 30;
     private static final int TOTAL_TASKS = TASKS_PAGE_SIZE + SECOND_TASKS_PAGE;
@@ -79,10 +84,25 @@ class OfferBatchClientTest {
             "{\"id\":\"cmd-1\",\"createdAt\":\"2026-01-01T00:00:00Z\","
                     + "\"completedAt\":\"2026-01-01T00:00:05Z\","
                     + "\"taskCount\":{\"total\":2,\"success\":2,\"failed\":0}}";
+    private static final OffsetDateTime REPORT_CREATED_AT = OffsetDateTime.parse("2026-01-01T00:00:00Z");
+    private static final OffsetDateTime REPORT_COMPLETED_AT = OffsetDateTime.parse("2026-01-01T00:00:05Z");
     private static final String TWO_TASKS =
             "{\"tasks\":[{\"offer\":{\"id\":\"" + OFFER_ONE + "\"},\"status\":\"SUCCESS\"},"
                     + "{\"offer\":{\"id\":\"" + OFFER_TWO + "\"},\"status\":\"SUCCESS\"}]}";
     private static final String EMPTY_TASKS = "{\"tasks\":[]}";
+    private static final String TASK_FIELD = "publication";
+    private static final String TASK_ERROR_CODE = "OFFER_NOT_MODIFIABLE";
+    private static final String TASK_ERROR_MESSAGE = "Offer cannot be published";
+    private static final String TASK_ERROR_USER_MESSAGE = "Nie można wystawić oferty";
+    private static final String TASK_ERROR_PATH = "offer";
+    private static final String TASK_ERROR_META_KEY = "offerId";
+    private static final String TASK_ERROR_META_VALUE = OFFER_ONE;
+    private static final String ONE_FAILED_TASK =
+            "{\"tasks\":[{\"offer\":{\"id\":\"" + OFFER_ONE + "\"},\"status\":\"ERROR\",\"field\":\""
+                    + TASK_FIELD + "\",\"message\":\"" + TASK_ERROR_MESSAGE + "\",\"errors\":[{\"code\":\""
+                    + TASK_ERROR_CODE + "\",\"message\":\"" + TASK_ERROR_MESSAGE + "\",\"userMessage\":\""
+                    + TASK_ERROR_USER_MESSAGE + "\",\"path\":\"" + TASK_ERROR_PATH + "\",\"metadata\":{\""
+                    + TASK_ERROR_META_KEY + "\":\"" + TASK_ERROR_META_VALUE + "\"}}]}]}";
     private static final String BAD_REQUEST_BODY =
             "{\"errors\":[{\"code\":\"INVALID\",\"message\":\"unknown offer\",\"path\":\"offerCriteria\"}]}";
     // Provenance: the real error shape live-observed for this endpoint (KNOWN-SERVER-BEHAVIORS
@@ -96,6 +116,7 @@ class OfferBatchClientTest {
     private static final String POLL_SCENARIO = "poll";
     private static final String STATE_COMPLETED = "completed";
     private static final String ACTION_JSON_PATH = "$.publication.action";
+    private static final String SCHEDULED_FOR_JSON_PATH = "$.publication.scheduledFor";
     private static final String OFFERS_JSON_PATH = "$.offerCriteria[0].offers[0].id";
     private static final String OFFERS_SECOND_JSON_PATH = "$.offerCriteria[0].offers[1].id";
     private static final String TYPE_JSON_PATH = "$.offerCriteria[0].type";
@@ -153,6 +174,9 @@ class OfferBatchClientTest {
         ObjectMapper mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .registerModule(new org.openapitools.jackson.nullable.JsonNullableModule())
+                // mirror the production mapper (AllegroClient) so dates serialize as ISO-8601,
+                // not epoch — otherwise scheduledFor would go on the wire as a numeric timestamp
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         RetryHandler retryHandler = new RetryHandler(HttpClient.newHttpClient(),
                 RetryPolicy.builder().enabled(false).build());
@@ -237,11 +261,54 @@ class OfferBatchClientTest {
                 .withRequestBody(matchingJsonPath(OFFERS_JSON_PATH, equalTo(OFFER_ONE)))
                 .withRequestBody(matchingJsonPath(OFFERS_SECOND_JSON_PATH, equalTo(OFFER_TWO))));
         // and the terminal report is mapped
+        assertEquals(REPORT_CREATED_AT, report.createdAt());
+        assertEquals(REPORT_COMPLETED_AT, report.completedAt());
         assertEquals(2, report.total());
         assertEquals(2, report.success());
         assertEquals(0, report.failed());
         assertEquals(2, report.tasks().size());
         assertEquals(OFFER_ONE, report.tasks().get(0).offerId());
+    }
+
+    @Test
+    void publish_whenScheduled_putsScheduledForInCommandBody(WireMockRuntimeInfo wmInfo) {
+        // given — a completed command and a future activation time
+        stubCompletedCommand();
+        stubFor(get(urlPathMatching(TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(TWO_TASKS)));
+        OffsetDateTime scheduledFor = OffsetDateTime.parse(SCHEDULED_FOR);
+
+        // when
+        batchClient(wmInfo).publish(List.of(OFFER_ONE), scheduledFor);
+
+        // then — the command body carries the ACTIVATE action and the scheduledFor timestamp
+        verify(1, putRequestedFor(urlPathMatching(COMMAND_PATH))
+                .withRequestBody(matchingJsonPath(ACTION_JSON_PATH, equalTo("ACTIVATE")))
+                .withRequestBody(matchingJsonPath(SCHEDULED_FOR_JSON_PATH, equalTo(SCHEDULED_FOR))));
+    }
+
+    @Test
+    void publish_whenTaskFails_mapsFieldAndTypedErrors(WireMockRuntimeInfo wmInfo) {
+        // given — a completed command whose single task failed with a typed error
+        stubCompletedCommand();
+        stubFor(get(urlPathMatching(TASKS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ONE_FAILED_TASK)));
+
+        // when
+        BatchReport report = batchClient(wmInfo).publish(List.of(OFFER_ONE));
+
+        // then — the failed task carries its field and the full typed errors[], not just a message
+        TaskResult task = report.tasks().get(0);
+        assertEquals(OFFER_ONE, task.offerId());
+        assertEquals(TASK_FIELD, task.field());
+        assertEquals(TASK_ERROR_MESSAGE, task.message());
+        assertEquals(1, task.errors().size());
+        AllegroFieldError error = task.errors().get(0);
+        assertEquals(TASK_ERROR_CODE, error.code());
+        assertEquals(TASK_ERROR_MESSAGE, error.message());
+        assertEquals(TASK_ERROR_USER_MESSAGE, error.userMessage());
+        assertEquals(TASK_ERROR_PATH, error.path());
+        assertEquals(TASK_ERROR_META_VALUE, error.metadata().get(TASK_ERROR_META_KEY));
     }
 
     @Test
@@ -395,7 +462,9 @@ class OfferBatchClientTest {
                 .withRequestBody(matchingJsonPath(MOD_STOCK_TYPE_JSON_PATH, equalTo(CHANGE_TYPE_FIXED)))
                 .withRequestBody(matchingJsonPath(MOD_STOCK_VALUE_JSON_PATH,
                         equalTo(String.valueOf(STOCK_VALUE)))));
-        // and the terminal report carries the per-field task subjects
+        // and the terminal report carries the per-field task subjects and its timestamps
+        assertEquals(REPORT_CREATED_AT, report.createdAt());
+        assertEquals(REPORT_COMPLETED_AT, report.completedAt());
         assertEquals(2, report.total());
         assertEquals(2, report.tasks().size());
         assertEquals(OFFER_ONE, report.tasks().get(0).offerId());
