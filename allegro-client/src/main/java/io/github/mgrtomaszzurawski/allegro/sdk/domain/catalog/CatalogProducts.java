@@ -4,9 +4,13 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductChangeProposalRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductProposalRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductChangeProposal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductProposal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import java.util.List;
 import java.util.stream.Stream;
@@ -55,4 +59,34 @@ public interface CatalogProducts {
      *     when the category defines none
      */
     List<ProductParameter> parametersIn(String categoryId);
+
+    /**
+     * Propose a new catalogue product Allegro does not yet carry. Allegro moderates
+     * the proposal; the returned {@link ProductProposal} carries the assigned id and
+     * its {@code PROPOSED}/{@code LISTED} status.
+     *
+     * @param request the product to propose (name and category required)
+     * @return the created proposal
+     */
+    ProductProposal propose(ProductProposalRequest request);
+
+    /**
+     * Propose a change to an existing catalogue product. Allegro moderates the change;
+     * read its state back later with {@link #changeProposal(String)}.
+     *
+     * @param productId the product to propose changes for
+     * @param request the corrected product picture (name required)
+     * @return the created change proposal, with its assigned id
+     */
+    ProductChangeProposal proposeChange(String productId, ProductChangeProposalRequest request);
+
+    /**
+     * Read a product change proposal by its id — the proposed fields and how Allegro
+     * resolved them.
+     *
+     * @param changeProposalId the change-proposal id (e.g. from
+     *     {@link #proposeChange(String, ProductChangeProposalRequest)})
+     * @return the change proposal
+     */
+    ProductChangeProposal changeProposal(String changeProposalId);
 }
