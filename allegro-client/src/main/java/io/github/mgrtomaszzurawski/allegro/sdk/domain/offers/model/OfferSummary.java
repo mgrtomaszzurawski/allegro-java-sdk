@@ -8,21 +8,32 @@ import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CurrentPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MarketplaceReferenceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferAdditionalServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1AdditionalMarketplaceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1DeliveryRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationMarketplacesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SaleInfoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SellingModeRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StatsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StockRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceAutomationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceAutomationRuleRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -61,6 +72,16 @@ import org.jspecify.annotations.Nullable;
  * @param fundraisingCampaignId the id of the offer's fundraising campaign, or {@code null}
  * @param currentPrice    the offer's current price (the auction/live price), or {@code null}
  * @param biddersCount    how many buyers have bid, or {@code null} when the payload omits it
+ * @param minimalPrice    the auction minimal (reserve) price, or {@code null}
+ * @param startingPrice   the auction starting price, or {@code null}
+ * @param priceAutomationRuleId the id of the automatic-pricing rule applied to the offer, or {@code null}
+ * @param scheduledStartAt when the offer's publication is scheduled to start, or {@code null}
+ * @param scheduledEndAt  when the offer's publication is scheduled to end, or {@code null}
+ * @param baseMarketplaceId the id of the marketplace the offer is primarily published on, or {@code null}
+ * @param additionalMarketplaceIds the ids of the additional marketplaces the offer is published on,
+ *                        in order (possibly empty)
+ * @param additionalMarketplaces the per-marketplace listing details (state, price, stats, sold),
+ *                        keyed by marketplace id (possibly empty)
  * @since 0.2.0
  */
 public record OfferSummary(
@@ -85,7 +106,23 @@ public record OfferSummary(
         @Nullable String additionalServicesGroupId,
         @Nullable String fundraisingCampaignId,
         @Nullable Money currentPrice,
-        @Nullable Integer biddersCount) {
+        @Nullable Integer biddersCount,
+        @Nullable Money minimalPrice,
+        @Nullable Money startingPrice,
+        @Nullable String priceAutomationRuleId,
+        @Nullable OffsetDateTime scheduledStartAt,
+        @Nullable OffsetDateTime scheduledEndAt,
+        @Nullable String baseMarketplaceId,
+        List<String> additionalMarketplaceIds,
+        Map<String, ListingMarketplace> additionalMarketplaces) {
+
+    /** Canonical constructor: defensively copies the marketplace collections to immutable views. */
+    public OfferSummary {
+        additionalMarketplaceIds =
+                additionalMarketplaceIds == null ? List.of() : List.copyOf(additionalMarketplaceIds);
+        additionalMarketplaces =
+                additionalMarketplaces == null ? Map.of() : Map.copyOf(additionalMarketplaces);
+    }
 
     /** Project a generated listing item onto the consumer record. */
     public static OfferSummary from(OfferListingDtoRaw raw) {
@@ -118,7 +155,50 @@ public record OfferSummary(
                 additionalServicesGroupIdOf(raw),
                 fundraisingCampaignIdOf(raw),
                 currentPriceOf(saleInfo),
-                saleInfo == null ? null : saleInfo.getBiddersCount());
+                saleInfo == null ? null : saleInfo.getBiddersCount(),
+                minimalPriceOf(sellingMode),
+                startingPriceOf(sellingMode),
+                priceAutomationRuleIdOf(sellingMode),
+                publication == null ? null : parseDateTime(publication.getStartingAt()),
+                publication == null ? null : parseDateTime(publication.getEndingAt()),
+                baseMarketplaceIdOf(publication),
+                additionalMarketplaceIdsOf(publication),
+                additionalMarketplacesOf(raw));
+    }
+
+    private static Map<String, ListingMarketplace> additionalMarketplacesOf(OfferListingDtoRaw raw) {
+        Map<String, OfferListingDtoV1AdditionalMarketplaceRaw> marketplaces = raw.getAdditionalMarketplaces();
+        if (marketplaces == null || marketplaces.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, ListingMarketplace> mapped = new HashMap<>();
+        marketplaces.forEach((marketplaceId, value) -> {
+            if (value != null) {
+                mapped.put(marketplaceId, ListingMarketplace.from(value));
+            }
+        });
+        return mapped;
+    }
+
+    private static @Nullable OfferListingDtoV1PublicationMarketplacesRaw marketplacesOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        return publication == null ? null : publication.getMarketplaces();
+    }
+
+    private static @Nullable String baseMarketplaceIdOf(@Nullable OfferListingDtoV1PublicationRaw publication) {
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
+        MarketplaceReferenceRaw base = marketplaces == null ? null : marketplaces.getBase();
+        return base == null ? null : base.getId();
+    }
+
+    private static List<String> additionalMarketplaceIdsOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
+        List<MarketplaceReferenceRaw> additional = marketplaces == null ? null : marketplaces.getAdditional();
+        if (additional == null) {
+            return List.of();
+        }
+        return additional.stream().map(MarketplaceReferenceRaw::getId).filter(Objects::nonNull).toList();
     }
 
     private static @Nullable Money currentPriceOf(@Nullable OfferListingDtoV1SaleInfoRaw saleInfo) {
@@ -127,6 +207,29 @@ public record OfferSummary(
         }
         CurrentPriceRaw price = saleInfo.getCurrentPrice();
         return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money minimalPriceOf(@Nullable OfferListingDtoV1SellingModeRaw sellingMode) {
+        if (sellingMode == null) {
+            return null;
+        }
+        MinimalPriceRaw price = sellingMode.getMinimalPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money startingPriceOf(@Nullable OfferListingDtoV1SellingModeRaw sellingMode) {
+        if (sellingMode == null) {
+            return null;
+        }
+        StartingPriceRaw price = sellingMode.getStartingPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable String priceAutomationRuleIdOf(
+            @Nullable OfferListingDtoV1SellingModeRaw sellingMode) {
+        PriceAutomationRaw priceAutomation = sellingMode == null ? null : sellingMode.getPriceAutomation();
+        PriceAutomationRuleRaw rule = priceAutomation == null ? null : priceAutomation.getRule();
+        return rule == null ? null : rule.getId();
     }
 
     private static @Nullable String externalIdOf(OfferListingDtoRaw raw) {

@@ -28,13 +28,9 @@ import org.jspecify.annotations.Nullable;
  * per-row version. {@link #volumeInCc()} is likewise present only on single-notice
  * reads/writes.
  *
- * <p>The notice's polymorphic {@code shipping} declaration (the
- * {@code COURIER_BY_SELLER} / {@code OWN_TRANSPORT} / {@code THIRD_PARTY_DELIVERY}
- * variants, each with its own courier / carrier / arrival details) is not modelled
- * here yet: the generated Layer-1 read DTO cannot deserialize those three methods —
- * their generated subtypes extend the write base, not the read base — so a real
- * notice carrying them fails to read until Layer-1 is regenerated. Exposing the
- * declaration is deferred behind that fix.
+ * <p>{@link #shipping()} is how the goods reach the warehouse — one of the four
+ * {@link AsnShipping} methods (courier / own transport / third party / already in
+ * warehouse) — or {@code null} when the notice carries no shipping declaration.
  *
  * @param id            the notice identifier (a UUID)
  * @param displayNumber the human-readable notice number
@@ -50,6 +46,7 @@ import org.jspecify.annotations.Nullable;
  * @param submittedAt   when the notice was submitted, once it has been
  * @param volumeInCc    the notice's volume in cubic centimetres, when known
  * @param version       the optimistic-concurrency token ({@code ETag}), when known
+ * @param shipping      how the goods reach the warehouse, when declared
  *
  * @since 0.4.0
  */
@@ -64,7 +61,8 @@ public record AdvanceShipNotice(
         @Nullable String labelsFileUrl,
         @Nullable OffsetDateTime submittedAt,
         @Nullable BigDecimal volumeInCc,
-        @Nullable String version) {
+        @Nullable String version,
+        @Nullable AsnShipping shipping) {
 
     /** Map a full single-notice response, carrying the response {@code ETag} as the version. */
     public static AdvanceShipNotice from(AdvanceShipNoticeResponseRaw raw, @Nullable String version) {
@@ -79,7 +77,8 @@ public record AdvanceShipNotice(
                 labelsUrl(raw.getLabels()),
                 raw.getSubmittedAt(),
                 raw.getVolumeInCc(),
-                version);
+                version,
+                AsnShipping.from(raw.getShipping()));
     }
 
     /** Map a create response, carrying the response {@code ETag} as the version. */
@@ -95,7 +94,8 @@ public record AdvanceShipNotice(
                 labelsUrl(raw.getLabels()),
                 null,
                 raw.getVolumeInCc(),
-                version);
+                version,
+                AsnShipping.from(raw.getShipping()));
     }
 
     /** Map a list row — no per-row version or volume is sent. */
@@ -111,7 +111,8 @@ public record AdvanceShipNotice(
                 labelsUrl(raw.getLabels()),
                 raw.getSubmittedAt(),
                 null,
-                null);
+                null,
+                AsnShipping.from(raw.getShipping()));
     }
 
     private static List<AsnItem> mapItems(@Nullable List<ProductItemRaw> items) {

@@ -249,11 +249,16 @@ public final class ApiPaths {
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
     /** Category-change event feed ({@code /sale/category-events}); cursor-paged by {@code from}. */
     public static final String CATEGORY_EVENTS = "/sale/category-events";
+    /** Planned category-parameter changes ({@code /sale/category-parameters-scheduled-changes}); offset-paged. */
+    public static final String CATEGORY_PARAMETERS_SCHEDULED_CHANGES =
+            "/sale/category-parameters-scheduled-changes";
     /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
     public static final String PRODUCTS = "/sale/products";
     /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
     public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
             "/sale/compatibility-list/supported-categories";
+    /** Suggested compatibility list for an offer or product ({@code /sale/compatibility-list-suggestions}). */
+    public static final String COMPATIBILITY_SUGGESTIONS = "/sale/compatibility-list-suggestions";
     /** Compatible-products database search ({@code /sale/compatible-products}). */
     public static final String COMPATIBLE_PRODUCTS = "/sale/compatible-products";
     /** Compatible-product groups ({@code /sale/compatible-products/groups}). */
@@ -427,6 +432,9 @@ public final class ApiPaths {
     /** Carrier pickup-time proposals for a set of shipments. */
     public static final String PICKUP_PROPOSALS = "/shipment-management/pickup-proposals";
 
+    /** Delivery proposals for an order ({@code /shipment-management/delivery-proposals/{orderId}}); GET. */
+    public static final String DELIVERY_PROPOSALS = "/shipment-management/delivery-proposals";
+
     // ---- fulfillment (bucket I) ----
     /** Seller's active removal preference for One Fulfillment goods. */
     public static final String FULFILLMENT_REMOVAL_PREFERENCES = "/fulfillment/removal/preferences";
@@ -526,6 +534,10 @@ public final class ApiPaths {
     public static final String RESPONSIBLE_PERSONS = "/sale/responsible-persons";
     /** Product-compliance (GPSR) responsible producers dictionary. */
     public static final String RESPONSIBLE_PRODUCERS = "/sale/responsible-producers";
+    /** Additional-service definition catalog by category. */
+    public static final String ADDITIONAL_SERVICES_CATEGORIES = "/sale/offer-additional-services/categories";
+    /** Seller additional-services groups (and their translations). */
+    public static final String ADDITIONAL_SERVICES_GROUPS = "/sale/offer-additional-services/groups";
     /** Seller size tables ({@code /sale/size-tables}). */
     public static final String SIZE_TABLES = "/sale/size-tables";
     /** Allegro-provided size-table templates ({@code /sale/size-tables-templates}). */

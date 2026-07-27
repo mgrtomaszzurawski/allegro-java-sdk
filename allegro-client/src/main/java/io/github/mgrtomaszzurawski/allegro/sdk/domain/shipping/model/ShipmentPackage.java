@@ -69,6 +69,22 @@ public record ShipmentPackage(
                 raw.getWaybill());
     }
 
+    /**
+     * Map a generated request DTO (as echoed in a delivery proposal's suggested
+     * input) to the public record. The waybill is a read-only carrier field and
+     * is never present on a request DTO, so it is {@code null}.
+     */
+    public static ShipmentPackage fromRequest(PackageRequestDtoRaw raw) {
+        return new ShipmentPackage(
+                PackageType.fromWire(raw.getType() == null ? null : raw.getType().getValue()),
+                dimension(raw.getLength()),
+                dimension(raw.getWidth()),
+                dimension(raw.getHeight()),
+                weight(raw.getWeight()),
+                raw.getTextOnLabel(),
+                null);
+    }
+
     /** Build the generated request DTO for a create body (writable fields only). */
     public PackageRequestDtoRaw toRaw() {
         PackageRequestDtoRaw raw = new PackageRequestDtoRaw();

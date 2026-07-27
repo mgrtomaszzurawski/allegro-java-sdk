@@ -231,6 +231,24 @@ class ProductSetElementTest {
     }
 
     @Test
+    void from_whenAdvertisementProposedProductHasNoId_mapsNullProductId() {
+        // given — an advertisement's create response echoes a proposed product with no catalogue id
+        SaleProductOfferResponseV1AllOfProductSetRaw raw =
+                new SaleProductOfferResponseV1AllOfProductSetRaw()
+                        .product(new SaleProductOfferResponseV1AllOfProductSetAllOfProductRaw()
+                                .parameters(List.of(new ParameterProductOfferResponseRaw()
+                                        .id(PARAM_ID).name(PARAM_NAME).values(List.of(PARAM_VALUE)))));
+
+        // when — maps without NPE (was requireNonNull(product.id) before advertisement support)
+        ProductSetElement element = ProductSetElement.from(raw);
+
+        // then — the product id degrades to null; the rest of the element still maps
+        assertNull(element.productId());
+        assertEquals(1, element.productParameters().size());
+        assertEquals(PARAM_ID, element.productParameters().get(0).id());
+    }
+
+    @Test
     void from_whenQuantityMissing_defaultsToOne() {
         // given
         SaleProductOfferResponseV1AllOfProductSetRaw raw =

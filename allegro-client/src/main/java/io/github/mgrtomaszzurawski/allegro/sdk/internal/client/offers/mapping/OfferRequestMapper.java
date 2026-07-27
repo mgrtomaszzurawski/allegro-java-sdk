@@ -75,8 +75,11 @@ public final class OfferRequestMapper {
         SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
                 .name(request.name())
                 .category(new OfferCategoryRequestRaw().id(request.categoryId()))
-                .sellingMode(sellingModeOf(request))
-                .stock(stockOf(request));
+                .sellingMode(sellingModeOf(request));
+        // An ADVERTISEMENT offer carries no stock; only send the stock element when set.
+        if (request.availableStock() != null) {
+            body.stock(stockOf(request));
+        }
         applyContentFields(body, request);
         applyOfferMetadata(body, request);
         applyReferencesAndSettings(body, request);

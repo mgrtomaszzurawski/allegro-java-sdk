@@ -63,6 +63,15 @@ Use `OfferFilter.all()` to list every offer. `OfferSummary` is a lighter project
 `Offer` — id, name, category, format, status, Buy Now price, available/sold stock and the
 primary image URL — with the same null rules (no `buyNowPrice` for an auction, etc.).
 
+When you only need the *number* of matching offers (a dashboard total, say), use `countOffers`
+rather than `streamOffers(filter).count()` — the latter pages through every match, while
+`countOffers` makes a single request regardless of how many offers you have:
+
+```java
+long active = client.offers().countOffers(
+        OfferFilter.builder().status(OfferStatus.ACTIVE).build());
+```
+
 To find offers that still need work, `streamUnfilledParameters()` lists those missing category
 parameters:
 

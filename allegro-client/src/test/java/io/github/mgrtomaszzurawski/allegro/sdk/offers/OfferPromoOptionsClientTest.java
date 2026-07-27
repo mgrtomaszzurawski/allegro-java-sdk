@@ -11,6 +11,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,6 +23,8 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionInterceptor;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AvailablePromotionPackages;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplaceAvailablePackages;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplacePromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
@@ -45,14 +48,30 @@ class OfferPromoOptionsClientTest {
     private static final String BASE_NAME = "Bold title";
     private static final String BASE_CYCLE = "P7D";
     private static final String EXTRA_ID = "HIGHLIGHT";
+    private static final String MARKETPLACE_ID = "allegro-pl";
+    private static final String ADDL_MARKETPLACE_ID = "allegro-cz";
+    private static final String PENDING_BASE_ID = "BOLD_NEXT";
 
-    private static final String AVAILABLE_BODY = "{\"basePackages\":[{\"id\":\"" + BASE_ID
+    private static final String AVAILABLE_BODY = "{\"marketplaceId\":\"" + MARKETPLACE_ID + "\","
+            + "\"basePackages\":[{\"id\":\"" + BASE_ID
             + "\",\"name\":\"" + BASE_NAME + "\",\"cycleDuration\":\"" + BASE_CYCLE + "\"}],"
-            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\",\"name\":\"Highlight\"}]}";
+            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\",\"name\":\"Highlight\"}],"
+            + "\"additionalMarketplaces\":[{\"marketplaceId\":\"" + ADDL_MARKETPLACE_ID + "\","
+            + "\"basePackages\":[{\"id\":\"" + BASE_ID + "\",\"name\":\"" + BASE_NAME
+            + "\",\"cycleDuration\":\"" + BASE_CYCLE + "\"}],"
+            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\",\"name\":\"Highlight\"}]}]}";
     private static final String FOR_OFFER_BODY = "{\"offerId\":\"" + OFFER_ID + "\","
+            + "\"marketplaceId\":\"" + MARKETPLACE_ID + "\","
             + "\"basePackage\":{\"id\":\"" + BASE_ID + "\",\"validFrom\":\"2026-01-01T00:00:00Z\","
             + "\"validTo\":\"2026-02-01T00:00:00Z\"},"
-            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\"}]}";
+            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\"}],"
+            + "\"pendingChanges\":{\"basePackage\":{\"id\":\"" + PENDING_BASE_ID + "\"}},"
+            + "\"additionalMarketplaces\":[{\"marketplaceId\":\"" + ADDL_MARKETPLACE_ID + "\","
+            + "\"basePackage\":{\"id\":\"" + BASE_ID + "\"},"
+            + "\"extraPackages\":[{\"id\":\"" + EXTRA_ID + "\"}],"
+            + "\"pendingChanges\":{\"basePackage\":{\"id\":\"" + PENDING_BASE_ID + "\"}}}]}";
+    private static final String MINIMAL_FOR_OFFER_BODY = "{\"offerId\":\"" + OFFER_ID + "\","
+            + "\"basePackage\":{\"id\":\"" + BASE_ID + "\"}}";
     private static final String NOT_FOUND_BODY =
             "{\"errors\":[{\"code\":\"NOT_FOUND\",\"message\":\"offer not found\"}]}";
 
@@ -106,17 +125,26 @@ class OfferPromoOptionsClientTest {
         // when
         AvailablePromotionPackages available = promoOptions(wmInfo).availablePackages();
 
-        // then
+        // then — base marketplace packages map
+        assertEquals(MARKETPLACE_ID, available.marketplaceId());
         assertEquals(1, available.basePackages().size());
         assertEquals(BASE_ID, available.basePackages().get(0).id());
         assertEquals(BASE_NAME, available.basePackages().get(0).name());
         assertEquals(BASE_CYCLE, available.basePackages().get(0).cycleDuration());
         assertEquals(1, available.extraPackages().size());
         assertEquals(EXTRA_ID, available.extraPackages().get(0).id());
+        // and the per-additional-marketplace packages, keyed by marketplace id
+        assertEquals(1, available.additionalMarketplaces().size());
+        MarketplaceAvailablePackages additional = available.additionalMarketplaces().get(ADDL_MARKETPLACE_ID);
+        assertNotNull(additional);
+        assertEquals(BASE_ID, additional.basePackages().get(0).id());
+        assertEquals(BASE_CYCLE, additional.basePackages().get(0).cycleDuration());
+        assertEquals(EXTRA_ID, additional.extraPackages().get(0).id());
     }
 
     @Test
-    void forOffer_whenOptionsApplied_mapsBaseAndExtraWithValidity(WireMockRuntimeInfo wmInfo) {
+    void forOffer_whenOptionsApplied_mapsMarketplacePendingAndAdditionalMarketplaces(
+            WireMockRuntimeInfo wmInfo) {
         // given
         stubFor(get(urlEqualTo(FOR_OFFER_PATH))
                 .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
@@ -126,13 +154,45 @@ class OfferPromoOptionsClientTest {
         // when
         OfferPromoOptions applied = promoOptions(wmInfo).forOffer(OFFER_ID);
 
-        // then
+        // then — base marketplace, packages and validity map
         assertEquals(OFFER_ID, applied.offerId());
+        assertEquals(MARKETPLACE_ID, applied.marketplaceId());
         assertNotNull(applied.basePackage());
         assertEquals(BASE_ID, applied.basePackage().id());
         assertNotNull(applied.basePackage().validFrom());
         assertEquals(1, applied.extraPackages().size());
         assertEquals(EXTRA_ID, applied.extraPackages().get(0).id());
+        // and the pending base-package change queued for the next cycle
+        assertNotNull(applied.pendingChanges());
+        assertNotNull(applied.pendingChanges().basePackage());
+        assertEquals(PENDING_BASE_ID, applied.pendingChanges().basePackage().id());
+        // and the per-additional-marketplace options, keyed by marketplace id
+        assertEquals(1, applied.additionalMarketplaces().size());
+        MarketplacePromoOptions additional = applied.additionalMarketplaces().get(ADDL_MARKETPLACE_ID);
+        assertNotNull(additional);
+        assertEquals(BASE_ID, additional.basePackage().id());
+        assertEquals(1, additional.extraPackages().size());
+        assertEquals(EXTRA_ID, additional.extraPackages().get(0).id());
+        assertNotNull(additional.pendingChanges());
+        assertEquals(PENDING_BASE_ID, additional.pendingChanges().basePackage().id());
+    }
+
+    @Test
+    void forOffer_whenNoPendingOrAdditionalMarketplaces_mapsNullAndEmptyDefaults(
+            WireMockRuntimeInfo wmInfo) {
+        // given a response that omits marketplaceId, pendingChanges and additionalMarketplaces
+        stubFor(get(urlEqualTo(FOR_OFFER_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(MINIMAL_FOR_OFFER_BODY)));
+
+        // when
+        OfferPromoOptions applied = promoOptions(wmInfo).forOffer(OFFER_ID);
+
+        // then the optional blocks tolerate absence: null pending, empty marketplace map
+        assertEquals(BASE_ID, applied.basePackage().id());
+        assertNull(applied.marketplaceId());
+        assertNull(applied.pendingChanges());
+        assertTrue(applied.additionalMarketplaces().isEmpty());
     }
 
     @Test

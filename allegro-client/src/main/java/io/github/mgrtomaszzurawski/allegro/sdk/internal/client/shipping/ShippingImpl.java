@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 import io.github.mgrtomaszzurawski.allegro.client.model.CancelShipmentCommandStatusDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CreatePickupCommandStatusDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CreateShipmentCommandStatusDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProposalDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.Error400Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseDeliveryMethodsInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfDeliveryMethodsUsingGET200ResponseRaw;
@@ -23,6 +24,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.PointsOfService;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.Shipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.ShippingRates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryProposal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.LabelRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Pickup;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PickupProposals;
@@ -72,6 +74,7 @@ public final class ShippingImpl implements Shipping {
     private static final String OP_REQUEST_PICKUP = "request pickup";
     private static final String OP_REQUEST_PICKUP_POLL = "poll pickup request";
     private static final String OP_GET_PICKUP = "get pickup";
+    private static final String OP_DELIVERY_OPTIONS = "get delivery options for order";
 
     private static final String OCTET_STREAM = "application/octet-stream";
     private static final String ERR_CREATE_FAILED =
@@ -83,6 +86,7 @@ public final class ShippingImpl implements Shipping {
     private static final String ERR_NO_PICKUP_ID = "pickupId is required";
     private static final String ERR_PICKUP_FAILED =
             "Pickup request command finished with a non-success status (%s)";
+    private static final String ERR_NO_ORDER_ID = "orderId is required";
     private static final String EMPTY = "";
     /**
      * Status code carried by the exception for an asynchronous command that
@@ -160,6 +164,15 @@ public final class ShippingImpl implements Shipping {
         PickupDtoRaw raw = http.getAuthenticated(
                 ApiPaths.subPath(ApiPaths.PICKUPS, pickupId), PickupDtoRaw.class, OP_GET_PICKUP);
         return Pickup.from(raw);
+    }
+
+    @Override
+    public DeliveryProposal deliveryOptionsFor(String orderId) {
+        requireOrderId(orderId);
+        DeliveryProposalDtoRaw raw = http.getAuthenticated(
+                ApiPaths.subPath(ApiPaths.DELIVERY_PROPOSALS, orderId),
+                DeliveryProposalDtoRaw.class, OP_DELIVERY_OPTIONS);
+        return DeliveryProposal.from(raw);
     }
 
     @Override
@@ -285,6 +298,12 @@ public final class ShippingImpl implements Shipping {
     private static void requirePickupId(String pickupId) {
         if (pickupId == null || pickupId.isBlank()) {
             throw new IllegalArgumentException(ERR_NO_PICKUP_ID);
+        }
+    }
+
+    private static void requireOrderId(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            throw new IllegalArgumentException(ERR_NO_ORDER_ID);
         }
     }
 

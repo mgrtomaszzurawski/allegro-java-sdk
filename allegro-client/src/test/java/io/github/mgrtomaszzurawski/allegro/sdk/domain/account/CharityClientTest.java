@@ -43,13 +43,14 @@ class CharityClientTest {
     private static final String PHRASE = "children";
     private static final int LIMIT = 20;
     private static final String ORGANIZATION_NAME = "Kids Foundation";
+    private static final String CAMPAIGN_NAME = "Help Kids";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
             """;
     private static final String CAMPAIGNS_RESPONSE = """
-            {"campaigns":[{"id":"c1","name":"Help Kids","organization":{"name":"%s"}}]}
-            """.formatted(ORGANIZATION_NAME);
+            {"campaigns":[{"id":"c1","name":"%s","organization":{"name":"%s"}}]}
+            """.formatted(CAMPAIGN_NAME, ORGANIZATION_NAME);
 
     private static AllegroClient client(WireMockRuntimeInfo wmInfo) {
         stubFor(post(urlEqualTo(TestHttpConstants.TOKEN_PATH))
@@ -78,6 +79,7 @@ class CharityClientTest {
             // then — organization flattened to its name
             assertEquals(1, campaigns.size());
             assertEquals("c1", campaigns.get(0).id());
+            assertEquals(CAMPAIGN_NAME, campaigns.get(0).name());
             assertEquals(ORGANIZATION_NAME, campaigns.get(0).organizationName());
             // and — the beta Accept header + required query params went on the wire
             verify(getRequestedFor(urlPathEqualTo(CAMPAIGNS_PATH))

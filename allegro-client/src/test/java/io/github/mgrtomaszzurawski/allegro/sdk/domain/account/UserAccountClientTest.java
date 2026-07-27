@@ -26,6 +26,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SalesQuality
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -109,12 +111,19 @@ class UserAccountClientTest {
             // when
             SalesQuality quality = allegro.user().salesQuality();
 
-            // then
+            // then — every scalar of the day and its metric is pinned, not just grade/code
             assertEquals(1, quality.days().size());
             SalesQuality.Day day = quality.days().get(0);
+            assertEquals(LocalDate.of(2025, 1, 15), day.resultFor());
+            assertEquals(0, new BigDecimal("95.5").compareTo(day.score()));
+            assertEquals(0, new BigDecimal("100").compareTo(day.maxScore()));
             assertEquals("A", day.grade());
             assertEquals(1, day.metrics().size());
-            assertEquals(METRIC_CODE, day.metrics().get(0).code());
+            SalesQuality.Metric metric = day.metrics().get(0);
+            assertEquals(METRIC_CODE, metric.code());
+            assertEquals("Shipment time", metric.name());
+            assertEquals(0, new BigDecimal("48").compareTo(metric.score()));
+            assertEquals(0, new BigDecimal("50").compareTo(metric.maxScore()));
         }
     }
 
@@ -129,10 +138,16 @@ class UserAccountClientTest {
             // when
             SmartClassification report = allegro.user().smartClassification();
 
-            // then — request carried no marketplaceId, report mapped
+            // then — request carried no marketplaceId, report mapped incl. the
+            // positive lastChanged timestamp and every condition scalar
             assertTrue(report.fulfilled());
+            assertEquals(OffsetDateTime.parse("2025-01-15T10:00:00Z"), report.lastChanged());
             assertEquals(1, report.conditions().size());
-            assertEquals(METRIC_CODE, report.conditions().get(0).code());
+            SmartClassification.Condition condition = report.conditions().get(0);
+            assertEquals(METRIC_CODE, condition.code());
+            assertEquals("Shipment time", condition.name());
+            assertEquals("ships fast", condition.description());
+            assertTrue(condition.required());
             assertEquals(List.of("dm-1"), report.excludedDeliveryMethodIds());
             verify(1, getRequestedFor(urlEqualTo(SMART_PATH)));
         }

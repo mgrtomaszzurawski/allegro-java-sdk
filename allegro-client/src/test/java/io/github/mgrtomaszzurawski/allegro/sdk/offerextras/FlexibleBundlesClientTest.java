@@ -24,6 +24,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -40,6 +41,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.BundleCr
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundle;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleDiscountType;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleOfferMarketplace;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSlotOffer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.FlexibleBundleSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.MarketplaceDiscount;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.SlotDiscount;
@@ -75,6 +78,8 @@ class FlexibleBundlesClientTest {
     private static final String SECOND_SUMMARY_ID = "flex-2";
     private static final String OFFER_A = "offer-a";
     private static final String MARKETPLACE_PL = "allegro-pl";
+    private static final String MARKETPLACE_CZ = "allegro-cz";
+    private static final String REASON_ENDED = "ENDED";
     private static final int WHOLE_PERCENTAGE = 10;
     private static final int SLOT_PERCENTAGE = 15;
     private static final int MIN_BOUGHT = 2;
@@ -106,18 +111,30 @@ class FlexibleBundlesClientTest {
     private static final String LISTING_PAGE_2 = """
             {"bundles":[%s],"nextPage":null}
             """.formatted(SUMMARY.replace(SUMMARY_ID, SECOND_SUMMARY_ID));
-    // spec-derived: not yet wire-verified. A full bundle with one slot and a
-    // per-slot discount (the get/slot-discount mapping is verified live before
-    // the flexible-bundle write follow-up, once a seller token is restored).
+    // Live-verified (2026-07-26, sandbox get-by-id through the SDK): a full bundle
+    // with one slot, a per-slot discount, and per-marketplace offer availability
+    // (one available marketplace, one unavailable with a reason).
     private static final String FULL_BUNDLE = """
             {"id":"%s","createdBy":"USER","createdAt":"2026-07-01T10:15:30Z",
              "slots":[{"id":"22222222-2222-2222-2222-222222222222","order":1,"entryPoint":true,
                "requiredQuantity":1,
-               "offers":[{"id":"%s","excludedFromDiscount":false,"entryPoint":true}]}],
+               "offers":[{"id":"%s","excludedFromDiscount":false,"entryPoint":true,
+                 "marketplaces":[{"id":"%s","availability":{"available":true,"reasons":[]}},
+                   {"id":"%s","availability":{"available":false,"reasons":["%s"]}}]}]}],
              "discount":{"type":"SLOT_DISCOUNT","bundle":null,
                "slot":{"slots":[{"order":1,
                  "discounts":[{"marketplaceId":"%s","percentage":%d}]}]}}}
-            """.formatted(TEST_FLEX_ID, OFFER_A, MARKETPLACE_PL, SLOT_PERCENTAGE);
+            """.formatted(TEST_FLEX_ID, OFFER_A, MARKETPLACE_PL, MARKETPLACE_CZ, REASON_ENDED,
+                    MARKETPLACE_PL, SLOT_PERCENTAGE);
+    // A get response whose offer omits the marketplaces[] array — the mapper must
+    // yield an empty list, never null (defensive null-guard coverage).
+    private static final String BUNDLE_OFFER_NO_MARKETPLACES = """
+            {"id":"%s","createdBy":"USER","createdAt":"2026-07-01T10:15:30Z",
+             "slots":[{"id":"22222222-2222-2222-2222-222222222222","order":1,"entryPoint":true,
+               "requiredQuantity":1,
+               "offers":[{"id":"%s","excludedFromDiscount":false,"entryPoint":true}]}],
+             "discount":null}
+            """.formatted(TEST_FLEX_ID, OFFER_A);
     // spec-derived: not yet wire-verified (errors[] contract shape).
     private static final String BAD_REQUEST_RESPONSE = """
             {"errors":[{"code":"ConstraintViolationException","message":"invalid",
@@ -268,12 +285,41 @@ class FlexibleBundlesClientTest {
             // then — the slot, its offer, and the per-slot discount are mapped
             assertEquals(TEST_FLEX_ID, bundle.id());
             assertEquals(1, bundle.slots().size());
-            assertEquals(OFFER_A, bundle.slots().get(0).offers().get(0).offerId());
-            assertFalse(bundle.slots().get(0).offers().get(0).excludedFromDiscount());
+            FlexibleBundleSlotOffer offer = bundle.slots().get(0).offers().get(0);
+            assertEquals(OFFER_A, offer.offerId());
+            assertFalse(offer.excludedFromDiscount());
+            // per-marketplace availability: one available (no reasons), one blocked with a reason
+            assertEquals(2, offer.marketplaces().size());
+            FlexibleBundleOfferMarketplace availablePl = offer.marketplaces().get(0);
+            assertEquals(MARKETPLACE_PL, availablePl.marketplaceId());
+            assertTrue(availablePl.available());
+            assertTrue(availablePl.reasons().isEmpty());
+            FlexibleBundleOfferMarketplace blockedCz = offer.marketplaces().get(1);
+            assertEquals(MARKETPLACE_CZ, blockedCz.marketplaceId());
+            assertFalse(blockedCz.available());
+            assertEquals(List.of(REASON_ENDED), blockedCz.reasons());
             assertEquals(FlexibleBundleDiscountType.SLOT_DISCOUNT, bundle.discount().type());
             assertEquals(SLOT_PERCENTAGE,
                     bundle.discount().slotDiscounts().get(0).marketplaceDiscounts().get(0).percentage());
             verify(1, getRequestedFor(urlPathEqualTo(FLEX_BUNDLE_PATH)));
+        }
+    }
+
+    @Test
+    void get_whenOfferHasNoMarketplaces_mapsEmptyList(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(get(urlPathEqualTo(FLEX_BUNDLE_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(BUNDLE_OFFER_NO_MARKETPLACES)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            FlexibleBundle bundle = allegro.offers().flexibleBundles().get(TEST_FLEX_ID);
+
+            // then — a missing marketplaces[] maps to an empty list, never null
+            assertTrue(bundle.slots().get(0).offers().get(0).marketplaces().isEmpty());
         }
     }
 
