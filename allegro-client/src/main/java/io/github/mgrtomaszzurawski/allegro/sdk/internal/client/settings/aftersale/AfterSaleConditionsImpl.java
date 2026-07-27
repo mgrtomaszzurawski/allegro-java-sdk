@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.aftersale;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesAttachmentRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantiesListImpliedWarrantyBasicRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyBasicRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyResponseRaw;
@@ -17,6 +18,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.ReturnPolicyUpdateRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.builder.WarrantyRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.AfterSalesAttachment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarranty;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ImpliedWarrantySummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.model.ReturnPolicy;
@@ -28,6 +30,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRu
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -63,6 +66,11 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
     private static final String ERR_IMPLIED_ID_NULL = "impliedWarrantyId must not be null";
     private static final String ERR_RETURN_POLICY_ID_NULL = "returnPolicyId must not be null";
     private static final String ERR_REQUEST_NULL = "request must not be null";
+    private static final String ERR_CONTENT_NULL = "content must not be null";
+    private static final String ERR_CONTENT_TYPE_NULL = "contentType must not be null";
+    private static final String ERR_ATTACHMENT_ID = "attachment declaration returned no id";
+    private static final String OP_DECLARE_ATTACHMENT = "declare after-sale attachment";
+    private static final String OP_UPLOAD_ATTACHMENT = "upload after-sale attachment";
 
     private final HttpSupport http;
 
@@ -225,6 +233,26 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
      * defensive, never decisive — the walk always stops after the first page;
      * the guard still holds should the caps ever widen.
      */
+    @Override
+    public AfterSalesAttachment uploadAttachment(byte[] content, String contentType) {
+        Objects.requireNonNull(content, ERR_CONTENT_NULL);
+        Objects.requireNonNull(contentType, ERR_CONTENT_TYPE_NULL);
+        // Declare the attachment (untyped metadata body), then PUT the bytes to the
+        // returned id — Allegro's two-step warranty-document upload.
+        AfterSalesServicesAttachmentRaw declared = http.request(OP_DECLARE_ATTACHMENT)
+                .post(ApiPaths.AFTER_SALES_ATTACHMENTS)
+                .jsonBody(Map.of())
+                .fetch(AfterSalesServicesAttachmentRaw.class);
+        if (declared.getId() == null) {
+            throw new IllegalStateException(ERR_ATTACHMENT_ID);
+        }
+        AfterSalesServicesAttachmentRaw uploaded = http.request(OP_UPLOAD_ATTACHMENT)
+                .put(ApiPaths.subPath(ApiPaths.AFTER_SALES_ATTACHMENTS, declared.getId().toString()))
+                .binaryBody(content, contentType)
+                .fetch(AfterSalesServicesAttachmentRaw.class);
+        return Objects.requireNonNull(AfterSalesAttachment.from(uploaded));
+    }
+
     private static boolean hasNextPage(int pageSize, int offset) {
         return pageSize == PAGE_LIMIT && offset + PAGE_LIMIT <= MAX_OFFSET;
     }
