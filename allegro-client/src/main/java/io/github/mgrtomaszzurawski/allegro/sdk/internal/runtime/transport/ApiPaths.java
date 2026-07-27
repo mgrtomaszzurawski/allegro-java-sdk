@@ -522,6 +522,10 @@ public final class ApiPaths {
     public static final String RESPONSIBLE_PERSONS = "/sale/responsible-persons";
     /** Product-compliance (GPSR) responsible producers dictionary. */
     public static final String RESPONSIBLE_PRODUCERS = "/sale/responsible-producers";
+    /** Additional-service definition catalog by category. */
+    public static final String ADDITIONAL_SERVICES_CATEGORIES = "/sale/offer-additional-services/categories";
+    /** Seller additional-services groups (and their translations). */
+    public static final String ADDITIONAL_SERVICES_GROUPS = "/sale/offer-additional-services/groups";
     /** Seller size tables ({@code /sale/size-tables}). */
     public static final String SIZE_TABLES = "/sale/size-tables";
     /** Allegro-provided size-table templates ({@code /sale/size-tables-templates}). */

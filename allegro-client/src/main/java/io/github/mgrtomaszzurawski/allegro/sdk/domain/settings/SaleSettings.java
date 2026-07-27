@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.AdditionalServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.AfterSaleConditions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.Compliance;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.SizeTables;
@@ -36,6 +37,13 @@ public interface SaleSettings {
      * @return the compliance sub-facade
      */
     Compliance compliance();
+
+    /**
+     * Additional-services groups, their definition catalog and translations.
+     *
+     * @return the additional-services sub-facade
+     */
+    AdditionalServices additionalServices();
 
     /**
      * The seller's size tables and the templates they are built from.
