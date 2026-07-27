@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryMethod;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.DeliveryProposal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.LabelRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.Shipment;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentRequest;
@@ -102,6 +103,25 @@ public interface Shipping {
      * @return the available delivery methods, possibly empty
      */
     List<DeliveryMethod> deliveryMethods();
+
+    /**
+     * Retrieve Allegro's shipping suggestion for an order: a ready-to-submit
+     * shipment ({@link DeliveryProposal#suggestedInput()}, which can be passed
+     * straight to {@link #createShipment(ShipmentRequest)} or adjusted first) plus
+     * the delivery options available for that order.
+     *
+     * <p>This call has no side effects, but Allegro serves the resource under the
+     * {@code shipments:write} scope (it belongs to the shipment-creation flow), so
+     * the app must be authorized for that scope. It is the supported successor to
+     * the deprecated delivery-services resource.
+     *
+     * @param orderId the order to retrieve delivery options for
+     * @return the delivery proposal for the order
+     * @throws IllegalArgumentException if {@code orderId} is null or blank
+     * @throws io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException
+     *     if no order with that id exists
+     */
+    DeliveryProposal deliveryOptionsFor(String orderId);
 
     /**
      * Points of service — the seller's personal-collection locations.

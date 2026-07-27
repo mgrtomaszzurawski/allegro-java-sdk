@@ -1,0 +1,69 @@
+{
+  "orderId": "ORDER-9001",
+  "suggestedInput": {
+    "credentialsId": "CRED-77",
+    "sender": {
+      "name": "Sender One",
+      "company": "Seller Ltd",
+      "street": "Grunwaldzka 100",
+      "postalCode": "80-244",
+      "city": "Gdansk",
+      "state": "pomorskie",
+      "email": "sender@example.com",
+      "phone": "+48500100100"
+    },
+    "receiver": {
+      "name": "Receiver Two",
+      "street": "Marszalkowska 1",
+      "postalCode": "00-001",
+      "city": "Warszawa",
+      "email": "receiver@example.com",
+      "phone": "+48500200200",
+      "point": "POP-42"
+    },
+    "referenceNumber": "REF-2026-01",
+    "packages": [
+      {
+        "type": "PACKAGE",
+        "length": { "value": 30.0, "unit": "CENTIMETER" },
+        "width": { "value": 20.0, "unit": "CENTIMETER" },
+        "height": { "value": 10.0, "unit": "CENTIMETER" },
+        "weight": { "value": 2.5, "unit": "KILOGRAMS" },
+        "textOnLabel": "handle with care"
+      }
+    ],
+    "insurance": { "amount": "199.99", "currency": "PLN" },
+    "cashOnDelivery": {
+      "amount": "250.00",
+      "currency": "PLN",
+      "ownerName": "Seller Ltd",
+      "iban": "PL61109010140000071219812874"
+    },
+    "labelFormat": "PDF"
+  },
+  "deliveryOptions": [
+    {
+      "deliveryType": "DOOR",
+      "paymentType": "PREPAID",
+      "packageType": "PACKAGE",
+      "originCountry": "PL",
+      "destinationCountry": "PL",
+      "limits": {
+        "cashOnDelivery": { "amount": "5000.00", "currency": "PLN" },
+        "insurance": { "amount": "20000.00", "currency": "PLN" },
+        "dimensions": {
+          "length": { "value": 120.0, "unit": "CENTIMETER" },
+          "width": { "value": 80.0, "unit": "CENTIMETER" },
+          "height": { "value": 60.0, "unit": "CENTIMETER" }
+        },
+        "weight": { "value": 30.0, "unit": "KILOGRAMS" }
+      },
+      "additionalServices": [
+        { "id": "SAT_DELIVERY", "name": "Saturday delivery", "description": "Deliver on Saturday" }
+      ],
+      "additionalProperties": [
+        { "id": "REF_NUMBER", "name": "Reference number", "description": "Own reference", "required": false, "readOnly": false }
+      ]
+    }
+  ]
+}
