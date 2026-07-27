@@ -4,6 +4,8 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The kind of a description section item.
  *
@@ -26,4 +28,21 @@ public enum DescriptionItemType {
     static final String WIRE_TEXT = "TEXT";
     /** The wire discriminator for an image item. */
     static final String WIRE_IMAGE = "IMAGE";
+
+    /**
+     * Resolve the kind from the wire {@code type} discriminator, tolerating a kind this
+     * release does not model (which maps to {@link #UNKNOWN}).
+     *
+     * @param wireType the wire discriminator token (e.g. {@code TEXT}), or {@code null}
+     * @return the matching kind, or {@link #UNKNOWN}
+     */
+    static DescriptionItemType from(@Nullable String wireType) {
+        if (WIRE_TEXT.equals(wireType)) {
+            return TEXT;
+        }
+        if (WIRE_IMAGE.equals(wireType)) {
+            return IMAGE;
+        }
+        return UNKNOWN;
+    }
 }

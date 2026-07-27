@@ -20,6 +20,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceChangeResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import java.util.stream.Stream;
@@ -59,13 +60,15 @@ public interface Offers {
     PartialOffer getFields(String offerId, OfferPart... parts);
 
     /**
-     * Change an offer's Buy Now price. The SDK issues the price-change command
-     * and returns once Allegro has accepted it.
+     * Change an offer's Buy Now price. A single-offer price change resolves
+     * synchronously, so the SDK returns the command's terminal result — the price
+     * it applied, the processing status, and any per-field errors.
      *
      * @param offerId     the offer identifier
      * @param buyNowPrice the new Buy Now price
+     * @return the terminal result of the price-change command
      */
-    void changeBuyNowPrice(String offerId, Money buyNowPrice);
+    PriceChangeResult changeBuyNowPrice(String offerId, Money buyNowPrice);
 
     /**
      * Create a new Buy Now offer. The offer is created as a draft; publish it
@@ -101,6 +104,18 @@ public interface Offers {
      * @return a lazy stream of offer summaries
      */
     Stream<OfferSummary> streamOffers(OfferFilter filter);
+
+    /**
+     * How many of the seller's offers match a filter — the total the server reports,
+     * without walking the result set. This is a single, constant-cost request (one
+     * minimal page fetched only to read the total), independent of how many offers the
+     * seller has: use it for a count (e.g. a dashboard total) instead of
+     * {@code streamOffers(filter).count()}, which would page through every match.
+     *
+     * @param filter which offers to count (use {@link OfferFilter#all()} for all)
+     * @return the total number of matching offers
+     */
+    long countOffers(OfferFilter filter);
 
     /**
      * A lazy stream of events about the seller's offers (activated, ended, price/stock

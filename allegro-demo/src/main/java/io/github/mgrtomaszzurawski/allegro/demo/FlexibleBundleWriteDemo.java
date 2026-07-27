@@ -128,6 +128,9 @@ public final class FlexibleBundleWriteDemo {
                     + " (" + created.slots().size() + " slots, createdBy=" + created.createdBy() + ")");
             FlexibleBundle readBack = flexible.get(created.id());
             System.out.println("read back bundle " + readBack.id() + " with " + readBack.slots().size() + " slot(s)");
+            readBack.slots().forEach(slot -> slot.offers().forEach(bundleOffer ->
+                    System.out.println("  slot offer " + bundleOffer.offerId()
+                            + " marketplaces=" + bundleOffer.marketplaces())));
             flexible.delete(created.id());
             System.out.println("deleted flexible bundle " + created.id());
         } catch (AllegroBadRequestException rejected) {
