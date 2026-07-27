@@ -50,14 +50,16 @@ Consumers depend only on `sdk.domain.*` — never on `internal.*`, `*Raw`, or tr
 - `docs/<domain>.md` — per-domain usage guides, added as each
   domain lands
   - [`docs/account.md`](docs/account.md) — account & meta: marketplaces, current user (bucket D)
-  - [`docs/catalog.md`](docs/catalog.md) — categories, products, compatibility (`client.catalog()`)
+  - [`docs/catalog.md`](docs/catalog.md) — categories, products (incl. proposals), compatibility (`client.catalog()`)
   - [`docs/offers-extras.md`](docs/offers-extras.md) — classifieds, tags, translations,
     rating, and bundles (bucket F)
-  - [`docs/pricing.md`](docs/pricing.md) — automatic pricing rules (promotions, deposits to follow)
+  - [`docs/pricing.md`](docs/pricing.md) — automatic pricing rules, rebate promotions, turnover
+    discounts, fee preview/quotes and deposit types
   - [`docs/fulfillment.md`](docs/fulfillment.md) — One Fulfillment by Allegro (removal preferences, …)
 - [`docs/campaigns.md`](docs/campaigns.md) — badge campaigns, Allegro Prices, AlleDiscount
 - [`docs/settings.md`](docs/settings.md) — seller sale settings (`client.settings()`): after-sale
-  warranties (more of bucket K to follow)
+  conditions (warranties, implied warranties, return policies + attachments), product compliance,
+  additional services (read/write), size tables and tax settings
 
 ## Quick start
 
