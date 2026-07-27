@@ -35,7 +35,9 @@ import org.jspecify.annotations.Nullable;
  * read one back from an {@link Offer}. Optional fields are added with the {@code with…}
  * copies.
  *
- * @param productId                    the catalogue product id (required)
+ * @param productId                    the catalogue product id; {@code null} when the element is
+ *                                     product-by-data (inline product) or an advertisement
+ *                                     response's proposed product that has no catalogue id yet
  * @param quantity                     units of the product in this element (at least 1)
  * @param responsibleProducer          the GPSR responsible producer, or {@code null}
  * @param marketedBeforeGpsrObligation {@code true}/{@code false} to declare the product was
@@ -79,7 +81,8 @@ public record ProductSetElement(
     private static final int DEFAULT_QUANTITY = 1;
 
     /**
-     * Canonical constructor: the product id is required and the quantity must be positive;
+     * Canonical constructor: the product id may be absent (inline / advertisement-proposed
+     * product) but the quantity must be positive;
      * {@code productParameters} and {@code deposits} are normalized to immutable copies (empty
      * when the payload, or a build path that only references the product by id, omits them).
      */

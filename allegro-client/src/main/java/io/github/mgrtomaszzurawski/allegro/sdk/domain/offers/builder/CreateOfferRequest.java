@@ -132,7 +132,7 @@ public final class CreateOfferRequest {
         return buyNowPrice;
     }
 
-    /** The available quantity. */
+    /** The available quantity, or {@code null} for an ADVERTISEMENT offer (which carries no stock). */
     public @Nullable Integer availableStock() {
         return availableStock;
     }
@@ -333,7 +333,7 @@ public final class CreateOfferRequest {
             return this;
         }
 
-        /** The available quantity (required, non-negative). */
+        /** The available quantity (non-negative; required for every format except ADVERTISEMENT). */
         public Builder availableStock(int availableStock) {
             this.availableStock = availableStock;
             return this;
