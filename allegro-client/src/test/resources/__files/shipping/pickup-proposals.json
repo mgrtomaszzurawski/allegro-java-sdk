@@ -1,0 +1,25 @@
+{
+  "address": {
+    "name": "Seller One",
+    "company": "Seller Ltd",
+    "street": "Grunwaldzka 100",
+    "postalCode": "80-244",
+    "city": "Gdansk",
+    "state": "pomorskie",
+    "countryCode": "PL",
+    "email": "seller@example.com",
+    "phone": "+48500100100"
+  },
+  "proposals": [
+    {
+      "shipmentId": "SHIP-1001",
+      "proposalItems": [
+        { "id": "OLD-1", "name": "deprecated", "description": "ignored by the SDK" }
+      ],
+      "pickupTimes": [
+        { "date": "2026-07-28", "minTime": "08:00", "maxTime": "16:00" },
+        { "date": "2026-07-29", "minTime": "09:00", "maxTime": "17:00" }
+      ]
+    }
+  ]
+}

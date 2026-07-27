@@ -1,0 +1,13 @@
+{
+  "commandId": "CMD-PICKUP-1",
+  "status": "ERROR",
+  "errors": [
+    {
+      "code": "PICKUP_TIME_UNAVAILABLE",
+      "message": "No pickup available in the requested window",
+      "userMessage": "The carrier cannot collect at that time",
+      "path": "pickupTime",
+      "details": "choose another window from pickupProposals"
+    }
+  ]
+}

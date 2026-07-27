@@ -1,0 +1,18 @@
+{
+  "id": "PICKUP-1001",
+  "carrierPickupId": "CARR-9",
+  "carrier": "DPD",
+  "pickupCarrier": "DPD",
+  "address": {
+    "name": "Seller One",
+    "company": "Seller Ltd",
+    "street": "Grunwaldzka 100",
+    "postalCode": "80-244",
+    "city": "Gdansk",
+    "state": "pomorskie",
+    "email": "seller@example.com",
+    "phone": "+48500100100"
+  },
+  "shipmentIds": ["SHIP-1001"],
+  "waybills": ["WB-555"]
+}
