@@ -257,6 +257,8 @@ public final class ApiPaths {
     /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
     public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
             "/sale/compatibility-list/supported-categories";
+    /** Suggested compatibility list for an offer or product ({@code /sale/compatibility-list-suggestions}). */
+    public static final String COMPATIBILITY_SUGGESTIONS = "/sale/compatibility-list-suggestions";
     /** Compatible-products database search ({@code /sale/compatible-products}). */
     public static final String COMPATIBLE_PRODUCTS = "/sale/compatible-products";
     /** Compatible-product groups ({@code /sale/compatible-products/groups}). */

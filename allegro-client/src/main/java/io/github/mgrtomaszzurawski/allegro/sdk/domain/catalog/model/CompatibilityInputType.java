@@ -8,17 +8,19 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListSupport
 import org.jspecify.annotations.Nullable;
 
 /**
- * How a {@link CompatibleCategory}'s compatibility-list items are supplied when
- * building an offer in that category.
+ * Whether a compatibility entry is keyed by a product identifier or supplied as
+ * free text — the shared {@code ID}/{@code TEXT} axis that describes both how a
+ * {@link CompatibleCategory} accepts its compatibility-list items and the kind of
+ * an individual {@link CompatibilityItem} on a read.
  *
  * @since 0.2.0
  */
 public enum CompatibilityInputType {
 
-    /** Items are chosen by product identifier from Allegro's compatible-products list. */
+    /** Chosen by product identifier from Allegro's compatible-products list. */
     ID,
 
-    /** Items are entered as free text, bounded by the category's validation rules. */
+    /** Entered as free text, bounded by the category's validation rules. */
     TEXT,
 
     /**

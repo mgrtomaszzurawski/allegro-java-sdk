@@ -4,8 +4,10 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog;
 
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibilitySuggestionRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductGroupsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductsFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityList;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleCategory;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProduct;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProductGroup;
@@ -30,6 +32,16 @@ public interface Compatibility {
      * @return the supported categories; empty when none are returned
      */
     List<CompatibleCategory> supportedCategories();
+
+    /**
+     * Suggests the compatibility list for an offer or a product — the same hint the
+     * sell form offers when classifying a car part.
+     *
+     * @param request the target, built via {@link CompatibilitySuggestionRequest}
+     *     (which validates the offer-xor-product invariant fail-fast at build time)
+     * @return the suggested list (manual or product-based)
+     */
+    CompatibilityList suggestionsFor(CompatibilitySuggestionRequest request);
 
     /**
      * Searches Allegro's compatible-products database — the {@code ID}-typed source

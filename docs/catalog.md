@@ -6,8 +6,9 @@ classified and described against. All of it is public data, so an app-only **cli
 token is enough — no user login required.
 
 > **Status:** the `catalog().categories()` and `catalog().products()` sub-facades ship, along
-> with the first `catalog().compatibility()` read; the remaining compatibility reads follow in the
-> same bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
+> with the `catalog().compatibility()` supported-categories and suggestion reads; the
+> compatible-product reads follow in the same bucket. See
+> [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
 
 ## Categories
 
@@ -203,6 +204,29 @@ yet reads as `UNKNOWN`. `validationRules` caps the list size (`maxRows`) for eit
 `maxCharactersPerLine` bounds a free-text row and is `null` for an `ID` category, whose items are
 picked rather than typed.
 
+### Suggested lists
+
+For an offer or a product, Allegro can suggest the compatibility list — the same hint the sell
+form offers. Ask for exactly one of an offer or a product (the request rejects neither/both
+fail-fast):
+
+```java
+CompatibilityList suggested = compatibility.suggestionsFor(
+        CompatibilitySuggestionRequest.forProduct("5a1b2c3d-…"));   // or .forOffer("12345")
+
+System.out.println(suggested.type());                              // MANUAL or PRODUCT_BASED
+for (CompatibilityItem item : suggested.items()) {
+    System.out.println("  " + item.type() + "  " + item.id() + "  " + item.text());
+}
+```
+
+A `MANUAL` list carries seller-editable `items` — each an `ID` entry (picked from the
+compatible-products database, so it exposes the `id()` to reuse, plus a label and any
+`additionalInfo` such as an engine code) or a free-`TEXT` entry. A `PRODUCT_BASED` list is
+derived from the associated product: it carries that list's `id()` and a read-only text
+representation of its items, to be included in the offer unchanged. A list type this release does
+not model yet reads as `UNKNOWN` with empty items.
+
 ### The compatible-products database
 
 For an `ID`-type category, the items come from Allegro's compatible-products database. Browse it by
@@ -234,8 +258,9 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 
 ```bash
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-categories
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products             -Pdemo.account=seller
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility        -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products                  -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility-suggestions -Pdemo.account=seller
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatible-products
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-category-events
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-parameter-changes
