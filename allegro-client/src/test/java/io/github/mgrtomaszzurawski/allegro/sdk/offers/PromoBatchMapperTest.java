@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.mgrtomaszzurawski.allegro.client.model.ErrorRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PromoGeneralReportRaw;
@@ -23,17 +24,24 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.PromoBatchMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 
 /**
  * Wire-shape mapping of {@link PromoBatchMapper}: the command body's base/extra
  * packages, timing and criterion; the {@code taskCount}-based completion check
  * (there is no {@code completedAt}); and the terminal report mapping. Body
- * assertions are on the serialized JSON tree; NON_EMPTY mirrors the SDK's partial
- * write body so unset optional fields are omitted.
+ * assertions are on the serialized JSON tree.
+ *
+ * <p>The mapper mirrors the SDK's partial write body: the production
+ * {@code JavaTimeModule} + {@code JsonNullableModule} plus {@code NON_EMPTY} inclusion,
+ * so unset optional fields are omitted and a later {@code java.time}/{@code JsonNullable}
+ * field cannot silently diverge from the wire while the assertions keep passing.
  */
 class PromoBatchMapperTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new JsonNullableModule())
             .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     private static final String OFFER_ONE = "111";
     private static final String OFFER_TWO = "222";
@@ -138,13 +146,22 @@ class PromoBatchMapperTest {
 
         // then — counts from taskCount, tasks projected onto TaskResult
         assertEquals("cmd-1", batchReport.id());
+        // the promotion-package report type carries no timestamps (see PromoBatchMapper javadoc)
+        assertNull(batchReport.createdAt());
+        assertNull(batchReport.completedAt());
         assertEquals(2, batchReport.total());
         assertEquals(1, batchReport.success());
         assertEquals(1, batchReport.failed());
         assertEquals(OFFER_ONE, batchReport.tasks().get(0).offerId());
         assertEquals("DONE", batchReport.tasks().get(0).status());
         assertNull(batchReport.tasks().get(0).message());
+        // the successful task carries no errors and no field (promo is not field-scoped)
+        assertTrue(batchReport.tasks().get(0).errors().isEmpty());
+        assertNull(batchReport.tasks().get(0).field());
         assertEquals("ERROR", batchReport.tasks().get(1).status());
         assertEquals("package unavailable", batchReport.tasks().get(1).message());
+        // and the failed task exposes the same message as a structured typed error
+        assertEquals(1, batchReport.tasks().get(1).errors().size());
+        assertEquals("package unavailable", batchReport.tasks().get(1).errors().get(0).message());
     }
 }

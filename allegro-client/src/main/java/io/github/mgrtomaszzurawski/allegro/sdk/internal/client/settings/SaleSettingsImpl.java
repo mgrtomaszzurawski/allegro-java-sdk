@@ -5,11 +5,18 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.SaleSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.AdditionalServices;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.aftersale.AfterSaleConditions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.Compliance;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.SizeTables;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.tax.model.TaxSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.additionalservices.AdditionalServicesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.aftersale.AfterSaleConditionsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.compliance.ComplianceImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.sizetables.SizeTablesImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.settings.tax.TaxSettingsClientImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
+import java.util.List;
 
 /**
  * Root implementation of the {@link SaleSettings} facade; wires the nested
@@ -21,10 +28,16 @@ public final class SaleSettingsImpl implements SaleSettings {
 
     private final AfterSaleConditions afterSaleConditions;
     private final Compliance compliance;
+    private final AdditionalServices additionalServices;
+    private final SizeTables sizeTables;
+    private final TaxSettingsClientImpl taxSettingsClient;
 
     public SaleSettingsImpl(HttpRuntime runtime) {
         this.afterSaleConditions = new AfterSaleConditionsImpl(runtime);
         this.compliance = new ComplianceImpl(runtime);
+        this.additionalServices = new AdditionalServicesImpl(runtime);
+        this.sizeTables = new SizeTablesImpl(runtime);
+        this.taxSettingsClient = new TaxSettingsClientImpl(runtime);
     }
 
     @Override
@@ -35,5 +48,25 @@ public final class SaleSettingsImpl implements SaleSettings {
     @Override
     public Compliance compliance() {
         return compliance;
+    }
+
+    @Override
+    public AdditionalServices additionalServices() {
+        return additionalServices;
+    }
+
+    @Override
+    public SizeTables sizeTables() {
+        return sizeTables;
+    }
+
+    @Override
+    public TaxSettings taxSettings(String categoryId) {
+        return taxSettingsClient.taxSettings(categoryId, List.of());
+    }
+
+    @Override
+    public TaxSettings taxSettings(String categoryId, List<String> countryCodes) {
+        return taxSettingsClient.taxSettings(categoryId, countryCodes);
     }
 }

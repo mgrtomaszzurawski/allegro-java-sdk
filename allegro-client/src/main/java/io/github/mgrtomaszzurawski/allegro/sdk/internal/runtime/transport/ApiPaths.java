@@ -247,11 +247,22 @@ public final class ApiPaths {
     public static final String PRODUCT_PARAMETERS_SEGMENT = "product-parameters";
     /** Category suggestions matched by name ({@code /sale/matching-categories}). */
     public static final String MATCHING_CATEGORIES = "/sale/matching-categories";
+    /** Category-change event feed ({@code /sale/category-events}); cursor-paged by {@code from}. */
+    public static final String CATEGORY_EVENTS = "/sale/category-events";
+    /** Planned category-parameter changes ({@code /sale/category-parameters-scheduled-changes}); offset-paged. */
+    public static final String CATEGORY_PARAMETERS_SCHEDULED_CHANGES =
+            "/sale/category-parameters-scheduled-changes";
     /** Product database search + read ({@code /sale/products}); append {@code /{id}} via subPath. */
     public static final String PRODUCTS = "/sale/products";
     /** Categories that support a compatibility list ({@code /sale/compatibility-list/supported-categories}). */
     public static final String COMPATIBILITY_SUPPORTED_CATEGORIES =
             "/sale/compatibility-list/supported-categories";
+    /** Suggested compatibility list for an offer or product ({@code /sale/compatibility-list-suggestions}). */
+    public static final String COMPATIBILITY_SUGGESTIONS = "/sale/compatibility-list-suggestions";
+    /** Compatible-products database search ({@code /sale/compatible-products}). */
+    public static final String COMPATIBLE_PRODUCTS = "/sale/compatible-products";
+    /** Compatible-product groups ({@code /sale/compatible-products/groups}). */
+    public static final String COMPATIBLE_PRODUCTS_GROUPS = "/sale/compatible-products/groups";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */
@@ -516,6 +527,16 @@ public final class ApiPaths {
     public static final String RESPONSIBLE_PERSONS = "/sale/responsible-persons";
     /** Product-compliance (GPSR) responsible producers dictionary. */
     public static final String RESPONSIBLE_PRODUCERS = "/sale/responsible-producers";
+    /** Additional-service definition catalog by category. */
+    public static final String ADDITIONAL_SERVICES_CATEGORIES = "/sale/offer-additional-services/categories";
+    /** Seller additional-services groups (and their translations). */
+    public static final String ADDITIONAL_SERVICES_GROUPS = "/sale/offer-additional-services/groups";
+    /** Seller size tables ({@code /sale/size-tables}). */
+    public static final String SIZE_TABLES = "/sale/size-tables";
+    /** Allegro-provided size-table templates ({@code /sale/size-tables-templates}). */
+    public static final String SIZE_TABLES_TEMPLATES = "/sale/size-tables-templates";
+    /** Per-category tax (VAT) settings ({@code /sale/tax-settings}). */
+    public static final String TAX_SETTINGS = "/sale/tax-settings";
 
     // [append point: domain paths] Each domain bucket appends its own
     // "---- <feature> (bucket X) ----" section above this marker, one block

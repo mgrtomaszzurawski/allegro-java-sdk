@@ -10,32 +10,53 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.HandlingTime;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferDuration;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PaymentsModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.InvoiceType;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.OfferModificationMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.openapitools.jackson.nullable.JsonNullableModule;
 
 /**
  * Wire-shape mapping of {@link OfferModificationMapper}: each domain duration /
  * handling-time value maps to its ISO 8601 wire token, the two publication modes
  * (fixed vs unlimited), and the omission of the eight unset {@code Modification}
- * sub-objects. Assertions are on the serialized JSON tree; NON_EMPTY mirrors the
- * SDK's partial write body.
+ * sub-objects. Assertions are on the serialized JSON tree.
+ *
+ * <p>The mapper registers the production {@code JavaTimeModule} + {@code JsonNullableModule}
+ * (the serialization modules the {@code AllegroClient} mapper also carries) plus
+ * {@code NON_EMPTY} inclusion, so it matches the SDK's partial write body. Registering the
+ * modules — not just the inclusion — keeps a later {@code java.time} or {@code JsonNullable}
+ * field on this command from silently diverging from the wire while the assertions keep passing.
  */
 class OfferModificationMapperTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new JsonNullableModule())
             .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
     private static final String OFFER_ONE = "111";
     private static final String OFFER_TWO = "222";
     private static final String DURATION_PATH = "/modification/publication/duration";
     private static final String UNLIMITED_PATH = "/modification/publication/durationUnlimited";
     private static final String HANDLING_TIME_PATH = "/modification/delivery/handlingTime";
+    private static final String REFERENCE_ID = "ref-9f3a";
+    private static final String SHIPPING_RATES_PATH = "/modification/delivery/shippingRates/id";
+    private static final String WHOLESALE_PATH = "/modification/discounts/wholesalePriceList/id";
+    private static final String SIZE_TABLE_PATH = "/modification/sizeTable/id";
+    private static final String SERVICES_GROUP_PATH = "/modification/additionalServicesGroup/id";
+    private static final String RESPONSIBLE_PRODUCER_PATH = "/modification/responsibleProducer/id";
+    private static final String RESPONSIBLE_PERSON_PATH = "/modification/responsiblePerson/id";
+    private static final String PAYMENTS_INVOICE_PATH = "/modification/payments/invoice";
+    private static final String PAYMENTS_TAX_PERCENTAGE_PATH = "/modification/payments/tax/percentage";
+    private static final String VAT_RATE = "23";
 
     private static JsonNode tree(BatchModificationRequest request) {
         return MAPPER.valueToTree(OfferModificationMapper.toRaw(request));
@@ -135,5 +156,91 @@ class OfferModificationMapperTest {
         // then — delivery is present and publication is absent (single-element command)
         assertEquals("P2D", tree.at(HANDLING_TIME_PATH).asText());
         assertTrue(tree.at("/modification/publication").isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenShippingRatesAssigned_mapsIdUnderDeliveryShippingRates() {
+        BatchModificationRequest request = forOne().shippingRates(REFERENCE_ID).build();
+        JsonNode tree = tree(request);
+        assertEquals(REFERENCE_ID, tree.at(SHIPPING_RATES_PATH).asText());
+        // the single-element rule holds: no handling time rides along under delivery
+        assertTrue(tree.at(HANDLING_TIME_PATH).isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenWholesalePriceListAssigned_mapsIdUnderDiscounts() {
+        BatchModificationRequest request = forOne().wholesalePriceList(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(WHOLESALE_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenSizeTableAssigned_mapsIdUnderSizeTable() {
+        BatchModificationRequest request = forOne().sizeTable(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(SIZE_TABLE_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenAdditionalServicesGroupAssigned_mapsIdUnderAdditionalServicesGroup() {
+        BatchModificationRequest request = forOne().additionalServicesGroup(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(SERVICES_GROUP_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenResponsibleProducerAssigned_mapsIdUnderResponsibleProducer() {
+        BatchModificationRequest request = forOne().responsibleProducer(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(RESPONSIBLE_PRODUCER_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenResponsiblePersonAssigned_mapsIdUnderResponsiblePerson() {
+        BatchModificationRequest request = forOne().responsiblePerson(REFERENCE_ID).build();
+        assertEquals(REFERENCE_ID, tree(request).at(RESPONSIBLE_PERSON_PATH).asText());
+    }
+
+    @Test
+    void toRaw_whenPaymentsInvoiceAndVatRate_mapsBothUnderPayments() {
+        // given — both invoice type and VAT rate change together (one payments element)
+        PaymentsModification payments = PaymentsModification.builder()
+                .invoiceType(InvoiceType.VAT).vatRate(VAT_RATE)
+                .build();
+        BatchModificationRequest request = forOne().payments(payments).build();
+
+        // when
+        JsonNode tree = tree(request);
+
+        // then — invoice enum token and tax.percentage both present under payments
+        assertEquals("VAT", tree.at(PAYMENTS_INVOICE_PATH).asText());
+        assertEquals(VAT_RATE, tree.at(PAYMENTS_TAX_PERCENTAGE_PATH).asText());
+        assertTrue(tree.at("/modification/publication").isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenPaymentsInvoiceOnly_omitsTax() {
+        // given — only the invoice type changes
+        PaymentsModification payments = PaymentsModification.builder()
+                .invoiceType(InvoiceType.VAT_MARGIN)
+                .build();
+        BatchModificationRequest request = forOne().payments(payments).build();
+
+        // when
+        JsonNode tree = tree(request);
+
+        // then — invoice present, tax absent (partial payments body)
+        assertEquals("VAT_MARGIN", tree.at(PAYMENTS_INVOICE_PATH).asText());
+        assertTrue(tree.at("/modification/payments/tax").isMissingNode());
+    }
+
+    @Test
+    void toRaw_whenPaymentsVatRateOnly_omitsInvoice() {
+        // given — only the VAT rate changes
+        PaymentsModification payments = PaymentsModification.builder().vatRate(VAT_RATE).build();
+        BatchModificationRequest request = forOne().payments(payments).build();
+
+        // when
+        JsonNode tree = tree(request);
+
+        // then — tax.percentage present, invoice absent
+        assertEquals(VAT_RATE, tree.at(PAYMENTS_TAX_PERCENTAGE_PATH).asText());
+        assertTrue(tree.at(PAYMENTS_INVOICE_PATH).isMissingNode());
     }
 }

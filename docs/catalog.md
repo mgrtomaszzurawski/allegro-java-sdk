@@ -6,8 +6,9 @@ classified and described against. All of it is public data, so an app-only **cli
 token is enough — no user login required.
 
 > **Status:** the `catalog().categories()` and `catalog().products()` sub-facades ship, along
-> with the first `catalog().compatibility()` read; the remaining compatibility reads follow in the
-> same bucket. See [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
+> with the `catalog().compatibility()` supported-categories and suggestion reads; the
+> compatible-product reads follow in the same bucket. See
+> [`API-SURFACE.md`](../API-SURFACE.md) §E for the full planned surface.
 
 ## Categories
 
@@ -98,6 +99,41 @@ for (CategorySuggestion match : categories.suggest("wiertarka udarowa Bosch")) {
 }
 ```
 
+## Category changes
+
+The category tree evolves — categories are created, deleted, moved or renamed. `streamChanges`
+is a lazy feed of those events; the stream follows Allegro's `from` cursor for you (each event's id
+is the cursor), so a bounded consumer only fetches the pages it needs.
+
+```java
+categories.streamChanges(CategoryEventFilter.all())
+        .limit(100)
+        .forEach(event -> System.out.println(event.occurredAt() + "  " + event.type()
+                + "  " + (event.category() == null ? "?" : event.category().id())));
+```
+
+Each `CategoryEvent` carries its `id()` (also the cursor to resume from), the change `type()`
+(`CATEGORY_CREATED` / `CATEGORY_DELETED` / `CATEGORY_MOVED` / `CATEGORY_RENAMED`, or `UNKNOWN` for a
+kind this release does not model), when it `occurredAt()`, and the affected `category()` as it stood
+at the event. A `CATEGORY_DELETED` event also exposes `redirectCategoryId()` — where its offers were
+redirected. Restrict the feed to certain kinds with `CategoryEventFilter.ofTypes(...)`, or resume
+after a checkpoint with `CategoryEventFilter.since(lastSeenEventId)`.
+
+Allegro also announces **planned** parameter changes ahead of time, so sellers can prepare —
+`scheduledParameterChanges` is that (offset-paginated) feed:
+
+```java
+categories.scheduledParameterChanges(CategoryParameterChangeFilter.all())
+        .forEach(change -> System.out.println(change.scheduledFor() + "  " + change.type()
+                + "  category=" + change.categoryId() + " parameter=" + change.parameterId()));
+```
+
+Each `CategoryParameterScheduledChange` states the change `type()` (today only
+`REQUIREMENT_CHANGE` — a parameter's requirement changing; `UNKNOWN` for a kind this release does not
+model), when it was announced (`scheduledAt()`) and when it takes effect (`scheduledFor()`), and the
+affected `categoryId()` / `parameterId()`. Narrow the feed by effective- or announcement-date range
+and by kind with `CategoryParameterChangeFilter.builder()`.
+
 ## Products
 
 Products are the shared descriptions offers are built from. Search the database lazily — the
@@ -168,6 +204,53 @@ yet reads as `UNKNOWN`. `validationRules` caps the list size (`maxRows`) for eit
 `maxCharactersPerLine` bounds a free-text row and is `null` for an `ID` category, whose items are
 picked rather than typed.
 
+### Suggested lists
+
+For an offer or a product, Allegro can suggest the compatibility list — the same hint the sell
+form offers. Ask for exactly one of an offer or a product (the request rejects neither/both
+fail-fast):
+
+```java
+CompatibilityList suggested = compatibility.suggestionsFor(
+        CompatibilitySuggestionRequest.forProduct("5a1b2c3d-…"));   // or .forOffer("12345")
+
+System.out.println(suggested.type());                              // MANUAL or PRODUCT_BASED
+for (CompatibilityItem item : suggested.items()) {
+    System.out.println("  " + item.type() + "  " + item.id() + "  " + item.text());
+}
+```
+
+A `MANUAL` list carries seller-editable `items` — each an `ID` entry (picked from the
+compatible-products database, so it exposes the `id()` to reuse, plus a label and any
+`additionalInfo` such as an engine code) or a free-`TEXT` entry. A `PRODUCT_BASED` list is
+derived from the associated product: it carries that list's `id()` and a read-only text
+representation of its items, to be included in the offer unchanged. A list type this release does
+not model yet reads as `UNKNOWN` with empty items.
+
+### The compatible-products database
+
+For an `ID`-type category, the items come from Allegro's compatible-products database. Browse it by
+`type` (a value a category advertises as its `itemsType`, e.g. `CAR`), narrowed by a product group,
+a TecDoc vehicle number, or a free-text phrase. Both reads are lazy offset-paginated streams:
+
+```java
+// The coarse dimension first — e.g. vehicle makes.
+compatibility.productGroups(CompatibleProductGroupsFilter.ofType("CAR"))
+        .limit(20)
+        .forEach(group -> System.out.println(group.id() + "  " + group.text()));
+
+// Then the products within a group.
+compatibility.products(CompatibleProductsFilter.builder().type("CAR").groupId(groupId).build())
+        .limit(50)
+        .forEach(product -> System.out.println(product.id() + "  " + product.text()));
+```
+
+A `type` is required — `build()` fails fast without it. Each `CompatibleProduct` carries its `id()`
+(reuse it as a compatibility-list `ID` item), a `text()` label, the `groupId()` it belongs to, and
+`attributes()` that disambiguate it (`CompatibleProductAttribute` — an id such as `ENGINE_CODE` or
+`BRAND` and its values). A phrase search returns all matches on a single page (Allegro ignores
+offset/limit when a phrase is present), so the stream does not page further.
+
 ## Verifying against the sandbox
 
 The read-only demo scenario navigates the live category tree and confirms the mapped fields
@@ -175,6 +258,10 @@ arrive (the read-only counterpart of the write→read rule in [`TESTING.md`](../
 
 ```bash
 ./gradlew :allegro-demo:run -Pdemo.scenario=catalog-categories
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products      -Pdemo.account=seller
-./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-products                  -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatibility-suggestions -Pdemo.account=seller
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-compatible-products
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-category-events
+./gradlew :allegro-demo:run -Pdemo.scenario=catalog-parameter-changes
 ```

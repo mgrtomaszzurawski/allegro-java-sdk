@@ -5,15 +5,36 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CurrentPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MarketplaceReferenceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferAdditionalServicesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1AdditionalMarketplaceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1B2bRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1DeliveryRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationMarketplacesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1PublicationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SaleInfoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1SellingModeRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StatsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoV1StockRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceAutomationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PriceAutomationRuleRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -42,6 +63,25 @@ import org.jspecify.annotations.Nullable;
  *                        or {@code null} if the payload omits the flag
  * @param publishedAt     when the offer's publication started, or {@code null}
  * @param endedAt         when the offer's publication ended, or {@code null} if still running
+ * @param watchersCount   how many buyers watch the offer, or {@code null} when the payload omits it
+ * @param visitsCount     how many times the offer was visited, or {@code null} when the payload omits it
+ * @param externalId      the seller's own external identifier for the offer, or {@code null}
+ * @param businessOnly    {@code true} if the offer is buyable only by business buyers, or {@code null}
+ * @param shippingRatesId the id of the offer's shipping-rates table, or {@code null}
+ * @param additionalServicesGroupId the id of the offer's additional-services group, or {@code null}
+ * @param fundraisingCampaignId the id of the offer's fundraising campaign, or {@code null}
+ * @param currentPrice    the offer's current price (the auction/live price), or {@code null}
+ * @param biddersCount    how many buyers have bid, or {@code null} when the payload omits it
+ * @param minimalPrice    the auction minimal (reserve) price, or {@code null}
+ * @param startingPrice   the auction starting price, or {@code null}
+ * @param priceAutomationRuleId the id of the automatic-pricing rule applied to the offer, or {@code null}
+ * @param scheduledStartAt when the offer's publication is scheduled to start, or {@code null}
+ * @param scheduledEndAt  when the offer's publication is scheduled to end, or {@code null}
+ * @param baseMarketplaceId the id of the marketplace the offer is primarily published on, or {@code null}
+ * @param additionalMarketplaceIds the ids of the additional marketplaces the offer is published on,
+ *                        in order (possibly empty)
+ * @param additionalMarketplaces the per-marketplace listing details (state, price, stats, sold),
+ *                        keyed by marketplace id (possibly empty)
  * @since 0.2.0
  */
 public record OfferSummary(
@@ -57,7 +97,32 @@ public record OfferSummary(
         @Nullable AfterSalesServices afterSalesServices,
         @Nullable Boolean fulfillment,
         @Nullable OffsetDateTime publishedAt,
-        @Nullable OffsetDateTime endedAt) {
+        @Nullable OffsetDateTime endedAt,
+        @Nullable Integer watchersCount,
+        @Nullable Integer visitsCount,
+        @Nullable String externalId,
+        @Nullable Boolean businessOnly,
+        @Nullable String shippingRatesId,
+        @Nullable String additionalServicesGroupId,
+        @Nullable String fundraisingCampaignId,
+        @Nullable Money currentPrice,
+        @Nullable Integer biddersCount,
+        @Nullable Money minimalPrice,
+        @Nullable Money startingPrice,
+        @Nullable String priceAutomationRuleId,
+        @Nullable OffsetDateTime scheduledStartAt,
+        @Nullable OffsetDateTime scheduledEndAt,
+        @Nullable String baseMarketplaceId,
+        List<String> additionalMarketplaceIds,
+        Map<String, ListingMarketplace> additionalMarketplaces) {
+
+    /** Canonical constructor: defensively copies the marketplace collections to immutable views. */
+    public OfferSummary {
+        additionalMarketplaceIds =
+                additionalMarketplaceIds == null ? List.of() : List.copyOf(additionalMarketplaceIds);
+        additionalMarketplaces =
+                additionalMarketplaces == null ? Map.of() : Map.copyOf(additionalMarketplaces);
+    }
 
     /** Project a generated listing item onto the consumer record. */
     public static OfferSummary from(OfferListingDtoRaw raw) {
@@ -66,6 +131,8 @@ public record OfferSummary(
         OfferListingDtoV1PublicationRaw publication = raw.getPublication();
         OfferListingDtoV1StockRaw stock = raw.getStock();
         OfferListingDtoImageRaw primaryImage = raw.getPrimaryImage();
+        OfferListingDtoV1StatsRaw stats = raw.getStats();
+        OfferListingDtoV1SaleInfoRaw saleInfo = raw.getSaleInfo();
         return new OfferSummary(
                 raw.getId(),
                 raw.getName(),
@@ -79,7 +146,117 @@ public record OfferSummary(
                 AfterSalesServices.from(raw.getAfterSalesServices()),
                 raw.getIsFulfillment(),
                 publication == null ? null : parseDateTime(publication.getStartedAt()),
-                publication == null ? null : parseDateTime(publication.getEndedAt()));
+                publication == null ? null : parseDateTime(publication.getEndedAt()),
+                stats == null ? null : stats.getWatchersCount(),
+                stats == null ? null : stats.getVisitsCount(),
+                externalIdOf(raw),
+                businessOnlyOf(raw),
+                shippingRatesIdOf(raw),
+                additionalServicesGroupIdOf(raw),
+                fundraisingCampaignIdOf(raw),
+                currentPriceOf(saleInfo),
+                saleInfo == null ? null : saleInfo.getBiddersCount(),
+                minimalPriceOf(sellingMode),
+                startingPriceOf(sellingMode),
+                priceAutomationRuleIdOf(sellingMode),
+                publication == null ? null : parseDateTime(publication.getStartingAt()),
+                publication == null ? null : parseDateTime(publication.getEndingAt()),
+                baseMarketplaceIdOf(publication),
+                additionalMarketplaceIdsOf(publication),
+                additionalMarketplacesOf(raw));
+    }
+
+    private static Map<String, ListingMarketplace> additionalMarketplacesOf(OfferListingDtoRaw raw) {
+        Map<String, OfferListingDtoV1AdditionalMarketplaceRaw> marketplaces = raw.getAdditionalMarketplaces();
+        if (marketplaces == null || marketplaces.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, ListingMarketplace> mapped = new HashMap<>();
+        marketplaces.forEach((marketplaceId, value) -> {
+            if (value != null) {
+                mapped.put(marketplaceId, ListingMarketplace.from(value));
+            }
+        });
+        return mapped;
+    }
+
+    private static @Nullable OfferListingDtoV1PublicationMarketplacesRaw marketplacesOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        return publication == null ? null : publication.getMarketplaces();
+    }
+
+    private static @Nullable String baseMarketplaceIdOf(@Nullable OfferListingDtoV1PublicationRaw publication) {
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
+        MarketplaceReferenceRaw base = marketplaces == null ? null : marketplaces.getBase();
+        return base == null ? null : base.getId();
+    }
+
+    private static List<String> additionalMarketplaceIdsOf(
+            @Nullable OfferListingDtoV1PublicationRaw publication) {
+        OfferListingDtoV1PublicationMarketplacesRaw marketplaces = marketplacesOf(publication);
+        List<MarketplaceReferenceRaw> additional = marketplaces == null ? null : marketplaces.getAdditional();
+        if (additional == null) {
+            return List.of();
+        }
+        return additional.stream().map(MarketplaceReferenceRaw::getId).filter(Objects::nonNull).toList();
+    }
+
+    private static @Nullable Money currentPriceOf(@Nullable OfferListingDtoV1SaleInfoRaw saleInfo) {
+        if (saleInfo == null) {
+            return null;
+        }
+        CurrentPriceRaw price = saleInfo.getCurrentPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money minimalPriceOf(@Nullable OfferListingDtoV1SellingModeRaw sellingMode) {
+        if (sellingMode == null) {
+            return null;
+        }
+        MinimalPriceRaw price = sellingMode.getMinimalPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable Money startingPriceOf(@Nullable OfferListingDtoV1SellingModeRaw sellingMode) {
+        if (sellingMode == null) {
+            return null;
+        }
+        StartingPriceRaw price = sellingMode.getStartingPrice();
+        return price == null ? null : Money.of(price.getAmount(), price.getCurrency());
+    }
+
+    private static @Nullable String priceAutomationRuleIdOf(
+            @Nullable OfferListingDtoV1SellingModeRaw sellingMode) {
+        PriceAutomationRaw priceAutomation = sellingMode == null ? null : sellingMode.getPriceAutomation();
+        PriceAutomationRuleRaw rule = priceAutomation == null ? null : priceAutomation.getRule();
+        return rule == null ? null : rule.getId();
+    }
+
+    private static @Nullable String externalIdOf(OfferListingDtoRaw raw) {
+        ExternalIdRaw external = raw.getExternal();
+        return external == null ? null : external.getId();
+    }
+
+    private static @Nullable Boolean businessOnlyOf(OfferListingDtoRaw raw) {
+        OfferListingDtoV1B2bRaw b2bBlock = raw.getB2b();
+        return b2bBlock == null ? null : b2bBlock.getBuyableOnlyByBusiness();
+    }
+
+    private static @Nullable String shippingRatesIdOf(OfferListingDtoRaw raw) {
+        OfferListingDtoV1DeliveryRaw delivery = raw.getDelivery();
+        ShippingRatesRaw shippingRates = delivery == null ? null : delivery.getShippingRates();
+        return shippingRates == null ? null : shippingRates.getId();
+    }
+
+    private static @Nullable String additionalServicesGroupIdOf(OfferListingDtoRaw raw) {
+        OfferAdditionalServicesRaw additionalServices = raw.getAdditionalServices();
+        UUID id = additionalServices == null ? null : additionalServices.getId();
+        return id == null ? null : id.toString();
+    }
+
+    private static @Nullable String fundraisingCampaignIdOf(OfferListingDtoRaw raw) {
+        JustIdRaw fundraisingCampaign = raw.getFundraisingCampaign();
+        return fundraisingCampaign == null ? null : fundraisingCampaign.getId();
     }
 
     /** Parse an ISO-8601 timestamp string the listing carries as text, tolerating absence/format. */

@@ -219,6 +219,12 @@ client.orders().returns().rejectRefund(customerReturnId, RejectionRequest.builde
         .build());
 ```
 
+A `CustomerReturn` carries the full return: `items()` (each a `ReturnedItem` with offer id,
+quantity, price, url, serial numbers and a `ReturnItemReason`), the `rejection()` detail, the
+return `parcels()`, and — when the seller must refund manually — the buyer's `refundBankAccount()`.
+Personal data (buyer login/e-mail, the bank account, the parcel sender's phone) is **redacted from
+`toString()`**; read the accessors deliberately.
+
 **Commission refunds** — reclaim the sales commission on a cancelled line item:
 
 ```java

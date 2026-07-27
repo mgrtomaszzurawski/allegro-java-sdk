@@ -14,8 +14,6 @@ import io.github.mgrtomaszzurawski.allegro.client.model.OfferCriteriumRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferPriceChangeCommandRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferQuantityChangeCommandRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationFixedPriceHolderRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceModificationFixedPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PublicationChangeCommandDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PublicationModificationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.QuantityModificationRaw;
@@ -25,17 +23,20 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchModificationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BatchPricingRulesRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.BulkPriceStockModification;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.PriceChangeRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.BatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockBatchReport;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceStockTaskResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.BulkOfferModificationMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.OfferModificationMapper;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.PriceChangeMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.PricingRulesMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.command.CommandPoller;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -93,22 +94,28 @@ public final class OfferBatchImpl implements OfferBatch {
 
     @Override
     public BatchReport publish(List<String> offerIds) {
-        return publication(offerIds, PublicationModificationRaw.ActionEnum.ACTIVATE, OP_PUBLISH);
+        return publication(offerIds, PublicationModificationRaw.ActionEnum.ACTIVATE, null, OP_PUBLISH);
+    }
+
+    @Override
+    public BatchReport publish(List<String> offerIds, OffsetDateTime scheduledFor) {
+        return publication(offerIds, PublicationModificationRaw.ActionEnum.ACTIVATE, scheduledFor, OP_PUBLISH);
     }
 
     @Override
     public BatchReport unpublish(List<String> offerIds) {
-        return publication(offerIds, PublicationModificationRaw.ActionEnum.END, OP_UNPUBLISH);
+        return publication(offerIds, PublicationModificationRaw.ActionEnum.END, null, OP_UNPUBLISH);
     }
 
     @Override
     public BatchReport changePrices(List<String> offerIds, Money price) {
+        return changePrices(PriceChangeRequest.forOffers(offerIds).setPrice(price).build());
+    }
+
+    @Override
+    public BatchReport changePrices(PriceChangeRequest request) {
         String commandId = UUID.randomUUID().toString();
-        OfferPriceChangeCommandRaw body = new OfferPriceChangeCommandRaw()
-                .offerCriteria(criteria(offerIds))
-                .modification(new PriceModificationFixedPriceRaw().price(
-                        new PriceModificationFixedPriceHolderRaw()
-                                .amount(price.amount()).currency(price.currency())));
+        OfferPriceChangeCommandRaw body = PriceChangeMapper.toRaw(request);
         return submitAndAwait(ApiPaths.offerPriceChangeCommand(commandId),
                 ApiPaths.offerPriceChangeCommandTasks(commandId), body, OP_CHANGE_PRICES);
     }
@@ -162,11 +169,16 @@ public final class OfferBatchImpl implements OfferBatch {
     }
 
     private BatchReport publication(List<String> offerIds,
-            PublicationModificationRaw.ActionEnum action, String operationName) {
+            PublicationModificationRaw.ActionEnum action, @Nullable OffsetDateTime scheduledFor,
+            String operationName) {
         String commandId = UUID.randomUUID().toString();
+        PublicationModificationRaw publication = new PublicationModificationRaw().action(action);
+        if (scheduledFor != null) {
+            publication.scheduledFor(scheduledFor);
+        }
         PublicationChangeCommandDtoRaw body = new PublicationChangeCommandDtoRaw()
                 .offerCriteria(criteria(offerIds))
-                .publication(new PublicationModificationRaw().action(action));
+                .publication(publication);
         return submitAndAwait(ApiPaths.offerPublicationCommand(commandId),
                 ApiPaths.offerPublicationCommandTasks(commandId), body, operationName);
     }

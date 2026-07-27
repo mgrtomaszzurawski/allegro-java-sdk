@@ -111,8 +111,8 @@ require `sale:offers:write`.
 ## Fee preview
 
 Preview the fees a draft offer would incur before publishing it — the one-off
-sale commission and any recurring quotes — for a given category and Buy Now
-price:
+sale commission and any recurring quotes — for a given category and price. The
+common case is a Buy Now offer:
 
 ```java
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
@@ -130,6 +130,33 @@ preview.commissions().forEach(commission ->
 preview.quotes().forEach(quote ->
         System.out.println(quote.name() + " every " + quote.cycleDuration()));
 ```
+
+Only the category and a selling mode are required; every other input is optional
+and supplied when it changes the fee. Set an auction format, promotion options,
+a listing duration, a marketplace, category parameters or classifieds packages
+to preview their effect:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreviewSellingMode;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferParameter;
+import java.util.List;
+
+FeePreview auctionPreview = client.pricing().feePreview(
+        OfferFeePreviewRequest.builder()
+                .categoryId("257")
+                .sellingMode(FeePreviewSellingMode.auction(
+                        Money.of("10.00", "PLN"), Money.of("50.00", "PLN")))  // starting + reserve
+                .marketplaceId("allegro-pl")
+                .publicationDuration("P30D")
+                .emphasizedForTenDays()          // paid promotion option
+                .onDepartmentPage()
+                .addParameter(OfferParameter.ofValueIds("11323", List.of("11954")))
+                .build());
+```
+
+A seller that prices net of VAT passes the net price alongside the gross one with
+`FeePreviewSellingMode.buyNow(gross, net)`. Advertisement categories carry their
+`ClassifiedsPackages`, and a charity offer its `fundraisingCampaignId`.
 
 Pass `.offerId(...)` to preview the fees for an existing offer. The preview needs
 `sale:offers:read`.

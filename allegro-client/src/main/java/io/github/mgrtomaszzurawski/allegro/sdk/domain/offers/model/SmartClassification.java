@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportClassificationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportConditionsInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -15,14 +16,21 @@ import org.jspecify.annotations.Nullable;
  * ({@code offers().smartClassification(offerId)}): whether the offer qualifies
  * for Smart!, and the per-condition breakdown of why.
  *
+ * <p>The report's per-delivery-method lists ({@code smartDeliveryMethods} and the
+ * per-condition {@code passed}/{@code failedDeliveryMethods}) are marked deprecated
+ * in the Allegro spec and are deliberately not surfaced here — a new typed surface
+ * should not lead consumers onto fields the API owner is removing.
+ *
  * @param fulfilled                    whether the offer currently qualifies for Smart!
  * @param scheduledForReclassification whether Allegro will re-evaluate the offer
+ * @param lastChanged                  when the classification last changed, or {@code null}
  * @param conditions                   the individual Smart! conditions and their state
  * @since 0.2.0
  */
 public record SmartClassification(
         boolean fulfilled,
         boolean scheduledForReclassification,
+        @Nullable OffsetDateTime lastChanged,
         List<Condition> conditions) {
 
     public SmartClassification {
@@ -39,6 +47,7 @@ public record SmartClassification(
         return new SmartClassification(
                 classification != null && Boolean.TRUE.equals(classification.getFulfilled()),
                 Boolean.TRUE.equals(raw.getScheduledForReclassification()),
+                classification == null ? null : classification.getLastChanged(),
                 conditions);
     }
 

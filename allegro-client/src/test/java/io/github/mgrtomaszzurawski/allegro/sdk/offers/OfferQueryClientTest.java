@@ -14,6 +14,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,6 +28,8 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroExecutionIntercepto
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ListingMarketplace;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplacePublicationState;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
@@ -65,6 +68,11 @@ class OfferQueryClientTest {
     private static final int FULL_PAGE = 100;
     private static final int SECOND_PAGE = 30;
     private static final int TOTAL = FULL_PAGE + SECOND_PAGE;
+    private static final String COUNT_LIMIT = "1";
+    private static final int OFFERS_TOTAL = 157;
+    private static final String COUNT_PAGE =
+            "{\"offers\":[{\"id\":\"1\"}],\"count\":1,\"totalCount\":" + OFFERS_TOTAL + "}";
+    private static final String NO_TOTAL_PAGE = "{\"offers\":[],\"count\":0}";
 
     private static final String FILTER_NAME = "klawiatura";
     private static final String STATUS_ACTIVE_WIRE = "ACTIVE";
@@ -78,16 +86,72 @@ class OfferQueryClientTest {
     private static final String IMAGE_URL = "https://img.example/x.jpg";
     private static final String RETURN_POLICY_ID = "ca36b384-61de-48ca-b296-a0abe1f41930";
     private static final String STARTED_AT = "2026-07-24T13:35:45Z";
+    private static final int WATCHERS = 42;
+    private static final int VISITS = 128;
+    private static final String EXTERNAL_ID = "SKU-9";
+    private static final String SHIPPING_RATES_ID = "2479b9fb-b52a-409d-b4d0-1aeb80b79368";
+    private static final String ADDITIONAL_SERVICES_ID = "8603fbbb-0f0e-4999-945e-258c4c96c7d6";
+    private static final String FUNDRAISING_ID = "camp-1";
+    private static final String CURRENT_PRICE = "45.00";
+    private static final int BIDDERS = 4;
+    private static final int BIDDERS_ONLY = 2;
+    private static final String MIN_PRICE = "10.00";
+    private static final String START_PRICE = "5.00";
+    private static final String PRICE_RULE_ID = "6a63f773-0000-4000-8000-0000000000aa";
+    private static final String SCHEDULED_START = "2026-08-01T10:00:00Z";
+    private static final String SCHEDULED_END = "2026-08-31T10:00:00Z";
+    private static final String BASE_MP_ID = "allegro-pl";
+    private static final String ADDL_MP_ID = "allegro-cz";
+    private static final String MP_STATE = "APPROVED";
+    private static final String MP_PRICE = "899.00";
+    private static final String MP_CURRENCY = "CZK";
+    private static final String MP_RULE_ID = "aa11bb22-0000-4000-8000-0000000000bb";
+    private static final int MP_WATCHERS = 3;
+    private static final int MP_VISITS = 9;
+    private static final int MP_SOLD = 2;
+    private static final String ADDL_MP_NULL_VALUE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"additionalMarketplaces\":{\"%s\":null}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, ADDL_MP_ID);
+    private static final String ADDL_MP_NULL_ID_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"publication\":{\"status\":\"ACTIVE\",\"marketplaces\":{\"additional\":[{\"id\":\"%s\"},{}]}}}],"
+            + "\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, ADDL_MP_ID);
+    private static final String NO_SELLING_MODE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"publication\":{\"status\":\"ACTIVE\"}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME);
+    private static final String SALEINFO_NO_PRICE_PAGE = ("{\"offers\":[{\"id\":\"%s\",\"name\":\"%s\","
+            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+            + "\"saleInfo\":{\"biddersCount\":%d}}],\"count\":1}")
+            .formatted(OFFER_ID, OFFER_NAME, AMOUNT, CURRENCY_PLN, BIDDERS_ONLY);
 
     private static final String RICH_OFFER_PAGE = ("{\"offers\":[{\"id\":\"%s\","
             + "\"name\":\"%s\",\"category\":{\"id\":\"%s\"},"
-            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"}},"
+            + "\"sellingMode\":{\"format\":\"BUY_NOW\",\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"minimalPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"startingPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"priceAutomation\":{\"rule\":{\"id\":\"%s\"}}},"
             + "\"stock\":{\"available\":%d,\"sold\":%d},"
-            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\"},"
+            + "\"publication\":{\"status\":\"ACTIVE\",\"startedAt\":\"%s\",\"startingAt\":\"%s\","
+            + "\"endingAt\":\"%s\",\"marketplaces\":{\"base\":{\"id\":\"%s\"},"
+            + "\"additional\":[{\"id\":\"%s\"}]}},"
             + "\"afterSalesServices\":{\"returnPolicy\":{\"id\":\"%s\"}},\"isFulfillment\":false,"
+            + "\"stats\":{\"watchersCount\":%d,\"visitsCount\":%d},"
+            + "\"external\":{\"id\":\"%s\"},\"b2b\":{\"buyableOnlyByBusiness\":true},"
+            + "\"delivery\":{\"shippingRates\":{\"id\":\"%s\"}},"
+            + "\"additionalServices\":{\"id\":\"%s\"},\"fundraisingCampaign\":{\"id\":\"%s\"},"
+            + "\"saleInfo\":{\"currentPrice\":{\"amount\":\"%s\",\"currency\":\"%s\"},\"biddersCount\":%d},"
+            + "\"additionalMarketplaces\":{\"%s\":{\"publication\":{\"state\":\"%s\"},"
+            + "\"sellingMode\":{\"price\":{\"amount\":\"%s\",\"currency\":\"%s\"},"
+            + "\"priceAutomation\":{\"rule\":{\"id\":\"%s\"}}},"
+            + "\"stats\":{\"watchersCount\":%d,\"visitsCount\":%d},\"stock\":{\"sold\":%d}}},"
             + "\"primaryImage\":{\"url\":\"%s\"}}],\"count\":1}")
-            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN, AVAILABLE, SOLD,
-                    STARTED_AT, RETURN_POLICY_ID, IMAGE_URL);
+            .formatted(OFFER_ID, OFFER_NAME, CATEGORY_ID, AMOUNT, CURRENCY_PLN,
+                    MIN_PRICE, CURRENCY_PLN, START_PRICE, CURRENCY_PLN, PRICE_RULE_ID, AVAILABLE, SOLD,
+                    STARTED_AT, SCHEDULED_START, SCHEDULED_END, BASE_MP_ID, ADDL_MP_ID,
+                    RETURN_POLICY_ID, WATCHERS, VISITS, EXTERNAL_ID, SHIPPING_RATES_ID,
+                    ADDITIONAL_SERVICES_ID, FUNDRAISING_ID, CURRENT_PRICE, CURRENCY_PLN, BIDDERS,
+                    ADDL_MP_ID, MP_STATE, MP_PRICE, MP_CURRENCY, MP_RULE_ID, MP_WATCHERS, MP_VISITS, MP_SOLD,
+                    IMAGE_URL);
 
     // A lean listing item: a malformed publication timestamp and no after-sales / fulfillment
     // blocks — the tolerant mapping must degrade these to null rather than fail the read.
@@ -99,6 +163,7 @@ class OfferQueryClientTest {
     private static final String CONDITION_MET_CODE = "DELIVERY";
     private static final String CONDITION_MET_NAME = "Wysyłka";
     private static final String CONDITION_MET_DESCRIPTION = "szybko";
+    private static final OffsetDateTime SMART_LAST_CHANGED = OffsetDateTime.parse("2026-01-01T00:00:00Z");
     private static final String UNFILLED_PATH = "/sale/offers/unfilled-parameters";
     private static final String PARAM_ID_ONE = "p-100";
     private static final String PARAM_ID_TWO = "p-200";
@@ -235,7 +300,31 @@ class OfferQueryClientTest {
         assertEquals(Boolean.FALSE, summary.fulfillment());
         assertEquals(OffsetDateTime.parse(STARTED_AT), summary.publishedAt());
         assertNull(summary.endedAt());
-        assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicyId());
+        assertEquals(RETURN_POLICY_ID, summary.afterSalesServices().returnPolicy().id());
+        assertEquals(WATCHERS, summary.watchersCount());
+        assertEquals(VISITS, summary.visitsCount());
+        assertEquals(EXTERNAL_ID, summary.externalId());
+        assertEquals(Boolean.TRUE, summary.businessOnly());
+        assertEquals(SHIPPING_RATES_ID, summary.shippingRatesId());
+        assertEquals(ADDITIONAL_SERVICES_ID, summary.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, summary.fundraisingCampaignId());
+        assertEquals(Money.of(CURRENT_PRICE, CURRENCY_PLN), summary.currentPrice());
+        assertEquals(BIDDERS, summary.biddersCount());
+        assertEquals(Money.of(MIN_PRICE, CURRENCY_PLN), summary.minimalPrice());
+        assertEquals(Money.of(START_PRICE, CURRENCY_PLN), summary.startingPrice());
+        assertEquals(PRICE_RULE_ID, summary.priceAutomationRuleId());
+        assertEquals(OffsetDateTime.parse(SCHEDULED_START), summary.scheduledStartAt());
+        assertEquals(OffsetDateTime.parse(SCHEDULED_END), summary.scheduledEndAt());
+        assertEquals(BASE_MP_ID, summary.baseMarketplaceId());
+        assertEquals(List.of(ADDL_MP_ID), summary.additionalMarketplaceIds());
+        ListingMarketplace marketplace = summary.additionalMarketplaces().get(ADDL_MP_ID);
+        assertNotNull(marketplace);
+        assertEquals(MarketplacePublicationState.APPROVED, marketplace.publicationState());
+        assertEquals(Money.of(MP_PRICE, MP_CURRENCY), marketplace.price());
+        assertEquals(MP_RULE_ID, marketplace.priceAutomationRuleId());
+        assertEquals(MP_WATCHERS, marketplace.watchersCount());
+        assertEquals(MP_VISITS, marketplace.visitsCount());
+        assertEquals(MP_SOLD, marketplace.soldCount());
     }
 
     @Test
@@ -252,6 +341,80 @@ class OfferQueryClientTest {
         assertNull(summary.endedAt());
         assertNull(summary.afterSalesServices());
         assertNull(summary.fulfillment());
+        assertNull(summary.watchersCount());
+        assertNull(summary.visitsCount());
+        assertNull(summary.externalId());
+        assertNull(summary.businessOnly());
+        assertNull(summary.shippingRatesId());
+        assertNull(summary.additionalServicesGroupId());
+        assertNull(summary.fundraisingCampaignId());
+        assertNull(summary.currentPrice());
+        assertNull(summary.biddersCount());
+        assertNull(summary.minimalPrice());
+        assertNull(summary.startingPrice());
+        assertNull(summary.priceAutomationRuleId());
+        assertNull(summary.scheduledStartAt());
+        assertNull(summary.scheduledEndAt());
+        assertNull(summary.baseMarketplaceId());
+        assertTrue(summary.additionalMarketplaceIds().isEmpty());
+        assertTrue(summary.additionalMarketplaces().isEmpty());
+    }
+
+    @Test
+    void streamOffers_whenAdditionalMarketplaceValueNull_skipsIt(WireMockRuntimeInfo wmInfo) {
+        // given — an additionalMarketplaces entry whose value is null (spec-legal)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ADDL_MP_NULL_VALUE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the null per-marketplace value is dropped, leaving no entry
+        assertTrue(summary.additionalMarketplaces().isEmpty());
+    }
+
+    @Test
+    void streamOffers_whenAdditionalMarketplaceHasNullId_skipsIt(WireMockRuntimeInfo wmInfo) {
+        // given — an additional-marketplace entry with no id (spec-legal: id is not required)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(ADDL_MP_NULL_ID_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — the null-id entry is dropped, the valid id survives
+        assertEquals(List.of(ADDL_MP_ID), summary.additionalMarketplaceIds());
+    }
+
+    @Test
+    void streamOffers_whenSellingModeAbsent_allSellingModePricesAreNull(WireMockRuntimeInfo wmInfo) {
+        // given — an offer with no sellingMode block at all
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NO_SELLING_MODE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — every sellingMode-derived price degrades to null (the sellingMode == null branch)
+        assertNull(summary.buyNowPrice());
+        assertNull(summary.minimalPrice());
+        assertNull(summary.startingPrice());
+        assertNull(summary.priceAutomationRuleId());
+    }
+
+    @Test
+    void streamOffers_whenSaleInfoHasBiddersButNoCurrentPrice_readsBiddersAndNullPrice(
+            WireMockRuntimeInfo wmInfo) {
+        // given — saleInfo present with biddersCount but no currentPrice (the live BUY_NOW shape)
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(SALEINFO_NO_PRICE_PAGE)));
+
+        // when
+        OfferSummary summary = offers(wmInfo).streamOffers(OfferFilter.all()).findFirst().orElseThrow();
+
+        // then — biddersCount is read; currentPrice degrades to null (the saleInfo-present inner branch)
+        assertEquals(BIDDERS_ONLY, summary.biddersCount());
+        assertNull(summary.currentPrice());
     }
 
     @Test
@@ -276,6 +439,40 @@ class OfferQueryClientTest {
         AllegroRateLimitException failure = assertThrows(AllegroRateLimitException.class,
                 () -> offers(wmInfo).streamOffers(OfferFilter.all()).findFirst());
         assertEquals(RETRY_AFTER_SECONDS, failure.retryAfterSeconds());
+    }
+
+    @Test
+    void countOffers_returnsServerTotalWithASingleMinimalRequest(WireMockRuntimeInfo wmInfo) {
+        // given — the listing reports a large total; the probe fetches a single item
+        stubFor(get(urlPathEqualTo(OFFERS_PATH)).withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(COUNT_PAGE)));
+        OfferFilter filter = OfferFilter.builder()
+                .name(FILTER_NAME).status(OfferStatus.ACTIVE).format(OfferFormat.BUY_NOW).build();
+
+        // when
+        long total = offers(wmInfo).countOffers(filter);
+
+        // then — the server total, fetched with limit=1 (not a full page) and the filter forwarded
+        assertEquals(OFFERS_TOTAL, total);
+        verify(1, getRequestedFor(urlPathEqualTo(OFFERS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
+                .withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT))
+                .withQueryParam(QUERY_NAME, equalTo(FILTER_NAME))
+                .withQueryParam(QUERY_STATUS, equalTo(STATUS_ACTIVE_WIRE))
+                .withQueryParam(QUERY_FORMAT, equalTo(FORMAT_BUY_NOW_WIRE)));
+    }
+
+    @Test
+    void countOffers_whenResponseHasNoTotalCount_returnsZero(WireMockRuntimeInfo wmInfo) {
+        // given — a listing that omits totalCount
+        stubFor(get(urlPathEqualTo(OFFERS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(NO_TOTAL_PAGE)));
+
+        // when / then — the missing total degrades to zero rather than throwing, still via one probe
+        assertEquals(0L, offers(wmInfo).countOffers(OfferFilter.all()));
+        verify(1, getRequestedFor(urlPathEqualTo(OFFERS_PATH)).withQueryParam(QUERY_LIMIT, equalTo(COUNT_LIMIT)));
     }
 
     @Test
@@ -325,6 +522,7 @@ class OfferQueryClientTest {
         // then — the qualification flag and the per-condition breakdown map through
         assertTrue(report.fulfilled());
         assertFalse(report.scheduledForReclassification());
+        assertEquals(SMART_LAST_CHANGED, report.lastChanged());
         assertEquals(2, report.conditions().size());
         SmartClassification.Condition met = report.conditions().get(0);
         assertEquals(CONDITION_MET_CODE, met.code());

@@ -63,6 +63,8 @@ class MarketplacesClientTest {
     private static final String MARKETPLACE_PL = "allegro-pl";
     private static final String MARKETPLACE_MINIMAL = "allegro-sk";
     private static final String CURRENCY_PLN = "PLN";
+    private static final String CURRENCY_EUR = "EUR";
+    private static final String CURRENCY_CZK = "CZK";
     private static final String LANGUAGE_PL = "pl-PL";
     private static final String LANGUAGE_EN = "en-US";
     private static final String LANGUAGE_UK = "uk-UA";
@@ -85,6 +87,12 @@ class MarketplacesClientTest {
               "currencies":{"base":{"code":"%s"},"additional":[{}]},
               "shippingCountries":[{},{"code":"%s"}]}]}
             """.formatted(MARKETPLACE_PL, LANGUAGE_PL, CURRENCY_PLN, SHIPPING_COUNTRY_PL);
+    // A marketplace whose currencies carry additional codes alongside the base —
+    // the only shape that exercises the non-empty additionalCurrencies mapping.
+    private static final String ADDITIONAL_CURRENCIES_RESPONSE = """
+            {"marketplaces":[{"id":"%s",
+              "currencies":{"base":{"code":"%s"},"additional":[{"code":"%s"},{"code":"%s"}]}}]}
+            """.formatted(MARKETPLACE_PL, CURRENCY_PLN, CURRENCY_EUR, CURRENCY_CZK);
     // spec-derived: not yet wire-verified (errors[] contract shape; a live 404
     // capture during the bucket exploration pass will confirm or correct it)
     private static final String NOT_FOUND_RESPONSE = """
@@ -163,6 +171,25 @@ class MarketplacesClientTest {
             assertTrue(minimal.offerDisplayLanguages().isEmpty());
             assertTrue(minimal.additionalCurrencies().isEmpty());
             assertTrue(minimal.shippingCountries().isEmpty());
+        }
+    }
+
+    @Test
+    void list_whenAdditionalCurrenciesPresent_mapsThemAlongsideBase(WireMockRuntimeInfo wmInfo) {
+        // given — a marketplace with extra accepted currencies beyond the base
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlEqualTo(MARKETPLACES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(ADDITIONAL_CURRENCIES_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            Marketplace marketplace = allegro.marketplaces().list().get(0);
+
+            // then — the non-empty additional-currency list maps (not just the empty path)
+            assertEquals(CURRENCY_PLN, marketplace.baseCurrency());
+            assertEquals(List.of(CURRENCY_EUR, CURRENCY_CZK), marketplace.additionalCurrencies());
         }
     }
 

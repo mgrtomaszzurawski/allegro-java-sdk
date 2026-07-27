@@ -6,16 +6,22 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder;
 
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.CompatibilityEntry;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MessageToSellerSettings;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferPayments;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ProductSetElement;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.TaxSettings;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -42,11 +48,13 @@ public final class CreateOfferRequest {
     private static final String ERR_PRICE = "buyNowPrice is required for a BUY_NOW offer";
     private static final String ERR_STARTING = "startingPrice is required for an AUCTION offer";
     private static final String ERR_STOCK = "availableStock is required and must not be negative";
+    private static final String ERR_STOCK_ADVERTISEMENT =
+            "availableStock does not apply to an ADVERTISEMENT offer";
 
     private final String name;
     private final String categoryId;
     private final @Nullable Money buyNowPrice;
-    private final int availableStock;
+    private final @Nullable Integer availableStock;
     private final List<String> imageUrls;
     private final @Nullable OfferFormat sellingFormat;
     private final @Nullable Money startingPrice;
@@ -58,16 +66,22 @@ public final class CreateOfferRequest {
     private final @Nullable OfferLocation location;
     private final List<OfferParameter> parameters;
     private final List<ProductSetElement> productSet;
+    private final List<CompatibilityEntry> compatibilityList;
+    private final List<String> attachmentIds;
+    private final List<String> aiCoCreatedImageUrls;
     private final @Nullable String externalId;
     private final @Nullable String language;
     private final @Nullable String sizeTableId;
     private final @Nullable Boolean businessOnly;
     private final @Nullable PublicationSettings publication;
     private final @Nullable TaxSettings taxSettings;
-    private final @Nullable String contactId;
-    private final @Nullable String additionalServicesGroupId;
-    private final @Nullable String fundraisingCampaignId;
-    private final @Nullable String wholesalePriceListId;
+    private final @Nullable OfferPayments payments;
+    private final Map<String, Money> additionalMarketplacePrices;
+    private final @Nullable NamedReference contact;
+    private final @Nullable NamedReference additionalServices;
+    private final @Nullable NamedReference fundraisingCampaign;
+    private final @Nullable NamedReference wholesalePriceList;
+    private final @Nullable MessageToSellerSettings messageToSellerSettings;
 
     private CreateOfferRequest(Builder builder) {
         this.name = builder.name;
@@ -85,16 +99,22 @@ public final class CreateOfferRequest {
         this.location = builder.location;
         this.parameters = List.copyOf(builder.parameters);
         this.productSet = List.copyOf(builder.productSet);
+        this.compatibilityList = List.copyOf(builder.compatibilityList);
+        this.attachmentIds = List.copyOf(builder.attachmentIds);
+        this.aiCoCreatedImageUrls = List.copyOf(builder.aiCoCreatedImageUrls);
         this.externalId = builder.externalId;
         this.language = builder.language;
         this.sizeTableId = builder.sizeTableId;
         this.businessOnly = builder.businessOnly;
         this.publication = builder.publication;
         this.taxSettings = builder.taxSettings;
-        this.contactId = builder.contactId;
-        this.additionalServicesGroupId = builder.additionalServicesGroupId;
-        this.fundraisingCampaignId = builder.fundraisingCampaignId;
-        this.wholesalePriceListId = builder.wholesalePriceListId;
+        this.payments = builder.payments;
+        this.additionalMarketplacePrices = Map.copyOf(builder.additionalMarketplacePrices);
+        this.contact = builder.contact;
+        this.additionalServices = builder.additionalServices;
+        this.fundraisingCampaign = builder.fundraisingCampaign;
+        this.wholesalePriceList = builder.wholesalePriceList;
+        this.messageToSellerSettings = builder.messageToSellerSettings;
     }
 
     /** The offer title. */
@@ -112,14 +132,24 @@ public final class CreateOfferRequest {
         return buyNowPrice;
     }
 
-    /** The available quantity. */
-    public int availableStock() {
+    /** The available quantity, or {@code null} for an ADVERTISEMENT offer (which carries no stock). */
+    public @Nullable Integer availableStock() {
         return availableStock;
     }
 
     /** Image URLs, in display order (possibly empty). */
     public List<String> imageUrls() {
         return imageUrls;
+    }
+
+    /** The ids of the seller's uploaded attachments to link to the offer; empty when none. */
+    public List<String> attachmentIds() {
+        return attachmentIds;
+    }
+
+    /** The URLs of the offer images declared as AI co-created, in the order added; empty when none. */
+    public List<String> aiCoCreatedImageUrls() {
+        return aiCoCreatedImageUrls;
     }
 
     /** The selling format, or {@code null} to default to {@code BUY_NOW}. */
@@ -172,6 +202,11 @@ public final class CreateOfferRequest {
         return productSet;
     }
 
+    /** The offer's "fits to" ({@code compatibilityList}) entries, in the order added (possibly empty). */
+    public List<CompatibilityEntry> compatibilityList() {
+        return compatibilityList;
+    }
+
     /** The seller's own external identifier (your system's SKU/id) for the offer, or {@code null} if not set. */
     public @Nullable String externalId() {
         return externalId;
@@ -202,24 +237,42 @@ public final class CreateOfferRequest {
         return taxSettings;
     }
 
-    /** The id of the seller's contact to attach to the offer, or {@code null} if not set. */
-    public @Nullable String contactId() {
-        return contactId;
+    /** The offer's payment settings (invoice type), or {@code null} if not set. */
+    public @Nullable OfferPayments payments() {
+        return payments;
     }
 
-    /** The id of the seller's additional-services group to attach, or {@code null} if not set. */
-    public @Nullable String additionalServicesGroupId() {
-        return additionalServicesGroupId;
+    /**
+     * The Buy Now prices to publish on additional (foreign) marketplaces, keyed by marketplace id
+     * (e.g. {@code allegro-cz}); empty when the offer is not cross-listed.
+     */
+    public Map<String, Money> additionalMarketplacePrices() {
+        return additionalMarketplacePrices;
     }
 
-    /** The id of the fundraising campaign to attach to the offer, or {@code null} if not set. */
-    public @Nullable String fundraisingCampaignId() {
-        return fundraisingCampaignId;
+    /** The seller's contact to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference contact() {
+        return contact;
     }
 
-    /** The id of the seller's wholesale price list to attach, or {@code null} if not set. */
-    public @Nullable String wholesalePriceListId() {
-        return wholesalePriceListId;
+    /** The seller's additional-services group to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference additionalServices() {
+        return additionalServices;
+    }
+
+    /** The fundraising campaign to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference fundraisingCampaign() {
+        return fundraisingCampaign;
+    }
+
+    /** The seller's wholesale price list to attach (by id or name), or {@code null} if not set. */
+    public @Nullable NamedReference wholesalePriceList() {
+        return wholesalePriceList;
+    }
+
+    /** The buyer-note ("message to seller") settings, or {@code null} if not set. */
+    public @Nullable MessageToSellerSettings messageToSellerSettings() {
+        return messageToSellerSettings;
     }
 
     /** A new builder. */
@@ -235,6 +288,8 @@ public final class CreateOfferRequest {
         private @Nullable Money buyNowPrice;
         private @Nullable Integer availableStock;
         private List<String> imageUrls = List.of();
+        private List<String> attachmentIds = List.of();
+        private List<String> aiCoCreatedImageUrls = List.of();
         private @Nullable OfferFormat sellingFormat;
         private @Nullable Money startingPrice;
         private @Nullable Money minimalPrice;
@@ -245,16 +300,20 @@ public final class CreateOfferRequest {
         private @Nullable OfferLocation location;
         private final List<OfferParameter> parameters = new ArrayList<>();
         private final List<ProductSetElement> productSet = new ArrayList<>();
+        private final List<CompatibilityEntry> compatibilityList = new ArrayList<>();
         private @Nullable String externalId;
         private @Nullable String language;
         private @Nullable String sizeTableId;
         private @Nullable Boolean businessOnly;
         private @Nullable PublicationSettings publication;
         private @Nullable TaxSettings taxSettings;
-        private @Nullable String contactId;
-        private @Nullable String additionalServicesGroupId;
-        private @Nullable String fundraisingCampaignId;
-        private @Nullable String wholesalePriceListId;
+        private @Nullable OfferPayments payments;
+        private final Map<String, Money> additionalMarketplacePrices = new LinkedHashMap<>();
+        private @Nullable NamedReference contact;
+        private @Nullable NamedReference additionalServices;
+        private @Nullable NamedReference fundraisingCampaign;
+        private @Nullable NamedReference wholesalePriceList;
+        private @Nullable MessageToSellerSettings messageToSellerSettings;
 
         /** The offer title (required). */
         public Builder name(String name) {
@@ -274,7 +333,7 @@ public final class CreateOfferRequest {
             return this;
         }
 
-        /** The available quantity (required, non-negative). */
+        /** The available quantity (non-negative; required for every format except ADVERTISEMENT). */
         public Builder availableStock(int availableStock) {
             this.availableStock = availableStock;
             return this;
@@ -283,6 +342,18 @@ public final class CreateOfferRequest {
         /** Image URLs, in display order (optional). */
         public Builder imageUrls(List<String> imageUrls) {
             this.imageUrls = List.copyOf(imageUrls);
+            return this;
+        }
+
+        /** Link the seller's uploaded attachments to the offer by id (optional). */
+        public Builder attachmentIds(List<String> attachmentIds) {
+            this.attachmentIds = List.copyOf(attachmentIds);
+            return this;
+        }
+
+        /** Declare the given offer image URLs as AI co-created (optional). */
+        public Builder aiCoCreatedImageUrls(List<String> aiCoCreatedImageUrls) {
+            this.aiCoCreatedImageUrls = List.copyOf(aiCoCreatedImageUrls);
             return this;
         }
 
@@ -362,6 +433,20 @@ public final class CreateOfferRequest {
             return this;
         }
 
+        /** Replace the offer's "fits to" ({@code compatibilityList}) entries with the given list (optional, non-null). */
+        public Builder compatibilityList(List<CompatibilityEntry> compatibilityList) {
+            Objects.requireNonNull(compatibilityList, "compatibilityList");
+            this.compatibilityList.clear();
+            this.compatibilityList.addAll(compatibilityList);
+            return this;
+        }
+
+        /** Add a single "fits to" entry (optional, non-null; call repeatedly to add several). */
+        public Builder addCompatibilityEntry(CompatibilityEntry entry) {
+            this.compatibilityList.add(Objects.requireNonNull(entry, "entry"));
+            return this;
+        }
+
         /** Set the seller's own external identifier for the offer (optional). */
         public Builder externalId(@Nullable String externalId) {
             this.externalId = externalId;
@@ -398,27 +483,53 @@ public final class CreateOfferRequest {
             return this;
         }
 
-        /** Attach the seller's contact by id (optional). */
-        public Builder contactId(@Nullable String contactId) {
-            this.contactId = contactId;
+        /** Set the offer's payment settings — the invoice type the seller issues (optional). */
+        public Builder payments(@Nullable OfferPayments payments) {
+            this.payments = payments;
             return this;
         }
 
-        /** Attach the seller's additional-services group by id (optional). */
-        public Builder additionalServicesGroupId(@Nullable String additionalServicesGroupId) {
-            this.additionalServicesGroupId = additionalServicesGroupId;
+        /**
+         * Publish the offer on an additional (foreign) marketplace at the given Buy Now price.
+         * Call once per marketplace (e.g. {@code allegro-cz}); a repeated marketplace id replaces
+         * its price. The price must use the marketplace's required currency (discover the eligible
+         * marketplaces and their currencies via {@code marketplaces().list()}) — the server returns
+         * a validation error otherwise; the SDK cannot check it (the valid set is account-dynamic).
+         */
+        public Builder additionalMarketplacePrice(String marketplaceId, Money price) {
+            this.additionalMarketplacePrices.put(
+                    Objects.requireNonNull(marketplaceId, "marketplaceId"),
+                    Objects.requireNonNull(price, "price"));
             return this;
         }
 
-        /** Attach a fundraising campaign by id (optional). */
-        public Builder fundraisingCampaignId(@Nullable String fundraisingCampaignId) {
-            this.fundraisingCampaignId = fundraisingCampaignId;
+        /** Attach the seller's contact by id or name (optional). */
+        public Builder contact(@Nullable NamedReference contact) {
+            this.contact = contact;
             return this;
         }
 
-        /** Attach the seller's wholesale price list by id (optional). */
-        public Builder wholesalePriceListId(@Nullable String wholesalePriceListId) {
-            this.wholesalePriceListId = wholesalePriceListId;
+        /** Attach the seller's additional-services group by id or name (optional). */
+        public Builder additionalServices(@Nullable NamedReference additionalServices) {
+            this.additionalServices = additionalServices;
+            return this;
+        }
+
+        /** Attach a fundraising campaign by id or name (optional). */
+        public Builder fundraisingCampaign(@Nullable NamedReference fundraisingCampaign) {
+            this.fundraisingCampaign = fundraisingCampaign;
+            return this;
+        }
+
+        /** Attach the seller's wholesale price list by id or name (optional). */
+        public Builder wholesalePriceList(@Nullable NamedReference wholesalePriceList) {
+            this.wholesalePriceList = wholesalePriceList;
+            return this;
+        }
+
+        /** Set the buyer-note ("message to seller") settings — mode and hint (optional). */
+        public Builder messageToSellerSettings(@Nullable MessageToSellerSettings messageToSellerSettings) {
+            this.messageToSellerSettings = messageToSellerSettings;
             return this;
         }
 
@@ -439,7 +550,12 @@ public final class CreateOfferRequest {
             } else if (buyNowPrice == null) {
                 throw new IllegalStateException(ERR_PRICE);
             }
-            if (availableStock == null || availableStock < 0) {
+            // Stock is a Buy Now / auction quantity; an ADVERTISEMENT offer carries none.
+            if (sellingFormat == OfferFormat.ADVERTISEMENT) {
+                if (availableStock != null) {
+                    throw new IllegalStateException(ERR_STOCK_ADVERTISEMENT);
+                }
+            } else if (availableStock == null || availableStock < 0) {
                 throw new IllegalStateException(ERR_STOCK);
             }
             return new CreateOfferRequest(this);

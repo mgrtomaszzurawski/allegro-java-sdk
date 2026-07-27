@@ -173,6 +173,16 @@ report.offers().forEach(offer ->
         System.out.println(offer.offerId() + " → " + offer.status() + " " + offer.errors()));
 ```
 
+Each `SubsidyOfferResult` also carries `maxContributionPercentage()` — the max seller contribution
+Allegro recorded for that offer, echoed back from the submit declaration, so you can confirm the
+accepted value without a second read. It is `null` on an `excludeOffers` result (an exclusion
+declares no contribution).
+
+> **Alpha.** `maxContributionPercentage()` is mapped from the vendored OpenAPI spec but is **not
+> yet confirmed against the live sandbox** — a subsidy submit needs an offer with a discount
+> opportunity, which the current sandbox account cannot arrange. Verify it manually before relying
+> on it, or treat it as alpha. Every other field on the report is live-verified.
+
 Between 1 and 1000 offers per command. A `Duration` overload bounds the wait; on expiry the SDK
 throws `AllegroAsyncTimeoutException` (the command may still complete server-side — re-read the
 offer status rather than resubmitting). `excludeOffers` works the same way with
