@@ -263,6 +263,10 @@ public final class ApiPaths {
     public static final String COMPATIBLE_PRODUCTS = "/sale/compatible-products";
     /** Compatible-product groups ({@code /sale/compatible-products/groups}). */
     public static final String COMPATIBLE_PRODUCTS_GROUPS = "/sale/compatible-products/groups";
+    /** New-product proposals ({@code /sale/product-proposals}); POST to propose. */
+    public static final String PRODUCT_PROPOSALS = "/sale/product-proposals";
+    /** {@code change-proposals} sub-resource segment (under {@link #PRODUCTS}). */
+    public static final String CHANGE_PROPOSALS_SEGMENT = "change-proposals";
 
     // ---- offers-extras + classifieds (bucket F) ----
     /** Classifieds (advertisement) package configurations, filtered by category. */

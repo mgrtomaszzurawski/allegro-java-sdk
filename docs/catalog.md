@@ -177,6 +177,47 @@ its `unit`, and — by type — either the numeric/text `restrictions` or the se
 `dictionary` values. It shares those value types with `CategoryParameter` but omits the two
 components that apply only to an offer's parameters (`requiredForProduct`, display options).
 
+### Proposing products
+
+When the catalogue does not yet carry a product you need, propose it — Allegro moderates the
+submission and, once accepted, lists it. A proposal needs a name and the category it belongs to;
+images and parameters (from `parametersIn(categoryId)`) are optional:
+
+```java
+ProductProposal created = client.catalog().products().propose(
+        ProductProposalRequest.builder()
+                .name("ACME Widget 3000")
+                .categoryId("257")
+                .addImageUrl("https://img.example/widget.jpg")
+                .addParameter(ProductProposalParameter.ofValueIds("11323", "1"))
+                .build());
+
+System.out.println(created.id() + " — " + created.status());   // PROPOSED, later LISTED
+```
+
+To correct an existing product, propose a change and read its moderation state back by id:
+
+```java
+ProductChangeProposal change = client.catalog().products().proposeChange(productId,
+        ProductChangeProposalRequest.builder()
+                .name("ACME Widget 3000 (2026)")
+                .note("Renamed to the 2026 edition")
+                .notifyViaEmailAfterVerification(true)
+                .build());
+
+ProductChangeProposal current = client.catalog().products().changeProposal(change.id());
+if (current.name() != null) {
+    System.out.println(current.name().proposal() + " — " + current.name().resolution());
+}
+```
+
+`propose` returns a `ProductProposal` (its id + `ProductProposalStatus`); `proposeChange`/
+`changeProposal` return a `ProductChangeProposal` whose `name()` is a `ProductNameProposal`
+(`current`/`proposal`/`reason` + a `ProposalResolution` — `UNRESOLVED`/`ACCEPTED`/`REJECTED`). Both
+proposals are moderation-gated, so the SDK's wire mapping is WireMock-pinned (not live-verified);
+the proposed description, and the changed category/images/parameters on read, are a field-depth
+follow-up.
+
 ## Compatibility
 
 Some categories — car parts and accessories — let an offer carry a **compatibility list**: the

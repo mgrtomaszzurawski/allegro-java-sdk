@@ -8,11 +8,17 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CategoryProductParameter
 import io.github.mgrtomaszzurawski.allegro.client.model.CategoryProductParameterRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetSaleProductsResponseNextPageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetSaleProductsResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductChangeProposalDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductProposalsResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.CatalogProducts;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductChangeProposalRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductProposalRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.ProductSearchRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Product;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductChangeProposal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductProposal;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ProductSummary;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator.CursorPage;
@@ -46,6 +52,10 @@ public final class CatalogProductsImpl implements CatalogProducts {
     private static final String ERR_REQUEST_NULL = "request must not be null";
     private static final String ERR_PRODUCT_ID_NULL = "productId must not be null";
     private static final String ERR_CATEGORY_ID_NULL = "categoryId must not be null";
+    private static final String ERR_CHANGE_PROPOSAL_ID_NULL = "changeProposalId must not be null";
+    private static final String OP_PROPOSE_PRODUCT = "propose product";
+    private static final String OP_PROPOSE_PRODUCT_CHANGE = "propose product change";
+    private static final String OP_GET_CHANGE_PROPOSAL = "get product change proposal";
 
     private final HttpSupport http;
 
@@ -79,6 +89,34 @@ public final class CatalogProductsImpl implements CatalogProducts {
             return List.of();
         }
         return rawParameters.stream().map(ProductParameter::from).toList();
+    }
+
+    @Override
+    public ProductProposal propose(ProductProposalRequest request) {
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        ProductProposalsResponseRaw raw = http.postJsonAuthenticated(
+                ApiPaths.PRODUCT_PROPOSALS, request.toRaw(),
+                ProductProposalsResponseRaw.class, OP_PROPOSE_PRODUCT);
+        return ProductProposal.from(raw);
+    }
+
+    @Override
+    public ProductChangeProposal proposeChange(String productId, ProductChangeProposalRequest request) {
+        Objects.requireNonNull(productId, ERR_PRODUCT_ID_NULL);
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        ProductChangeProposalDtoRaw raw = http.postJsonAuthenticated(
+                ApiPaths.subPath(ApiPaths.PRODUCTS, productId, ApiPaths.CHANGE_PROPOSALS_SEGMENT),
+                request.toRaw(), ProductChangeProposalDtoRaw.class, OP_PROPOSE_PRODUCT_CHANGE);
+        return ProductChangeProposal.from(raw);
+    }
+
+    @Override
+    public ProductChangeProposal changeProposal(String changeProposalId) {
+        Objects.requireNonNull(changeProposalId, ERR_CHANGE_PROPOSAL_ID_NULL);
+        ProductChangeProposalDtoRaw raw = http.getAuthenticated(
+                ApiPaths.subPath(ApiPaths.PRODUCTS, ApiPaths.CHANGE_PROPOSALS_SEGMENT, changeProposalId),
+                ProductChangeProposalDtoRaw.class, OP_GET_CHANGE_PROPOSAL);
+        return ProductChangeProposal.from(raw);
     }
 
     private CursorPage<ProductSummary> fetchPage(ProductSearchRequest request, @Nullable String pageId) {
