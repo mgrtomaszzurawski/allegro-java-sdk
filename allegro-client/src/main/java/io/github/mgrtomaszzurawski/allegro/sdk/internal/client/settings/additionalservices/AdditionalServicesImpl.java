@@ -10,6 +10,8 @@ import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalServicesGroups
 import io.github.mgrtomaszzurawski.allegro.client.model.CategoriesResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CategoryResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.AdditionalServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.AdditionalServicesGroupRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.GroupTranslationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServiceCategory;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.GroupTranslations;
@@ -41,6 +43,12 @@ public final class AdditionalServicesImpl implements AdditionalServices {
     private static final int PAGE_LIMIT = 100;
 
     private static final String ERR_GROUP_ID_NULL = "groupId must not be null";
+    private static final String ERR_REQUEST_NULL = "request must not be null";
+    private static final String ERR_LANGUAGE_NULL = "language must not be null";
+    private static final String OP_CREATE_GROUP = "create additional-services group";
+    private static final String OP_UPDATE_GROUP = "update additional-services group";
+    private static final String OP_UPSERT_TRANSLATION = "upsert additional-services group translation";
+    private static final String OP_DELETE_TRANSLATION = "delete additional-services group translation";
 
     private final HttpSupport http;
 
@@ -88,5 +96,46 @@ public final class AdditionalServicesImpl implements AdditionalServices {
         return GroupTranslations.from(http.request(OP_GET_TRANSLATIONS)
                 .get(ApiPaths.subPath(ApiPaths.ADDITIONAL_SERVICES_GROUPS, groupId, TRANSLATIONS_SEGMENT))
                 .fetch(AdditionalServiceGroupTranslationResponseRaw.class));
+    }
+
+    @Override
+    public AdditionalServicesGroup createGroup(AdditionalServicesGroupRequest request) {
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        return AdditionalServicesGroup.from(http.request(OP_CREATE_GROUP)
+                .post(ApiPaths.ADDITIONAL_SERVICES_GROUPS)
+                .jsonBody(request.toRaw())
+                .fetch(AdditionalServicesGroupResponseRaw.class));
+    }
+
+    @Override
+    public AdditionalServicesGroup updateGroup(String groupId, AdditionalServicesGroupRequest request) {
+        Objects.requireNonNull(groupId, ERR_GROUP_ID_NULL);
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        return AdditionalServicesGroup.from(http.request(OP_UPDATE_GROUP)
+                .put(ApiPaths.subPath(ApiPaths.ADDITIONAL_SERVICES_GROUPS, groupId))
+                .jsonBody(request.toRaw())
+                .fetch(AdditionalServicesGroupResponseRaw.class));
+    }
+
+    @Override
+    public void upsertTranslation(String groupId, String language, GroupTranslationRequest request) {
+        Objects.requireNonNull(groupId, ERR_GROUP_ID_NULL);
+        Objects.requireNonNull(language, ERR_LANGUAGE_NULL);
+        Objects.requireNonNull(request, ERR_REQUEST_NULL);
+        http.request(OP_UPSERT_TRANSLATION)
+                .patch(ApiPaths.subPath(
+                        ApiPaths.ADDITIONAL_SERVICES_GROUPS, groupId, TRANSLATIONS_SEGMENT, language))
+                .jsonBody(request.toRaw())
+                .send();
+    }
+
+    @Override
+    public void deleteTranslation(String groupId, String language) {
+        Objects.requireNonNull(groupId, ERR_GROUP_ID_NULL);
+        Objects.requireNonNull(language, ERR_LANGUAGE_NULL);
+        http.request(OP_DELETE_TRANSLATION)
+                .delete(ApiPaths.subPath(
+                        ApiPaths.ADDITIONAL_SERVICES_GROUPS, groupId, TRANSLATIONS_SEGMENT, language))
+                .send();
     }
 }

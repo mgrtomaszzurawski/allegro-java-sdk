@@ -5,9 +5,8 @@ conditions, additional services, product-compliance parties, size tables and tax
 Every operation is seller-scoped and uses the standard vendor media type.
 
 > **Status:** covers after-sale conditions (warranties, implied warranties, return policies),
-> product compliance (responsible persons/producers), additional services, and size tables /
-> tax settings. Additional-services writes and after-sales attachments are the remaining
-> bucket-K slices.
+> product compliance (responsible persons/producers), additional services (read **and** write),
+> and size tables / tax settings. After-sales attachment upload is the remaining bucket-K slice.
 
 ## After-sale conditions — warranties
 
@@ -158,8 +157,8 @@ ResponsibleProducer producer = compliance.responsibleProducer(producerId);
 the **definition catalog** available to the seller (grouped by category, each definition carrying a
 `maxPrice`), the seller's own **groups** (lazy list + single read; each group holds services, and
 each service its priced `configurations` with a country/delivery `constraint`), and a group's
-**translations** (one `GroupTranslation` per language, `MANUAL` or `AUTO`). Group create/update and
-translation writes ship in a follow-up slice.
+**translations** (one `GroupTranslation` per language, `MANUAL` or `AUTO`). It also **writes**
+groups (create/update) and their translations (upsert/delete) — see below.
 
 ```java
 AdditionalServices additional = client.settings().additionalServices();
@@ -172,6 +171,37 @@ additional.streamGroups().forEach(group ->           // lazy Stream<AdditionalSe
 
 AdditionalServicesGroup group = additional.group(groupId);
 GroupTranslations translations = additional.translations(groupId);
+```
+
+### Group and translation writes
+
+Create or replace a group — it needs a name and at least one service; each service references a
+definition id from the catalog and may carry priced `configurations` — and upsert or delete a
+group's per-language translation:
+
+```java
+AdditionalServicesGroup created = additional.createGroup(
+        AdditionalServicesGroupRequest.builder()
+                .name("Assembly & delivery")
+                .language("pl-PL")
+                .addService(AdditionalServiceRequest.of("ASSEMBLY", "On-site assembly",
+                        ServiceConfigurationRequest.of(Money.of("49.00", "PLN"))))
+                .build());
+
+additional.updateGroup(created.id(), request);        // full PUT replace
+
+additional.upsertTranslation(created.id(), "en-US",   // per-service descriptions
+        GroupTranslationRequest.builder()
+                .addTranslation("ASSEMBLY", "On-site assembly")
+                .build());
+
+additional.deleteTranslation(created.id(), "en-US");
+```
+
+`createGroup`/`updateGroup` return the mapped `AdditionalServicesGroup`. A configuration's
+constraint criteria (which offers a price applies to) is a field-depth follow-up; a configuration
+currently carries its `price`.
+
 ## Size tables
 
 A size table is a small grid — named column `headers` plus `rows` of cell values — that a

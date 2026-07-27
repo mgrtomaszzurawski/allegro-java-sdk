@@ -56,6 +56,7 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.model;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.model;
