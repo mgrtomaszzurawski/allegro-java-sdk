@@ -4,30 +4,14 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestImpliedWarrantyRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestReturnPolicyRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesProductOfferRequestWarrantyRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceInputRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ChangePriceWithoutOutputRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferListingDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OffersSearchResultDtoRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferRequestRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.PriceRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1AllOfDeliveryRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferRequestV1Raw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferRatingRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SalePartialProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOffersRequestStockRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.SizeTableRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferStatusResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerOfferBaseEventRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.SellerOfferEventsResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SmartOfferClassificationReportRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UnfilledParametersResponseRaw;
@@ -38,31 +22,36 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTags;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslations;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferBatch;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.OfferMedia;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.Offers;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.PromoOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.AfterSalesServices;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceChangeResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.FlexibleBundlesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferBundlesImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTagsImpl;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offerextras.OfferTranslationsImpl;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.client.offers.mapping.OfferRequestMapper;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
-import java.util.UUID;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
@@ -77,14 +66,22 @@ public final class OffersImpl implements Offers {
     private static final String OP_CREATE = "create offer";
     private static final String OP_EDIT = "edit offer";
     private static final String OP_DELETE_DRAFT = "delete draft offer";
-    private static final String OP_CHANGE_PRICE = "change offer Buy Now price";
     private static final String OP_STREAM = "stream offers";
+    private static final String OP_COUNT = "count offers";
     private static final String OP_SMART = "get offer Smart classification";
     private static final String OP_UNFILLED = "stream offers with unfilled parameters";
     private static final String OP_RATING = "get offer rating";
+    private static final String OP_EVENTS = "stream offer events";
+    private static final String OP_OPERATION_STATUS = "get offer operation status";
+    private static final String OP_GET_FIELDS = "get offer parts";
 
     /** Offers page ≤ 1000 (spec); 100 balances round-trips against payload size. */
     private static final int PAGE_SIZE = 100;
+    // A count probe fetches the first page at the smallest legal size (Allegro's `limit`
+    // range is 1..1000) purely to read the response's `totalCount`.
+    private static final int COUNT_PROBE_OFFSET = 0;
+    private static final int COUNT_PROBE_LIMIT = 1;
+    private static final long EMPTY_COUNT = 0L;
 
     private static final String QUERY_NAME = "name";
     private static final String QUERY_STATUS = "publication.status";
@@ -93,10 +90,20 @@ public final class OffersImpl implements Offers {
     private static final String QUERY_PRICE_TO = "sellingMode.price.amount.lte";
     private static final String QUERY_OFFSET = "offset";
     private static final String QUERY_LIMIT = "limit";
+    private static final String QUERY_FROM = "from";
+    private static final String QUERY_TYPE = "type";
+    private static final String QUERY_INCLUDE = "include";
+    private static final String PART_STOCK = "stock";
+    private static final String PART_PRICE = "price";
+    private static final String ERR_NO_PARTS = "at least one offer part is required";
+    private static final String ERR_OFFER_ID = "offerId must not be null";
+    /** Marker in the create/edit response Location URL that precedes the async operation id. */
+    private static final String OPERATIONS_SEGMENT = "/operations/";
 
     private final HttpSupport http;
     private final OfferBatch batch;
     private final PromoOptions promoOptions;
+    private final OfferMedia media;
 
     // ---- bucket F sub-facades ----
     private final OfferTags tags;
@@ -108,6 +115,7 @@ public final class OffersImpl implements Offers {
         this.http = new HttpSupport(runtime);
         this.batch = new OfferBatchImpl(runtime);
         this.promoOptions = new PromoOptionsImpl(runtime);
+        this.media = new OfferMediaImpl(runtime);
         // [append point: offers sub-facade wiring] Bucket A constructs its own
         // sub-facades here (batch/promoOptions/media); bucket F constructs its
         // sub-facades (tags/translations/bundles/flexibleBundles/rating) from
@@ -124,149 +132,66 @@ public final class OffersImpl implements Offers {
                 ApiPaths.productOffer(offerId), SaleProductOfferResponseV1Raw.class, OP_GET));
     }
 
-    /** The generated Buy Now price DTO for a {@link Money} amount. */
-    private static BuyNowPriceRaw priceOf(Money money) {
-        return new BuyNowPriceRaw().amount(money.amount()).currency(money.currency());
+    @Override
+    public PartialOffer getFields(String offerId, OfferPart... parts) {
+        Objects.requireNonNull(offerId, ERR_OFFER_ID);
+        if (parts == null || parts.length == 0) {
+            throw new IllegalArgumentException(ERR_NO_PARTS);
+        }
+        Query query = Query.create();
+        for (OfferPart part : parts) {
+            query.add(QUERY_INCLUDE, wirePart(part));
+        }
+        return PartialOffer.from(http.request(OP_GET_FIELDS)
+                .get(ApiPaths.productOfferParts(offerId))
+                .query(query)
+                .fetch(SalePartialProductOfferResponseRaw.class));
     }
 
-    /** The generated selling mode for a create request: format, Buy Now price, and any auction prices. */
-    private static SellingModeRaw sellingModeOf(CreateOfferRequest request) {
-        SellingModeFormatRaw format = request.sellingFormat() == null
-                ? SellingModeFormatRaw.BUY_NOW
-                : request.sellingFormat().toRaw();
-        SellingModeRaw sellingMode = new SellingModeRaw().format(format);
-        if (request.buyNowPrice() != null) {
-            sellingMode.price(priceOf(request.buyNowPrice()));
-        }
-        if (request.startingPrice() != null) {
-            sellingMode.startingPrice(new StartingPriceRaw()
-                    .amount(request.startingPrice().amount()).currency(request.startingPrice().currency()));
-        }
-        if (request.minimalPrice() != null) {
-            sellingMode.minimalPrice(new MinimalPriceRaw()
-                    .amount(request.minimalPrice().amount()).currency(request.minimalPrice().currency()));
-        }
-        return sellingMode;
-    }
-
-    /** The generated stock for a create request: available quantity and optional unit. */
-    private static SaleProductOffersRequestStockRaw stockOf(CreateOfferRequest request) {
-        SaleProductOffersRequestStockRaw stock =
-                new SaleProductOffersRequestStockRaw().available(request.availableStock());
-        if (request.stockUnit() != null) {
-            stock.unit(request.stockUnit().toRaw());
-        }
-        return stock;
-    }
-
-    /** The generated delivery block for the SDK delivery terms (only set fields are written). */
-    private static SaleProductOfferRequestV1AllOfDeliveryRaw deliveryRawOf(OfferDelivery delivery) {
-        SaleProductOfferRequestV1AllOfDeliveryRaw raw = new SaleProductOfferRequestV1AllOfDeliveryRaw();
-        if (delivery.shippingRatesId() != null) {
-            raw.shippingRates(new JustIdRaw().id(delivery.shippingRatesId()));
-        }
-        if (delivery.handlingTime() != null) {
-            raw.handlingTime(delivery.handlingTime());
-        }
-        if (delivery.shipmentDate() != null) {
-            raw.shipmentDate(delivery.shipmentDate());
-        }
-        if (delivery.additionalInfo() != null) {
-            raw.additionalInfo(delivery.additionalInfo());
-        }
-        return raw;
-    }
-
-    /** The generated after-sales block for the SDK conditions; the ids are parsed as Allegro UUIDs. */
-    private static AfterSalesServicesProductOfferRequestRaw afterSalesRawOf(AfterSalesServices services) {
-        AfterSalesServicesProductOfferRequestRaw raw = new AfterSalesServicesProductOfferRequestRaw();
-        if (services.impliedWarrantyId() != null) {
-            raw.impliedWarranty(new AfterSalesServicesProductOfferRequestImpliedWarrantyRaw()
-                    .id(UUID.fromString(services.impliedWarrantyId())));
-        }
-        if (services.returnPolicyId() != null) {
-            raw.returnPolicy(new AfterSalesServicesProductOfferRequestReturnPolicyRaw()
-                    .id(UUID.fromString(services.returnPolicyId())));
-        }
-        if (services.warrantyId() != null) {
-            raw.warranty(new AfterSalesServicesProductOfferRequestWarrantyRaw()
-                    .id(UUID.fromString(services.warrantyId())));
-        }
-        return raw;
-    }
-
-    /** The generated request parameters for the SDK category parameters, in order. */
-    private static List<ParameterProductOfferRequestRaw> parametersRawOf(List<OfferParameter> parameters) {
-        return parameters.stream().map(OfferParameter::toRaw).toList();
+    private static String wirePart(OfferPart part) {
+        return part == OfferPart.STOCK ? PART_STOCK : PART_PRICE;
     }
 
     @Override
     public Offer create(CreateOfferRequest request) {
-        SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw()
-                .name(request.name())
-                .category(new OfferCategoryRequestRaw().id(request.categoryId()))
-                .sellingMode(sellingModeOf(request))
-                .stock(stockOf(request));
-        if (!request.imageUrls().isEmpty()) {
-            body.images(request.imageUrls());
-        }
-        if (request.delivery() != null) {
-            body.delivery(deliveryRawOf(request.delivery()));
-        }
-        if (request.afterSalesServices() != null) {
-            body.afterSalesServices(afterSalesRawOf(request.afterSalesServices()));
-        }
-        if (request.description() != null) {
-            body.description(request.description().toRaw());
-        }
-        if (request.location() != null) {
-            body.location(request.location().toRaw());
-        }
-        if (!request.parameters().isEmpty()) {
-            body.parameters(parametersRawOf(request.parameters()));
-        }
-        if (request.externalId() != null) {
-            body.external(new ExternalIdRaw().id(request.externalId()));
-        }
-        if (request.language() != null) {
-            body.language(request.language());
-        }
-        if (request.sizeTableId() != null) {
-            body.sizeTable(new SizeTableRaw().id(request.sizeTableId()));
-        }
         // jsonBodyPartial (not jsonBody): the generated request type pre-initializes
         // empty collections and leaves nullable scalars (e.g. `language`) null, and
         // Allegro rejects `language:null` with a JsonMappingException — send only the
-        // fields actually set.
-        return Offer.from(http.request(OP_CREATE)
+        // fields actually set (the mapper builds them).
+        var located = http.request(OP_CREATE)
                 .post(ApiPaths.SALE_PRODUCT_OFFERS)
-                .jsonBodyPartial(body)
-                .fetch(SaleProductOfferResponseV1Raw.class));
+                .jsonBodyPartial(OfferRequestMapper.createBody(request))
+                .fetchLocation(SaleProductOfferResponseV1Raw.class);
+        return Offer.from(located.value(), operationIdFrom(located.location()));
     }
 
     @Override
     public Offer edit(String offerId, EditOfferRequest request) {
-        // A partial PATCH: build only the changed fields and serialize omitting
-        // null AND empty fields (jsonBodyPartial), so untouched fields — including
-        // the request type's pre-initialized empty collections — are absent from
-        // the wire rather than sent and reset.
-        SaleProductOfferRequestV1Raw body = new SaleProductOfferRequestV1Raw();
-        if (request.name() != null) {
-            body.name(request.name());
-        }
-        if (request.buyNowPrice() != null) {
-            body.sellingMode(new SellingModeRaw().price(priceOf(request.buyNowPrice())));
-        }
-        if (request.availableStock() != null) {
-            body.stock(new SaleProductOffersRequestStockRaw().available(request.availableStock()));
-        }
-        if (request.imageUrls() != null) {
-            body.images(request.imageUrls());
-        }
-        return Offer.from(http.request(OP_EDIT)
+        // A partial PATCH: the mapper builds only the changed fields and jsonBodyPartial
+        // omits null AND empty fields, so untouched fields — including the request type's
+        // pre-initialized empty collections — are absent from the wire rather than reset.
+        var located = http.request(OP_EDIT)
                 .patch(ApiPaths.productOffer(offerId))
-                .jsonBodyPartial(body)
-                .fetch(SaleProductOfferResponseV1Raw.class));
+                .jsonBodyPartial(OfferRequestMapper.editBody(request))
+                .fetchLocation(SaleProductOfferResponseV1Raw.class);
+        return Offer.from(located.value(), operationIdFrom(located.location()));
+    }
+
+    /**
+     * The async create/edit operation id is the segment after {@code /operations/} in the response
+     * {@code Location} URL ({@code .../sale/product-offers/{offerId}/operations/{operationId}}), or
+     * {@code null} when the server sends no such header (or one that is not an operations URL).
+     */
+    private static @Nullable String operationIdFrom(@Nullable String location) {
+        if (location == null) {
+            return null;
+        }
+        int marker = location.indexOf(OPERATIONS_SEGMENT);
+        if (marker < 0) {
+            return null;
+        }
+        String operationId = location.substring(marker + OPERATIONS_SEGMENT.length());
+        return operationId.isBlank() ? null : operationId;
     }
 
     @Override
@@ -275,18 +200,10 @@ public final class OffersImpl implements Offers {
     }
 
     @Override
-    public void changeBuyNowPrice(String offerId, Money buyNowPrice) {
-        // Allegro's price change is a command keyed by a client-generated id;
-        // for a single offer it resolves synchronously, so one PUT suffices.
-        String commandId = UUID.randomUUID().toString();
-        ChangePriceWithoutOutputRaw body = new ChangePriceWithoutOutputRaw()
-                .id(commandId)
-                .input(new ChangePriceInputRaw().buyNowPrice(
-                        new PriceRaw().amount(buyNowPrice.amount()).currency(buyNowPrice.currency())));
-        http.request(OP_CHANGE_PRICE)
-                .put(ApiPaths.changePriceCommand(offerId, commandId))
-                .jsonBody(body)
-                .send();
+    public PriceChangeResult changeBuyNowPrice(String offerId, Money buyNowPrice) {
+        // A single-offer price change resolves synchronously; the command's *Raw
+        // request/response assembly lives in ChangePriceCommand to keep this wrapper lean.
+        return ChangePriceCommand.apply(http, offerId, buyNowPrice);
     }
 
     @Override
@@ -294,13 +211,35 @@ public final class OffersImpl implements Offers {
         return PagedSpliterator.stream(pageIndex -> fetchPage(filter, pageIndex));
     }
 
-    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
-        Query query = Query.create()
+    @Override
+    public long countOffers(OfferFilter filter) {
+        // Fetch a single minimal page purely to read the server's totalCount — a constant
+        // number of matching offers is returned regardless of how large the result set is,
+        // so this stays O(1) rather than paging the whole listing.
+        Query query = filterQuery(filter)
+                .add(QUERY_OFFSET, COUNT_PROBE_OFFSET)
+                .add(QUERY_LIMIT, COUNT_PROBE_LIMIT);
+        OffersSearchResultDtoRaw response = http.request(OP_COUNT)
+                .get(ApiPaths.SALE_OFFERS)
+                .query(query)
+                .fetch(OffersSearchResultDtoRaw.class);
+        Integer totalCount = response.getTotalCount();
+        // The offers listing always carries totalCount (ADR-010 only wires this accessor where the
+        // server reports one); the null branch is a defensive guard, not a supported "no total" signal.
+        return totalCount == null ? EMPTY_COUNT : totalCount;
+    }
+
+    private Query filterQuery(OfferFilter filter) {
+        return Query.create()
                 .add(QUERY_NAME, filter.name())
                 .add(QUERY_STATUS, wireValueOf(filter.status()))
                 .add(QUERY_FORMAT, wireValueOf(filter.format()))
                 .add(QUERY_PRICE_FROM, filter.priceFrom())
-                .add(QUERY_PRICE_TO, filter.priceTo())
+                .add(QUERY_PRICE_TO, filter.priceTo());
+    }
+
+    private PagedSpliterator.Page<OfferSummary> fetchPage(OfferFilter filter, int pageIndex) {
+        Query query = filterQuery(filter)
                 .add(QUERY_OFFSET, pageIndex * PAGE_SIZE)
                 .add(QUERY_LIMIT, PAGE_SIZE);
         OffersSearchResultDtoRaw response = http.request(OP_STREAM)
@@ -345,6 +284,37 @@ public final class OffersImpl implements Offers {
     }
 
     @Override
+    public Stream<OfferEvent> streamEvents(OfferEventFilter filter) {
+        return PagedSpliterator.cursorStream(cursor -> fetchEventPage(filter, cursor));
+    }
+
+    private PagedSpliterator.CursorPage<OfferEvent> fetchEventPage(OfferEventFilter filter,
+            @Nullable String from) {
+        Query query = Query.create()
+                .add(QUERY_FROM, from)
+                .add(QUERY_LIMIT, PAGE_SIZE)
+                .add(QUERY_TYPE, filter.type());
+        SellerOfferEventsResponseRaw response = http.request(OP_EVENTS)
+                .get(ApiPaths.SALE_OFFER_EVENTS)
+                .query(query)
+                .fetch(SellerOfferEventsResponseRaw.class);
+        List<SellerOfferBaseEventRaw> events = response.getOfferEvents();
+        List<OfferEvent> items = events == null
+                ? List.of()
+                : events.stream().map(OfferEvent::from).toList();
+        // A full page means there may be more; advance the cursor to the last event id.
+        String nextCursor = items.size() == PAGE_SIZE ? items.get(items.size() - 1).id() : null;
+        return new PagedSpliterator.CursorPage<>(items, nextCursor);
+    }
+
+    @Override
+    public OfferProcessingStatus operationStatus(String offerId, String operationId) {
+        return OfferProcessingStatus.from(http.getAuthenticated(
+                ApiPaths.offerOperation(offerId, operationId),
+                SaleProductOfferStatusResponseRaw.class, OP_OPERATION_STATUS));
+    }
+
+    @Override
     public OfferBatch batch() {
         return batch;
     }
@@ -352,6 +322,11 @@ public final class OffersImpl implements Offers {
     @Override
     public PromoOptions promoOptions() {
         return promoOptions;
+    }
+
+    @Override
+    public OfferMedia media() {
+        return media;
     }
 
     // ---- bucket F sub-accessors ----

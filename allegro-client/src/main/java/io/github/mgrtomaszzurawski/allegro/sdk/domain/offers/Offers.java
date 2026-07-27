@@ -12,9 +12,15 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.OfferTranslati
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offerextras.model.OfferRating;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.CreateOfferRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.EditOfferRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferEventFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.builder.OfferPart;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferEvent;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferProcessingStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferSummary;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PartialOffer;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.PriceChangeResult;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.SmartClassification;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.UnfilledParameters;
 import java.util.stream.Stream;
@@ -42,13 +48,27 @@ public interface Offers {
     Offer get(String offerId);
 
     /**
-     * Change an offer's Buy Now price. The SDK issues the price-change command
-     * and returns once Allegro has accepted it.
+     * Selected parts of a single product-offer — a faster, lighter read than
+     * {@link #get(String)} that returns only the requested {@link OfferPart parts}
+     * (the available stock and/or the per-marketplace price). At least one part is
+     * required.
+     *
+     * @param offerId the offer identifier
+     * @param parts   the parts to retrieve (at least one)
+     * @return the requested parts of the offer
+     */
+    PartialOffer getFields(String offerId, OfferPart... parts);
+
+    /**
+     * Change an offer's Buy Now price. A single-offer price change resolves
+     * synchronously, so the SDK returns the command's terminal result — the price
+     * it applied, the processing status, and any per-field errors.
      *
      * @param offerId     the offer identifier
      * @param buyNowPrice the new Buy Now price
+     * @return the terminal result of the price-change command
      */
-    void changeBuyNowPrice(String offerId, Money buyNowPrice);
+    PriceChangeResult changeBuyNowPrice(String offerId, Money buyNowPrice);
 
     /**
      * Create a new Buy Now offer. The offer is created as a draft; publish it
@@ -86,6 +106,37 @@ public interface Offers {
     Stream<OfferSummary> streamOffers(OfferFilter filter);
 
     /**
+     * How many of the seller's offers match a filter — the total the server reports,
+     * without walking the result set. This is a single, constant-cost request (one
+     * minimal page fetched only to read the total), independent of how many offers the
+     * seller has: use it for a count (e.g. a dashboard total) instead of
+     * {@code streamOffers(filter).count()}, which would page through every match.
+     *
+     * @param filter which offers to count (use {@link OfferFilter#all()} for all)
+     * @return the total number of matching offers
+     */
+    long countOffers(OfferFilter filter);
+
+    /**
+     * A lazy stream of events about the seller's offers (activated, ended, price/stock
+     * changed, …), newest resumable by event id. Filter by type with the given filter.
+     *
+     * @param filter which event types to include (use {@link OfferEventFilter#all()} for all)
+     * @return a lazy stream of offer events
+     */
+    Stream<OfferEvent> streamEvents(OfferEventFilter filter);
+
+    /**
+     * The processing status of an asynchronous offer operation (the {@code operationId} an
+     * async create/edit returns) — whether the background processing has finished.
+     *
+     * @param offerId     the offer the operation applies to
+     * @param operationId the operation id to check
+     * @return the processing status
+     */
+    OfferProcessingStatus operationStatus(String offerId, String operationId);
+
+    /**
      * The Allegro Smart! classification report for one offer — whether it
      * qualifies and the per-condition breakdown.
      *
@@ -115,6 +166,13 @@ public interface Offers {
      * @return the promo-options sub-facade
      */
     PromoOptions promoOptions();
+
+    /**
+     * Offer media — uploading offer images and document attachments.
+     *
+     * @return the media sub-facade
+     */
+    OfferMedia media();
 
     // [append point: offers sub-facades] Bucket A appends its own sub-facade
     // accessors here (batch(), promoOptions(), media()); bucket F appends its

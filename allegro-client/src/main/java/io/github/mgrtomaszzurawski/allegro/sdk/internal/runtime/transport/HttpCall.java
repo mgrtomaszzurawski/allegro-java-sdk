@@ -58,6 +58,7 @@ public final class HttpCall {
     private String method;
     private String path;
     private String absoluteUrl;
+    private boolean useUploadHost;
     private Query query = Query.create();
     private String acceptMediaType = HttpSupport.VND_ALLEGRO_V1;
     private String acceptLanguage;
@@ -116,6 +117,16 @@ public final class HttpCall {
     /** Attach encoded query parameters. */
     public HttpCall query(Query requestQuery) {
         this.query = requestQuery;
+        return this;
+    }
+
+    /**
+     * Send this {@code path} to the Allegro UPLOAD host ({@code upload.*}) rather than
+     * the API base — for the binary media endpoints ({@code POST /sale/images}, the
+     * attachment {@code PUT}). The Bearer token and media type are still sent.
+     */
+    public HttpCall onUploadHost() {
+        this.useUploadHost = true;
         return this;
     }
 
@@ -251,9 +262,14 @@ public final class HttpCall {
             throw new IllegalStateException(ERR_NO_VERB);
         }
         String fullPath = query.isEmpty() ? path : path + query.render();
-        URI target = absoluteUrl != null
-                ? secureUploadTarget(absoluteUrl, support.runtime().baseUrl())
-                : support.uri(fullPath);
+        URI target;
+        if (absoluteUrl != null) {
+            target = secureUploadTarget(absoluteUrl, support.runtime().baseUrl());
+        } else if (useUploadHost) {
+            target = URI.create(support.runtime().uploadBaseUrl() + fullPath);
+        } else {
+            target = support.uri(fullPath);
+        }
         HttpRequest.Builder builder = HttpRequest.newBuilder(target)
                 .timeout(support.runtime().readTimeout())
                 .header(ACCEPT_HEADER, acceptMediaType)

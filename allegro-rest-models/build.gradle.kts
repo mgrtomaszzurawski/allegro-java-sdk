@@ -9,9 +9,22 @@
 // in allegro-client, so the generator's api-client/supporting files are not
 // produced — nothing here but data-transfer types.
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import com.vanniktech.maven.publish.JavaLibrary
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SonatypeHost
+
+buildscript {
+    dependencies {
+        // YAML tree access for the spec-preprocessing task below. The vendored
+        // OpenAPI spec is never edited; the patch runs on a build/ copy.
+        classpath("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.2")
+    }
+}
 
 plugins {
     `java-library`
@@ -39,13 +52,126 @@ dependencies {
 
 val specFile = layout.projectDirectory.file("openapi/allegro-openapi.yaml")
 
+// ---------- Generation-time spec normalization (vendored spec untouched) ----------
+//
+// Some Allegro schemas declare a discriminator whose mapping targets are NOT
+// linked back to the parent with `allOf` (the spec relies on the discriminator
+// mapping alone). The OpenAPI generator only sets up Java inheritance when a
+// subtype `allOf`-references its parent, so for those schemas the mapped
+// subtypes generate as STANDALONE classes and the parent field cannot carry a
+// concrete subtype instance — the value-bearing fields become unreachable.
+//
+// `OfferBulkModification.stock` is such a schema: its `FIXED`/`GAIN` subtypes
+// (`StockModification{Fixed,Gain}`, each carrying `value`) are standalone, so
+// the generated `stock` field (typed to the changeType-only base) can never
+// hold a stock value. The price side of the same request has the identical
+// discriminator but its subtypes DO `allOf`-reference the parent, so it works.
+//
+// The vendored spec must never appear in a diff, so this runs on a build/ copy:
+// promote the inline `stock` schema to a named component and rewrite each mapped
+// subtype into `allOf: [ {$ref parent}, {original} ]`, mirroring the price side.
+val patchedSpecFile = layout.buildDirectory.file("patched-openapi/allegro-openapi.yaml")
+
+// One discriminator-only schema to normalize: the inline object under
+// `owner.property` is promoted to `parentName`, and each mapped subtype is
+// re-parented under it via allOf.
+data class StockLikeFix(
+    val owner: String,
+    val property: String,
+    val parentName: String,
+    val subtypes: List<String>,
+)
+
+val patchOpenApiSpec = tasks.register("patchOpenApiSpec") {
+    val source = specFile
+    val target = patchedSpecFile
+    inputs.file(source)
+    outputs.file(target)
+    doLast {
+        val schemaRefPrefix = "#/components/schemas/"
+        val mapper = ObjectMapper(
+            YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+        )
+        val root = mapper.readTree(source.asFile) as ObjectNode
+        val schemas = root.path("components").path("schemas") as ObjectNode
+
+        // Data-driven: (owning schema, inline object property, promoted component,
+        // discriminator-mapped subtypes) — one entry per discriminator-only schema.
+        val fixes = listOf(
+            StockLikeFix(
+                owner = "OfferBulkModification",
+                property = "stock",
+                parentName = "OfferBulkModificationStock",
+                subtypes = listOf("StockModificationFixed", "StockModificationGain"),
+            ),
+        )
+        for (fixEntry in fixes) {
+            if (schemas.has(fixEntry.parentName)) {
+                continue // already normalized (idempotent across incremental runs)
+            }
+            val parentRef = schemaRefPrefix + fixEntry.parentName
+            val owner = schemas.get(fixEntry.owner) as ObjectNode
+            val ownerProps = owner.get("properties") as ObjectNode
+            val inline = ownerProps.get(fixEntry.property) as ObjectNode
+
+            // 1. Promote the inline object (keeps its discriminator + mapping) to a named component.
+            schemas.set<JsonNode>(fixEntry.parentName, inline.deepCopy())
+            // 2. Replace the inline with a $ref to that component.
+            ownerProps.set<JsonNode>(fixEntry.property, mapper.createObjectNode().put("\$ref", parentRef))
+            // 3. Wrap each mapped subtype so it allOf-references the parent (Java inheritance).
+            for (subName in fixEntry.subtypes) {
+                val original = schemas.get(subName) as ObjectNode
+                val wrapped = mapper.createObjectNode()
+                val allOf = wrapped.putArray("allOf")
+                allOf.add(mapper.createObjectNode().put("\$ref", parentRef))
+                allOf.add(original.deepCopy())
+                schemas.set<JsonNode>(subName, wrapped)
+            }
+            logger.lifecycle("patchOpenApiSpec: linked ${fixEntry.subtypes} under ${fixEntry.parentName}")
+        }
+
+        // Shipping / ShippingExtended (ASN): both discriminate on `method`, but the three shared
+        // method subtypes (OWN_TRANSPORT / COURIER_BY_SELLER / THIRD_PARTY_DELIVERY) allOf-reference
+        // the write base `Shipping` ONLY. A `ShippingExtended`-typed read field therefore resolves
+        // those methods to classes that are not its subtypes, and Jackson throws
+        // InvalidTypeIdException — failing the whole Advance Ship Notice read (and the create/update
+        // echo, which returns the same type). Collapse to a single `Shipping` hierarchy: retarget
+        // every `ShippingExtended` reference to `Shipping` (this also re-parents ALREADY_IN_WAREHOUSE),
+        // add that method to `Shipping`'s discriminator mapping, and drop the now-orphaned schema.
+        // `Shipping` then carries all four method subtypes and every ASN shipping field reads.
+        if (schemas.has("ShippingExtended")) {
+            fun retargetRefs(node: JsonNode, fromRef: String, toRef: String) {
+                if (node is ObjectNode) {
+                    val refNode = node.get("\$ref")
+                    if (refNode != null && refNode.isTextual && refNode.asText() == fromRef) {
+                        node.put("\$ref", toRef)
+                    }
+                    node.fields().forEach { retargetRefs(it.value, fromRef, toRef) }
+                } else if (node.isArray) {
+                    node.forEach { retargetRefs(it, fromRef, toRef) }
+                }
+            }
+            retargetRefs(root, schemaRefPrefix + "ShippingExtended", schemaRefPrefix + "Shipping")
+            val shippingMapping = (schemas.get("Shipping") as ObjectNode)
+                .get("discriminator").get("mapping") as ObjectNode
+            shippingMapping.put("ALREADY_IN_WAREHOUSE", schemaRefPrefix + "AlreadyInWarehouseShipping")
+            schemas.remove("ShippingExtended")
+            logger.lifecycle("patchOpenApiSpec: collapsed ShippingExtended into Shipping (4 methods)")
+        }
+
+        target.get().asFile.also { it.parentFile.mkdirs() }
+        mapper.writeValue(target.get().asFile, root)
+    }
+}
+
 openApiGenerate {
     generatorName.set("java")
     // The `native` library serializes with Jackson (the okhttp-gson default
     // pulls in Gson type-adapters + a JSON support class). Models-only
     // generation keeps just the Jackson-annotated DTOs.
     library.set("native")
-    inputSpec.set(specFile.asFile.absolutePath)
+    // Consume the normalized copy (see patchOpenApiSpec); the vendored spec stays untouched.
+    inputSpec.set(patchedSpecFile.map { it.asFile.absolutePath })
     outputDir.set(layout.buildDirectory.dir("generated-sources/openapi").map { it.asFile.absolutePath })
     modelPackage.set("io.github.mgrtomaszzurawski.allegro.client.model")
     invokerPackage.set("io.github.mgrtomaszzurawski.allegro.client")
@@ -88,7 +214,8 @@ openApiGenerate {
 // + generator config. doFirst clears stale generated files before each run so a
 // removed schema definition does not leave orphan *Raw classes behind.
 tasks.named("openApiGenerate") {
-    inputs.file(specFile).withPathSensitivity(PathSensitivity.RELATIVE)
+    dependsOn(patchOpenApiSpec)
+    inputs.file(patchedSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     val outDir = layout.buildDirectory.dir("generated-sources/openapi")
     outputs.dir(outDir)
     outputs.cacheIf { true }

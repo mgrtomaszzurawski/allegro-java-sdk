@@ -9,12 +9,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValuePublicationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalMarketplacesResponseValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedContentRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.AiCoCreatedImageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AfterSalesServicesRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.B2bRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ContactRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DeliveryProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionItemTextRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DescriptionSectionRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.DiscountsProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ExternalIdRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ImpliedWarrantyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
@@ -22,8 +30,13 @@ import io.github.mgrtomaszzurawski.allegro.client.model.LocationRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferCategoryRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferStatusRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxRateRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.OfferTaxSettingsRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterProductOfferResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAdditionalServicesResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferAttachmentInnerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ProductOfferFundraisingCampaignResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ReturnPolicyRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferPublicationResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SaleProductOfferResponseV1Raw;
@@ -40,20 +53,35 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionIt
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.DescriptionItemType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.Offer;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDelivery;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.MarketplacePublicationState;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferDescription;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferFormat;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferMarketplace;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferLocation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.OfferStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.ParameterRange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.StockUnit;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class OfferTest {
 
     private static final String OFFER_ID = "13579";
+    private static final String MARKETPLACE_ID = "allegro-cz";
+    private static final String MARKETPLACE_AMOUNT = "899.00";
+    private static final String MARKETPLACE_CURRENCY = "CZK";
+    private static final String ATTACHMENT_ID = "3f8b2c10-0000-4000-8000-000000000abc";
+    private static final String ATTACHMENT_ID_2 = "5c7d1e20-0000-4000-8000-000000000def";
+    private static final String AI_IMAGE_URL = "https://a.allegroimg.com/original/11ea99/ai-one";
+    private static final String IMAGE_URL_A = "https://a.allegroimg.com/original/img/a";
+    private static final String IMAGE_URL_B = "https://a.allegroimg.com/original/img/b";
+    private static final OffsetDateTime CREATED_AT = OffsetDateTime.parse("2026-07-20T08:00:00Z");
+    private static final OffsetDateTime UPDATED_AT = OffsetDateTime.parse("2026-07-24T09:30:00Z");
+    private static final String AI_IMAGE_URL_2 = "https://a.allegroimg.com/original/11ea99/ai-two";
     private static final String CATEGORY_ID = "257";
     private static final String TEST_UNKNOWN_FORMAT = "FUTURE_FORMAT";
     private static final String TEST_UNKNOWN_STATUS = "FUTURE_STATUS";
@@ -82,6 +110,14 @@ class OfferTest {
     private static final String EXTERNAL_ID = "SKU-12345";
     private static final String LANGUAGE = "pl-PL";
     private static final String SIZE_TABLE_ID = "size-table-1";
+    private static final String TAX_SUBJECT = "GOODS";
+    private static final String TAX_EXEMPTION = "NONE";
+    private static final String TAX_RATE = "23";
+    private static final String TAX_COUNTRY = "PL";
+    private static final String CONTACT_ID = "contact-1";
+    private static final String ADDITIONAL_SERVICES_ID = "group-1";
+    private static final String FUNDRAISING_ID = "campaign-1";
+    private static final String WHOLESALE_PRICE_LIST_ID = "wholesale-1";
 
     @Test
     void from_whenFormatAndStatusAbsent_mapsBothToUnknown() {
@@ -170,6 +206,262 @@ class OfferTest {
     }
 
     @Test
+    void from_whenAdditionalMarketplacesPresent_projectsThemByMarketplaceId() {
+        // given — the offer is cross-listed on a foreign marketplace with a price and state
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .additionalMarketplaces(Map.of(MARKETPLACE_ID, new AdditionalMarketplacesResponseValueRaw()
+                        .sellingMode(new SellingModeRaw()
+                                .format(SellingModeFormatRaw.BUY_NOW)
+                                .price(new BuyNowPriceRaw().amount(MARKETPLACE_AMOUNT).currency(MARKETPLACE_CURRENCY)))
+                        .publication(new AdditionalMarketplacesResponseValuePublicationRaw()
+                                .state(AdditionalMarketplacesResponseValuePublicationRaw.StateEnum.APPROVED))));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — the per-marketplace value is keyed by marketplace id
+        OfferMarketplace marketplace = offer.additionalMarketplaces().get(MARKETPLACE_ID);
+        assertNotNull(marketplace);
+        assertEquals(MARKETPLACE_AMOUNT, marketplace.price().amount());
+        assertEquals(MarketplacePublicationState.APPROVED, marketplace.publicationState());
+    }
+
+    @Test
+    void from_whenNoAdditionalMarketplaces_isEmpty() {
+        // then — an offer that is not cross-listed exposes an empty map
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw().id(OFFER_ID).name(NAME_FULL);
+        assertTrue(Offer.from(raw).additionalMarketplaces().isEmpty());
+    }
+
+    @Test
+    void from_whenAttachmentsPresent_projectsTheirIds() {
+        // given — an offer with a linked attachment
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .attachments(List.of(new ProductOfferAttachmentInnerRaw().id(ATTACHMENT_ID)));
+
+        // then — the attachment ids are surfaced flat
+        assertEquals(List.of(ATTACHMENT_ID), Offer.from(raw).attachmentIds());
+    }
+
+    @Test
+    void from_whenNoAttachments_isEmpty() {
+        // then — an offer with no linked attachments exposes an empty list
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw().id(OFFER_ID).name(NAME_FULL);
+        assertTrue(Offer.from(raw).attachmentIds().isEmpty());
+    }
+
+    @Test
+    void from_whenAttachmentHasNullId_skipsItAndKeepsOrder() {
+        // given — attachments where one carries no id (spec-legal: id is not required)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .attachments(List.of(
+                        new ProductOfferAttachmentInnerRaw().id(ATTACHMENT_ID),
+                        new ProductOfferAttachmentInnerRaw(),
+                        new ProductOfferAttachmentInnerRaw().id(ATTACHMENT_ID_2)));
+
+        // then — the null id is dropped and the surviving ids keep their order
+        assertEquals(List.of(ATTACHMENT_ID, ATTACHMENT_ID_2), Offer.from(raw).attachmentIds());
+    }
+
+    @Test
+    void from_whenAiCoCreatedImagesPresent_readsUrlsAndSkipsNullUrlKeepingOrder() {
+        // given — an offer whose aiCoCreatedContent lists two AI images plus one with no url
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .aiCoCreatedContent(new AiCoCreatedContentRaw().images(List.of(
+                        new AiCoCreatedImageRaw().url(AI_IMAGE_URL),
+                        new AiCoCreatedImageRaw(),
+                        new AiCoCreatedImageRaw().url(AI_IMAGE_URL_2))));
+
+        // then — the null-url entry is dropped and the surviving urls keep their order
+        assertEquals(List.of(AI_IMAGE_URL, AI_IMAGE_URL_2), Offer.from(raw).aiCoCreatedImageUrls());
+    }
+
+    @Test
+    void from_whenNoAiCoCreatedContent_isEmpty() {
+        // then — an offer with no aiCoCreatedContent exposes an empty list
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw().id(OFFER_ID).name(NAME_FULL);
+        assertTrue(Offer.from(raw).aiCoCreatedImageUrls().isEmpty());
+    }
+
+    @Test
+    void from_whenAiCoCreatedContentHasNullImages_isEmpty() {
+        // given — the block is present but its images list is null (spec-legal: images is optional)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .aiCoCreatedContent(new AiCoCreatedContentRaw().images(null));
+
+        // then — an empty list, no NullPointerException
+        assertTrue(Offer.from(raw).aiCoCreatedImageUrls().isEmpty());
+    }
+
+    @Test
+    void from_whenImagesAndTimestampsPresent_readsThem() {
+        // given — an offer with a gallery and create/update timestamps
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL)
+                .images(List.of(IMAGE_URL_A, IMAGE_URL_B))
+                .createdAt(CREATED_AT).updatedAt(UPDATED_AT);
+
+        // then — the image urls (in order) and both timestamps are surfaced
+        Offer offer = Offer.from(raw);
+        assertEquals(List.of(IMAGE_URL_A, IMAGE_URL_B), offer.imageUrls());
+        assertEquals(CREATED_AT, offer.createdAt());
+        assertEquals(UPDATED_AT, offer.updatedAt());
+    }
+
+    @Test
+    void from_whenImagesNullAndTimestampsAbsent_isEmptyAndNull() {
+        // given — the images list is null and the timestamps are omitted
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID).name(NAME_FULL).images(null);
+
+        // then — an empty list (no NPE) and null timestamps
+        Offer offer = Offer.from(raw);
+        assertTrue(offer.imageUrls().isEmpty());
+        assertNull(offer.createdAt());
+        assertNull(offer.updatedAt());
+    }
+
+    @Test
+    void from_whenBusinessOnlyPresent_unwrapsTheFlag() {
+        // given — a payload restricting the offer to business buyers
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .b2b(new B2bRaw().buyableOnlyByBusiness(true));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — the nested flag is surfaced flat
+        assertEquals(Boolean.TRUE, offer.businessOnly());
+    }
+
+    @Test
+    void from_whenBusinessOnlyFalse_passesTheValueThrough() {
+        // given — a payload explicitly NOT restricted to business buyers (proves the value is
+        // passed through, not short-circuited to a constant)
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .b2b(new B2bRaw().buyableOnlyByBusiness(false));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertEquals(Boolean.FALSE, offer.businessOnly());
+    }
+
+    @Test
+    void from_whenB2bBlockAbsent_leavesBusinessOnlyNull() {
+        // given — a payload without a b2b block
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL);
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.businessOnly());
+    }
+
+    @Test
+    void from_whenTaxSettingsPresent_mapsRatesSubjectAndExemption() {
+        // given — a payload carrying VAT settings
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .taxSettings(new OfferTaxSettingsRaw()
+                        .subject(TAX_SUBJECT)
+                        .exemption(TAX_EXEMPTION)
+                        .rates(List.of(new OfferTaxRateRaw().rate(TAX_RATE).countryCode(TAX_COUNTRY))));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertEquals(TAX_SUBJECT, offer.taxSettings().subject());
+        assertEquals(TAX_EXEMPTION, offer.taxSettings().exemption());
+        assertEquals(TAX_RATE, offer.taxSettings().rates().get(0).rate());
+        assertEquals(TAX_COUNTRY, offer.taxSettings().rates().get(0).countryCode());
+    }
+
+    @Test
+    void from_whenTaxSettingsAbsent_leavesItNull() {
+        // given — a payload without a tax-settings block
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL);
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.taxSettings());
+    }
+
+    @Test
+    void from_whenReferencesPresent_unwrapsEachId() {
+        // given — a payload carrying a contact, additional-services group and fundraising campaign
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .contact(new ContactRaw().id(CONTACT_ID))
+                .additionalServices(new ProductOfferAdditionalServicesResponseRaw().id(ADDITIONAL_SERVICES_ID))
+                .fundraisingCampaign(new ProductOfferFundraisingCampaignResponseRaw().id(FUNDRAISING_ID))
+                .discounts(new DiscountsProductOfferResponseRaw().wholesalePriceList(
+                        new JustIdRaw().id(WHOLESALE_PRICE_LIST_ID)));
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then — each nested id is surfaced flat
+        assertEquals(CONTACT_ID, offer.contactId());
+        assertEquals(ADDITIONAL_SERVICES_ID, offer.additionalServicesGroupId());
+        assertEquals(FUNDRAISING_ID, offer.fundraisingCampaignId());
+        assertEquals(WHOLESALE_PRICE_LIST_ID, offer.wholesalePriceListId());
+    }
+
+    @Test
+    void from_whenReferencesAbsent_leaveThemNull() {
+        // given — a payload without those reference blocks
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL);
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.contactId());
+        assertNull(offer.additionalServicesGroupId());
+        assertNull(offer.fundraisingCampaignId());
+        assertNull(offer.wholesalePriceListId());
+    }
+
+    @Test
+    void from_whenDiscountsPresentButWholesalePriceListAbsent_leavesIdNull() {
+        // given — a discounts block present but without a wholesale price list (a real wire
+        // shape: wholesalePriceList is JsonNullable). Guards the projector's middle null-branch.
+        SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
+                .id(OFFER_ID)
+                .name(NAME_FULL)
+                .discounts(new DiscountsProductOfferResponseRaw());
+
+        // when
+        Offer offer = Offer.from(raw);
+
+        // then
+        assertNull(offer.wholesalePriceListId());
+    }
+
+    @Test
     void from_whenParametersPresent_mapsDictionaryAndRangeInOrder() {
         // given — a payload with a dictionary parameter (value ids) and a range parameter
         SaleProductOfferResponseV1Raw raw = new SaleProductOfferResponseV1Raw()
@@ -249,9 +541,9 @@ class OfferTest {
         assertEquals(HANDLING_TIME, delivery.handlingTime());
         AfterSalesServices afterSales = offer.afterSalesServices();
         assertNotNull(afterSales);
-        assertEquals(IMPLIED_WARRANTY_ID, afterSales.impliedWarrantyId());
-        assertEquals(RETURN_POLICY_ID, afterSales.returnPolicyId());
-        assertNull(afterSales.warrantyId());
+        assertEquals(IMPLIED_WARRANTY_ID, afterSales.impliedWarranty().id());
+        assertEquals(RETURN_POLICY_ID, afterSales.returnPolicy().id());
+        assertNull(afterSales.warranty());
     }
 
     @Test

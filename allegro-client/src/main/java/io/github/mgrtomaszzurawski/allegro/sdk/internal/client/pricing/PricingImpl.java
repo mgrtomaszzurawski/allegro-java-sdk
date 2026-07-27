@@ -6,26 +6,44 @@ package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.pricing;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BuyNowPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CategoryRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ClassifiedExtraPackageRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ClassifiedPackageRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ClassifiedsPackagesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.DepositTypeResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.FeePreviewResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.JustIdRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.MinimalPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.NetPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OfferQuotesDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRangeValueRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ParameterRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PricingOfferRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PricingPublicationRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PromotionRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PublicOfferPreviewRequestRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeFormatRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.SellingModeWithNetPriceRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.StartingPriceRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Pricing;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.PricingAutomation;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.Promotions;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.TurnoverDiscounts;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.ClassifiedsExtraPackage;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.ClassifiedsPackages;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.DepositType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreview;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.FeePreviewSellingMode;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferFeePreviewRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferParameter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.OfferQuote;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.ParameterRange;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.pricing.model.PromotionOptions;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Root implementation behind the {@link Pricing} facade. Holds the sub-facade
@@ -103,20 +121,108 @@ public final class PricingImpl implements Pricing {
     }
 
     /**
-     * Build the Buy-Now offer-preview request body from the focused domain
-     * request: only the category and price the fee calculation needs.
+     * Build the offer-preview request body from the domain request, carrying
+     * every fee-affecting input the caller supplied. Optional blocks are added
+     * only when set, so a bare category-and-price request stays minimal.
      */
     private static PublicOfferPreviewRequestRaw feePreviewToRaw(OfferFeePreviewRequest request) {
         PricingOfferRaw offer = new PricingOfferRaw()
                 .category(new CategoryRaw().id(request.categoryId()))
-                .sellingMode(new SellingModeWithNetPriceRaw()
-                        .format(SellingModeFormatRaw.BUY_NOW)
-                        .price(new BuyNowPriceRaw()
-                                .amount(request.price().amount())
-                                .currency(request.price().currency())));
+                .sellingMode(sellingModeToRaw(request.sellingMode()));
         if (request.offerId() != null) {
             offer.id(request.offerId());
         }
-        return new PublicOfferPreviewRequestRaw().offer(offer);
+        if (request.fundraisingCampaignId() != null) {
+            offer.fundraisingCampaign(new JustIdRaw().id(request.fundraisingCampaignId()));
+        }
+        if (request.publicationDuration() != null) {
+            offer.publication(new PricingPublicationRaw().duration(request.publicationDuration()));
+        }
+        PromotionRaw promotion = promotionToRaw(request.promotionOptions());
+        if (promotion != null) {
+            offer.promotion(promotion);
+        }
+        for (OfferParameter parameter : request.parameters()) {
+            offer.addParametersItem(parameterToRaw(parameter));
+        }
+        PublicOfferPreviewRequestRaw body = new PublicOfferPreviewRequestRaw().offer(offer);
+        if (request.marketplaceId() != null) {
+            body.marketplaceId(request.marketplaceId());
+        }
+        if (request.classifiedsPackages() != null) {
+            body.classifiedsPackages(classifiedsToRaw(request.classifiedsPackages()));
+        }
+        return body;
+    }
+
+    private static SellingModeWithNetPriceRaw sellingModeToRaw(FeePreviewSellingMode mode) {
+        SellingModeWithNetPriceRaw raw = new SellingModeWithNetPriceRaw();
+        if (mode instanceof FeePreviewSellingMode.BuyNow buyNow) {
+            raw.format(SellingModeFormatRaw.BUY_NOW)
+                    .price(new BuyNowPriceRaw()
+                            .amount(buyNow.price().amount())
+                            .currency(buyNow.price().currency()));
+            if (buyNow.netPrice() != null) {
+                raw.netPrice(new NetPriceRaw()
+                        .amount(buyNow.netPrice().amount())
+                        .currency(buyNow.netPrice().currency()));
+            }
+        } else if (mode instanceof FeePreviewSellingMode.Auction auction) {
+            raw.format(SellingModeFormatRaw.AUCTION)
+                    .startingPrice(new StartingPriceRaw()
+                            .amount(auction.startingPrice().amount())
+                            .currency(auction.startingPrice().currency()));
+            if (auction.minimalPrice() != null) {
+                raw.minimalPrice(new MinimalPriceRaw()
+                        .amount(auction.minimalPrice().amount())
+                        .currency(auction.minimalPrice().currency()));
+            }
+        }
+        return raw;
+    }
+
+    private static @Nullable PromotionRaw promotionToRaw(PromotionOptions options) {
+        if (!options.any()) {
+            return null;
+        }
+        PromotionRaw raw = new PromotionRaw();
+        if (options.emphasized1d()) {
+            raw.emphasized1d(true);
+        }
+        if (options.emphasized10d()) {
+            raw.emphasized10d(true);
+        }
+        if (options.departmentPage()) {
+            raw.departmentPage(true);
+        }
+        return raw;
+    }
+
+    private static ParameterRaw parameterToRaw(OfferParameter parameter) {
+        ParameterRaw raw = new ParameterRaw().id(parameter.id());
+        if (!parameter.values().isEmpty()) {
+            raw.values(parameter.values());
+        }
+        if (!parameter.valuesIds().isEmpty()) {
+            raw.valuesIds(parameter.valuesIds());
+        }
+        ParameterRange range = parameter.rangeValue();
+        if (range != null) {
+            raw.rangeValue(new ParameterRangeValueRaw().from(range.lowerBound()).to(range.upperBound()));
+        }
+        return raw;
+    }
+
+    private static ClassifiedsPackagesRaw classifiedsToRaw(ClassifiedsPackages packages) {
+        ClassifiedsPackagesRaw raw = new ClassifiedsPackagesRaw();
+        if (packages.basePackageId() != null) {
+            raw.basePackage(new ClassifiedPackageRaw().id(packages.basePackageId()));
+        }
+        for (ClassifiedsExtraPackage extra : packages.extraPackages()) {
+            raw.addExtraPackagesItem(new ClassifiedExtraPackageRaw()
+                    .id(extra.id())
+                    .republish(extra.republish()));
+        }
+        return raw;
     }
 }

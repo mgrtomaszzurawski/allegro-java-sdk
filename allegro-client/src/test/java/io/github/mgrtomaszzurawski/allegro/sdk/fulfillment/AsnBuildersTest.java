@@ -13,9 +13,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.AsnFil
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.AsnRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.builder.SubmittedAsnUpdate;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnItem;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnShipping;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.AsnStatus;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.fulfillment.model.HandlingUnit;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +31,9 @@ class AsnBuildersTest {
 
     private static final String PRODUCT_ID = "11111111-2222-3333-4444-555555555555";
     private static final String OTHER_PRODUCT_ID = "99999999-8888-7777-6666-555555555555";
+    private static final String COUNTRY = "PL";
+    private static final String SHIPPING_ETA = "2026-07-15T08:00:00Z";
+    private static final String TRUCK_PLATE = "FZ12453";
     private static final int QUANTITY = 5;
     private static final int OTHER_QUANTITY = 7;
     private static final int MAX_QUANTITY = 1_000_000;
@@ -139,7 +144,36 @@ class AsnBuildersTest {
         assertEquals(BigDecimal.valueOf(MAX_QUANTITY), request.items().get(0).quantity());
     }
 
+    @Test
+    void asnRequest_whenShippingAlreadyInWarehouse_throws() {
+        // given — ALREADY_IN_WAREHOUSE is read-only and must not be declarable on a write
+        AsnRequest.Builder builder = AsnRequest.builder().addItem(PRODUCT_ID, QUANTITY);
+        AsnShipping readOnly = new AsnShipping.AlreadyInWarehouse(OffsetDateTime.parse(SHIPPING_ETA), COUNTRY);
+        // then
+        assertThrows(IllegalArgumentException.class, () -> builder.shipping(readOnly));
+    }
+
+    @Test
+    void asnRequest_whenShippingSet_roundTripsThroughToBuilder() {
+        // given
+        AsnShipping shipping = new AsnShipping.OwnTransport(TRUCK_PLATE, OffsetDateTime.parse(SHIPPING_ETA), COUNTRY);
+        AsnRequest request = AsnRequest.builder().addItem(PRODUCT_ID, QUANTITY).shipping(shipping).build();
+        // when
+        AsnRequest copy = request.toBuilder().build();
+        // then — the shipping declaration survives the round-trip
+        assertEquals(shipping, copy.shipping());
+    }
+
     // ---- SubmittedAsnUpdate ----
+
+    @Test
+    void submittedUpdate_whenShippingAlreadyInWarehouse_throws() {
+        // given
+        SubmittedAsnUpdate.Builder builder = SubmittedAsnUpdate.builder();
+        AsnShipping readOnly = new AsnShipping.AlreadyInWarehouse(OffsetDateTime.parse(SHIPPING_ETA), COUNTRY);
+        // then — the sparse update builder rejects the read-only method too
+        assertThrows(IllegalArgumentException.class, () -> builder.shipping(readOnly));
+    }
 
     @Test
     void submittedUpdate_whenAllFieldsSet_roundTripsThroughToBuilder() {

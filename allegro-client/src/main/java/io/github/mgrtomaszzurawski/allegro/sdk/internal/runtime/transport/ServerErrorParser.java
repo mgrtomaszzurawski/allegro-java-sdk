@@ -15,7 +15,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitExcepti
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -43,6 +45,7 @@ public final class ServerErrorParser {
     private static final String USER_MESSAGE_FIELD = "userMessage";
     private static final String PATH_FIELD = "path";
     private static final String DETAILS_FIELD = "details";
+    private static final String METADATA_FIELD = "metadata";
 
     private static final String MSG_BAD_REQUEST = "Allegro rejected the request as invalid";
     private static final String MSG_AUTH = "Allegro rejected the credentials or token";
@@ -114,7 +117,8 @@ public final class ServerErrorParser {
                         errorNode.path(MESSAGE_FIELD).asText(""),
                         textOrNull(errorNode, USER_MESSAGE_FIELD),
                         textOrNull(errorNode, PATH_FIELD),
-                        textOrNull(errorNode, DETAILS_FIELD)));
+                        textOrNull(errorNode, DETAILS_FIELD),
+                        metadataOf(errorNode)));
             }
         } catch (com.fasterxml.jackson.core.JacksonException e) {
             // A non-JSON error body (proxy HTML, empty page) is legal input here:
@@ -151,5 +155,15 @@ public final class ServerErrorParser {
     private static @Nullable String textOrNull(JsonNode node, String fieldName) {
         JsonNode valueNode = node.path(fieldName);
         return valueNode.isMissingNode() || valueNode.isNull() ? null : valueNode.asText();
+    }
+
+    private static Map<String, String> metadataOf(JsonNode errorNode) {
+        JsonNode metadataNode = errorNode.path(METADATA_FIELD);
+        if (!metadataNode.isObject()) {
+            return Map.of();
+        }
+        Map<String, String> metadata = new HashMap<>();
+        metadataNode.fields().forEachRemaining(entry -> metadata.put(entry.getKey(), entry.getValue().asText("")));
+        return metadata;
     }
 }

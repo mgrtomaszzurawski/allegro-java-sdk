@@ -55,6 +55,12 @@ module io.github.mgrtomaszzurawski.allegro {
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.model;
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.compliance.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.model;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.sizetables.builder;
+    exports io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.tax.model;
 
     // Account and user information (bucket D; me() ships with the core PR).
     exports io.github.mgrtomaszzurawski.allegro.sdk.domain.account;

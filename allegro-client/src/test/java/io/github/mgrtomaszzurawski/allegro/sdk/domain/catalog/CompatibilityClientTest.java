@@ -28,11 +28,15 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibilitySuggestionRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductGroupsFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityInputType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityList;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityListType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleCategory;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProduct;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProductGroup;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
@@ -45,9 +49,7 @@ import org.junit.jupiter.api.Test;
  * WireMock contract for the {@code catalog().compatibility()} facade: vendor
  * headers, Raw → {@link CompatibleCategory} mapping (per-{@link
  * CompatibilityInputType} rules, the enum degrade for an unmodelled input type),
- * the {@code suggestionsFor} polymorphic {@code MANUAL}/{@code PRODUCT_BASED}
- * mapping and its unknown-type degrade, the request builder's offer-xor-product
- * guard, the empty-response case, and the mandatory error-path table.
+ * the empty-response case, and the mandatory error-path table.
  */
 @WireMockTest
 class CompatibilityClientTest {
@@ -346,6 +348,301 @@ class CompatibilityClientTest {
             assertThrows(AllegroServerException.class, compatibility::supportedCategories);
             verify(RETRY_MAX_ATTEMPTS, getRequestedFor(urlEqualTo(SUPPORTED_CATEGORIES_PATH)));
         }
+    }
+
+    // ---- products / productGroups ----
+
+    private static final String COMPATIBLE_PRODUCTS_PATH = "/sale/compatible-products";
+    private static final String COMPATIBLE_GROUPS_PATH = "/sale/compatible-products/groups";
+    private static final String QUERY_TYPE = "type";
+    private static final String QUERY_GROUP_ID = "group.id";
+    private static final String QUERY_PHRASE = "phrase";
+    private static final String QUERY_OFFSET = "offset";
+    private static final String TEST_TYPE = "CAR";
+    private static final String TEST_GROUP_ID = "G9";
+    private static final String TEST_PHRASE = "bmw x5";
+    private static final String OFFSET_FIRST = "0";
+    private static final String OFFSET_SECOND = "100";
+    private static final String PRODUCT_ID_1 = "P1";
+    private static final String PRODUCT_ID_2 = "P2";
+    private static final String PRODUCT_ID_3 = "P3";
+    private static final String PRODUCT_TEXT_1 = "BMW X5 3.0d";
+    private static final String ATTR_ENGINE_ID = "ENGINE_CODE";
+    private static final String ATTR_ENGINE_VALUE_1 = "M57";
+    private static final String ATTR_ENGINE_VALUE_2 = "306D3";
+    private static final String GROUP_ID_1 = "MK1";
+    private static final String GROUP_TEXT_1 = "BMW";
+    private static final int EXPECTED_TWO = 2;
+    private static final int EXPECTED_THREE = 3;
+
+    // Shape wire-verified 2026-07-19 (sandbox, client-credentials): products carry
+    // id + text + group.id + attributes[{id, values[]}] (live ids like BODY/BRAND/
+    // ENGINE_CODE). Two products — one full (group + attributes), one bare (no group,
+    // no attributes) — pin the nullable mapping; ids/values simplified for the test.
+    private static final String PRODUCTS_ONE_PAGE = """
+            {"compatibleProducts":[
+              {"id":"%s","text":"%s","group":{"id":"%s"},
+               "attributes":[{"id":"%s","values":["%s","%s"]}]},
+              {"id":"%s"}],"count":2,"totalCount":2}
+            """.formatted(PRODUCT_ID_1, PRODUCT_TEXT_1, TEST_GROUP_ID,
+            ATTR_ENGINE_ID, ATTR_ENGINE_VALUE_1, ATTR_ENGINE_VALUE_2, PRODUCT_ID_2);
+    // page 0 of a two-page offset run (totalCount 3 > the 2 on this page → more).
+    private static final String PRODUCTS_PAGE_0 = """
+            {"compatibleProducts":[{"id":"%s"},{"id":"%s"}],"count":2,"totalCount":3}
+            """.formatted(PRODUCT_ID_1, PRODUCT_ID_2);
+    private static final String PRODUCTS_PAGE_1 = """
+            {"compatibleProducts":[{"id":"%s"}],"count":1,"totalCount":3}
+            """.formatted(PRODUCT_ID_3);
+    // a phrase search: totalCount claims many, but Allegro ignores offset/limit for a
+    // phrase and returns them all here — the stream must NOT try to advance.
+    private static final String PRODUCTS_PHRASE_PAGE = """
+            {"compatibleProducts":[{"id":"%s"},{"id":"%s"}],"count":2,"totalCount":999}
+            """.formatted(PRODUCT_ID_1, PRODUCT_ID_2);
+    private static final String GROUPS_ONE_PAGE = """
+            {"groups":[{"id":"%s","text":"%s"},{"id":"G2"}],"count":2,"totalCount":2}
+            """.formatted(GROUP_ID_1, GROUP_TEXT_1);
+
+    @Test
+    void products_whenGroupFilter_mapsProductsAndSendsTypeAndGroup(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .withHeader(TestHttpConstants.ACCEPT_HEADER, equalTo(TestHttpConstants.VND_ALLEGRO_V1))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PRODUCTS_ONE_PAGE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CompatibleProduct> products = allegro.catalog().compatibility()
+                    .products(CompatibleProductsFilter.builder()
+                            .type(TEST_TYPE).groupId(TEST_GROUP_ID).build())
+                    .toList();
+
+            // then — both products map; nullable group/attributes land per product
+            assertEquals(EXPECTED_TWO, products.size());
+            CompatibleProduct full = products.get(0);
+            assertEquals(PRODUCT_ID_1, full.id());
+            assertEquals(PRODUCT_TEXT_1, full.text());
+            assertEquals(TEST_GROUP_ID, full.groupId());
+            assertEquals(1, full.attributes().size());
+            assertEquals(ATTR_ENGINE_ID, full.attributes().get(0).id());
+            assertEquals(List.of(ATTR_ENGINE_VALUE_1, ATTR_ENGINE_VALUE_2),
+                    full.attributes().get(0).values());
+            CompatibleProduct bare = products.get(1);
+            assertEquals(PRODUCT_ID_2, bare.id());
+            assertNull(bare.groupId());
+            assertTrue(bare.attributes().isEmpty());
+
+            // and the type + group filter reached the wire
+            verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                    .withQueryParam(QUERY_TYPE, equalTo(TEST_TYPE))
+                    .withQueryParam(QUERY_GROUP_ID, equalTo(TEST_GROUP_ID))
+                    .withQueryParam(QUERY_PHRASE, absent()));
+        }
+    }
+
+    @Test
+    void products_whenNoPhrase_paginatesLazilyAndSurvivesTypeAcrossPages(WireMockRuntimeInfo wmInfo) {
+        // given — two offset pages (page 0 then page 100), same type filter
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PRODUCTS_PAGE_0)));
+        stubFor(get(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(PRODUCTS_PAGE_1)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var compatibility = allegro.catalog().compatibility();
+
+            // when — a bounded consumer takes only the first page's worth
+            long taken = compatibility.products(CompatibleProductsFilter.inGroup(TEST_TYPE, TEST_GROUP_ID))
+                    .limit(EXPECTED_TWO).count();
+
+            // then — page two was NOT fetched (lazy)
+            assertEquals(EXPECTED_TWO, taken);
+            verify(0, getRequestedFor(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                    .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND)));
+
+            // when — a full consumer drains both pages
+            long allProducts = compatibility.products(CompatibleProductsFilter.inGroup(TEST_TYPE, TEST_GROUP_ID)).count();
+
+            // then — offset advanced to page two and the type filter survived the boundary
+            assertEquals(EXPECTED_THREE, allProducts);
+            verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                    .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                    .withQueryParam(QUERY_TYPE, equalTo(TEST_TYPE)));
+        }
+    }
+
+    @Test
+    void products_whenPhraseSet_returnsSinglePageDespiteTotalCount(WireMockRuntimeInfo wmInfo) {
+        // given — a phrase search whose totalCount claims far more than one page
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(PRODUCTS_PHRASE_PAGE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            long count = allegro.catalog().compatibility()
+                    .products(CompatibleProductsFilter.builder()
+                            .type(TEST_TYPE).phrase(TEST_PHRASE).build())
+                    .count();
+
+            // then — all matches came on page one; the stream did not try to advance
+            // (Allegro ignores offset for a phrase, so advancing would re-fetch the same page)
+            assertEquals(EXPECTED_TWO, count);
+            verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH)));
+            verify(0, getRequestedFor(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                    .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND)));
+        }
+    }
+
+    @Test
+    void products_when400WithErrors_throwsBadRequestOnConsumption(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_PRODUCTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(BAD_REQUEST)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var stream = allegro.catalog().compatibility()
+                    .products(CompatibleProductsFilter.inGroup(TEST_TYPE, TEST_GROUP_ID));
+
+            // then — the lazy stream surfaces the error when first consumed
+            AllegroBadRequestException failure =
+                    assertThrows(AllegroBadRequestException.class, stream::toList);
+            assertEquals("ValidationException", failure.errors().get(0).code());
+        }
+    }
+
+    @Test
+    void productGroups_whenTypeFilter_mapsGroupsAndSendsType(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(GROUPS_ONE_PAGE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CompatibleProductGroup> groups = allegro.catalog().compatibility()
+                    .productGroups(CompatibleProductGroupsFilter.ofType(TEST_TYPE))
+                    .toList();
+
+            // then — groups map (id always, text nullable); the type filter reached the wire
+            assertEquals(EXPECTED_TWO, groups.size());
+            assertEquals(GROUP_ID_1, groups.get(0).id());
+            assertEquals(GROUP_TEXT_1, groups.get(0).text());
+            assertNull(groups.get(1).text());
+            verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                    .withQueryParam(QUERY_TYPE, equalTo(TEST_TYPE)));
+        }
+    }
+
+    @Test
+    void products_whenNoType_throwsIllegalState() {
+        // then — a filter without a type is rejected fail-fast at build time
+        assertThrows(IllegalStateException.class,
+                () -> CompatibleProductsFilter.builder().phrase(TEST_PHRASE).build());
+    }
+
+    @Test
+    void products_whenTypeOnlyNoNarrowing_throwsIllegalState() {
+        // then — Allegro rejects a type-only query (group.id required), so the builder
+        // fails fast when none of group/TecDoc/phrase narrows the search
+        assertThrows(IllegalStateException.class,
+                () -> CompatibleProductsFilter.builder().type(TEST_TYPE).build());
+    }
+
+    @Test
+    void productGroups_whenNoType_throwsIllegalState() {
+        // then — a groups filter without a type is rejected fail-fast at build time
+        assertThrows(IllegalStateException.class,
+                () -> CompatibleProductGroupsFilter.builder().build());
+    }
+
+    @Test
+    void productGroups_whenMoreThanOnePage_paginatesByOffset(WireMockRuntimeInfo wmInfo) {
+        // given — two offset pages of groups (the live endpoint reports 185 for type=CAR)
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_FIRST))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("""
+                        {"groups":[{"id":"G1"},{"id":"G2"}],"count":2,"totalCount":3}
+                        """)));
+        stubFor(get(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("""
+                        {"groups":[{"id":"G3"}],"count":1,"totalCount":3}
+                        """)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — drain every group
+            long groups = allegro.catalog().compatibility()
+                    .productGroups(CompatibleProductGroupsFilter.ofType(TEST_TYPE)).count();
+
+            // then — offset advanced to the second page, carrying the type filter
+            assertEquals(EXPECTED_THREE, groups);
+            verify(1, getRequestedFor(urlPathEqualTo(COMPATIBLE_GROUPS_PATH))
+                    .withQueryParam(QUERY_OFFSET, equalTo(OFFSET_SECOND))
+                    .withQueryParam(QUERY_TYPE, equalTo(TEST_TYPE)));
+        }
+    }
+
+    // ---- filter builder round-trips ----
+
+    private static final String TEST_TECDOC_K = "123456";
+    private static final String TEST_TECDOC_N = "789012";
+
+    @Test
+    void compatibleProductsFilter_whenAllFieldsSet_roundTrips() {
+        // given / when
+        CompatibleProductsFilter filter = CompatibleProductsFilter.builder()
+                .type(TEST_TYPE).groupId(TEST_GROUP_ID)
+                .tecdocKTypNr(TEST_TECDOC_K).tecdocNTypNr(TEST_TECDOC_N)
+                .phrase(TEST_PHRASE).build();
+
+        // then
+        assertEquals(TEST_TYPE, filter.type());
+        assertEquals(TEST_GROUP_ID, filter.groupId());
+        assertEquals(TEST_TECDOC_K, filter.tecdocKTypNr());
+        assertEquals(TEST_TECDOC_N, filter.tecdocNTypNr());
+        assertEquals(TEST_PHRASE, filter.phrase());
+    }
+
+    @Test
+    void compatibleProductsFilter_toBuilder_preservesFields() {
+        // given
+        CompatibleProductsFilter original = CompatibleProductsFilter.builder()
+                .type(TEST_TYPE).groupId(TEST_GROUP_ID)
+                .tecdocKTypNr(TEST_TECDOC_K).tecdocNTypNr(TEST_TECDOC_N)
+                .phrase(TEST_PHRASE).build();
+
+        // when
+        CompatibleProductsFilter copy = original.toBuilder().build();
+
+        // then
+        assertEquals(original.type(), copy.type());
+        assertEquals(original.groupId(), copy.groupId());
+        assertEquals(original.tecdocKTypNr(), copy.tecdocKTypNr());
+        assertEquals(original.tecdocNTypNr(), copy.tecdocNTypNr());
+        assertEquals(original.phrase(), copy.phrase());
+    }
+
+    @Test
+    void compatibleProductGroupsFilter_roundTripsAndToBuilderPreservesType() {
+        // given / when — the groups filter is type-only (no phrase on this endpoint)
+        CompatibleProductGroupsFilter filter = CompatibleProductGroupsFilter.builder()
+                .type(TEST_TYPE).build();
+        CompatibleProductGroupsFilter copy = filter.toBuilder().build();
+
+        // then
+        assertEquals(TEST_TYPE, filter.type());
+        assertEquals(filter.type(), copy.type());
     }
 
     // ---- suggestionsFor: mapping ----

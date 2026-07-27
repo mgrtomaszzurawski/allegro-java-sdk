@@ -12,12 +12,21 @@ import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListProduct
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListSupportedCategoriesDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListSupportedCategoriesDtoSupportedCategoriesInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.CompatibilityListTextItemRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductsGroupsDtoGroupsInnerRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductsGroupsDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.CompatibleProductsListDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.Compatibility;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibilitySuggestionRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductGroupsFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CompatibleProductsFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityItem;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibilityList;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleCategory;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProduct;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CompatibleProductGroup;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
+import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.pagination.PagedSpliterator;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.ApiPaths;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpRuntime;
 import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.HttpSupport;
@@ -25,12 +34,17 @@ import io.github.mgrtomaszzurawski.allegro.sdk.internal.runtime.transport.Query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Endpoint wrapper behind the {@link Compatibility} facade.
  * {@link #supportedCategories()} hits
  * {@code GET /sale/compatibility-list/supported-categories};
- * {@link #suggestionsFor} hits {@code GET /sale/compatibility-list-suggestions}.
+ * {@link #suggestionsFor} hits {@code GET /sale/compatibility-list-suggestions};
+ * {@link #products} hits {@code GET /sale/compatible-products} and
+ * {@link #productGroups} hits {@code GET /sale/compatible-products/groups}, both
+ * offset-paginated as lazy streams.
  *
  * <p>The suggestions response is a discriminated {@code MANUAL}/{@code PRODUCT_BASED}
  * body whose generated subtypes do NOT share a common base (an OpenAPI-generator
@@ -46,11 +60,24 @@ import java.util.Objects;
  */
 public final class CompatibilityImpl implements Compatibility {
 
+    private static final int PAGE_SIZE = 100;
+
     private static final String OP_SUPPORTED_CATEGORIES = "get compatibility supported categories";
     private static final String OP_SUGGESTIONS = "get compatibility list suggestion";
+    private static final String OP_COMPATIBLE_PRODUCTS = "get compatible products";
+    private static final String OP_COMPATIBLE_PRODUCT_GROUPS = "get compatible product groups";
+
     private static final String PARAM_OFFER_ID = "offer.id";
     private static final String PARAM_PRODUCT_ID = "product.id";
     private static final String PARAM_LANGUAGE = "language";
+    private static final String PARAM_TYPE = "type";
+    private static final String PARAM_GROUP_ID = "group.id";
+    private static final String PARAM_TECDOC_KTYP = "tecdoc.kTypNr";
+    private static final String PARAM_TECDOC_NTYP = "tecdoc.nTypNr";
+    private static final String PARAM_PHRASE = "phrase";
+    private static final String PARAM_LIMIT = "limit";
+    private static final String PARAM_OFFSET = "offset";
+
     private static final String TYPE_FIELD = "type";
     private static final String ITEMS_FIELD = "items";
     private static final String TYPE_MANUAL = "MANUAL";
@@ -59,6 +86,7 @@ public final class CompatibilityImpl implements Compatibility {
     private static final String ITEM_TYPE_TEXT = "TEXT";
     private static final String ERR_REQUEST_NULL = "request must not be null";
     private static final String ERR_DESERIALIZE = "failed to map compatibility suggestion response";
+    private static final String ERR_FILTER_NULL = "filter must not be null";
 
     private final HttpRuntime runtime;
     private final HttpSupport http;
@@ -136,5 +164,69 @@ public final class CompatibilityImpl implements Compatibility {
         }
         // An item variant this SDK version does not model — degrade the item.
         return CompatibilityItem.unknownItem();
+    }
+
+    @Override
+    public Stream<CompatibleProduct> products(CompatibleProductsFilter filter) {
+        Objects.requireNonNull(filter, ERR_FILTER_NULL);
+        return PagedSpliterator.stream(pageIndex -> fetchProducts(filter, pageIndex));
+    }
+
+    @Override
+    public Stream<CompatibleProductGroup> productGroups(CompatibleProductGroupsFilter filter) {
+        Objects.requireNonNull(filter, ERR_FILTER_NULL);
+        return PagedSpliterator.stream(pageIndex -> fetchProductGroups(filter, pageIndex));
+    }
+
+    private PagedSpliterator.Page<CompatibleProduct> fetchProducts(
+            CompatibleProductsFilter filter, int pageIndex) {
+        int offset = pageIndex * PAGE_SIZE;
+        Query query = Query.create()
+                .add(PARAM_TYPE, filter.type())
+                .add(PARAM_GROUP_ID, filter.groupId())
+                .add(PARAM_TECDOC_KTYP, filter.tecdocKTypNr())
+                .add(PARAM_TECDOC_NTYP, filter.tecdocNTypNr())
+                .add(PARAM_PHRASE, filter.phrase())
+                .add(PARAM_LIMIT, PAGE_SIZE)
+                .add(PARAM_OFFSET, offset);
+        CompatibleProductsListDtoRaw response = http.request(OP_COMPATIBLE_PRODUCTS)
+                .get(ApiPaths.COMPATIBLE_PRODUCTS)
+                .query(query)
+                .fetch(CompatibleProductsListDtoRaw.class);
+        List<CompatibleProductDtoRaw> raw = response.getCompatibleProducts();
+        List<CompatibleProduct> items = raw == null
+                ? List.of()
+                : raw.stream().map(CompatibleProduct::from).toList();
+        // A phrase search returns every match on the first page (Allegro ignores
+        // offset/limit when phrase is set), so it never advances — guarding against
+        // a non-advancing-offset fetch loop.
+        boolean more = filter.phrase() == null
+                && hasMoreByOffset(offset, items.size(), response.getTotalCount());
+        return new PagedSpliterator.Page<>(items, more);
+    }
+
+    private PagedSpliterator.Page<CompatibleProductGroup> fetchProductGroups(
+            CompatibleProductGroupsFilter filter, int pageIndex) {
+        int offset = pageIndex * PAGE_SIZE;
+        // The groups endpoint takes only type + offset/limit — no phrase narrowing.
+        Query query = Query.create()
+                .add(PARAM_TYPE, filter.type())
+                .add(PARAM_LIMIT, PAGE_SIZE)
+                .add(PARAM_OFFSET, offset);
+        CompatibleProductsGroupsDtoRaw response = http.request(OP_COMPATIBLE_PRODUCT_GROUPS)
+                .get(ApiPaths.COMPATIBLE_PRODUCTS_GROUPS)
+                .query(query)
+                .fetch(CompatibleProductsGroupsDtoRaw.class);
+        List<CompatibleProductsGroupsDtoGroupsInnerRaw> raw = response.getGroups();
+        List<CompatibleProductGroup> items = raw == null
+                ? List.of()
+                : raw.stream().map(CompatibleProductGroup::from).toList();
+        return new PagedSpliterator.Page<>(
+                items, hasMoreByOffset(offset, items.size(), response.getTotalCount()));
+    }
+
+    /** Advance while the offset consumed so far is below the server's reported total. */
+    private static boolean hasMoreByOffset(int offset, int pageCount, @Nullable Integer totalCount) {
+        return totalCount != null && (long) offset + pageCount < totalCount;
     }
 }

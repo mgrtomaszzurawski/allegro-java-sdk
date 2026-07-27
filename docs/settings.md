@@ -4,9 +4,10 @@ Seller-side configuration for your Allegro account (bucket K): after-sale servic
 conditions, additional services, product-compliance parties, size tables and tax settings.
 Every operation is seller-scoped and uses the standard vendor media type.
 
-> **Status:** starter slice. Only after-sale **warranties** ship today; implied warranties,
-> return policies, additional services, compliance (responsible persons/producers), size
-> tables and tax settings land in the following bucket-K releases.
+> **Status:** covers after-sale conditions (warranties, implied warranties, return policies),
+> product compliance (responsible persons/producers), additional services, and size tables /
+> tax settings. Additional-services writes and after-sales attachments are the remaining
+> bucket-K slices.
 
 ## After-sale conditions — warranties
 
@@ -149,6 +150,69 @@ compliance.streamResponsiblePersons().forEach(person -> System.out.println(perso
 
 // Producers mirror the shape (tradeName instead of personName) and add a single read:
 ResponsibleProducer producer = compliance.responsibleProducer(producerId);
+```
+
+## Additional services
+
+`settings().additionalServices()` reads the additional-services a seller offers on their listings:
+the **definition catalog** available to the seller (grouped by category, each definition carrying a
+`maxPrice`), the seller's own **groups** (lazy list + single read; each group holds services, and
+each service its priced `configurations` with a country/delivery `constraint`), and a group's
+**translations** (one `GroupTranslation` per language, `MANUAL` or `AUTO`). Group create/update and
+translation writes ship in a follow-up slice.
+
+```java
+AdditionalServices additional = client.settings().additionalServices();
+
+additional.categoryDefinitions()                     // catalog: categories -> definitions (+ maxPrice)
+        .forEach(category -> System.out.println(category.name()));
+
+additional.streamGroups().forEach(group ->           // lazy Stream<AdditionalServicesGroup>
+        System.out.println(group.name() + " (" + group.services().size() + " services)"));
+
+AdditionalServicesGroup group = additional.group(groupId);
+GroupTranslations translations = additional.translations(groupId);
+## Size tables
+
+A size table is a small grid — named column `headers` plus `rows` of cell values — that a
+seller attaches to clothing and footwear offers. Tables are created from an Allegro
+template; pick one from `templates()` and reference its id.
+
+```java
+SizeTables sizeTables = client.settings().sizeTables();
+
+// Pick a template and build a table from it.
+SizeTableTemplate template = sizeTables.templates().get(0);
+SizeTableRequest request = SizeTableRequest.builder()
+        .name("My shoes size table")
+        .templateId(template.id())
+        .headers(template.headers())
+        .row(List.of("M", "38", "96-104"))
+        .build();
+
+SizeTable created = sizeTables.create(request);
+
+// Read one, list all, or update in place (update keeps the same template).
+SizeTable table = sizeTables.get(created.id());
+List<SizeTable> all = sizeTables.list();
+SizeTable renamed = sizeTables.update(table.id(), request.toBuilder().name("Renamed").build());
+```
+
+`templateId` is required when creating a table and ignored when updating one; creating without
+it fails fast with `IllegalArgumentException`.
+
+## Tax settings
+
+Read the VAT options available for a category — the subjects, rates (grouped by country) and
+exemptions you may assign to an offer in that category. Read-only reference data:
+
+```java
+TaxSettings tax = client.settings().taxSettings(categoryId);
+tax.rates().forEach(rate ->
+        System.out.println(rate.countryCode() + ": " + rate.values().size() + " VAT rates"));
+
+// Narrow to specific countries:
+TaxSettings polishOnly = client.settings().taxSettings(categoryId, List.of("PL"));
 ```
 
 ## Errors

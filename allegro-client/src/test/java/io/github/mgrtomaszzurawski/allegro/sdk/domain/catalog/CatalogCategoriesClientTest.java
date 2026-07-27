@@ -30,17 +30,26 @@ import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroClientConfig;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.AllegroEnvironment;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.credentials.ClientCredentials;
 import io.github.mgrtomaszzurawski.allegro.sdk.config.policy.RetryPolicy;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CategoryEventFilter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.builder.CategoryParameterChangeFilter;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.Category;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryEvent;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryEventType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameter;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameterScheduledChange;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategoryParameterType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.CategorySuggestion;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.catalog.model.ScheduledChangeType;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -623,6 +632,356 @@ class CatalogCategoriesClientTest {
         try (AllegroClient allegro = client(wmInfo)) {
             var categories = allegro.catalog().categories();
             assertThrows(NullPointerException.class, () -> categories.suggest(null));
+        }
+    }
+
+    // ---- streamChanges (category-events feed) ----
+
+    private static final String CATEGORY_EVENTS_PATH = "/sale/category-events";
+    private static final String FROM_QUERY = "from";
+    private static final String LIMIT_QUERY = "limit";
+    private static final String TYPE_QUERY = "type";
+    private static final int EVENTS_PAGE_SIZE = 100;
+    private static final String EVENT_ID_CREATED = "e1";
+    private static final String EVENT_ID_DELETED = "e2";
+    private static final String CREATED_CATEGORY_ID = "C1";
+    private static final String DELETED_REDIRECT_ID = "C9";
+    private static final String RESUME_CURSOR = "evt-42";
+    private static final int EXPECTED_EVENT_COUNT = 5;
+    private static final int EXPECTED_SECOND_PAGE = 2;
+
+    // A small page (fewer than the page size) ends the stream. Covers all four
+    // modelled event types plus one type this SDK version does not model. The common
+    // event shape (id/occurredAt/type/category{id,name,leaf,parent}) is wire-verified
+    // 2026-07-19 (sandbox, client-credentials; the live sample was all CATEGORY_CREATED);
+    // the DELETED redirectCategory and MOVED parent are spec-derived (not in that sample).
+    private static final String EVENTS_PAGE = """
+            {"events":[
+              {"type":"CATEGORY_CREATED","id":"e1","occurredAt":"2026-07-01T10:00:00Z",
+               "category":{"id":"C1","name":"Nowa","leaf":true,"parent":{"id":"P1"}}},
+              {"type":"CATEGORY_DELETED","id":"e2","occurredAt":"2026-07-01T10:01:00Z",
+               "category":{"id":"C2","name":"Stara"},"redirectCategory":{"id":"C9"}},
+              {"type":"CATEGORY_MOVED","id":"e3","occurredAt":"2026-07-01T10:02:00Z",
+               "category":{"id":"C3","name":"Przeniesiona","parent":{"id":"P2"}}},
+              {"type":"CATEGORY_RENAMED","id":"e4","occurredAt":"2026-07-01T10:03:00Z",
+               "category":{"id":"C4","name":"Nowa nazwa"}},
+              {"type":"CATEGORY_SPLIT","id":"e5","occurredAt":"2026-07-01T10:04:00Z"}]}
+            """;
+
+    @Test
+    void streamChanges_whenPageHasAllTypesPlusUnmodelled_mapsEachAndDegradesUnknown(
+            WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(EVENTS_PAGE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CategoryEvent> events = allegro.catalog().categories()
+                    .streamChanges(CategoryEventFilter.all()).toList();
+
+            // then — every event maps; the affected category and redirect land per type
+            assertEquals(EXPECTED_EVENT_COUNT, events.size());
+
+            CategoryEvent created = events.get(0);
+            assertEquals(EVENT_ID_CREATED, created.id());
+            assertEquals(CategoryEventType.CATEGORY_CREATED, created.type());
+            assertNotNull(created.occurredAt());
+            assertEquals(CREATED_CATEGORY_ID, created.category().id());
+            assertEquals("Nowa", created.category().name());
+            assertTrue(created.category().leaf());
+            assertEquals("P1", created.category().parentId());
+            assertNull(created.redirectCategoryId());
+
+            CategoryEvent deleted = events.get(1);
+            assertEquals(EVENT_ID_DELETED, deleted.id());
+            assertEquals(CategoryEventType.CATEGORY_DELETED, deleted.type());
+            assertEquals(DELETED_REDIRECT_ID, deleted.redirectCategoryId());
+            assertNull(deleted.category().parentId());
+
+            assertEquals(CategoryEventType.CATEGORY_MOVED, events.get(2).type());
+            assertEquals(CategoryEventType.CATEGORY_RENAMED, events.get(3).type());
+
+            // an unmodelled event type degrades rather than failing the stream
+            CategoryEvent unknown = events.get(4);
+            assertEquals(CategoryEventType.UNKNOWN, unknown.type());
+            assertNull(unknown.category());
+            assertNull(unknown.redirectCategoryId());
+
+            // the first fetch sends no `from` cursor and the page-size limit
+            verify(1, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                    .withQueryParam(FROM_QUERY, absent())
+                    .withQueryParam(LIMIT_QUERY, equalTo(String.valueOf(EVENTS_PAGE_SIZE))));
+        }
+    }
+
+    @Test
+    void streamChanges_isLazy_doesNotFetchPageTwoUntilConsumed(WireMockRuntimeInfo wmInfo) {
+        // given — a full page (so the cursor advances to the last event id) then an empty page
+        stubToken(TEST_TOKEN);
+        String lastId = "e" + (EVENTS_PAGE_SIZE - 1);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withQueryParam(FROM_QUERY, absent())
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(fullEventsPage())));
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withQueryParam(FROM_QUERY, equalTo(lastId))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{\"events\":[]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — a bounded consumer takes only the first page's worth
+            List<CategoryEvent> firstPage = allegro.catalog().categories()
+                    .streamChanges(CategoryEventFilter.all())
+                    .limit(EVENTS_PAGE_SIZE).toList();
+
+            // then — page two (from the last event id) is never fetched
+            assertEquals(EVENTS_PAGE_SIZE, firstPage.size());
+            verify(0, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                    .withQueryParam(FROM_QUERY, equalTo(lastId)));
+        }
+    }
+
+    @Test
+    void streamChanges_whenConsumedPastFirstPage_advancesFromCursorToLastEventId(
+            WireMockRuntimeInfo wmInfo) {
+        // given — a full first page (cursor advances to e99) then a short second page
+        stubToken(TEST_TOKEN);
+        String lastId = "e" + (EVENTS_PAGE_SIZE - 1);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withQueryParam(FROM_QUERY, absent())
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(fullEventsPage())));
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .withQueryParam(FROM_QUERY, equalTo(lastId))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("""
+                        {"events":[
+                          {"type":"CATEGORY_CREATED","id":"e100","occurredAt":"2026-07-01T11:00:00Z",
+                           "category":{"id":"C100","name":"c"}},
+                          {"type":"CATEGORY_CREATED","id":"e101","occurredAt":"2026-07-01T11:00:01Z",
+                           "category":{"id":"C101","name":"c"}}]}
+                        """)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — a full consumer drains both pages
+            long total = allegro.catalog().categories()
+                    .streamChanges(CategoryEventFilter.all()).count();
+
+            // then — the second page was fetched with the last event id as the `from` cursor
+            assertEquals(EVENTS_PAGE_SIZE + EXPECTED_SECOND_PAGE, total);
+            verify(1, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                    .withQueryParam(FROM_QUERY, equalTo(lastId)));
+        }
+    }
+
+    private static String fullEventsPage() {
+        return "{\"events\":[" + IntStream.range(0, EVENTS_PAGE_SIZE)
+                .mapToObj(index -> "{\"type\":\"CATEGORY_CREATED\",\"id\":\"e" + index
+                        + "\",\"occurredAt\":\"2026-07-01T10:00:00Z\","
+                        + "\"category\":{\"id\":\"C" + index + "\",\"name\":\"c\"}}")
+                .collect(Collectors.joining(",")) + "]}";
+    }
+
+    @Test
+    void streamChanges_whenTypesFilter_sendsRepeatedTypeQuery(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{\"events\":[]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.catalog().categories().streamChanges(
+                    CategoryEventFilter.ofTypes(
+                            CategoryEventType.CATEGORY_MOVED, CategoryEventType.CATEGORY_RENAMED))
+                    .toList();
+
+            // then — both wire type values are sent as repeated query params
+            verify(1, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                    .withQueryParam(TYPE_QUERY, equalTo("CATEGORY_MOVED"))
+                    .withQueryParam(TYPE_QUERY, equalTo("CATEGORY_RENAMED")));
+        }
+    }
+
+    @Test
+    void streamChanges_whenSince_sendsFromCursorOnFirstPage(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody("{\"events\":[]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — resume after a known event id
+            allegro.catalog().categories()
+                    .streamChanges(CategoryEventFilter.since(RESUME_CURSOR)).toList();
+
+            // then — the first page carries that id as the `from` cursor
+            verify(1, getRequestedFor(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                    .withQueryParam(FROM_QUERY, equalTo(RESUME_CURSOR)));
+        }
+    }
+
+    @Test
+    void streamChanges_when400_throwsBadRequestOnConsumption(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(CATEGORY_EVENTS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(BAD_REQUEST)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var stream = allegro.catalog().categories().streamChanges(CategoryEventFilter.all());
+
+            // then — the lazy stream surfaces the error when first consumed
+            assertThrows(AllegroBadRequestException.class, stream::toList);
+        }
+    }
+
+    // ---- scheduledParameterChanges (category-parameters-scheduled-changes feed) ----
+
+    private static final String SCHEDULED_CHANGES_PATH = "/sale/category-parameters-scheduled-changes";
+    private static final String SCHEDULED_FOR_GTE_QUERY = "scheduledFor.gte";
+    private static final String SCHEDULED_FOR_LTE_QUERY = "scheduledFor.lte";
+    private static final String SCHEDULED_AT_GTE_QUERY = "scheduledAt.gte";
+    private static final String OFFSET_QUERY = "offset";
+    private static final int SCHEDULED_PAGE_SIZE = 100;
+    private static final String SCHEDULED_CHANGE_CATEGORY_ID = "CAT1";
+    private static final String SCHEDULED_CHANGE_PARAMETER_ID = "PARAM1";
+    private static final String REQUIREMENT_SCHEDULED_AT = "2026-07-05T09:00:00Z";
+    private static final String REQUIREMENT_SCHEDULED_FOR = "2026-08-15T00:00:00Z";
+    private static final String UNKNOWN_SCHEDULED_FOR = "2026-08-16T00:00:00Z";
+    // Non-zero seconds so OffsetDateTime.parse(...).toString() round-trips exactly
+    // (OffsetDateTime.toString() omits zero seconds, e.g. renders midnight as "...T00:00Z").
+    private static final String SCHEDULED_FOR_FROM = "2026-08-01T08:30:15Z";
+    private static final String SCHEDULED_FOR_TO = "2026-09-01T18:45:30Z";
+    private static final String SCHEDULED_AT_FROM = "2026-07-01T06:15:45Z";
+    private static final String SCHEDULED_AT_TO = "2026-07-31T21:05:55Z";
+    private static final String SCHEDULED_AT_LTE_QUERY = "scheduledAt.lte";
+    private static final int EXPECTED_CHANGE_COUNT = 2;
+
+    // A REQUIREMENT_CHANGE (the only modelled kind) plus a type this SDK does not model.
+    // spec-derived: the endpoint is live-reachable app-only and returns a valid (empty)
+    // feed in the sandbox (verified 2026-07-19), but the sandbox has no planned changes
+    // to exercise the item shape, so the REQUIREMENT_CHANGE mapping stays WireMock-pinned.
+    private static final String SCHEDULED_CHANGES_PAGE = """
+            {"scheduledChanges":[
+              {"type":"REQUIREMENT_CHANGE","scheduledAt":"2026-07-05T09:00:00Z",
+               "scheduledFor":"2026-08-15T00:00:00Z","category":{"id":"CAT1"},"parameter":{"id":"PARAM1"}},
+              {"type":"REQUIREMENT_REMOVAL","scheduledAt":"2026-07-06T09:00:00Z",
+               "scheduledFor":"2026-08-16T00:00:00Z"}]}
+            """;
+
+    @Test
+    void scheduledParameterChanges_whenChangesReturned_mapsAndDegradesUnknown(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(SCHEDULED_CHANGES_PAGE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            List<CategoryParameterScheduledChange> changes = allegro.catalog().categories()
+                    .scheduledParameterChanges(CategoryParameterChangeFilter.all()).toList();
+
+            // then — the requirement change maps its category/parameter; the dates land
+            assertEquals(EXPECTED_CHANGE_COUNT, changes.size());
+            CategoryParameterScheduledChange requirement = changes.get(0);
+            assertEquals(ScheduledChangeType.REQUIREMENT_CHANGE, requirement.type());
+            // exact dates (not just non-null) so a scheduledAt/scheduledFor swap is caught
+            assertEquals(OffsetDateTime.parse(REQUIREMENT_SCHEDULED_AT), requirement.scheduledAt());
+            assertEquals(OffsetDateTime.parse(REQUIREMENT_SCHEDULED_FOR), requirement.scheduledFor());
+            assertEquals(SCHEDULED_CHANGE_CATEGORY_ID, requirement.categoryId());
+            assertEquals(SCHEDULED_CHANGE_PARAMETER_ID, requirement.parameterId());
+
+            // an unmodelled change type degrades rather than failing the read
+            CategoryParameterScheduledChange unknown = changes.get(1);
+            assertEquals(ScheduledChangeType.UNKNOWN, unknown.type());
+            assertNull(unknown.categoryId());
+            assertNull(unknown.parameterId());
+            assertEquals(OffsetDateTime.parse(UNKNOWN_SCHEDULED_FOR), unknown.scheduledFor());
+        }
+    }
+
+    @Test
+    void scheduledParameterChanges_whenFilters_sendsDateRangeTypeAndPaging(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"scheduledChanges\":[]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.catalog().categories().scheduledParameterChanges(
+                    CategoryParameterChangeFilter.builder()
+                            .scheduledForFrom(OffsetDateTime.parse(SCHEDULED_FOR_FROM))
+                            .scheduledForTo(OffsetDateTime.parse(SCHEDULED_FOR_TO))
+                            .scheduledAtFrom(OffsetDateTime.parse(SCHEDULED_AT_FROM))
+                            .scheduledAtTo(OffsetDateTime.parse(SCHEDULED_AT_TO))
+                            .types(ScheduledChangeType.REQUIREMENT_CHANGE)
+                            .build())
+                    .toList();
+
+            // then — the date bounds, type filter and paging all reach the wire
+            verify(1, getRequestedFor(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                    .withQueryParam(SCHEDULED_FOR_GTE_QUERY, equalTo(SCHEDULED_FOR_FROM))
+                    .withQueryParam(SCHEDULED_FOR_LTE_QUERY, equalTo(SCHEDULED_FOR_TO))
+                    .withQueryParam(SCHEDULED_AT_GTE_QUERY, equalTo(SCHEDULED_AT_FROM))
+                    .withQueryParam(SCHEDULED_AT_LTE_QUERY, equalTo(SCHEDULED_AT_TO))
+                    .withQueryParam(TYPE_QUERY, equalTo("REQUIREMENT_CHANGE"))
+                    .withQueryParam(OFFSET_QUERY, equalTo("0"))
+                    .withQueryParam(LIMIT_QUERY, equalTo(String.valueOf(SCHEDULED_PAGE_SIZE))));
+        }
+    }
+
+    @Test
+    void scheduledParameterChanges_isLazy_doesNotFetchPageTwoUntilConsumed(WireMockRuntimeInfo wmInfo) {
+        // given — a full first page (so offset advances) then a second page
+        stubToken(TEST_TOKEN);
+        String fullPage = "{\"scheduledChanges\":[" + IntStream.range(0, SCHEDULED_PAGE_SIZE)
+                .mapToObj(index -> "{\"type\":\"REQUIREMENT_CHANGE\","
+                        + "\"scheduledAt\":\"2026-07-05T09:00:00Z\","
+                        + "\"scheduledFor\":\"2026-08-15T00:00:00Z\","
+                        + "\"category\":{\"id\":\"C" + index + "\"},\"parameter\":{\"id\":\"P" + index + "\"}}")
+                .collect(Collectors.joining(",")) + "]}";
+        stubFor(get(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                .withQueryParam(OFFSET_QUERY, equalTo("0"))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(fullPage)));
+        stubFor(get(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                .withQueryParam(OFFSET_QUERY, equalTo(String.valueOf(SCHEDULED_PAGE_SIZE)))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody("{\"scheduledChanges\":[]}")));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when — a bounded consumer takes only the first page's worth
+            long taken = allegro.catalog().categories()
+                    .scheduledParameterChanges(CategoryParameterChangeFilter.all())
+                    .limit(SCHEDULED_PAGE_SIZE).count();
+
+            // then — page two (offset = page size) is never fetched
+            assertEquals(SCHEDULED_PAGE_SIZE, taken);
+            verify(0, getRequestedFor(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                    .withQueryParam(OFFSET_QUERY, equalTo(String.valueOf(SCHEDULED_PAGE_SIZE))));
+        }
+    }
+
+    @Test
+    void scheduledParameterChanges_when400_throwsBadRequestOnConsumption(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken(TEST_TOKEN);
+        stubFor(get(urlPathEqualTo(SCHEDULED_CHANGES_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_BAD_REQUEST)
+                        .withHeader(TestHttpConstants.TRACE_ID_HEADER, TEST_TRACE_ID)
+                        .withBody(BAD_REQUEST)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            var stream = allegro.catalog().categories()
+                    .scheduledParameterChanges(CategoryParameterChangeFilter.all());
+
+            // then — the lazy stream surfaces the error when first consumed
+            assertThrows(AllegroBadRequestException.class, stream::toList);
         }
     }
 }
