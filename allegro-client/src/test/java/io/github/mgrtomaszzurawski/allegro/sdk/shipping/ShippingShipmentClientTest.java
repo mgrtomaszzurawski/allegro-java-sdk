@@ -84,6 +84,12 @@ class ShippingShipmentClientTest {
     private static final String SHIPMENT_ID = "SHIP-1001";
     private static final String CREDENTIALS_ID = "CRED-77";
     private static final String WAYBILL = "WB-555";
+    private static final String EXPECTED_DELIVERY_METHOD_ID = "DM-9";
+    private static final String EXPECTED_ADDITIONAL_SERVICE = "SATURDAY_DELIVERY";
+    private static final String EXPECTED_TRANSPORT = "ROAD";
+    private static final String PROP_SORTING_CODE = "sortingCode";
+    private static final String EXPECTED_SORTING_CODE = "WAW-3";
+    private static final String EXPECTED_CARRIER_WAYBILL = "CW-9001";
     private static final String RECEIVER_POINT = "POP-42";
     private static final String INSURANCE_AMOUNT = "199.99";
     private static final String IBAN = "PL61109010140000071219812874";
@@ -320,6 +326,14 @@ class ShippingShipmentClientTest {
             assertEquals(IBAN, shipment.cashOnDelivery().iban());
             assertEquals(LabelFormat.PDF, shipment.labelFormat());
             assertNull(shipment.canceledDate());
+            // enriched depth: delivery method, additional services/transport/properties,
+            // and per-parcel transporting info
+            assertEquals(EXPECTED_DELIVERY_METHOD_ID, shipment.deliveryMethodId());
+            assertEquals(List.of(EXPECTED_ADDITIONAL_SERVICE), shipment.additionalServices());
+            assertEquals(List.of(EXPECTED_TRANSPORT), shipment.transport());
+            assertEquals(EXPECTED_SORTING_CODE, shipment.additionalProperties().get(PROP_SORTING_CODE));
+            assertEquals(1, parcel.transportingInfo().size());
+            assertEquals(EXPECTED_CARRIER_WAYBILL, parcel.transportingInfo().get(0).carrierWaybill());
         }
     }
 
