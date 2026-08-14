@@ -37,6 +37,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
 import java.util.List;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -77,9 +78,12 @@ class AdditionalServicesWriteClientTest {
             {"access_token":"%s","token_type":"bearer","expires_in":%d,"scope":"sale:settings:write"}
             """;
 
+    private static final String CREATED_AT = "2026-08-14T09:00:00Z";
+    private static final String UPDATED_AT = "2026-08-14T09:05:00Z";
     private static final String GROUP_RESPONSE = """
             {"id":"%s","name":"%s","language":"%s","managedByAllegro":false,
              "seller":{"id":"111332841"},
+             "createdAt":"2026-08-14T09:00:00Z","updatedAt":"2026-08-14T09:05:00Z",
              "additionalServices":[{"definition":{"id":"%s"},"description":"%s",
                "configurations":[{"constraintCriteria":{"country":"PL","type":"COUNTRY_SAME_QUANTITY"},
                  "price":{"amount":"%s","currency":"%s"}}]}]}
@@ -126,6 +130,8 @@ class AdditionalServicesWriteClientTest {
             // then
             assertEquals(GROUP_ID, group.id());
             assertEquals(GROUP_NAME, group.name());
+            assertEquals(OffsetDateTime.parse(CREATED_AT), group.createdAt());
+            assertEquals(OffsetDateTime.parse(UPDATED_AT), group.updatedAt());
             verify(1, postRequestedFor(urlPathEqualTo(GROUPS_PATH))
                     .withRequestBody(matchingJsonPath("$.name", equalTo(GROUP_NAME)))
                     .withRequestBody(matchingJsonPath(
