@@ -16,17 +16,20 @@ import org.jspecify.annotations.Nullable;
  * {@code catalog().products().get(productId)}.
  *
  * <p>A product is the shared definition an offer is built from: its identity,
- * classification, images, and the parameter values that describe it. This record
- * exposes that core; the deeper blocks of the underlying DTO — the structured
- * {@code description}, compatibility list, and safety/trusted-content — are
- * intentionally omitted for now and can be added later without breaking read
- * consumers.
+ * classification (id plus the full {@link #categoryPath() category path}), images,
+ * the {@link #parameters() parameter values} that describe it, the
+ * {@link #offerRequirements() offer requirements} it imposes, and the
+ * {@link #productSafety() GPSR product-safety} information. The structured
+ * {@code description}, compatibility list, and trusted/AI-co-created content blocks
+ * are still omitted and can be added later without breaking read consumers.
  *
  * @param id the product id
  * @param name the product name, in the account's default language (a per-call
  *     language option is not yet wired)
  * @param categoryId the id of the category the product is classified under, or
  *     {@code null} when the category carries no id
+ * @param categoryPath the category path from the root down to the product's
+ *     category, in order; never {@code null}, possibly empty
  * @param publicationStatus the catalogue publication status (e.g. {@code LISTED}
  *     / {@code PROPOSED}), or {@code null} when absent
  * @param hasProtectedBrand whether the product carries a brand-protection
@@ -34,6 +37,10 @@ import org.jspecify.annotations.Nullable;
  * @param imageUrls the product image URLs, in order; never {@code null}
  * @param parameters the parameter values describing the product, in order; never
  *     {@code null}, possibly empty
+ * @param offerRequirements the requirements the product imposes on offers built
+ *     from it, or {@code null} when absent
+ * @param productSafety the GPSR product-safety information, or {@code null} when
+ *     absent
  *
  * @since 0.2.0
  */
@@ -41,12 +48,16 @@ public record Product(
         String id,
         String name,
         @Nullable String categoryId,
+        List<ProductCategoryPathElement> categoryPath,
         @Nullable String publicationStatus,
         boolean hasProtectedBrand,
         List<String> imageUrls,
-        List<ProductParameterValue> parameters) {
+        List<ProductParameterValue> parameters,
+        @Nullable OfferRequirements offerRequirements,
+        @Nullable ProductSafety productSafety) {
 
     public Product {
+        categoryPath = categoryPath == null ? List.of() : List.copyOf(categoryPath);
         imageUrls = imageUrls == null ? List.of() : List.copyOf(imageUrls);
         parameters = parameters == null ? List.of() : List.copyOf(parameters);
     }
@@ -66,10 +77,20 @@ public record Product(
                 // `category` is a spec-required field; trust the contract (its
                 // nested id is optional, so categoryId stays nullable).
                 raw.getCategory().getId(),
+                categoryPathOf(raw),
                 publicationStatusOf(raw),
                 Boolean.TRUE.equals(raw.getHasProtectedBrand()),
                 imageUrls,
-                parameters);
+                parameters,
+                OfferRequirements.from(raw.getOfferRequirements()),
+                ProductSafety.from(raw.getProductSafety()));
+    }
+
+    private static List<ProductCategoryPathElement> categoryPathOf(SaleProductDtoRaw raw) {
+        if (raw.getCategory().getPath() == null) {
+            return List.of();
+        }
+        return raw.getCategory().getPath().stream().map(ProductCategoryPathElement::from).toList();
     }
 
     private static @Nullable String publicationStatusOf(SaleProductDtoRaw raw) {
