@@ -3,8 +3,9 @@
 The offer lifecycle, reached from `client.offers()`.
 
 > Available now: reading/listing offers, the Smart! classification, offers missing parameters,
-> create/edit/delete, single- and bulk price/stock changes, bulk publish/unpublish, and reading
-> promotion packages. The remaining promo write operations and media land in later releases.
+> create (Buy Now, auction and advertisement) / edit / delete, single- and bulk price/stock changes,
+> bulk publish/unpublish, and reading promotion packages. The remaining promo write operations land
+> in later releases.
 
 ## Read an offer
 
@@ -224,8 +225,10 @@ CreateOfferRequest request = CreateOfferRequest.builder()
 Offer created = client.offers().create(request);
 ```
 
-The required fields (name, category, Buy Now price, stock) are validated fail-fast by the
-builder. The offer is created as a **draft** — publish it with
+For a Buy Now offer the required fields (name, category, Buy Now price, stock) are validated
+fail-fast by the builder; other selling formats relax some of these — an auction takes a
+`startingPrice` instead of a fixed price, and an advertisement carries no stock (see the two
+subsections below). The offer is created as a **draft** — publish it with
 `client.offers().batch().publish(List.of(created.id()))`. Delete an unpublished draft with
 `client.offers().deleteDraft(offerId)`.
 
@@ -280,6 +283,36 @@ with no `buyNowPrice`, throws. On the read side, `offer.startingPrice()`, `offer
 and `offer.stockUnit()` are populated for auctions; `offer.buyNowPrice()` is `null` for a pure
 auction.
 
+### Advertisement (classifieds) offers
+
+Some categories — cars, real estate, and other classifieds — list offers as **advertisements**
+rather than transactable Buy Now offers. Set `sellingFormat(OfferFormat.ADVERTISEMENT)`, give a
+Buy Now `price`, and attach a **contact** (an offer contact card managed via `client.contacts()` —
+see [`docs/contacts.md`](contacts.md)), which the SDK resolves by id or by name. An advertisement
+carries **no stock**, so omit `availableStock` — supplying one throws:
+
+```java
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.offers.model.NamedReference;
+
+CreateOfferRequest advert = CreateOfferRequest.builder()
+        .name("Volkswagen Golf VII 1.6 TDI")
+        .categoryId("260574")                          // a classifieds-enabled category
+        .buyNowPrice(Money.of("35000.00", "PLN"))
+        .sellingFormat(OfferFormat.ADVERTISEMENT)
+        .contact(NamedReference.byId("1216c61e-…"))    // or NamedReference.byName("Salon Warszawa")
+        .build();                                      // no availableStock for an advertisement
+
+Offer created = client.offers().create(advert);
+```
+
+The category must be classifieds-enabled (browse the eligible ones with `client.catalog()` in
+bucket E); a plain retail category rejects the ADVERTISEMENT format. The offer is created as an
+INACTIVE draft, and Allegro proposes a catalogue product for it — so a read back leaves each
+`ProductSetElement.productId()` `null` for that proposed product. Before it can go live, an
+advertisement needs a **classifieds package** assigned; that step, and reading the packages a
+category offers, live on the classifieds facade — see
+[`docs/offers-extras.md`](offers-extras.md#classifieds).
+
 ### Description and location
 
 The standardized description is an ordered list of sections, each a group of text and image
@@ -323,7 +356,7 @@ CreateOfferRequest request = CreateOfferRequest.builder()
 ```
 
 Use `parameters(List<OfferParameter>)` to set them all at once. The value ids and their meaning
-come from the category definition (see `client.categories()` in bucket E).
+come from the category definition (see `client.catalog()` in bucket E).
 
 On the read side, `offer.parameters()` returns every parameter the offer carries. Call
 `parameter.kind()` (`DICTIONARY` / `FREE_TEXT` / `RANGE`) to tell them apart rather than guessing
