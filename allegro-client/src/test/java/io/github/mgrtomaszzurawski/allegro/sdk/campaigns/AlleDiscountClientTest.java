@@ -50,6 +50,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitExcepti
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroServerException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -137,14 +138,24 @@ class AlleDiscountClientTest {
     private static final String ACCEPTED_RESPONSE = """
             {"id":"%s"}
             """.formatted(TEST_COMMAND_ID);
+    private static final String EXPECTED_SUBMITTED_OFFER_ID = "OFFER-77";
+    private static final String EXPECTED_COMMAND_CREATED_AT = "2026-08-14T09:00:00Z";
+    private static final String EXPECTED_COMMAND_UPDATED_AT = "2026-08-14T09:00:05Z";
     private static final String SUBMIT_PREVIEW_TEMPLATE = """
-            {"id":"%s","output":{"status":"%s",
+            {"id":"%s",
+             "input":{"offer":{"id":"OFFER-77"},"campaign":{"id":"CMP-1"},
+               "proposedPrice":{"amount":"84.99","currency":"PLN"}},
+             "output":{"status":"%s",
+             "createdAt":"2026-08-14T09:00:00Z","updatedAt":"2026-08-14T09:00:05Z",
              "newOfferParticipation":{"participationId":"%s"},"errors":%s}}
             """;
     private static final String WITHDRAW_PREVIEW = """
-            {"id":"%s","output":{"status":"SUCCESSFUL",
+            {"id":"%s",
+             "input":{"participationId":"%s"},
+             "output":{"status":"SUCCESSFUL",
+             "createdAt":"2026-08-14T09:00:00Z","updatedAt":"2026-08-14T09:00:05Z",
              "withdrawnOfferParticipation":{"participationId":"%s"},"errors":[]}}
-            """.formatted(TEST_COMMAND_ID, TEST_PARTICIPATION_ID);
+            """.formatted(TEST_COMMAND_ID, TEST_PARTICIPATION_ID, TEST_PARTICIPATION_ID);
 
     private static String submitPreview(String status, String errorsJson) {
         return SUBMIT_PREVIEW_TEMPLATE.formatted(TEST_COMMAND_ID, status, TEST_PARTICIPATION_ID, errorsJson);
@@ -402,6 +413,11 @@ class AlleDiscountClientTest {
             // then — the input body was sent and the command polled once to terminal
             assertEquals(AlleDiscountCommandStatus.SUCCESSFUL, result.status());
             assertEquals(TEST_PARTICIPATION_ID, result.participationId());
+            // command depth: echoed input + output timestamps
+            assertEquals(EXPECTED_SUBMITTED_OFFER_ID, result.submittedOfferId());
+            assertEquals(Money.of(TEST_PROPOSED_AMOUNT, TEST_CURRENCY_PLN), result.proposedPrice());
+            assertEquals(OffsetDateTime.parse(EXPECTED_COMMAND_CREATED_AT), result.createdAt());
+            assertEquals(OffsetDateTime.parse(EXPECTED_COMMAND_UPDATED_AT), result.updatedAt());
             verify(1, postRequestedFor(urlEqualTo(SUBMIT_PATH))
                     .withRequestBody(matchingJsonPath(JSON_INPUT_OFFER_ID, equalTo(TEST_OFFER_ID)))
                     .withRequestBody(matchingJsonPath(JSON_INPUT_CAMPAIGN_ID, equalTo(CAMPAIGN_ID)))
@@ -563,6 +579,10 @@ class AlleDiscountClientTest {
             // then — the participation id travelled in the body and the command polled to terminal
             assertEquals(AlleDiscountCommandStatus.SUCCESSFUL, result.status());
             assertEquals(TEST_PARTICIPATION_ID, result.participationId());
+            // command depth: echoed requested participation id + output timestamps
+            assertEquals(TEST_PARTICIPATION_ID, result.requestedParticipationId());
+            assertEquals(OffsetDateTime.parse(EXPECTED_COMMAND_CREATED_AT), result.createdAt());
+            assertEquals(OffsetDateTime.parse(EXPECTED_COMMAND_UPDATED_AT), result.updatedAt());
             verify(1, postRequestedFor(urlEqualTo(WITHDRAW_PATH))
                     .withRequestBody(matchingJsonPath(JSON_INPUT_PARTICIPATION_ID, equalTo(TEST_PARTICIPATION_ID))));
             verify(1, getRequestedFor(urlEqualTo(WITHDRAW_POLL_PATH)));
