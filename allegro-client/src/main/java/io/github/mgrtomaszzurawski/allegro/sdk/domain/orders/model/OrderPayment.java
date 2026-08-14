@@ -14,17 +14,16 @@ import org.jspecify.annotations.Nullable;
  * A payment on an order — the main payment ({@link Order#payment()}) or one of
  * the order's surcharges ({@link Order#surcharges()}), which share this shape.
  *
- * <p>The reconciliation amount (an internal Allegro accounting figure) is not
- * modelled; it is not seller-actionable. The {@code id} and {@code type} are
- * always present (the spec marks them required); the remaining fields are
- * optional because a not-yet-completed payment may carry no provider,
- * completion time, or amount yet.
+ * <p>The {@code id} and {@code type} are always present (the spec marks them
+ * required); the remaining fields are optional because a not-yet-completed payment
+ * may carry no provider, completion time, or amount yet.
  *
  * @param id payment identifier
  * @param type how the order was paid
  * @param provider which provider processed the payment, or {@code null} when not set
  * @param finishedAt when the payment completed, or {@code null} when not finished
  * @param paidAmount the amount actually paid, or {@code null} when not set
+ * @param reconciliation the internal reconciliation amount, or {@code null} when not set
  * @param features payment feature flags (e.g. split-payment markers); never
  *     {@code null}, possibly empty
  *
@@ -36,6 +35,7 @@ public record OrderPayment(
         @Nullable PaymentProvider provider,
         @Nullable OffsetDateTime finishedAt,
         @Nullable Money paidAmount,
+        @Nullable Money reconciliation,
         List<String> features) {
 
     public OrderPayment {
@@ -50,6 +50,7 @@ public record OrderPayment(
                 raw.getProvider() == null ? null : PaymentProvider.from(raw.getProvider()),
                 raw.getFinishedAt(),
                 Prices.money(raw.getPaidAmount()),
+                Prices.money(raw.getReconciliation()),
                 raw.getFeatures());
     }
 }
