@@ -4,6 +4,7 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueAuthorRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueMessageAuthorRaw;
 import org.jspecify.annotations.Nullable;
 
@@ -38,6 +39,24 @@ public enum ChatAuthorRole {
             case ADMIN -> ADMIN;
             case SYSTEM -> SYSTEM;
             case FULFILLMENT -> FULFILLMENT;
+            default -> UNKNOWN;
+        };
+    }
+
+    /**
+     * Map the generated issue-author role (the variant carried by the issue chat's
+     * initial message), tolerating unknown future values.
+     *
+     * @param raw the generated role, or {@code null}
+     * @return the matching role, or {@link #UNKNOWN}
+     */
+    public static ChatAuthorRole from(PostPurchaseIssueAuthorRaw.@Nullable RoleEnum raw) {
+        if (raw == null) {
+            return UNKNOWN;
+        }
+        return switch (raw) {
+            case BUYER -> BUYER;
+            case ADMIN -> ADMIN;
             default -> UNKNOWN;
         };
     }

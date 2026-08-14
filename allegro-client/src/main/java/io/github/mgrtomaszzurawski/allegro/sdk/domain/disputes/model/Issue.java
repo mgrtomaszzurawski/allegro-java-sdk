@@ -36,10 +36,14 @@ import org.jspecify.annotations.Nullable;
  * @param decisionDueDate when a decision is due, or {@code null}
  * @param buyer the buyer who opened the issue, or {@code null}
  * @param checkoutFormId id of the related order (checkout form), or {@code null}
+ * @param checkoutFormCreatedAt when the related order was created, or {@code null}
  * @param offerId id of the offer the issue concerns, or {@code null}
+ * @param offerQuantity quantity of the offer the issue concerns, or {@code null}
  * @param productId id of the product the issue concerns, or {@code null}
  * @param attachments files the buyer attached to the issue; never {@code null},
  *     possibly empty
+ * @param chat a summary of the issue's chat (count + initial/last message), or
+ *     {@code null} when absent
  * @param state the current state, or {@code null}
  *
  * @since 0.2.0
@@ -57,9 +61,12 @@ public record Issue(
         @Nullable OffsetDateTime decisionDueDate,
         @Nullable IssueParticipant buyer,
         @Nullable String checkoutFormId,
+        @Nullable OffsetDateTime checkoutFormCreatedAt,
         @Nullable String offerId,
+        @Nullable Integer offerQuantity,
         @Nullable String productId,
         List<IssueAttachment> attachments,
+        @Nullable IssueChatSummary chat,
         @Nullable IssueState state) {
 
     /** Canonical constructor normalizes null collections to empty and defensively copies. */
@@ -88,9 +95,12 @@ public record Issue(
                 raw.getDecisionDueDate(),
                 buyer == null ? null : IssueParticipant.from(buyer),
                 checkoutForm == null ? null : checkoutForm.getId(),
+                checkoutForm == null ? null : checkoutForm.getCreatedAt(),
                 offer == null ? null : offer.getId(),
+                offer == null ? null : offer.getQuantity(),
                 productId(product),
                 attachmentsOf(raw.getAttachments()),
+                IssueChatSummary.from(raw.getChat()),
                 currentState == null ? null : IssueState.from(currentState));
     }
 
