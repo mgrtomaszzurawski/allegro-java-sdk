@@ -17,6 +17,8 @@ import org.jspecify.annotations.Nullable;
  * @param feeAmount the fee amount, or {@code null} when the preview carries none
  * @param cycleDuration the billing cycle as an ISO-8601 duration string (e.g.
  *     {@code "P1M"}), or {@code null} when the quote is not recurring
+ * @param classifiedsPackageId the id of the classifieds package this quote is for,
+ *     or {@code null} when the quote is not a classifieds-package quote
  *
  * @since 0.3.0
  */
@@ -24,7 +26,8 @@ public record FeeQuote(
         @Nullable String name,
         @Nullable String type,
         @Nullable Money feeAmount,
-        @Nullable String cycleDuration) {
+        @Nullable String cycleDuration,
+        @Nullable String classifiedsPackageId) {
 
     /**
      * Map the generated quote DTO to the public record.
@@ -39,6 +42,7 @@ public record FeeQuote(
                 raw.getFee() == null
                         ? null
                         : Money.of(raw.getFee().getAmount(), raw.getFee().getCurrency()),
-                raw.getCycleDuration());
+                raw.getCycleDuration(),
+                raw.getClassifiedsPackage() == null ? null : raw.getClassifiedsPackage().getId());
     }
 }
