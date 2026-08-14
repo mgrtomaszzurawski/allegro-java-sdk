@@ -29,6 +29,7 @@ final class AfterSaleAttachmentDemo {
             "No stored refresh token for account '%s' - run the auth-bootstrap scenario first";
     private static final String MSG_TOKEN_EXPIRED = "(stored token expired - rerun auth-bootstrap)";
     private static final String CONTENT_TYPE = "application/pdf";
+    private static final String FILE_NAME = "sdk-live-verify.pdf";
 
     /** Minimal single-page PDF document used as the upload payload. */
     private static final String PDF_DOCUMENT =
@@ -67,8 +68,8 @@ final class AfterSaleAttachmentDemo {
 
     private static void probe(AfterSaleConditions afterSaleConditions) {
         byte[] content = PDF_DOCUMENT.getBytes(StandardCharsets.US_ASCII);
-        System.out.println("uploading " + content.length + "-byte " + CONTENT_TYPE + " attachment");
-        AfterSalesAttachment attachment = afterSaleConditions.uploadAttachment(content, CONTENT_TYPE);
+        System.out.println("uploading " + content.length + "-byte " + CONTENT_TYPE + " attachment (" + FILE_NAME + ")");
+        AfterSalesAttachment attachment = afterSaleConditions.uploadAttachment(FILE_NAME, content, CONTENT_TYPE);
         System.out.println("attachment id=" + attachment.id()
                 + ", name=" + attachment.name()
                 + ", url present=" + (attachment.url() != null));

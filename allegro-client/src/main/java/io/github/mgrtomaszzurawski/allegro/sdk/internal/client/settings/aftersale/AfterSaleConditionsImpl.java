@@ -66,9 +66,11 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
     private static final String ERR_IMPLIED_ID_NULL = "impliedWarrantyId must not be null";
     private static final String ERR_RETURN_POLICY_ID_NULL = "returnPolicyId must not be null";
     private static final String ERR_REQUEST_NULL = "request must not be null";
+    private static final String ERR_FILE_NAME_NULL = "fileName must not be null";
     private static final String ERR_CONTENT_NULL = "content must not be null";
     private static final String ERR_CONTENT_TYPE_NULL = "contentType must not be null";
     private static final String ERR_ATTACHMENT_ID = "attachment declaration returned no id";
+    private static final String ATTACHMENT_NAME_FIELD = "name";
     private static final String OP_DECLARE_ATTACHMENT = "declare after-sale attachment";
     private static final String OP_UPLOAD_ATTACHMENT = "upload after-sale attachment";
 
@@ -234,14 +236,15 @@ public final class AfterSaleConditionsImpl implements AfterSaleConditions {
      * the guard still holds should the caps ever widen.
      */
     @Override
-    public AfterSalesAttachment uploadAttachment(byte[] content, String contentType) {
+    public AfterSalesAttachment uploadAttachment(String fileName, byte[] content, String contentType) {
+        Objects.requireNonNull(fileName, ERR_FILE_NAME_NULL);
         Objects.requireNonNull(content, ERR_CONTENT_NULL);
         Objects.requireNonNull(contentType, ERR_CONTENT_TYPE_NULL);
-        // Declare the attachment (untyped metadata body), then PUT the bytes to the
-        // returned id — Allegro's two-step warranty-document upload.
+        // Declare the attachment (the file name is the required metadata), then PUT the
+        // bytes to the returned id — Allegro's two-step warranty-document upload.
         AfterSalesServicesAttachmentRaw declared = http.request(OP_DECLARE_ATTACHMENT)
                 .post(ApiPaths.AFTER_SALES_ATTACHMENTS)
-                .jsonBody(Map.of())
+                .jsonBody(Map.of(ATTACHMENT_NAME_FIELD, fileName))
                 .fetch(AfterSalesServicesAttachmentRaw.class);
         if (declared.getId() == null) {
             throw new IllegalStateException(ERR_ATTACHMENT_ID);
