@@ -13,10 +13,11 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.AdditionalServicesGroupRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.GroupTranslationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConfigurationRequest;
-import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServiceCategory;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConstraintRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServiceDefinition;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -41,9 +42,13 @@ final class AdditionalServicesWriteDemo {
 
     private static final String GROUP_NAME = "SDK live-verify group";
     private static final String LANGUAGE = "pl-PL";
-    private static final String TRANSLATED_DESCRIPTION = "Usluga dodatkowa (weryfikacja SDK)";
-    private static final String FALLBACK_AMOUNT = "1.00";
-    private static final String FALLBACK_CURRENCY = "PLN";
+    // A group is translated into languages OTHER than its own base language.
+    private static final String TRANSLATION_LANGUAGE = "en-US";
+    private static final String TRANSLATED_DESCRIPTION = "Additional service (SDK verification)";
+    private static final String PREFERRED_DEFINITION_ID = "GIFT_WRAP";
+    private static final String CONSTRAINT_COUNTRY = "PL";
+    private static final String PRICE_AMOUNT = "5.00";
+    private static final String PRICE_CURRENCY = "PLN";
 
     private AdditionalServicesWriteDemo() {
     }
@@ -72,24 +77,30 @@ final class AdditionalServicesWriteDemo {
     }
 
     private static void probe(AdditionalServices additionalServices) {
-        Optional<AdditionalServiceDefinition> definition = additionalServices.categoryDefinitions().stream()
+        List<AdditionalServiceDefinition> definitions = additionalServices.categoryDefinitions().stream()
                 .flatMap(category -> category.definitions().stream())
                 .filter(candidate -> candidate.id() != null)
-                .findFirst();
+                .toList();
+        Optional<AdditionalServiceDefinition> definition = definitions.stream()
+                .filter(candidate -> PREFERRED_DEFINITION_ID.equals(candidate.id()))
+                .findFirst()
+                .or(() -> definitions.stream().findFirst());
         if (definition.isEmpty()) {
             System.out.println(MSG_NO_DEFINITION);
             return;
         }
         String definitionId = definition.get().id();
-        Money price = priceFor(definition.get());
-        System.out.println("using definition id=" + definitionId + ", price=" + price.amount() + " " + price.currency());
+        Money price = Money.of(PRICE_AMOUNT, PRICE_CURRENCY);
+        System.out.println("using definition id=" + definitionId
+                + ", price=" + price.amount() + " " + price.currency() + " (before-shipping/" + CONSTRAINT_COUNTRY + ")");
 
         AdditionalServicesGroup created = additionalServices.createGroup(
                 AdditionalServicesGroupRequest.builder()
                         .name(GROUP_NAME)
                         .language(LANGUAGE)
                         .addService(AdditionalServiceRequest.of(definitionId, GROUP_NAME,
-                                ServiceConfigurationRequest.of(price)))
+                                ServiceConfigurationRequest.of(price,
+                                        ServiceConstraintRequest.beforeShipping(CONSTRAINT_COUNTRY))))
                         .build());
         System.out.println("created group id=" + created.id() + ", services=" + created.services().size());
 
@@ -97,23 +108,15 @@ final class AdditionalServicesWriteDemo {
         System.out.println("read-back group id=" + readBack.id() + ", name=" + readBack.name()
                 + ", services=" + readBack.services().size());
 
-        additionalServices.upsertTranslation(created.id(), LANGUAGE,
+        additionalServices.upsertTranslation(created.id(), TRANSLATION_LANGUAGE,
                 GroupTranslationRequest.builder()
                         .addTranslation(definitionId, TRANSLATED_DESCRIPTION)
                         .build());
-        System.out.println("translation upserted for " + LANGUAGE);
+        System.out.println("translation upserted for " + TRANSLATION_LANGUAGE);
 
-        additionalServices.deleteTranslation(created.id(), LANGUAGE);
-        System.out.println("translation deleted for " + LANGUAGE);
+        additionalServices.deleteTranslation(created.id(), TRANSLATION_LANGUAGE);
+        System.out.println("translation deleted for " + TRANSLATION_LANGUAGE);
 
         System.out.println("write-read-ok=true (group " + created.id() + " left on the sandbox account)");
-    }
-
-    private static Money priceFor(AdditionalServiceDefinition definition) {
-        Money maxPrice = definition.maxPrice();
-        if (maxPrice != null) {
-            return maxPrice;
-        }
-        return Money.of(FALLBACK_AMOUNT, FALLBACK_CURRENCY);
     }
 }

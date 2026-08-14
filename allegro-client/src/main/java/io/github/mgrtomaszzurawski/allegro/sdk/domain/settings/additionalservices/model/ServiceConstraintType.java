@@ -31,4 +31,14 @@ public enum ServiceConstraintType {
     public static ServiceConstraintType from(ConstraintCriteriaRaw.TypeEnum raw) {
         return valueOf(raw.name());
     }
+
+    /**
+     * Project onto the generated Layer-1 enum for a create/update request. The
+     * constant name and wire value coincide.
+     *
+     * @return the matching generated enum value
+     */
+    public ConstraintCriteriaRaw.TypeEnum toRaw() {
+        return ConstraintCriteriaRaw.TypeEnum.valueOf(name());
+    }
 }

@@ -33,7 +33,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.AdditionalServicesGroupRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.GroupTranslationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConfigurationRequest;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConstraintRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
+import java.util.List;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import org.junit.jupiter.api.Test;
 
@@ -61,10 +63,15 @@ class AdditionalServicesWriteClientTest {
     private static final String TRANSLATION_PATH = GROUP_PATH + "/translations/" + LANGUAGE;
 
     private static final String DEFINITION_ID = "GIFT_WRAP";
+    private static final String CARRY_IN_DEFINITION_ID = "CARRY_IN";
     private static final String GROUP_NAME = "Gift wrap only";
     private static final String DESCRIPTION = "Wrap product in nice paper";
     private static final String AMOUNT = "5.00";
     private static final String CURRENCY = "PLN";
+    private static final String CONSTRAINT_COUNTRY = "PL";
+    private static final String CONSTRAINT_TYPE_BEFORE_SHIPPING = "COUNTRY_SAME_QUANTITY";
+    private static final String CONSTRAINT_TYPE_IN_DELIVERY = "COUNTRY_DELIVERY_SAME_QUANTITY";
+    private static final String DELIVERY_METHOD_ID = "6d5f38c3-e05c-4a5e-b8da-1234567890ab";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","token_type":"bearer","expires_in":%d,"scope":"sale:settings:write"}
@@ -98,7 +105,8 @@ class AdditionalServicesWriteClientTest {
                 .name(GROUP_NAME)
                 .language(LANGUAGE)
                 .addService(AdditionalServiceRequest.of(DEFINITION_ID, DESCRIPTION,
-                        ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY))))
+                        ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY),
+                                ServiceConstraintRequest.beforeShipping(CONSTRAINT_COUNTRY))))
                 .build();
     }
 
@@ -123,7 +131,43 @@ class AdditionalServicesWriteClientTest {
                     .withRequestBody(matchingJsonPath(
                             "$.additionalServices[0].definition.id", equalTo(DEFINITION_ID)))
                     .withRequestBody(matchingJsonPath(
-                            "$.additionalServices[0].configurations[0].price.amount", equalTo(AMOUNT))));
+                            "$.additionalServices[0].configurations[0].price.amount", equalTo(AMOUNT)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.country",
+                            equalTo(CONSTRAINT_COUNTRY)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.type",
+                            equalTo(CONSTRAINT_TYPE_BEFORE_SHIPPING))));
+        }
+    }
+
+    @Test
+    void createGroup_whenInDeliveryConstraint_sendsTypeAndDeliveryMethods(WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(post(urlPathEqualTo(GROUPS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(GROUP_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.settings().additionalServices().createGroup(
+                    AdditionalServicesGroupRequest.builder()
+                            .name(GROUP_NAME)
+                            .language(LANGUAGE)
+                            .addService(AdditionalServiceRequest.of(CARRY_IN_DEFINITION_ID, DESCRIPTION,
+                                    ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY),
+                                            ServiceConstraintRequest.inDelivery(
+                                                    CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID)))))
+                            .build());
+
+            // then
+            verify(1, postRequestedFor(urlPathEqualTo(GROUPS_PATH))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.type",
+                            equalTo(CONSTRAINT_TYPE_IN_DELIVERY)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods[0].id",
+                            equalTo(DELIVERY_METHOD_ID))));
         }
     }
 
