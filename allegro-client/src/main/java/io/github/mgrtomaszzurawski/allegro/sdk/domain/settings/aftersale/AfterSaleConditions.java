@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  * After-sale service conditions — reached via {@code settings().afterSale()}.
  *
  * <p>Covers seller warranties, implied warranties (rękojmia), return policies, and
- * the warranty-document {@link #uploadAttachment(byte[], String) attachments} they
+ * the warranty-document {@link #uploadAttachment(String, byte[], String) attachments} they
  * reference.
  *
  * @since 0.2.0

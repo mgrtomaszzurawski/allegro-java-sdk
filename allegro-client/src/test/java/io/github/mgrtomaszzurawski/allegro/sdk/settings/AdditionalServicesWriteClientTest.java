@@ -35,9 +35,9 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConfigurationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConstraintRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
-import java.util.List;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**

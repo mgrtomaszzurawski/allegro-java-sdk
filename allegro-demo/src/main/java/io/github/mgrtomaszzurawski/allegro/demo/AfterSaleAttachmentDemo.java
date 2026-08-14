@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Bucket-K live WRITE probe (#181, TESTING.md §2) for the after-sale warranty-document
  * attachment upload: declare an attachment then PUT the file bytes through the SDK
- * ({@code uploadAttachment(byte[], contentType)}), and confirm the server returns a
+ * ({@code uploadAttachment(fileName, byte[], contentType)}), and confirm the server returns a
  * hosted attachment with an id (and url once processed). Seller-only.
  *
  * <p>Run:

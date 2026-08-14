@@ -4,9 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.AlleDiscountGetWithdrawCommandResponseInputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AlleDiscountGetWithdrawCommandResponseOutputRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AlleDiscountGetWithdrawCommandResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.AlleDiscountGetWithdrawCommandResponseInputRaw;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
