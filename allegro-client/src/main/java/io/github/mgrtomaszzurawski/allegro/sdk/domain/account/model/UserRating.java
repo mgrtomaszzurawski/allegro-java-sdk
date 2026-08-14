@@ -4,10 +4,12 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.account.model;
 
+import io.github.mgrtomaszzurawski.allegro.client.model.OrderOffersInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.OrderRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.RatesRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UserRatingRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.UserRaw;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,6 +30,8 @@ import org.jspecify.annotations.Nullable;
  *     or {@code null} if it is not excluded or no reason was reported
  * @param rates the buyer's per-category rating scores, or {@code null} if none
  * @param orderId id of the order the rating concerns, or {@code null}
+ * @param ratedOffers the offers on the rated order (id, title, catalogue snapshot);
+ *     never {@code null}, possibly empty
  *
  * @since 0.2.0
  */
@@ -44,7 +48,13 @@ public record UserRating(
         boolean excludedFromAverageRates,
         @Nullable String excludedFromAverageRatesReason,
         @Nullable Rates rates,
-        @Nullable String orderId) {
+        @Nullable String orderId,
+        List<RatedOffer> ratedOffers) {
+
+    /** Canonical constructor — defensively copies the rated-offer list. */
+    public UserRating {
+        ratedOffers = ratedOffers == null ? List.of() : List.copyOf(ratedOffers);
+    }
 
     /** Map the generated Layer-1 DTO to the public immutable record. */
     public static UserRating from(UserRatingRaw raw) {
@@ -63,7 +73,32 @@ public record UserRating(
                 Boolean.TRUE.equals(raw.getExcludedFromAverageRates()),
                 raw.getExcludedFromAverageRatesReason(),
                 Rates.from(raw.getRates()),
-                order == null ? null : order.getId());
+                order == null ? null : order.getId(),
+                ratedOffers(order));
+    }
+
+    private static List<RatedOffer> ratedOffers(@Nullable OrderRaw order) {
+        if (order == null || order.getOffers() == null) {
+            return List.of();
+        }
+        return order.getOffers().stream().map(RatedOffer::from).toList();
+    }
+
+    /**
+     * One offer on the order a rating concerns.
+     *
+     * @param id offer id, or {@code null}
+     * @param title offer title at the time of rating, or {@code null}
+     * @param snapshot catalogue snapshot reference, or {@code null}
+     *
+     * @since 0.8.0
+     */
+    public record RatedOffer(@Nullable String id, @Nullable String title, @Nullable String snapshot) {
+
+        /** Map the generated Layer-1 DTO. */
+        static RatedOffer from(OrderOffersInnerRaw raw) {
+            return new RatedOffer(raw.getId(), raw.getTitle(), raw.getSnapshot());
+        }
     }
 
     /**

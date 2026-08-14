@@ -99,7 +99,7 @@ class UserRatingsClientTest {
              "rates":{"delivery":5,"deliveryCost":4,"description":9,"service":3},
              "removal":{"possibleTo":"2025-03-01T00:00:00Z",
                "request":{"createdAt":"2025-02-01T08:36:57.292Z","message":"admin removed","source":"ADMIN"}},
-             "order":{"id":"order-1"}}
+             "order":{"id":"order-1","offers":[{"id":"offer-9","title":"Widget","snapshot":"snap-1"}]}}
             """.formatted(RATING_ID, EXCLUSION_REASON);
     // A removal whose `source` is an unmodelled value — must map to null, never SELLER.
     private static final String REMOVAL_UNKNOWN_SOURCE_RESPONSE = """
@@ -304,6 +304,11 @@ class UserRatingsClientTest {
             assertEquals("2025-02-01T08:36:57.292Z", ratingRemoval.request().createdAt());
             assertEquals("admin removed", ratingRemoval.request().message());
             assertEquals(Removal.Source.ADMIN, ratingRemoval.request().source());
+            // and — the rated order's offers map (id / title / catalogue snapshot)
+            assertEquals(1, rating.ratedOffers().size());
+            assertEquals("offer-9", rating.ratedOffers().get(0).id());
+            assertEquals("Widget", rating.ratedOffers().get(0).title());
+            assertEquals("snap-1", rating.ratedOffers().get(0).snapshot());
         }
     }
 
