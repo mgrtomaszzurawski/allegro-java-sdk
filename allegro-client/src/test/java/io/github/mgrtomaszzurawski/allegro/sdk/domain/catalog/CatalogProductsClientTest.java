@@ -102,13 +102,26 @@ class CatalogProductsClientTest {
     private static final String PRODUCT_ID = "5272069b-0759-4283-8ba7-7f0512345678";
     private static final String PRODUCT_BY_ID_PATH = PRODUCTS_PATH + "/" + PRODUCT_ID;
     private static final String PRODUCT = """
-            {"id":"%s","name":"iPhone 15 128GB","category":{"id":"%s"},
-             "publication":{"status":"LISTED"},"hasProtectedBrand":true,
+            {"id":"%s","name":"iPhone 15 128GB",
+             "category":{"id":"%s","path":[
+               {"id":"1","name":"Elektronika"},{"id":"%s","name":"Smartfony"}]},
+             "publication":{"status":"LISTED","value":"LISTED"},"hasProtectedBrand":true,
              "images":[{"url":"https://img.allegro/p.jpg"}],
              "parameters":[
-               {"id":"11323","name":"Marka","values":["Apple"],"valuesIds":["11323_1"]},
-               {"id":"pojemnosc","name":"Pojemność","values":["128 GB"],"unit":"GB"}]}
-            """.formatted(PRODUCT_ID, CATEGORY_ID);
+               {"id":"11323","name":"Marka","values":["Apple"],"valuesIds":["11323_1"],
+                "valuesLabels":["Apple"],
+                "options":{"identifiesProduct":true,"isGTIN":false,"isTrusted":true,"isAiCoCreated":false}},
+               {"id":"pojemnosc","name":"Pojemność","values":["128 GB"],"unit":"GB"},
+               {"id":"waga","name":"Waga","rangeValue":{"from":"100","to":"200"},"unit":"g"}],
+             "offerRequirements":{"id":"req-1","parameters":[
+               {"id":"ean","name":"EAN","values":["0194253000000"]}]},
+             "productSafety":{"responsibleProducers":[
+               {"id":"11111111-1111-4111-8111-111111111111","name":"Apple Distribution",
+                "producerData":{"tradeName":"Apple Distribution International",
+                  "address":{"countryCode":"IE","street":"Hollyhill","postalCode":"T23","city":"Cork"},
+                  "contact":{"email":"gpsr@example.com","phoneNumber":"+353","formUrl":"https://example.com/form"}}}],
+               "safetyInformation":{"type":"TEXT","description":"Keep away from water"}}}
+            """.formatted(PRODUCT_ID, CATEGORY_ID, CATEGORY_ID);
     // A bare product: category present but with no id, and every optional block omitted.
     private static final String MINIMAL_PRODUCT = """
             {"id":"%s","name":"Bare product","category":{}}
@@ -423,7 +436,7 @@ class CatalogProductsClientTest {
             assertEquals("LISTED", product.publicationStatus());
             assertTrue(product.hasProtectedBrand());
             assertEquals(1, product.imageUrls().size());
-            assertEquals(2, product.parameters().size());
+            assertEquals(3, product.parameters().size());
             assertEquals("11323", product.parameters().get(0).id());
             assertEquals(List.of("Apple"), product.parameters().get(0).values());
             assertEquals(List.of("11323_1"), product.parameters().get(0).valuesIds());
@@ -431,6 +444,34 @@ class CatalogProductsClientTest {
             assertEquals("GB", product.parameters().get(1).unit());
             assertEquals(List.of("128 GB"), product.parameters().get(1).values());
             assertTrue(product.parameters().get(1).valuesIds().isEmpty());
+
+            // and — enriched depth: category path, parameter labels/options/range,
+            // offer requirements, and GPSR product safety
+            assertEquals(2, product.categoryPath().size());
+            assertEquals("Elektronika", product.categoryPath().get(0).name());
+            assertEquals(CATEGORY_ID, product.categoryPath().get(1).id());
+
+            var brand = product.parameters().get(0);
+            assertEquals(List.of("Apple"), brand.valuesLabels());
+            assertTrue(brand.options().identifiesProduct());
+            assertTrue(brand.options().trusted());
+            assertFalse(brand.options().gtin());
+            assertNull(brand.range());
+
+            var weight = product.parameters().get(2);
+            assertEquals("100", weight.range().lower());
+            assertEquals("200", weight.range().upper());
+
+            assertEquals("req-1", product.offerRequirements().id());
+            assertEquals("ean", product.offerRequirements().parameters().get(0).id());
+
+            assertEquals(1, product.productSafety().responsibleProducers().size());
+            var producer = product.productSafety().responsibleProducers().get(0);
+            assertEquals("Apple Distribution", producer.name());
+            assertEquals("Apple Distribution International", producer.producerData().tradeName());
+            assertEquals("IE", producer.producerData().address().countryCode());
+            assertEquals("gpsr@example.com", producer.producerData().contact().email());
+            assertEquals("Keep away from water", product.productSafety().safetyInformation());
             verify(1, getRequestedFor(urlEqualTo(PRODUCT_BY_ID_PATH)));
         }
     }
@@ -484,6 +525,10 @@ class CatalogProductsClientTest {
             assertFalse(product.hasProtectedBrand());
             assertTrue(product.imageUrls().isEmpty());
             assertTrue(product.parameters().isEmpty());
+            // enriched blocks absent → empty path, null value, null requirements/safety
+            assertTrue(product.categoryPath().isEmpty());
+            assertNull(product.offerRequirements());
+            assertNull(product.productSafety());
         }
     }
 

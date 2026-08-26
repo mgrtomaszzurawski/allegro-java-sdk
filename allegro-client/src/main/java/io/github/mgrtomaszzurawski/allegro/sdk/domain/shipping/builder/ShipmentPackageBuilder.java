@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.PackageType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShipmentPackage;
 import java.math.BigDecimal;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -79,6 +80,6 @@ public final class ShipmentPackageBuilder {
         BigDecimal validHeight = BuilderValidation.requirePresent(heightCm, FIELD_HEIGHT);
         BigDecimal validWeight = BuilderValidation.requirePresent(weightKg, FIELD_WEIGHT);
         return new ShipmentPackage(validType, validLength, validWidth, validHeight,
-                validWeight, textOnLabel, null);
+                validWeight, textOnLabel, null, List.of());
     }
 }

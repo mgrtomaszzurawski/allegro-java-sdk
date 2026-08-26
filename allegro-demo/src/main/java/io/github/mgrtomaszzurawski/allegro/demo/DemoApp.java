@@ -94,6 +94,7 @@ public final class DemoApp {
         SCENARIOS.put(DeliverySettingsDemo.SCENARIO, DeliverySettingsDemo::run);
         SCENARIOS.put(ShippingRatesDemo.SCENARIO, ShippingRatesDemo::run);
         SCENARIOS.put(ShipmentDemo.SCENARIO, ShipmentDemo::run);
+        SCENARIOS.put(DeliveryOptionsDemo.SCENARIO, DeliveryOptionsDemo::run);
         SCENARIOS.put(MessagingDemo.SCENARIO, MessagingDemo::run);
         SCENARIOS.put(DisputesDemo.SCENARIO, DisputesDemo::run);
         SCENARIOS.put(SCENARIO_SETTINGS_WARRANTY, SettingsWarrantyDemo::run);
@@ -102,6 +103,8 @@ public final class DemoApp {
         SCENARIOS.put(SettingsReturnPolicyDemo.SCENARIO, SettingsReturnPolicyDemo::run);
         SCENARIOS.put(ComplianceDemo.SCENARIO, ComplianceDemo::run);
         SCENARIOS.put(AdditionalServicesDemo.SCENARIO, AdditionalServicesDemo::run);
+        SCENARIOS.put(AdditionalServicesWriteDemo.SCENARIO, AdditionalServicesWriteDemo::run);
+        SCENARIOS.put(AfterSaleAttachmentDemo.SCENARIO, AfterSaleAttachmentDemo::run);
         SCENARIOS.put(SizeTablesDemo.SCENARIO, SizeTablesDemo::run);
     }
 

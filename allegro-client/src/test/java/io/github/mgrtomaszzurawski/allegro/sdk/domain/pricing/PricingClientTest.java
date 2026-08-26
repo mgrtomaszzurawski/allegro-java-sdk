@@ -81,6 +81,7 @@ class PricingClientTest {
     private static final String FEE_OFFER_ID = "654321";
     private static final String COMMISSION_FEE_AMOUNT = "2.50";
     private static final String QUOTE_CYCLE = "P1M";
+    private static final String CLASSIFIEDS_PACKAGE_ID = "CP-7";
     private static final String BUY_NOW_FORMAT = "BUY_NOW";
     private static final String AUCTION_FORMAT = "AUCTION";
     private static final String NET_AMOUNT = "81.29";
@@ -127,7 +128,8 @@ class PricingClientTest {
             {"commissions":[{"name":"Sale commission","type":"SALE",
                 "fee":{"amount":"2.50","currency":"PLN"}}],
              "quotes":[{"name":"Promo","type":"PROMO",
-                "fee":{"amount":"1.00","currency":"PLN"},"cycleDuration":"P1M"}]}
+                "fee":{"amount":"1.00","currency":"PLN"},"cycleDuration":"P1M",
+                "classifiedsPackage":{"id":"CP-7"}}]}
             """;
     // spec-derived: not yet wire-verified (errors[] contract shape)
     private static final String VALIDATION_ERROR_RESPONSE = """
@@ -295,6 +297,7 @@ class PricingClientTest {
                     preview.commissions().get(0).feeAmount());
             assertEquals(1, preview.quotes().size());
             assertEquals(QUOTE_CYCLE, preview.quotes().get(0).cycleDuration());
+            assertEquals(CLASSIFIEDS_PACKAGE_ID, preview.quotes().get(0).classifiedsPackageId());
             verify(1, postRequestedFor(urlEqualTo(FEE_PREVIEW_PATH)));
         }
     }

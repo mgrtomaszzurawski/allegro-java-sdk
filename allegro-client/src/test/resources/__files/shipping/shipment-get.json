@@ -1,6 +1,10 @@
 {
   "id": "SHIP-1001",
   "credentialsId": "CRED-77",
+  "deliveryMethodId": "DM-9",
+  "additionalServices": ["SATURDAY_DELIVERY"],
+  "transport": ["ROAD"],
+  "additionalProperties": { "sortingCode": "WAW-3" },
   "sender": {
     "name": "Sender One",
     "company": "Seller Ltd",
@@ -29,7 +33,10 @@
       "height": { "value": 10.0, "unit": "CENTIMETER" },
       "weight": { "value": 2.5, "unit": "KILOGRAMS" },
       "textOnLabel": "handle with care",
-      "waybill": "WB-555"
+      "waybill": "WB-555",
+      "transportingInfo": [
+        { "carrierId": "ALLEGRO", "carrierWaybill": "CW-9001" }
+      ]
     }
   ],
   "insurance": { "amount": "199.99", "currency": "PLN" },

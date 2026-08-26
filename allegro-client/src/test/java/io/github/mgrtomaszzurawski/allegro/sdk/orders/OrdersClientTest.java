@@ -90,6 +90,18 @@ class OrdersClientTest {
     private static final String ORDER_PATH = CHECKOUT_FORMS_PATH + "/" + ORDER_ID;
     private static final String EXPECTED_BUYER_LOGIN = "test-buyer";
     private static final String EXPECTED_BUYER_EMAIL = "buyer@example.com";
+    private static final String EXPECTED_BUYER_CITY = "Gdansk";
+    private static final String EXPECTED_BUYER_LANGUAGE = "pl-PL";
+    private static final String EXPECTED_OFFER_EXTERNAL_ID = "SKU-001";
+    private static final String EXPECTED_OFFER_HS_NUMBER = "8471300000";
+    private static final String EXPECTED_TAX_RATE = "23";
+    private static final String EXPECTED_ADDITIONAL_SERVICE_ID = "GIFT_WRAP";
+    private static final String EXPECTED_DISCOUNT_TYPE = "COUPON";
+    private static final String EXPECTED_ORIGINAL_AMOUNT = "24.99";
+    private static final String EXPECTED_DEPOSIT_AMOUNT = "1.00";
+    private static final String EXPECTED_RECONCILIATION_AMOUNT = "44.98";
+    private static final String EXPECTED_GUARANTEED_FROM = "2026-07-16T09:00:00Z";
+    private static final String EXPECTED_DISPATCH_TO = "2026-07-15T16:00:00Z";
     private static final String EXPECTED_OFFER_ID = "12345";
     private static final String EXPECTED_OFFER_NAME = "Test Widget";
     private static final int EXPECTED_QUANTITY = 2;
@@ -304,6 +316,9 @@ class OrdersClientTest {
             assertEquals(EXPECTED_BUYER_LOGIN, order.buyer().login());
             assertEquals(EXPECTED_BUYER_EMAIL, order.buyer().email());
             assertFalse(order.buyer().guest());
+            // buyer depth: preferred language + registered address
+            assertEquals(EXPECTED_BUYER_LANGUAGE, order.buyer().preferredLanguage());
+            assertEquals(EXPECTED_BUYER_CITY, order.buyer().address().city());
 
             assertEquals(1, order.lineItems().size());
             var lineItem = order.lineItems().get(0);
@@ -312,6 +327,18 @@ class OrdersClientTest {
             assertEquals(EXPECTED_QUANTITY, lineItem.quantity());
             assertEquals(EXPECTED_UNIT_AMOUNT, lineItem.price().amount());
             assertEquals(EXPECTED_CURRENCY, lineItem.price().currency());
+            // line-item depth: offer external id / HS number, original price, deposit,
+            // tax, selected additional services, discounts
+            assertEquals(EXPECTED_OFFER_EXTERNAL_ID, lineItem.offerExternalId());
+            assertEquals(EXPECTED_OFFER_HS_NUMBER, lineItem.offerHsNumber());
+            assertEquals(EXPECTED_ORIGINAL_AMOUNT, lineItem.originalPrice().amount());
+            assertEquals(EXPECTED_DEPOSIT_AMOUNT, lineItem.deposit().amount());
+            assertEquals(EXPECTED_TAX_RATE, lineItem.taxInfo().rate());
+            assertEquals(1, lineItem.selectedAdditionalServices().size());
+            assertEquals(EXPECTED_ADDITIONAL_SERVICE_ID,
+                    lineItem.selectedAdditionalServices().get(0).definitionId());
+            assertEquals(1, lineItem.discounts().size());
+            assertEquals(EXPECTED_DISCOUNT_TYPE, lineItem.discounts().get(0).type());
 
             assertEquals(EXPECTED_TOTAL_AMOUNT, order.totalToPay().amount());
             assertEquals(EXPECTED_CURRENCY, order.totalToPay().currency());
@@ -320,6 +347,7 @@ class OrdersClientTest {
             assertEquals(PaymentType.ONLINE, order.payment().type());
             assertEquals(PaymentProvider.PAYU, order.payment().provider());
             assertEquals(EXPECTED_PAID_AMOUNT, order.payment().paidAmount().amount());
+            assertEquals(EXPECTED_RECONCILIATION_AMOUNT, order.payment().reconciliation().amount());
             assertEquals(OffsetDateTime.parse(EXPECTED_PAYMENT_FINISHED_AT),
                     order.payment().finishedAt());
             assertEquals(1, order.surcharges().size());
@@ -332,6 +360,11 @@ class OrdersClientTest {
             assertEquals(EXPECTED_DELIVERY_COST, order.delivery().cost().amount());
             assertEquals(OffsetDateTime.parse(EXPECTED_DELIVERY_FROM),
                     order.delivery().time().earliestAt());
+            // delivery-time depth: guaranteed + dispatch windows
+            assertEquals(OffsetDateTime.parse(EXPECTED_GUARANTEED_FROM),
+                    order.delivery().time().guaranteed().earliestAt());
+            assertEquals(OffsetDateTime.parse(EXPECTED_DISPATCH_TO),
+                    order.delivery().time().dispatch().latestAt());
             assertTrue(order.delivery().smart());
             assertNull(order.delivery().pickupPoint());
 

@@ -18,6 +18,11 @@ import org.jspecify.annotations.Nullable;
  * @param companyName company name, or {@code null} for a private buyer
  * @param guest {@code true} when the purchase was made without an Allegro account
  * @param phoneNumber contact phone number, or {@code null} when not provided
+ * @param personalIdentity the buyer's personal identity number (e.g. for age-restricted
+ *     goods), or {@code null} when not provided
+ * @param preferredLanguage the buyer's preferred communication language, or {@code null}
+ *     when not provided
+ * @param address the buyer's registered address, or {@code null} when not provided
  *
  * @since 0.3.0
  */
@@ -29,7 +34,10 @@ public record Buyer(
         @Nullable String lastName,
         @Nullable String companyName,
         boolean guest,
-        @Nullable String phoneNumber) {
+        @Nullable String phoneNumber,
+        @Nullable String personalIdentity,
+        @Nullable String preferredLanguage,
+        @Nullable BuyerAddress address) {
 
     /** Map the generated Layer-1 DTO to the public record. */
     public static Buyer from(CheckoutFormBuyerReferenceRaw raw) {
@@ -41,7 +49,10 @@ public record Buyer(
                 raw.getLastName(),
                 raw.getCompanyName(),
                 Boolean.TRUE.equals(raw.getGuest()),
-                raw.getPhoneNumber());
+                raw.getPhoneNumber(),
+                raw.getPersonalIdentity(),
+                raw.getPreferences() == null ? null : raw.getPreferences().getLanguage(),
+                BuyerAddress.from(raw.getAddress()));
     }
 
     /**

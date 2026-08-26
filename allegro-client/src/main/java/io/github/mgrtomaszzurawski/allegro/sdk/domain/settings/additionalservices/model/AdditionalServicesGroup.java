@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservic
 
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalServiceResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.AdditionalServicesGroupResponseRaw;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -19,6 +20,8 @@ import org.jspecify.annotations.Nullable;
  * @param managedByAllegro {@code true} when Allegro auto-created and manages the group
  * @param sellerId owning seller id, or {@code null}
  * @param services the services in the group
+ * @param createdAt when the group was created, or {@code null}
+ * @param updatedAt when the group was last updated, or {@code null}
  *
  * @since 0.3.0
  */
@@ -28,7 +31,9 @@ public record AdditionalServicesGroup(
         @Nullable String language,
         boolean managedByAllegro,
         @Nullable String sellerId,
-        List<AdditionalService> services) {
+        List<AdditionalService> services,
+        @Nullable OffsetDateTime createdAt,
+        @Nullable OffsetDateTime updatedAt) {
 
     /** Canonical constructor — defensively copies the services. */
     public AdditionalServicesGroup {
@@ -43,6 +48,7 @@ public record AdditionalServicesGroup(
         String sellerId = raw.getSeller() == null ? null : raw.getSeller().getId();
         return new AdditionalServicesGroup(
                 raw.getId(), raw.getName(), raw.getLanguage(),
-                Boolean.TRUE.equals(raw.getManagedByAllegro()), sellerId, services);
+                Boolean.TRUE.equals(raw.getManagedByAllegro()), sellerId, services,
+                raw.getCreatedAt(), raw.getUpdatedAt());
     }
 }

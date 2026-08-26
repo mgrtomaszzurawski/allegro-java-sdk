@@ -11,6 +11,7 @@ import io.github.mgrtomaszzurawski.allegro.client.model.SenderAddressDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShipmentDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -32,6 +33,13 @@ import org.jspecify.annotations.Nullable;
  * @param carrier the carrier that fulfils the shipment, or {@code null}
  * @param labelFormat the label file format
  * @param pickupAvailable whether a pickup can be requested for it, or {@code null}
+ * @param deliveryMethodId the delivery method the shipment uses, or {@code null}
+ * @param additionalServices the ids of the additional carrier services requested;
+ *     never {@code null}, possibly empty
+ * @param transport the transport markers assigned to the shipment; never
+ *     {@code null}, possibly empty
+ * @param additionalProperties extra carrier-specific key/value properties; never
+ *     {@code null}, possibly empty
  *
  * @since 0.4.0
  */
@@ -48,11 +56,18 @@ public record Shipment(
         @Nullable String canceledDate,
         @Nullable String carrier,
         LabelFormat labelFormat,
-        @Nullable Boolean pickupAvailable) {
+        @Nullable Boolean pickupAvailable,
+        @Nullable String deliveryMethodId,
+        List<String> additionalServices,
+        List<String> transport,
+        Map<String, String> additionalProperties) {
 
-    /** Canonical constructor: defensively copy the package list. */
+    /** Canonical constructor: defensively copy the collections. */
     public Shipment {
         packages = List.copyOf(packages);
+        additionalServices = additionalServices == null ? List.of() : List.copyOf(additionalServices);
+        transport = transport == null ? List.of() : List.copyOf(transport);
+        additionalProperties = additionalProperties == null ? Map.of() : Map.copyOf(additionalProperties);
     }
 
     /** Map the generated response DTO to the public record. */
@@ -70,7 +85,11 @@ public record Shipment(
                 raw.getCanceledDate(),
                 raw.getCarrier(),
                 LabelFormat.fromWire(raw.getLabelFormat() == null ? null : raw.getLabelFormat().getValue()),
-                raw.getPickupAvailable());
+                raw.getPickupAvailable(),
+                raw.getDeliveryMethodId(),
+                raw.getAdditionalServices(),
+                raw.getTransport(),
+                raw.getAdditionalProperties());
     }
 
     private static @Nullable PostalAddress sender(@Nullable SenderAddressDtoRaw raw) {

@@ -8,9 +8,11 @@ import io.github.mgrtomaszzurawski.allegro.client.model.DimensionValueRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PackageDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PackageRequestDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PackageTypeDtoRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.TransportingInfoDtoRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.WeightValueRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.ShipmentPackageBuilder;
 import java.math.BigDecimal;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -29,6 +31,8 @@ import org.jspecify.annotations.Nullable;
  * @param weightKg the weight in kilograms, or {@code null} on a read that omits it
  * @param textOnLabel free text printed on the label, or {@code null}
  * @param waybill the carrier waybill number assigned on creation, or {@code null}
+ * @param transportingInfo the per-carrier transporting info assigned on creation;
+ *     never {@code null}, possibly empty (read-only)
  *
  * @since 0.4.0
  */
@@ -39,7 +43,13 @@ public record ShipmentPackage(
         @Nullable BigDecimal heightCm,
         @Nullable BigDecimal weightKg,
         @Nullable String textOnLabel,
-        @Nullable String waybill) {
+        @Nullable String waybill,
+        List<ShipmentTransportingInfo> transportingInfo) {
+
+    /** Canonical constructor — defensively copies the transporting-info list. */
+    public ShipmentPackage {
+        transportingInfo = transportingInfo == null ? List.of() : List.copyOf(transportingInfo);
+    }
 
     /** A fresh builder for a {@link ShipmentPackage}. */
     public static ShipmentPackageBuilder builder() {
@@ -66,7 +76,13 @@ public record ShipmentPackage(
                 dimension(raw.getHeight()),
                 weight(raw.getWeight()),
                 raw.getTextOnLabel(),
-                raw.getWaybill());
+                raw.getWaybill(),
+                transportingInfo(raw.getTransportingInfo()));
+    }
+
+    private static List<ShipmentTransportingInfo> transportingInfo(
+            @Nullable List<TransportingInfoDtoRaw> raw) {
+        return raw == null ? List.of() : raw.stream().map(ShipmentTransportingInfo::from).toList();
     }
 
     /**
@@ -82,7 +98,8 @@ public record ShipmentPackage(
                 dimension(raw.getHeight()),
                 weight(raw.getWeight()),
                 raw.getTextOnLabel(),
-                null);
+                null,
+                List.of());
     }
 
     /** Build the generated request DTO for a create body (writable fields only). */

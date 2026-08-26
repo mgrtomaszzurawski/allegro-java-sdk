@@ -13,15 +13,34 @@
     "firstName": "Anna",
     "lastName": "Nowak",
     "guest": false,
-    "phoneNumber": "+48500100200"
+    "phoneNumber": "+48500100200",
+    "personalIdentity": "PESEL-XXXX",
+    "preferences": { "language": "pl-PL" },
+    "address": {
+      "street": "Buyer 12",
+      "city": "Gdansk",
+      "postCode": "80-001",
+      "countryCode": "PL"
+    }
   },
   "lineItems": [
     {
       "id": "11112222-aaaa-bbbb-cccc-333344445555",
-      "offer": { "id": "12345", "name": "Test Widget" },
+      "offer": {
+        "id": "12345",
+        "name": "Test Widget",
+        "external": { "id": "SKU-001" },
+        "hsNumber": "8471300000"
+      },
       "quantity": 2,
       "originalPrice": { "amount": "24.99", "currency": "PLN" },
       "price": { "amount": "19.99", "currency": "PLN" },
+      "deposit": { "price": { "amount": "1.00", "currency": "PLN" } },
+      "tax": { "rate": "23", "subject": "GOODS", "exemption": null },
+      "selectedAdditionalServices": [
+        { "definitionId": "GIFT_WRAP", "name": "Gift wrap", "price": { "amount": "5.00", "currency": "PLN" }, "quantity": 1 }
+      ],
+      "discounts": [ { "type": "COUPON" } ],
       "boughtAt": "2026-07-15T10:30:00Z"
     }
   ],
@@ -31,6 +50,7 @@
     "provider": "PAYU",
     "finishedAt": "2026-07-15T10:32:00Z",
     "paidAmount": { "amount": "44.98", "currency": "PLN" },
+    "reconciliation": { "amount": "44.98", "currency": "PLN" },
     "features": []
   },
   "surcharges": [
@@ -54,7 +74,12 @@
       "phoneNumber": "+48500100200"
     },
     "cost": { "amount": "9.99", "currency": "PLN" },
-    "time": { "from": "2026-07-16T08:00:00Z", "to": "2026-07-16T18:00:00Z" },
+    "time": {
+      "from": "2026-07-16T08:00:00Z",
+      "to": "2026-07-16T18:00:00Z",
+      "guaranteed": { "from": "2026-07-16T09:00:00Z", "to": "2026-07-16T12:00:00Z" },
+      "dispatch": { "from": "2026-07-15T14:00:00Z", "to": "2026-07-15T16:00:00Z" }
+    },
     "smart": true
   },
   "invoice": {

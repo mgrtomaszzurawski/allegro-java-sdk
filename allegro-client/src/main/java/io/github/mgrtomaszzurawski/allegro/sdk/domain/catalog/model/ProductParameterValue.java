@@ -18,9 +18,8 @@ import org.jspecify.annotations.Nullable;
  * (localized) display labels and {@link #valuesIds()} the stable ids to match
  * against a {@link DictionaryValue#id()}.
  *
- * <p>Range-type parameters (which carry {@code from}/{@code to} bounds rather
- * than discrete values) are not yet modelled here; their {@link #values()} may
- * be empty.
+ * <p>Range-type parameters carry {@code from}/{@code to} bounds in {@link #range()}
+ * rather than discrete {@link #values()}.
  *
  * @param id the parameter id (matches a {@link CategoryParameter#id()})
  * @param name the parameter display name
@@ -28,7 +27,13 @@ import org.jspecify.annotations.Nullable;
  *     {@code null}, possibly empty
  * @param valuesIds the stable id(s) of the set value(s) (dictionary parameters),
  *     in order; never {@code null}, possibly empty
+ * @param valuesLabels the human-readable label(s) of the set value(s), in order;
+ *     never {@code null}, possibly empty
  * @param unit the unit the values are expressed in, or {@code null}
+ * @param range the {@code from}/{@code to} bounds for a range-type parameter, or
+ *     {@code null} when the parameter carries discrete values
+ * @param options the parameter's boolean traits (identifies-product, GTIN,
+ *     trusted, AI co-created); never {@code null}
  *
  * @since 0.2.0
  */
@@ -37,16 +42,27 @@ public record ProductParameterValue(
         String name,
         List<String> values,
         List<String> valuesIds,
-        @Nullable String unit) {
+        List<String> valuesLabels,
+        @Nullable String unit,
+        @Nullable ParameterRange range,
+        ProductParameterOptions options) {
 
     public ProductParameterValue {
         values = values == null ? List.of() : List.copyOf(values);
         valuesIds = valuesIds == null ? List.of() : List.copyOf(valuesIds);
+        valuesLabels = valuesLabels == null ? List.of() : List.copyOf(valuesLabels);
     }
 
     /** Map a generated Layer-1 product-parameter DTO to the public record. */
     public static ProductParameterValue from(ProductParameterDtoRaw raw) {
         return new ProductParameterValue(
-                raw.getId(), raw.getName(), raw.getValues(), raw.getValuesIds(), raw.getUnit());
+                raw.getId(),
+                raw.getName(),
+                raw.getValues(),
+                raw.getValuesIds(),
+                raw.getValuesLabels(),
+                raw.getUnit(),
+                ParameterRange.from(raw.getRangeValue()),
+                ProductParameterOptions.from(raw.getOptions()));
     }
 }

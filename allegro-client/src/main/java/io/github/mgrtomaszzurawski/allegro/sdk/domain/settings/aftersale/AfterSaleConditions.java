@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  * After-sale service conditions — reached via {@code settings().afterSale()}.
  *
  * <p>Covers seller warranties, implied warranties (rękojmia), return policies, and
- * the warranty-document {@link #uploadAttachment(byte[], String) attachments} they
+ * the warranty-document {@link #uploadAttachment(String, byte[], String) attachments} they
  * reference.
  *
  * @since 0.2.0
@@ -151,14 +151,16 @@ public interface AfterSaleConditions {
     void deleteReturnPolicy(String returnPolicyId);
 
     /**
-     * Upload a warranty-document attachment. The SDK declares the attachment
-     * (obtaining its id) and uploads the file bytes in one call, returning the
-     * hosted attachment whose {@link AfterSalesAttachment#id() id} can be referenced
-     * from a {@code WarrantyRequest}.
+     * Upload a warranty-document attachment. The SDK declares the attachment under
+     * the given file name (obtaining its id) and uploads the file bytes in one call,
+     * returning the hosted attachment whose {@link AfterSalesAttachment#id() id} can
+     * be referenced from a {@code WarrantyRequest}.
      *
+     * @param fileName the file name to register the attachment under (e.g.
+     *     {@code warranty.pdf}); Allegro requires it on the declare step
      * @param content the file bytes (e.g. a PDF)
      * @param contentType the file's MIME type (e.g. {@code application/pdf})
      * @return the uploaded attachment (id, name, url)
      */
-    AfterSalesAttachment uploadAttachment(byte[] content, String contentType);
+    AfterSalesAttachment uploadAttachment(String fileName, byte[] content, String contentType);
 }

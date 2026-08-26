@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
@@ -91,15 +92,17 @@ class AfterSaleAttachmentClientTest {
             // when
             byte[] pdf = "%PDF-1.4 fake".getBytes(StandardCharsets.UTF_8);
             AfterSalesAttachment uploaded =
-                    allegro.settings().afterSale().uploadAttachment(pdf, CONTENT_TYPE);
+                    allegro.settings().afterSale().uploadAttachment(ATTACHMENT_NAME, pdf, CONTENT_TYPE);
 
             // then — response mapped
             assertEquals(ATTACHMENT_ID, uploaded.id());
             assertEquals(ATTACHMENT_NAME, uploaded.name());
             assertEquals(ATTACHMENT_URL, uploaded.url());
 
-            // and the two-step upload hit declare then the id-scoped PUT with the file bytes
-            verify(1, postRequestedFor(urlPathEqualTo(ATTACHMENTS_PATH)));
+            // and the two-step upload hit declare (carrying the file name) then the
+            // id-scoped PUT with the file bytes
+            verify(1, postRequestedFor(urlPathEqualTo(ATTACHMENTS_PATH))
+                    .withRequestBody(matchingJsonPath("$.name", equalTo(ATTACHMENT_NAME))));
             verify(1, putRequestedFor(urlPathEqualTo(ATTACHMENT_PATH))
                     .withHeader(TestHttpConstants.CONTENT_TYPE_HEADER, equalTo(CONTENT_TYPE)));
         }

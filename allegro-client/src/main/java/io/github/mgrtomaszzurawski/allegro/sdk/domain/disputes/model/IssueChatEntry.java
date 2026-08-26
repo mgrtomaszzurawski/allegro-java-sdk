@@ -6,6 +6,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.disputes.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueAttachmentRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueChatMessageRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueFirstMessageRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueMessageAuthorRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.PostPurchaseIssueMessageRaw;
 import java.time.OffsetDateTime;
@@ -50,6 +51,23 @@ public record IssueChatEntry(
     public static IssueChatEntry from(PostPurchaseIssueMessageRaw raw) {
         return of(raw.getId(), raw.getText(), raw.getCreatedAt(), raw.getAuthor(),
                 raw.getAttachments());
+    }
+
+    /**
+     * Map the chat's initial message ({@code PostPurchaseIssueFirstMessage}) to the
+     * same chat-entry record. Its author is the issue-author variant, so it is mapped
+     * through the matching {@link ChatAuthor} factory.
+     *
+     * @param raw the generated first-message DTO
+     * @return the mapped chat entry
+     */
+    public static IssueChatEntry from(PostPurchaseIssueFirstMessageRaw raw) {
+        return new IssueChatEntry(
+                raw.getId(),
+                raw.getText(),
+                raw.getCreatedAt(),
+                raw.getAuthor() == null ? null : ChatAuthor.from(raw.getAuthor()),
+                attachmentsOf(raw.getAttachments()));
     }
 
     private static IssueChatEntry of(@Nullable String id, @Nullable String text,

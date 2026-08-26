@@ -39,6 +39,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroBadRequestExcept
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroRateLimitException;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +66,11 @@ class DisputesClientTest {
     private static final String CHAT_PATH = ISSUE_PATH + "/chat";
 
     private static final String ORDER_ID = "order-9";
+    private static final String EXPECTED_ORDER_CREATED_AT = "2026-07-10T08:00:00Z";
+    private static final Integer EXPECTED_OFFER_QUANTITY = 2;
+    private static final Integer EXPECTED_MESSAGES_COUNT = 3;
+    private static final String EXPECTED_INITIAL_MESSAGE_ID = "msg-1";
+    private static final String EXPECTED_LAST_MESSAGE_AT = "2026-07-16T12:00:00Z";
     private static final String BUYER_LOGIN = "buyer-login";
     private static final String OFFER_ID = "6789012345";
     private static final String PRODUCT_ID = "5f4e3d2c-1b0a-4988-8776-655443322110";
@@ -104,8 +110,13 @@ class DisputesClientTest {
              "openedDate":"2026-07-15T10:00:00Z","decisionDueDate":"2026-07-22T10:00:00Z",
              "buyer":{"id":"b1","login":"%s"},
              "checkoutForm":{"id":"%s","createdAt":"2026-07-10T08:00:00Z"},
-             "offer":{"id":"%s"},"product":{"id":"%s"},
+             "offer":{"id":"%s","quantity":2},"product":{"id":"%s"},
              "attachments":[{"fileName":"%s","url":"%s"}],
+             "chat":{"messagesCount":3,
+               "initialMessage":{"id":"msg-1","text":"Item arrived damaged",
+                 "createdAt":"2026-07-15T10:05:00Z",
+                 "author":{"login":"buyer-login","role":"BUYER"},"attachments":[]},
+               "lastMessage":{"createdAt":"2026-07-16T12:00:00Z"}},
              "currentState":{"status":"CLAIM_SUBMITTED","statusDueDate":"2026-07-20T10:00:00Z",
                "returnRequired":true,"chatActive":true}}
             """.formatted(ISSUE_ID, REASON_DESCRIPTION, EXPECTED_REFUND_AMOUNT, EXPECTED_REFUND_CURRENCY,
@@ -317,6 +328,13 @@ class DisputesClientTest {
             assertEquals(ONE_ELEMENT, issue.attachments().size());
             assertEquals(ISSUE_ATTACHMENT_FILENAME, issue.attachments().get(0).fileName());
             assertEquals(ISSUE_ATTACHMENT_URL, issue.attachments().get(0).url());
+            // then — enriched depth: order created-at, offer quantity, and the chat summary
+            assertEquals(OffsetDateTime.parse(EXPECTED_ORDER_CREATED_AT), issue.checkoutFormCreatedAt());
+            assertEquals(EXPECTED_OFFER_QUANTITY, issue.offerQuantity());
+            assertEquals(EXPECTED_MESSAGES_COUNT, issue.chat().messagesCount());
+            assertEquals(EXPECTED_INITIAL_MESSAGE_ID, issue.chat().initialMessage().id());
+            assertEquals(ChatAuthorRole.BUYER, issue.chat().initialMessage().author().role());
+            assertEquals(OffsetDateTime.parse(EXPECTED_LAST_MESSAGE_AT), issue.chat().lastMessageAt());
             verify(1, getRequestedFor(urlEqualTo(ISSUE_PATH)));
         }
     }
