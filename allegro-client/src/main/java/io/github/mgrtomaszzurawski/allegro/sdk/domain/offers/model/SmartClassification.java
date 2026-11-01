@@ -16,10 +16,11 @@ import org.jspecify.annotations.Nullable;
  * ({@code offers().smartClassification(offerId)}): whether the offer qualifies
  * for Smart!, and the per-condition breakdown of why.
  *
- * <p>The report's per-delivery-method lists ({@code smartDeliveryMethods} and the
- * per-condition {@code passed}/{@code failedDeliveryMethods}) are marked deprecated
- * in the Allegro spec and are deliberately not surfaced here — a new typed surface
- * should not lead consumers onto fields the API owner is removing.
+ * <p>The per-delivery-method lists the older spec carried ({@code smartDeliveryMethods}
+ * and the per-condition {@code passed}/{@code failedDeliveryMethods}) were deprecated
+ * and have since been removed from the Allegro spec; they were deliberately never
+ * surfaced here — a new typed surface should not lead consumers onto fields the API
+ * owner is removing.
  *
  * @param fulfilled                    whether the offer currently qualifies for Smart!
  * @param scheduledForReclassification whether Allegro will re-evaluate the offer
