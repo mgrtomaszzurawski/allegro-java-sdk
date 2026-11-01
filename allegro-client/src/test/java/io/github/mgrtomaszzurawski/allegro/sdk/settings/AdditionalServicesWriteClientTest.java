@@ -49,7 +49,11 @@ import org.junit.jupiter.api.Test;
  * translation upsert (PATCH) and delete send/verify their requests; the builders
  * reject an empty group / missing name fail-fast.
  *
- * <p>Fixtures are {@code spec-derived} (write→read tracked in the E2E debt ledger).
+ * <p>Fixture provenance: the group create/update/translation shapes are wire-verified by the
+ * {@code settings-additional-services-write} probe (create → read-back 2026-08-14; create,
+ * {@code updateGroup} rename → read-back → restore and the NON_EMPTY body 2026-11-01). The
+ * category-limited constraint write ({@code COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY}) is
+ * spec-derived — tracked in the E2E debt ledger.
  */
 @WireMockTest
 class AdditionalServicesWriteClientTest {
