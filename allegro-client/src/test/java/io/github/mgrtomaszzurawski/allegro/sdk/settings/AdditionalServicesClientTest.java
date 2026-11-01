@@ -40,6 +40,11 @@ import org.junit.jupiter.api.Test;
  * group list + single read (with nested services/configurations), and group
  * translations mapping, plus a 404. Live read verification is done by the
  * {@code settings-additional-services} demo on the seller sandbox.
+ *
+ * <p>The category-limited constraint configuration
+ * ({@code COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY} with {@code categories[]}) in
+ * the group fixture is spec-derived — the live read of 2026-08-14 predates the
+ * field; tracked in the E2E debt ledger.
  */
 @WireMockTest
 class AdditionalServicesClientTest {
@@ -63,6 +68,7 @@ class AdditionalServicesClientTest {
     private static final String DESCRIPTION = "Wrap product in nice paper";
     private static final String AMOUNT = "5.00";
     private static final String CURRENCY = "PLN";
+    private static final String CONSTRAINT_COUNTRY = "PL";
     private static final String TRACE_ID = "4631702648f0524e";
     private static final String CATEGORY_CONSTRAINT_TYPE = "COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY";
     private static final String CATEGORY_DELIVERY_METHOD_ID = "dm-tv-carry-in";
@@ -76,6 +82,8 @@ class AdditionalServicesClientTest {
             {"categories":[{"name":"Wrapping","definitions":[
               {"id":"%s","name":"Gift wrap","maxPrice":{"amount":"%s","currency":"%s"}}]}]}
             """.formatted(DEFINITION_ID, AMOUNT, CURRENCY);
+    // spec-derived: not yet wire-verified — the second configuration (COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY,
+    // 2026-11 spec) needs a seller with a category-limited service definition such as ALLEGRO_TV_CARRY_IN
     private static final String GROUP_RESPONSE = """
             {"id":"%s","name":"%s","language":"%s","managedByAllegro":false,
              "seller":{"id":"111332841"},
@@ -164,13 +172,16 @@ class AdditionalServicesClientTest {
 
     @Test
     void group_whenFound_mapsNestedServicesAndConfigurations(WireMockRuntimeInfo wmInfo) {
+        // given
         stubToken();
         stubFor(get(urlEqualTo(GROUP_PATH))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(GROUP_RESPONSE)));
 
         try (AllegroClient allegro = client(wmInfo)) {
+            // when
             AdditionalServicesGroup group = allegro.settings().additionalServices().group(GROUP_ID);
 
+            // then
             assertEquals(GROUP_ID, group.id());
             assertEquals(1, group.services().size());
             AdditionalService service = group.services().get(0);
@@ -178,7 +189,7 @@ class AdditionalServicesClientTest {
             assertEquals(DESCRIPTION, service.description());
             assertEquals(CONFIGURATION_COUNT, service.configurations().size());
             assertNotNull(service.configurations().get(0).constraint());
-            assertEquals("PL", service.configurations().get(0).constraint().country());
+            assertEquals(CONSTRAINT_COUNTRY, service.configurations().get(0).constraint().country());
             assertEquals(ServiceConstraintType.COUNTRY_SAME_QUANTITY,
                     service.configurations().get(0).constraint().type());
             assertNotNull(service.configurations().get(0).price());

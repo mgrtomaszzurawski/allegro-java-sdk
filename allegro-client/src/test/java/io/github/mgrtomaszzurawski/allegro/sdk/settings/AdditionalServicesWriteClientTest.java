@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -35,6 +36,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConfigurationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConstraintRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.ServiceConstraintType;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -147,7 +149,15 @@ class AdditionalServicesWriteClientTest {
                             equalTo(CONSTRAINT_COUNTRY)))
                     .withRequestBody(matchingJsonPath(
                             "$.additionalServices[0].configurations[0].constraintCriteria.type",
-                            equalTo(CONSTRAINT_TYPE_BEFORE_SHIPPING))));
+                            equalTo(CONSTRAINT_TYPE_BEFORE_SHIPPING)))
+                    // the lists a before-shipping constraint does not use stay off the wire (the
+                    // generated DTO pre-initialises them; the partial writer omits empties)
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods",
+                            absent()))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories",
+                            absent())));
         }
     }
 
@@ -177,8 +187,33 @@ class AdditionalServicesWriteClientTest {
                             equalTo(CONSTRAINT_TYPE_IN_DELIVERY)))
                     .withRequestBody(matchingJsonPath(
                             "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods[0].id",
-                            equalTo(DELIVERY_METHOD_ID))));
+                            equalTo(DELIVERY_METHOD_ID)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories",
+                            absent())));
         }
+    }
+
+    @Test
+    void inDeliveryForCategories_whenNoCategories_throws() {
+        // given — the spec's minItems: 1 on `categories` is replicated fail-fast
+        List<String> methods = List.of(DELIVERY_METHOD_ID);
+        List<String> noCategories = List.of();
+
+        // when / then
+        assertThrows(IllegalArgumentException.class,
+                () -> ServiceConstraintRequest.inDeliveryForCategories(CONSTRAINT_COUNTRY, methods, noCategories));
+    }
+
+    @Test
+    void inDelivery_whenBuilt_hasNoCategoryIds() {
+        // given / when — the three-argument form
+        ServiceConstraintRequest constraint = ServiceConstraintRequest.inDelivery(
+                CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID));
+
+        // then — it carries an empty category list and the in-delivery type
+        assertEquals(List.of(), constraint.categoryIds());
+        assertEquals(ServiceConstraintType.COUNTRY_DELIVERY_SAME_QUANTITY, constraint.type());
     }
 
     @Test

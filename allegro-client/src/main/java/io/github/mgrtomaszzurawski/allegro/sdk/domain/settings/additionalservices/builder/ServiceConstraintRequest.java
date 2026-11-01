@@ -38,12 +38,22 @@ public record ServiceConstraintRequest(
         List<String> deliveryMethodIds,
         List<String> categoryIds) {
 
-    /** Rejects a null country/type and defensively copies the id lists. */
+    private static final String ERR_CATEGORIES_REQUIRED =
+            "categoryIds must hold at least one id for a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+
+    /**
+     * Rejects a null country/type, defensively copies the id lists, and — mirroring the
+     * spec's {@code minItems: 1} — requires at least one category for a category-limited
+     * constraint.
+     */
     public ServiceConstraintRequest {
         Objects.requireNonNull(country, "country");
         Objects.requireNonNull(type, "type");
         deliveryMethodIds = deliveryMethodIds == null ? List.of() : List.copyOf(deliveryMethodIds);
         categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
+        if (type == ServiceConstraintType.COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY && categoryIds.isEmpty()) {
+            throw new IllegalArgumentException(ERR_CATEGORIES_REQUIRED);
+        }
     }
 
     /** A constraint without category limits (the shape before category-limited services existed). */
