@@ -52,20 +52,25 @@ public final class ShippingRatesImpl implements ShippingRates {
         return ShippingRateSet.from(raw);
     }
 
+    // jsonBodyPartial (not jsonBody): create and update share the generated ShippingRatesSetRaw,
+    // whose nullable `id`/`lastModified` (ignored by Allegro on write) and the rows' unset optional
+    // weight/time objects would otherwise go out as explicit nulls — the NON_EMPTY writer sends only
+    // what the request set (the body id on update is set, so it stays).
     @Override
     public ShippingRateSet create(ShippingRateSetRequest request) {
-        ShippingRatesSetRaw created = http.postJsonAuthenticated(
-                ApiPaths.SHIPPING_RATES, request.toCreateRaw(),
-                ShippingRatesSetRaw.class, OP_CREATE);
+        ShippingRatesSetRaw created = http.request(OP_CREATE)
+                .post(ApiPaths.SHIPPING_RATES)
+                .jsonBodyPartial(request.toCreateRaw())
+                .fetch(ShippingRatesSetRaw.class);
         return ShippingRateSet.from(created);
     }
 
     @Override
     public ShippingRateSet update(String rateSetId, ShippingRateSetRequest request) {
-        ShippingRatesSetRaw updated = http.putJsonAuthenticated(
-                ApiPaths.subPath(ApiPaths.SHIPPING_RATES, rateSetId),
-                request.toUpdateRaw(rateSetId),
-                ShippingRatesSetRaw.class, OP_UPDATE);
+        ShippingRatesSetRaw updated = http.request(OP_UPDATE)
+                .put(ApiPaths.subPath(ApiPaths.SHIPPING_RATES, rateSetId))
+                .jsonBodyPartial(request.toUpdateRaw(rateSetId))
+                .fetch(ShippingRatesSetRaw.class);
         return ShippingRateSet.from(updated);
     }
 

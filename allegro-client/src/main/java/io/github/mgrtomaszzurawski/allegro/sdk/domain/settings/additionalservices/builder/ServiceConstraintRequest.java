@@ -40,19 +40,32 @@ public record ServiceConstraintRequest(
 
     private static final String ERR_CATEGORIES_REQUIRED =
             "categoryIds must hold at least one id for a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+    private static final String ERR_CATEGORIES_NOT_ALLOWED =
+            "categoryIds apply only to a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+    private static final String ERR_DELIVERY_METHODS_NOT_ALLOWED =
+            "deliveryMethodIds apply only to a COUNTRY_DELIVERY_SAME_QUANTITY"
+                    + " or COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
 
     /**
-     * Rejects a null country/type, defensively copies the id lists, and — mirroring the
-     * spec's {@code minItems: 1} — requires at least one category for a category-limited
-     * constraint.
+     * Rejects a null country/type, defensively copies the id lists, and replicates the
+     * spec's shape rules fail-fast: delivery methods only on the two delivery-realised
+     * types, categories only on the category-limited type (which needs at least one —
+     * {@code minItems: 1}).
      */
     public ServiceConstraintRequest {
         Objects.requireNonNull(country, "country");
         Objects.requireNonNull(type, "type");
         deliveryMethodIds = deliveryMethodIds == null ? List.of() : List.copyOf(deliveryMethodIds);
         categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
-        if (type == ServiceConstraintType.COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY && categoryIds.isEmpty()) {
+        if (type == ServiceConstraintType.COUNTRY_SAME_QUANTITY && !deliveryMethodIds.isEmpty()) {
+            throw new IllegalArgumentException(ERR_DELIVERY_METHODS_NOT_ALLOWED);
+        }
+        boolean categoryLimited = type == ServiceConstraintType.COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY;
+        if (categoryLimited && categoryIds.isEmpty()) {
             throw new IllegalArgumentException(ERR_CATEGORIES_REQUIRED);
+        }
+        if (!categoryLimited && !categoryIds.isEmpty()) {
+            throw new IllegalArgumentException(ERR_CATEGORIES_NOT_ALLOWED);
         }
     }
 

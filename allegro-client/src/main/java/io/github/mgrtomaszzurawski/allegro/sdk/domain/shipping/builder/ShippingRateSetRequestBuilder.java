@@ -27,11 +27,21 @@ public final class ShippingRateSetRequestBuilder {
     /** Server-side limit on the set name (spec {@code maxLength}). */
     public static final int NAME_MAX_LENGTH = 64;
 
+    /**
+     * The regex character-class body of the characters a set name may contain —
+     * letters, numbers, hyphens, dots, commas and spaces (the spec rule). Shared so a
+     * caller normalising a name applies the same rule the builder enforces.
+     */
+    public static final String NAME_ALLOWED_CHARACTERS = "\\p{L}\\p{N} .,-";
+
+    /** Server-side limit on {@code dispatchCountry} — an ISO 3166-1 alpha-2 code (spec {@code maxLength}). */
+    public static final int DISPATCH_COUNTRY_MAX_LENGTH = 2;
+
     private static final String FIELD_NAME = "ShippingRateSetRequest.name";
     private static final String FIELD_TYPE = "ShippingRateSetRequest.type";
+    private static final String FIELD_DISPATCH_COUNTRY = "ShippingRateSetRequest.dispatchCountry";
     private static final String FIELD_RATES = "ShippingRateSetRequest.rates";
-    // Spec: "It may only contain: letters, numbers, hyphens, dots, commas and spaces."
-    private static final Pattern NAME_ALLOWED = Pattern.compile("[\\p{L}\\p{N} .,-]+");
+    private static final Pattern NAME_ALLOWED = Pattern.compile("[" + NAME_ALLOWED_CHARACTERS + "]+");
     private static final String ERR_NAME_CHARSET =
             "ShippingRateSetRequest.name may only contain letters, numbers, hyphens, dots, commas and spaces";
     private static final String ERR_UNKNOWN_TYPE =
@@ -80,7 +90,7 @@ public final class ShippingRateSetRequestBuilder {
      * @throws IllegalStateException if {@code name} is missing, too long or carries a
      *     character outside the allowed set, {@code type} is missing or the read-only
      *     {@link RateSetType#UNKNOWN}, a physical set has no {@code dispatchCountry},
-     *     or {@code rates} is empty
+     *     {@code dispatchCountry} is longer than an alpha-2 code, or {@code rates} is empty
      */
     public ShippingRateSetRequest build() {
         String validName = BuilderValidation.requireText(name, FIELD_NAME);
@@ -96,6 +106,7 @@ public final class ShippingRateSetRequestBuilder {
                 && (dispatchCountry == null || dispatchCountry.isBlank())) {
             throw new IllegalStateException(ERR_PHYSICAL_WITHOUT_DISPATCH_COUNTRY);
         }
+        BuilderValidation.requireMaxLength(dispatchCountry, DISPATCH_COUNTRY_MAX_LENGTH, FIELD_DISPATCH_COUNTRY);
         List<ShippingRate> validRates = BuilderValidation.requireNonEmpty(rates, FIELD_RATES);
         return new ShippingRateSetRequest(validName, validType, dispatchCountry, validRates);
     }

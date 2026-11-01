@@ -44,10 +44,10 @@ public record ServiceConstraint(
         }
         ServiceConstraintType type = raw.getType() == null ? null : ServiceConstraintType.from(raw.getType());
         return new ServiceConstraint(raw.getCountry(), type,
-                ids(raw.getDeliveryMethods()), ids(raw.getCategories()));
+                identifiers(raw.getDeliveryMethods()), identifiers(raw.getCategories()));
     }
 
-    private static List<String> ids(@Nullable List<JustIdRaw> refs) {
+    private static List<String> identifiers(@Nullable List<JustIdRaw> refs) {
         return refs == null ? List.of() : refs.stream().map(JustIdRaw::getId).toList();
     }
 }

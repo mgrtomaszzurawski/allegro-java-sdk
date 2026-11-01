@@ -25,14 +25,15 @@ import java.util.Objects;
  * seller-editable set with a modelled type — the write→read contract with a
  * marker rename: PUT the set under a probe-suffixed name, assert the update
  * response and a fresh GET both carry the new name with the type, dispatch
- * country and rows unchanged, then PUT the base name back. The API has no delete
- * for rate sets, so the probe never creates one (which would linger).
+ * country and rows unchanged, then PUT the base name back (the restore runs even
+ * if an assertion fails, so the sandbox set never stays renamed). The API has no
+ * delete for rate sets, so the probe never creates one (which would linger).
  *
  * <p>A legacy set whose name breaks the current server rule (letters, numbers,
  * hyphens, dots, commas and spaces — see {@code KNOWN-SERVER-BEHAVIORS.md}) is
  * restored under the rule-conforming form of its name, because the server
  * refuses to re-save the old one. Falls back to read-only if the seller has no
- * editable set with a modelled type.
+ * editable set with a modelled type and a name that can be normalised.
  *
  * <p>Needs the seller user token ({@code sale:settings:*}). Status-level output
  * only — never bodies or tokens.
@@ -53,13 +54,21 @@ public final class ShippingRatesDemo {
     private static final String NO_EDITABLE_SET = "(no seller-editable set - skipping write check)";
     private static final String UNTYPED_SET =
             "(editable set has no modelled type - cannot re-send it; skipping write check)";
+    private static final String UNNAMEABLE_SET =
+            "(editable set name has no allowed characters - cannot re-send it; skipping write check)";
     private static final String LEGACY_NAME =
             "(set name violates the current server rule - the probe restores it as '%s')";
     private static final String STAGE_UPDATE = "update response";
     private static final String STAGE_RE_READ = "re-read";
     private static final String STAGE_RESTORE = "restore";
+    private static final String FIELD_NAME = "name";
+    private static final String FIELD_TYPE = "type";
+    private static final String FIELD_DISPATCH_COUNTRY = "dispatchCountry";
+    private static final String FIELD_ROW_COUNT = "row count";
+    private static final String FIELD_FIRST_ITEM_RATE = "first row firstItemRate";
     private static final String PROBE_SUFFIX = " probe";
-    private static final String DISALLOWED_NAME_CHARS = "[^\\p{L}\\p{N} .,-]";
+    private static final String DISALLOWED_NAME_CHARS =
+            "[^" + ShippingRateSetRequestBuilder.NAME_ALLOWED_CHARACTERS + "]";
     private static final String REPEATED_SPACES = " {2,}";
     private static final String SINGLE_SPACE = " ";
     private static final String EMPTY = "";
@@ -124,26 +133,34 @@ public final class ShippingRatesDemo {
         writeReadRestore(rates, rateSet);
     }
 
-    /** Marker rename → update response + re-read assert → restore the base name. */
+    /** Marker rename → update response + re-read assert → restore the base name (always). */
     private static void writeReadRestore(ShippingRates rates, ShippingRateSet rateSet) {
         String baseName = legalName(rateSet.name());
+        if (baseName.isEmpty()) {
+            System.out.println(UNNAMEABLE_SET);
+            return;
+        }
         if (!baseName.equals(rateSet.name())) {
             System.out.println(LEGACY_NAME.formatted(baseName));
         }
-        String markerName = truncate(baseName + PROBE_SUFFIX);
+        String markerName = truncate(baseName,
+                ShippingRateSetRequestBuilder.NAME_MAX_LENGTH - PROBE_SUFFIX.length()) + PROBE_SUFFIX;
 
         ShippingRateSet updated = update(rates, rateSet, markerName);
         System.out.println("rates().update() ok: name='" + updated.name() + "', type=" + updated.type()
                 + ", dispatch=" + updated.dispatchCountry() + ", rows=" + updated.rates().size());
-        assertSameSet(rateSet, updated, markerName, STAGE_UPDATE);
-
-        ShippingRateSet reRead = rates.get(rateSet.id());
-        System.out.println("rates().get() after update ok: name='" + reRead.name()
-                + "', rows=" + reRead.rates().size());
-        assertSameSet(rateSet, reRead, markerName, STAGE_RE_READ);
-
-        ShippingRateSet restored = update(rates, rateSet, baseName);
-        System.out.println("rates().update() restored: name='" + restored.name() + "'");
+        ShippingRateSet restored;
+        try {
+            assertSameSet(rateSet, updated, markerName, STAGE_UPDATE);
+            ShippingRateSet reRead = rates.get(rateSet.id());
+            System.out.println("rates().get() after update ok: name='" + reRead.name()
+                    + "', rows=" + reRead.rates().size());
+            assertSameSet(rateSet, reRead, markerName, STAGE_RE_READ);
+        } finally {
+            // the marker landed on the live set — put the base name back whatever happened above
+            restored = update(rates, rateSet, baseName);
+            System.out.println("rates().update() restored: name='" + restored.name() + "'");
+        }
         assertSameSet(rateSet, restored, baseName, STAGE_RESTORE);
     }
 
@@ -160,28 +177,43 @@ public final class ShippingRatesDemo {
 
     private static void assertSameSet(ShippingRateSet expected, ShippingRateSet actual,
             String expectedName, String stage) {
-        boolean same = expectedName.equals(actual.name())
-                && expected.type() == actual.type()
-                && Objects.equals(expected.dispatchCountry(), actual.dispatchCountry())
-                && expected.rates().size() == actual.rates().size()
-                && (expected.rates().isEmpty()
-                        || Objects.equals(expected.rates().get(0).firstItemRate(),
-                                actual.rates().get(0).firstItemRate()));
-        if (!same) {
-            throw new IllegalStateException(ERR_ROUND_TRIP + stage);
+        String mismatch = firstMismatch(expected, actual, expectedName);
+        if (mismatch != null) {
+            throw new IllegalStateException(ERR_ROUND_TRIP + stage + " (" + mismatch + ")");
         }
+    }
+
+    /** The first field that differs, or {@code null} when the set round-tripped. */
+    private static String firstMismatch(ShippingRateSet expected, ShippingRateSet actual,
+            String expectedName) {
+        if (!expectedName.equals(actual.name())) {
+            return FIELD_NAME;
+        }
+        if (expected.type() != actual.type()) {
+            return FIELD_TYPE;
+        }
+        if (!Objects.equals(expected.dispatchCountry(), actual.dispatchCountry())) {
+            return FIELD_DISPATCH_COUNTRY;
+        }
+        if (expected.rates().size() != actual.rates().size()) {
+            return FIELD_ROW_COUNT;
+        }
+        if (!expected.rates().isEmpty() && !Objects.equals(
+                expected.rates().get(0).firstItemRate(), actual.rates().get(0).firstItemRate())) {
+            return FIELD_FIRST_ITEM_RATE;
+        }
+        return null;
     }
 
     /** The rule-conforming form of a name: drop disallowed characters, squeeze spaces, cap length. */
     private static String legalName(String name) {
         return truncate(name.replaceAll(DISALLOWED_NAME_CHARS, EMPTY)
-                .replaceAll(REPEATED_SPACES, SINGLE_SPACE).trim());
+                .replaceAll(REPEATED_SPACES, SINGLE_SPACE).trim(),
+                ShippingRateSetRequestBuilder.NAME_MAX_LENGTH);
     }
 
-    private static String truncate(String name) {
-        return name.length() <= ShippingRateSetRequestBuilder.NAME_MAX_LENGTH
-                ? name
-                : name.substring(0, ShippingRateSetRequestBuilder.NAME_MAX_LENGTH).trim();
+    private static String truncate(String name, int maxLength) {
+        return name.length() <= maxLength ? name : name.substring(0, maxLength).trim();
     }
 
     private static ShippingRateSetSummary firstEditable(List<ShippingRateSetSummary> summaries) {

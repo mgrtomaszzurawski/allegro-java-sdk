@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesSetRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.builder.ShippingRateSetRequestBuilder;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -32,7 +33,10 @@ public record ShippingRateSetRequest(
         @Nullable String dispatchCountry,
         List<ShippingRate> rates) {
 
+    /** Rejects a null name/type (the builder validates them fully) and defensively copies the rows. */
     public ShippingRateSetRequest {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(type, "type");
         rates = List.copyOf(rates);
     }
 
