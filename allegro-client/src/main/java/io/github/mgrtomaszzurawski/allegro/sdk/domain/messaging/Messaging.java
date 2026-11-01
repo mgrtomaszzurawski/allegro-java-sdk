@@ -102,7 +102,12 @@ public interface Messaging {
      * Deletes a single message.
      *
      * @param messageId the message identifier
+     * @deprecated Allegro has deprecated single-message deletion
+     *     ({@code DELETE /messaging/messages/{messageId}}) and announces its removal
+     *     without naming a replacement; the method stays until the spec drops the
+     *     operation.
      */
+    @Deprecated(since = "0.8.0", forRemoval = true)
     void deleteMessage(String messageId);
 
     /**

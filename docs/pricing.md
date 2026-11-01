@@ -175,7 +175,13 @@ List<OfferQuote> quotes = client.pricing().quotes(List.of("12345", "67890"));
 
 Fee quotes require the `billing:read` scope.
 
-## Turnover discounts
+## Turnover discounts (deprecated)
+
+> **Deprecated.** Allegro is withdrawing turnover-based discounts from the
+> platform: the API marks every turnover-discount operation deprecated, schedules
+> their removal for 2026-11-02 and removes existing discounts automatically. The
+> `turnoverDiscounts()` sub-facade is `@Deprecated(forRemoval = true)` and goes
+> away once the spec drops the operations; there is no replacement.
 
 Reward a buyer's cumulated turnover with a percentage discount, configured per
 marketplace. Turnover discounts require a company seller account.

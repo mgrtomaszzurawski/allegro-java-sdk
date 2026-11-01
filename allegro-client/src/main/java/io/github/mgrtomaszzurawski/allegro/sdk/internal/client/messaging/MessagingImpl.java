@@ -166,6 +166,7 @@ public final class MessagingImpl implements Messaging {
     }
 
     @Override
+    @SuppressWarnings("removal") // implements the operation Allegro deprecated; removed together with it
     public void deleteMessage(String messageId) {
         http.deleteAuthenticated(
                 ApiPaths.subPath(ApiPaths.MESSAGING_MESSAGES, messageId), OP_DELETE_MESSAGE);

@@ -500,6 +500,7 @@ class MessagingClientTest {
     }
 
     @Test
+    @SuppressWarnings("removal") // the operation is deprecated for removal; the contract stays pinned until then
     void deleteMessage_whenCalled_sendsDeleteToMessagePath(WireMockRuntimeInfo wmInfo) {
         // given
         stubToken(TEST_TOKEN);

@@ -63,6 +63,7 @@ public final class PricingImpl implements Pricing {
     private final HttpSupport http;
     private final PricingAutomation automation;
     private final Promotions promotions;
+    @SuppressWarnings("removal") // deprecated for removal with the Allegro resource (see TurnoverDiscounts)
     private final TurnoverDiscounts turnoverDiscounts;
 
     public PricingImpl(HttpRuntime runtime) {
@@ -83,6 +84,7 @@ public final class PricingImpl implements Pricing {
     }
 
     @Override
+    @SuppressWarnings("removal") // deprecated for removal with the Allegro resource (see TurnoverDiscounts)
     public TurnoverDiscounts turnoverDiscounts() {
         return turnoverDiscounts;
     }

@@ -46,6 +46,7 @@ public final class PricingVolumeExample {
         return client.pricing().quotes(List.of("12345", "67890"));
     }
 
+    @SuppressWarnings("removal") // documents the deprecated sub-facade until the spec drops it (docs/pricing.md)
     static TurnoverDiscount setTurnoverDiscount(AllegroClient client) {
         return client.pricing().turnoverDiscounts().set(MARKETPLACE_ID,
                 TurnoverDiscountRequest.builder()
