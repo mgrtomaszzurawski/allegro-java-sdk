@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class AdditionalServicesEnumsTest {
 
     @Test
-    void serviceConstraintType_everyGeneratedValue_mapsToDomainConstantOfTheSameName() {
+    void from_whenEveryGeneratedValue_mapsToDomainConstantOfTheSameName() {
         for (ConstraintCriteriaRaw.TypeEnum raw : ConstraintCriteriaRaw.TypeEnum.values()) {
             if (raw == ConstraintCriteriaRaw.TypeEnum.UNKNOWN_DEFAULT_OPEN_API) {
                 continue;
@@ -31,7 +31,7 @@ class AdditionalServicesEnumsTest {
     }
 
     @Test
-    void serviceConstraintType_everyDomainConstant_roundTripsThroughTheGeneratedEnum() {
+    void toRaw_whenEveryDomainConstant_roundTripsThroughFrom() {
         for (ServiceConstraintType type : ServiceConstraintType.values()) {
             // given a domain constant; when projected to the wire and read back; then it round-trips
             assertEquals(type, ServiceConstraintType.from(type.toRaw()));
@@ -39,7 +39,7 @@ class AdditionalServicesEnumsTest {
     }
 
     @Test
-    void serviceConstraintType_whenGeneratedUnknownSentinel_failsLoudly() {
+    void from_whenGeneratedUnknownSentinel_failsLoudly() {
         // given the generator's sentinel for a wire value no constant models
         ConstraintCriteriaRaw.TypeEnum sentinel = ConstraintCriteriaRaw.TypeEnum.UNKNOWN_DEFAULT_OPEN_API;
 

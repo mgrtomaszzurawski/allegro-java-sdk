@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.shipping;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
@@ -184,6 +185,8 @@ class ShippingRatesClientTest {
         // `type` field existed as returned without it (the field is required since 2026-11)
         stubToken();
         stubFor(get(urlEqualTo(RATE_SET_PATH))
+                .withHeader(TestHttpConstants.AUTHORIZATION_HEADER,
+                        equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBody(LEGACY_SET_WITHOUT_TYPE)));
 
@@ -233,9 +236,15 @@ class ShippingRatesClientTest {
                             .rates(List.of(courierRate()))
                             .build());
 
-            // then
+            // then — the create response maps through the shared set DTO like update does
             assertEquals(RATE_SET_ID, created.id());
-            verify(1, postRequestedFor(urlEqualTo(RATES_PATH)));
+            assertEquals(RateSetType.PHYSICAL, created.type());
+            assertEquals(DISPATCH_COUNTRY, created.dispatchCountry());
+            assertEquals(1, created.rates().size());
+            verify(1, postRequestedFor(urlEqualTo(RATES_PATH))
+                    // the partial writer keeps the server-assigned `id` and `lastModified` off a create body
+                    .withRequestBody(matchingJsonPath("$.id", absent()))
+                    .withRequestBody(matchingJsonPath("$.lastModified", absent())));
         }
     }
 

@@ -79,6 +79,15 @@ class AdditionalServicesWriteClientTest {
     private static final String CONSTRAINT_TYPE_IN_DELIVERY_FOR_CATEGORIES =
             "COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY";
     private static final String CATEGORY_ID = "cat-tv-sets";
+    private static final String ERR_CONFIGURATIONS_REQUIRED =
+            "configurations must hold at least one priced configuration";
+    private static final String ERR_CATEGORIES_REQUIRED =
+            "categoryIds must hold at least one id for a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+    private static final String ERR_CATEGORIES_NOT_ALLOWED =
+            "categoryIds apply only to a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+    private static final String ERR_DELIVERY_METHODS_NOT_ALLOWED =
+            "deliveryMethodIds apply only to a COUNTRY_DELIVERY_SAME_QUANTITY"
+                    + " or COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","token_type":"bearer","expires_in":%d,"scope":"sale:settings:write"}
@@ -200,9 +209,67 @@ class AdditionalServicesWriteClientTest {
         List<String> methods = List.of(DELIVERY_METHOD_ID);
         List<String> noCategories = List.of();
 
-        // when / then
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
                 () -> ServiceConstraintRequest.inDeliveryForCategories(CONSTRAINT_COUNTRY, methods, noCategories));
+
+        // then
+        assertEquals(ERR_CATEGORIES_REQUIRED, rejected.getMessage());
+    }
+
+    @Test
+    void serviceConstraintRequest_whenDeliveryMethodsOnBeforeShippingType_throws() {
+        // given — the spec allows deliveryMethods only on the delivery-realised types
+        List<String> methods = List.of(DELIVERY_METHOD_ID);
+        List<String> noCategories = List.of();
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> new ServiceConstraintRequest(CONSTRAINT_COUNTRY,
+                        ServiceConstraintType.COUNTRY_SAME_QUANTITY, methods, noCategories));
+
+        // then
+        assertEquals(ERR_DELIVERY_METHODS_NOT_ALLOWED, rejected.getMessage());
+    }
+
+    @Test
+    void serviceConstraintRequest_whenCategoriesOnInDeliveryType_throws() {
+        // given — the spec allows categories only on the category-limited type
+        List<String> methods = List.of(DELIVERY_METHOD_ID);
+        List<String> categories = List.of(CATEGORY_ID);
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> new ServiceConstraintRequest(CONSTRAINT_COUNTRY,
+                        ServiceConstraintType.COUNTRY_DELIVERY_SAME_QUANTITY, methods, categories));
+
+        // then
+        assertEquals(ERR_CATEGORIES_NOT_ALLOWED, rejected.getMessage());
+    }
+
+    @Test
+    void additionalServiceRequest_whenNoConfigurations_throws() {
+        // given — Allegro refuses a service without a priced configuration (live-verified 2026-11-01)
+        List<ServiceConfigurationRequest> noConfigurations = List.of();
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> new AdditionalServiceRequest(DEFINITION_ID, DESCRIPTION, noConfigurations));
+
+        // then
+        assertEquals(ERR_CONFIGURATIONS_REQUIRED, rejected.getMessage());
+    }
+
+    @Test
+    void inDeliveryForCategories_whenCategoriesGiven_carriesBothLists() {
+        // given / when
+        ServiceConstraintRequest constraint = ServiceConstraintRequest.inDeliveryForCategories(
+                CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID), List.of(CATEGORY_ID));
+
+        // then
+        assertEquals(ServiceConstraintType.COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY, constraint.type());
+        assertEquals(List.of(DELIVERY_METHOD_ID), constraint.deliveryMethodIds());
+        assertEquals(List.of(CATEGORY_ID), constraint.categoryIds());
     }
 
     @Test
@@ -263,10 +330,16 @@ class AdditionalServicesWriteClientTest {
             AdditionalServicesGroup group =
                     allegro.settings().additionalServices().updateGroup(GROUP_ID, sampleGroup());
 
-            // then
+            // then — the PUT body carries the name and, like create, no unused constraint lists
             assertEquals(GROUP_ID, group.id());
             verify(1, putRequestedFor(urlPathEqualTo(GROUP_PATH))
-                    .withRequestBody(matchingJsonPath("$.name", equalTo(GROUP_NAME))));
+                    .withRequestBody(matchingJsonPath("$.name", equalTo(GROUP_NAME)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods",
+                            absent()))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories",
+                            absent())));
         }
     }
 
@@ -309,9 +382,14 @@ class AdditionalServicesWriteClientTest {
 
     @Test
     void groupBuilder_whenNameBlank_throwsIllegalState() {
+        // given — a valid service, no group name
+        AdditionalServiceRequest service = AdditionalServiceRequest.of(DEFINITION_ID, DESCRIPTION,
+                ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY),
+                        ServiceConstraintRequest.beforeShipping(CONSTRAINT_COUNTRY)));
+
+        // when / then
         assertThrows(IllegalStateException.class,
-                () -> AdditionalServicesGroupRequest.builder()
-                        .addService(AdditionalServiceRequest.of(DEFINITION_ID)).build());
+                () -> AdditionalServicesGroupRequest.builder().addService(service).build());
     }
 
     @Test

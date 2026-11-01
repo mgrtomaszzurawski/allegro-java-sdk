@@ -55,6 +55,7 @@ class FulfillmentEnumsTest {
         assertEquals(RefundDispositionType.BOUNCE, RefundDispositionType.fromWire("BOUNCE"));
         assertEquals("BOUNCE", RefundDispositionType.BOUNCE.wireValue());
         assertEquals(RefundDispositionType.REPLACEMENT, RefundDispositionType.fromWire("REPLACEMENT"));
+        assertEquals("REPLACEMENT", RefundDispositionType.REPLACEMENT.wireValue());
         assertEquals(RefundDispositionType.UNKNOWN, RefundDispositionType.fromWire(UNSEEN_TOKEN));
         assertNull(RefundDispositionType.UNKNOWN.wireValue());
     }
@@ -67,6 +68,7 @@ class FulfillmentEnumsTest {
         assertEquals(RefundStockStatus.ITEM_MISMATCH, RefundStockStatus.fromWire("ITEM_MISMATCH"));
         assertEquals("ITEM_MISMATCH", RefundStockStatus.ITEM_MISMATCH.wireValue());
         assertEquals(RefundStockStatus.NOT_APPLICABLE, RefundStockStatus.fromWire("NOT_APPLICABLE"));
+        assertEquals("NOT_APPLICABLE", RefundStockStatus.NOT_APPLICABLE.wireValue());
         assertEquals(RefundStockStatus.UNKNOWN, RefundStockStatus.fromWire(UNSEEN_TOKEN));
         assertNull(RefundStockStatus.UNKNOWN.wireValue());
     }
