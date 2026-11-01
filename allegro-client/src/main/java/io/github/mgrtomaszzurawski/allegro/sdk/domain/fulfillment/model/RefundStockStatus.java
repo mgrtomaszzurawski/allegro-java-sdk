@@ -27,6 +27,9 @@ public enum RefundStockStatus {
     /** The returned item did not match what was expected. */
     ITEM_MISMATCH("ITEM_MISMATCH"),
 
+    /** No stock outcome applies (e.g. a short shipment with nothing to check in). */
+    NOT_APPLICABLE("NOT_APPLICABLE"),
+
     /** A status Allegro introduced after this SDK build (open value set). */
     UNKNOWN(null);
 

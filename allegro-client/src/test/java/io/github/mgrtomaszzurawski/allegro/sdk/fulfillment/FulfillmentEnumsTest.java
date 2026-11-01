@@ -54,6 +54,7 @@ class FulfillmentEnumsTest {
         // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(RefundDispositionType.BOUNCE, RefundDispositionType.fromWire("BOUNCE"));
         assertEquals("BOUNCE", RefundDispositionType.BOUNCE.wireValue());
+        assertEquals(RefundDispositionType.REPLACEMENT, RefundDispositionType.fromWire("REPLACEMENT"));
         assertEquals(RefundDispositionType.UNKNOWN, RefundDispositionType.fromWire(UNSEEN_TOKEN));
         assertNull(RefundDispositionType.UNKNOWN.wireValue());
     }
@@ -65,6 +66,7 @@ class FulfillmentEnumsTest {
         // then the known token round-trips and the unseen one maps to UNKNOWN (wire value null)
         assertEquals(RefundStockStatus.ITEM_MISMATCH, RefundStockStatus.fromWire("ITEM_MISMATCH"));
         assertEquals("ITEM_MISMATCH", RefundStockStatus.ITEM_MISMATCH.wireValue());
+        assertEquals(RefundStockStatus.NOT_APPLICABLE, RefundStockStatus.fromWire("NOT_APPLICABLE"));
         assertEquals(RefundStockStatus.UNKNOWN, RefundStockStatus.fromWire(UNSEEN_TOKEN));
         assertNull(RefundStockStatus.UNKNOWN.wireValue());
     }
