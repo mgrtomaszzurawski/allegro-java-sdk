@@ -12,7 +12,9 @@ import io.github.mgrtomaszzurawski.allegro.client.model.ConstraintCriteriaRaw;
  * <p>{@code COUNTRY_SAME_QUANTITY} applies to services realised before shipping
  * (e.g. {@code GIFT_WRAP}); {@code COUNTRY_DELIVERY_SAME_QUANTITY} applies to
  * services realised in delivery (e.g. {@code CARRY_IN}), which carry the delivery
- * methods that can realise them.
+ * methods that can realise them; {@code COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY}
+ * additionally limits such a service to specific offer categories (e.g.
+ * {@code ALLEGRO_TV_CARRY_IN}).
  *
  * @since 0.3.0
  */
@@ -22,7 +24,13 @@ public enum ServiceConstraintType {
     COUNTRY_SAME_QUANTITY,
 
     /** Realised in delivery; constrained by country and delivery methods. */
-    COUNTRY_DELIVERY_SAME_QUANTITY;
+    COUNTRY_DELIVERY_SAME_QUANTITY,
+
+    /**
+     * Realised in delivery and limited to specific offer categories; constrained
+     * by country, delivery methods and categories.
+     */
+    COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY;
 
     /**
      * Map the generated Layer-1 enum. The wire value and constant name coincide,

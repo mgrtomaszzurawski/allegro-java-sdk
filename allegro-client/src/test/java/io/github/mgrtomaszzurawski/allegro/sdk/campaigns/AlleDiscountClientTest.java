@@ -59,6 +59,10 @@ import org.junit.jupiter.api.Test;
  * submitted offer streams (mapping + lazy pagination + filters), the submit and
  * withdraw command state machines (poll to terminal, failure, timeout), and the
  * mandatory error-path table (TESTING.md §1).
+ *
+ * <p>Command fixtures (submit/withdraw status and the FAILED {@code output.errors[]},
+ * flat since the 2026-11 spec) are spec-derived — a live cycle needs an enrolled
+ * campaign; tracked in the E2E debt ledger.
  */
 @WireMockTest
 class AlleDiscountClientTest {
@@ -167,13 +171,19 @@ class AlleDiscountClientTest {
                 + "\"},\"errors\":" + errorsJson + "}}";
     }
 
+    /**
+     * A FAILED command's {@code output.errors}: a flat {@code Error[]} per the
+     * 2026-11 spec (the earlier spec nested it as {@code errors[].errors[]}).
+     * Spec-derived — a live command cycle needs an enrolled campaign (see
+     * {@code KNOWN-SERVER-BEHAVIORS.md}, AlleDiscount).
+     */
     private static String failureErrors() {
-        return "[{\"errors\":[{\"code\":\"" + TEST_FAIL_CODE + "\",\"message\":\"" + TEST_FAIL_MESSAGE + "\"}]}]";
+        return "[{\"code\":\"" + TEST_FAIL_CODE + "\",\"message\":\"" + TEST_FAIL_MESSAGE + "\"}]";
     }
 
     /** A FAILED command error carrying a code but no message (the {@code List.copyOf} NPE case). */
     private static String codeOnlyErrors() {
-        return "[{\"errors\":[{\"code\":\"" + TEST_CODE_ONLY + "\"}]}]";
+        return "[{\"code\":\"" + TEST_CODE_ONLY + "\"}]";
     }
 
     private static String fullPageOfEligible(int count) {
@@ -474,7 +484,7 @@ class AlleDiscountClientTest {
             // when
             AlleDiscountSubmitResult result = allegro.campaigns().alleDiscount().submitOffer(request);
 
-            // then — FAILED is terminal; the nested error code and message map through
+            // then — FAILED is terminal; the flat output.errors[] code and message map through
             assertEquals(AlleDiscountCommandStatus.FAILED, result.status());
             assertEquals(1, result.errors().size());
             assertEquals(TEST_FAIL_CODE, result.errors().get(0).code());

@@ -15,8 +15,14 @@ import java.util.List;
  * <p>Turnover discounts require a company seller account and a base-currency
  * marketplace; the server rejects configurations that violate those constraints.
  *
+ * @deprecated Allegro is withdrawing turnover-based discounts from the platform:
+ *     the API spec marks every turnover-discount operation deprecated, schedules
+ *     their removal for 2026-11-02 and removes existing discounts automatically.
+ *     There is no replacement; this sub-facade is kept only until the spec drops
+ *     the operations.
  * @since 0.3.0
  */
+@Deprecated(since = "0.8.0", forRemoval = true)
 public interface TurnoverDiscounts {
 
     /**

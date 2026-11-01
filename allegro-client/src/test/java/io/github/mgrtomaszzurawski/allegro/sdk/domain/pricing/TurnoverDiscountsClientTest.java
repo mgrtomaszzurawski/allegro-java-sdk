@@ -42,9 +42,12 @@ import org.junit.jupiter.api.Test;
  * WireMock contract for {@link TurnoverDiscounts}: the bare-array list response
  * (with a {@code null} element that must be skipped), the marketplace filter
  * query, the PUT request body for a set, the deactivate path, and a
- * representative 400/401 pair from the shared error handling.
+ * representative 400/401 pair from the shared error handling. The facade is
+ * deprecated for removal (Allegro withdraws the resource on 2026-11-02); the
+ * contract stays pinned until the spec drops the operations.
  */
 @WireMockTest
+@SuppressWarnings("removal")
 class TurnoverDiscountsClientTest {
 
     private static final String TEST_CLIENT_ID = "client-id";

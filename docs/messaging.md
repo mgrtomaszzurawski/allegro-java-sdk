@@ -71,7 +71,11 @@ Message sent = client.messaging().send(NewMessageRequest.builder()
         .build());
 ```
 
-## Delete a message
+## Delete a message (deprecated)
+
+Allegro has deprecated single-message deletion and announces its removal without
+naming a replacement, so `deleteMessage` is `@Deprecated(forRemoval = true)` and
+stays only until the spec drops the operation.
 
 ```java
 client.messaging().deleteMessage(messageId);

@@ -5,6 +5,7 @@
 package io.github.mgrtomaszzurawski.allegro.sdk.settings;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -35,6 +36,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConfigurationRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.builder.ServiceConstraintRequest;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.ServiceConstraintType;
 import io.github.mgrtomaszzurawski.allegro.sdk.support.TestHttpConstants;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -47,7 +49,11 @@ import org.junit.jupiter.api.Test;
  * translation upsert (PATCH) and delete send/verify their requests; the builders
  * reject an empty group / missing name fail-fast.
  *
- * <p>Fixtures are {@code spec-derived} (write→read tracked in the E2E debt ledger).
+ * <p>Fixture provenance: the group create/update/translation shapes are wire-verified by the
+ * {@code settings-additional-services-write} probe (create → read-back 2026-08-14; create,
+ * {@code updateGroup} rename → read-back → restore and the NON_EMPTY body 2026-11-01). The
+ * category-limited constraint write ({@code COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY}) is
+ * spec-derived — tracked in the E2E debt ledger.
  */
 @WireMockTest
 class AdditionalServicesWriteClientTest {
@@ -73,6 +79,19 @@ class AdditionalServicesWriteClientTest {
     private static final String CONSTRAINT_TYPE_BEFORE_SHIPPING = "COUNTRY_SAME_QUANTITY";
     private static final String CONSTRAINT_TYPE_IN_DELIVERY = "COUNTRY_DELIVERY_SAME_QUANTITY";
     private static final String DELIVERY_METHOD_ID = "6d5f38c3-e05c-4a5e-b8da-1234567890ab";
+    private static final String TV_CARRY_IN_DEFINITION_ID = "ALLEGRO_TV_CARRY_IN";
+    private static final String CONSTRAINT_TYPE_IN_DELIVERY_FOR_CATEGORIES =
+            "COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY";
+    private static final String CATEGORY_ID = "cat-tv-sets";
+    private static final String ERR_CONFIGURATIONS_REQUIRED =
+            "configurations must hold at least one priced configuration";
+    private static final String ERR_CATEGORIES_REQUIRED =
+            "categoryIds must hold at least one id for a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+    private static final String ERR_CATEGORIES_NOT_ALLOWED =
+            "categoryIds apply only to a COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
+    private static final String ERR_DELIVERY_METHODS_NOT_ALLOWED =
+            "deliveryMethodIds apply only to a COUNTRY_DELIVERY_SAME_QUANTITY"
+                    + " or COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","token_type":"bearer","expires_in":%d,"scope":"sale:settings:write"}
@@ -143,7 +162,15 @@ class AdditionalServicesWriteClientTest {
                             equalTo(CONSTRAINT_COUNTRY)))
                     .withRequestBody(matchingJsonPath(
                             "$.additionalServices[0].configurations[0].constraintCriteria.type",
-                            equalTo(CONSTRAINT_TYPE_BEFORE_SHIPPING))));
+                            equalTo(CONSTRAINT_TYPE_BEFORE_SHIPPING)))
+                    // the lists a before-shipping constraint does not use stay off the wire (the
+                    // generated DTO pre-initialises them; the partial writer omits empties)
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods",
+                            absent()))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories",
+                            absent())));
         }
     }
 
@@ -173,7 +200,125 @@ class AdditionalServicesWriteClientTest {
                             equalTo(CONSTRAINT_TYPE_IN_DELIVERY)))
                     .withRequestBody(matchingJsonPath(
                             "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods[0].id",
-                            equalTo(DELIVERY_METHOD_ID))));
+                            equalTo(DELIVERY_METHOD_ID)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories",
+                            absent())));
+        }
+    }
+
+    @Test
+    void inDeliveryForCategories_whenNoCategories_throws() {
+        // given — the spec's minItems: 1 on `categories` is replicated fail-fast
+        List<String> methods = List.of(DELIVERY_METHOD_ID);
+        List<String> noCategories = List.of();
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> ServiceConstraintRequest.inDeliveryForCategories(CONSTRAINT_COUNTRY, methods, noCategories));
+
+        // then
+        assertEquals(ERR_CATEGORIES_REQUIRED, rejected.getMessage());
+    }
+
+    @Test
+    void serviceConstraintRequest_whenDeliveryMethodsOnBeforeShippingType_throws() {
+        // given — the spec allows deliveryMethods only on the delivery-realised types
+        List<String> methods = List.of(DELIVERY_METHOD_ID);
+        List<String> noCategories = List.of();
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> new ServiceConstraintRequest(CONSTRAINT_COUNTRY,
+                        ServiceConstraintType.COUNTRY_SAME_QUANTITY, methods, noCategories));
+
+        // then
+        assertEquals(ERR_DELIVERY_METHODS_NOT_ALLOWED, rejected.getMessage());
+    }
+
+    @Test
+    void serviceConstraintRequest_whenCategoriesOnInDeliveryType_throws() {
+        // given — the spec allows categories only on the category-limited type
+        List<String> methods = List.of(DELIVERY_METHOD_ID);
+        List<String> categories = List.of(CATEGORY_ID);
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> new ServiceConstraintRequest(CONSTRAINT_COUNTRY,
+                        ServiceConstraintType.COUNTRY_DELIVERY_SAME_QUANTITY, methods, categories));
+
+        // then
+        assertEquals(ERR_CATEGORIES_NOT_ALLOWED, rejected.getMessage());
+    }
+
+    @Test
+    void additionalServiceRequest_whenNoConfigurations_throws() {
+        // given — Allegro refuses a service without a priced configuration (live-verified 2026-11-01)
+        List<ServiceConfigurationRequest> noConfigurations = List.of();
+
+        // when
+        IllegalArgumentException rejected = assertThrows(IllegalArgumentException.class,
+                () -> new AdditionalServiceRequest(DEFINITION_ID, DESCRIPTION, noConfigurations));
+
+        // then
+        assertEquals(ERR_CONFIGURATIONS_REQUIRED, rejected.getMessage());
+    }
+
+    @Test
+    void inDeliveryForCategories_whenCategoriesGiven_carriesBothLists() {
+        // given / when
+        ServiceConstraintRequest constraint = ServiceConstraintRequest.inDeliveryForCategories(
+                CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID), List.of(CATEGORY_ID));
+
+        // then
+        assertEquals(ServiceConstraintType.COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY, constraint.type());
+        assertEquals(List.of(DELIVERY_METHOD_ID), constraint.deliveryMethodIds());
+        assertEquals(List.of(CATEGORY_ID), constraint.categoryIds());
+    }
+
+    @Test
+    void inDelivery_whenBuilt_hasNoCategoryIds() {
+        // given / when — the three-argument form
+        ServiceConstraintRequest constraint = ServiceConstraintRequest.inDelivery(
+                CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID));
+
+        // then — it carries an empty category list and the in-delivery type
+        assertEquals(List.of(), constraint.categoryIds());
+        assertEquals(ServiceConstraintType.COUNTRY_DELIVERY_SAME_QUANTITY, constraint.type());
+    }
+
+    @Test
+    void createGroup_whenCategoryLimitedConstraint_sendsTypeMethodsAndCategories(
+            WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(post(urlPathEqualTo(GROUPS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(GROUP_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.settings().additionalServices().createGroup(
+                    AdditionalServicesGroupRequest.builder()
+                            .name(GROUP_NAME)
+                            .language(LANGUAGE)
+                            .addService(AdditionalServiceRequest.of(TV_CARRY_IN_DEFINITION_ID, DESCRIPTION,
+                                    ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY),
+                                            ServiceConstraintRequest.inDeliveryForCategories(
+                                                    CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID),
+                                                    List.of(CATEGORY_ID)))))
+                            .build());
+
+            // then — spec-derived: the category-limited constraint type carries both lists
+            verify(1, postRequestedFor(urlPathEqualTo(GROUPS_PATH))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.type",
+                            equalTo(CONSTRAINT_TYPE_IN_DELIVERY_FOR_CATEGORIES)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods[0].id",
+                            equalTo(DELIVERY_METHOD_ID)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories[0].id",
+                            equalTo(CATEGORY_ID))));
         }
     }
 
@@ -189,10 +334,16 @@ class AdditionalServicesWriteClientTest {
             AdditionalServicesGroup group =
                     allegro.settings().additionalServices().updateGroup(GROUP_ID, sampleGroup());
 
-            // then
+            // then — the PUT body carries the name and, like create, no unused constraint lists
             assertEquals(GROUP_ID, group.id());
             verify(1, putRequestedFor(urlPathEqualTo(GROUP_PATH))
-                    .withRequestBody(matchingJsonPath("$.name", equalTo(GROUP_NAME))));
+                    .withRequestBody(matchingJsonPath("$.name", equalTo(GROUP_NAME)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods",
+                            absent()))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories",
+                            absent())));
         }
     }
 
@@ -235,9 +386,14 @@ class AdditionalServicesWriteClientTest {
 
     @Test
     void groupBuilder_whenNameBlank_throwsIllegalState() {
+        // given — a valid service, no group name
+        AdditionalServiceRequest service = AdditionalServiceRequest.of(DEFINITION_ID, DESCRIPTION,
+                ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY),
+                        ServiceConstraintRequest.beforeShipping(CONSTRAINT_COUNTRY)));
+
+        // when / then
         assertThrows(IllegalStateException.class,
-                () -> AdditionalServicesGroupRequest.builder()
-                        .addService(AdditionalServiceRequest.of(DEFINITION_ID)).build());
+                () -> AdditionalServicesGroupRequest.builder().addService(service).build());
     }
 
     @Test

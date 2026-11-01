@@ -98,12 +98,19 @@ public final class AdditionalServicesImpl implements AdditionalServices {
                 .fetch(AdditionalServiceGroupTranslationResponseRaw.class));
     }
 
+    // jsonBodyPartial (not jsonBody): the generated ConstraintCriteriaRaw pre-initialises its
+    // `deliveryMethods` and `categories` lists, and the spec allows each list only for the
+    // constraint types that use it (`categories` even carries minItems: 1) — the NON_EMPTY
+    // writer keeps an unused list off the wire instead of sending `[]`. The writer is body-wide
+    // (the house pattern for generated DTOs with pre-initialised collections); every other list
+    // in the body is non-empty by construction (AdditionalServiceRequest requires a configuration,
+    // the group builder requires a service), so nothing required can drop out.
     @Override
     public AdditionalServicesGroup createGroup(AdditionalServicesGroupRequest request) {
         Objects.requireNonNull(request, ERR_REQUEST_NULL);
         return AdditionalServicesGroup.from(http.request(OP_CREATE_GROUP)
                 .post(ApiPaths.ADDITIONAL_SERVICES_GROUPS)
-                .jsonBody(request.toRaw())
+                .jsonBodyPartial(request.toRaw())
                 .fetch(AdditionalServicesGroupResponseRaw.class));
     }
 
@@ -113,7 +120,7 @@ public final class AdditionalServicesImpl implements AdditionalServices {
         Objects.requireNonNull(request, ERR_REQUEST_NULL);
         return AdditionalServicesGroup.from(http.request(OP_UPDATE_GROUP)
                 .put(ApiPaths.subPath(ApiPaths.ADDITIONAL_SERVICES_GROUPS, groupId))
-                .jsonBody(request.toRaw())
+                .jsonBodyPartial(request.toRaw())
                 .fetch(AdditionalServicesGroupResponseRaw.class));
     }
 

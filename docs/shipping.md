@@ -177,17 +177,22 @@ ShippingRateSet created = client.shipping().rates().create(
             ShippingRate.builder()
                 .deliveryMethodId(methodId)            // from deliveryMethods()
                 .firstItemRate(Money.of("12.99", "PLN"))
-                .nextItemRate(Money.of("2.00", "PLN"))
                 .maxQuantityPerPackage(10)
                 .maxPackageWeight(new Weight("30.0", "KILOGRAMS"))  // optional
                 .build()))
         .build());
 ```
 
-A rate row requires the delivery method, the first- and next-item rates and the
-maximum quantity per package; the package-weight limit and dispatch-time range
-are optional. A rate-set request requires a `name` and at least one rate. Each
-row's `deliveryMethodId` is an id from `deliveryMethods()`. `RateSetType` reads
+A rate row requires the delivery method, the first-item rate (Allegro charges
+nothing for further items in the same parcel) and the maximum quantity per
+package; the package-weight limit and dispatch-time range are optional. A
+rate-set request requires a `name`, a `type` and at least one rate; a `PHYSICAL`
+set also needs its `dispatchCountry`. Allegro fixes `type` and `dispatchCountry`
+when the set is created, so an `update` repeats them. The name is 1–64 characters
+of letters, digits, hyphens, dots, commas and spaces — the builder enforces the
+rule because the server rejects anything else (`VALIDATION_ERROR` on `name`),
+including names that older sets were created with. Each row's
+`deliveryMethodId` is an id from `deliveryMethods()`. `RateSetType` reads
 fail-soft (`UNKNOWN`) and writes strict.
 
 ## Shipment management (Wysyłam z Allegro)

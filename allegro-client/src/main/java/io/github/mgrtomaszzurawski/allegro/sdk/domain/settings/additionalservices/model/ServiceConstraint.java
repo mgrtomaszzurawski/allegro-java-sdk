@@ -11,24 +11,30 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The constraint under which an additional-service configuration applies: a
- * country, a {@link ServiceConstraintType}, and — for delivery-realised services
- * — the ids of the delivery methods that can realise it.
+ * country, a {@link ServiceConstraintType}, for delivery-realised services the ids
+ * of the delivery methods that can realise it, and for category-limited services
+ * the ids of the offer categories it is available in.
  *
  * @param country ISO country code the configuration applies to, or {@code null}
  * @param type the constraint type, or {@code null}
  * @param deliveryMethodIds delivery-method ids (empty unless the type is
- *     {@code COUNTRY_DELIVERY_SAME_QUANTITY})
+ *     {@code COUNTRY_DELIVERY_SAME_QUANTITY} or
+ *     {@code COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY})
+ * @param categoryIds offer-category ids (empty unless the type is
+ *     {@code COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY})
  *
  * @since 0.3.0
  */
 public record ServiceConstraint(
         @Nullable String country,
         @Nullable ServiceConstraintType type,
-        List<String> deliveryMethodIds) {
+        List<String> deliveryMethodIds,
+        List<String> categoryIds) {
 
-    /** Canonical constructor — defensively copies the delivery-method ids. */
+    /** Canonical constructor — defensively copies the id lists. */
     public ServiceConstraint {
         deliveryMethodIds = deliveryMethodIds == null ? List.of() : List.copyOf(deliveryMethodIds);
+        categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
     }
 
     /** Map the generated Layer-1 DTO, or {@code null} when absent. */
@@ -37,8 +43,11 @@ public record ServiceConstraint(
             return null;
         }
         ServiceConstraintType type = raw.getType() == null ? null : ServiceConstraintType.from(raw.getType());
-        List<JustIdRaw> methods = raw.getDeliveryMethods() == null ? List.of() : raw.getDeliveryMethods();
-        List<String> methodIds = methods.stream().map(JustIdRaw::getId).toList();
-        return new ServiceConstraint(raw.getCountry(), type, methodIds);
+        return new ServiceConstraint(raw.getCountry(), type,
+                identifiers(raw.getDeliveryMethods()), identifiers(raw.getCategories()));
+    }
+
+    private static List<String> identifiers(@Nullable List<JustIdRaw> refs) {
+        return refs == null ? List.of() : refs.stream().map(JustIdRaw::getId).toList();
     }
 }

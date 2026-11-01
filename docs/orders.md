@@ -193,6 +193,10 @@ client.orders().allegroPickupPoints(PointsFilter.ofCarriers("UPS"));
 Three sub-facades hang off `orders()`.
 
 **Invoices** — declaring an invoice is two steps: register the metadata, then upload the bytes.
+Allegro has deprecated this two-step flow (no removal date announced) in favour of a single
+upload-with-metadata request (`POST /order/{orderId}/billing-documents/files`); `declare` and
+`uploadFile` are `@Deprecated` and stay until the single-request wrapper lands in the next
+coverage pass.
 
 ```java
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.orders.builder.InvoiceDeclaration;

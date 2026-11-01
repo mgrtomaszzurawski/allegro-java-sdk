@@ -215,9 +215,20 @@ additional.upsertTranslation(created.id(), "en-US",   // per-service description
 additional.deleteTranslation(created.id(), "en-US");
 ```
 
-`createGroup`/`updateGroup` return the mapped `AdditionalServicesGroup`. A configuration's
-constraint criteria (which offers a price applies to) is a field-depth follow-up; a configuration
-currently carries its `price`.
+`createGroup`/`updateGroup` return the mapped `AdditionalServicesGroup`. Allegro accepts a
+priced configuration only with a matching constraint, so prefer
+`ServiceConfigurationRequest.of(price, constraint)` with one of the three constraint factories:
+
+```java
+ServiceConstraintRequest.beforeShipping("PL");                       // COUNTRY_SAME_QUANTITY — realised before shipping (GIFT_WRAP)
+ServiceConstraintRequest.inDelivery("PL", deliveryMethodIds);         // COUNTRY_DELIVERY_SAME_QUANTITY — realised in delivery (CARRY_IN)
+ServiceConstraintRequest.inDeliveryForCategories("PL",                // COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY — delivery services
+        deliveryMethodIds, categoryIds);                              //   limited to offer categories (ALLEGRO_TV_CARRY_IN); ≥ 1 category
+```
+
+On read, `configuration.constraint()` exposes `country()`, `type()`, `deliveryMethodIds()` and
+`categoryIds()` (the id lists are empty when the constraint type does not use them). The write
+body omits the lists a constraint type does not use.
 
 ## Size tables
 

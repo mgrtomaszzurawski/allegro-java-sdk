@@ -40,8 +40,12 @@ public interface Pricing {
      * a percentage discount.
      *
      * @return the turnover-discount sub-facade
+     * @deprecated Allegro is withdrawing turnover-based discounts (spec removal
+     *     scheduled for 2026-11-02, no replacement); see {@link TurnoverDiscounts}.
      * @since 0.3.0
      */
+    @Deprecated(since = "0.8.0", forRemoval = true)
+    @SuppressWarnings("removal") // the return type is deprecated for removal together with this accessor
     TurnoverDiscounts turnoverDiscounts();
 
     /**

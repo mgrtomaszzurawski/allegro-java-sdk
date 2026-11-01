@@ -49,6 +49,7 @@ class ShippingBuildersTest {
     private static final String OPEN_FROM = "08:00";
     private static final String OPEN_TO = "16:00";
     private static final String FILLER = "x";
+    private static final String BLANK = " ";
 
     private static final int MAX_NAME = 80;
     private static final int MAX_EXTERNAL_ID = 80;
@@ -419,7 +420,6 @@ class ShippingBuildersTest {
         return ShippingRate.builder()
                 .deliveryMethodId(METHOD_ID)
                 .firstItemRate(Money.of("12.99", "PLN"))
-                .nextItemRate(Money.of("2.00", "PLN"))
                 .maxQuantityPerPackage(10);
     }
 
@@ -444,7 +444,6 @@ class ShippingBuildersTest {
 
         // then
         assertEquals(Money.of("12.99", "PLN"), rate.firstItemRate());
-        assertEquals(Money.of("2.00", "PLN"), rate.nextItemRate());
         assertEquals(10, rate.maxQuantityPerPackage());
         assertEquals("KILOGRAMS", rate.maxPackageWeight().unit());
         assertEquals("48", rate.shippingTime().toTime());
@@ -466,8 +465,7 @@ class ShippingBuildersTest {
     @Test
     void rateBuilder_whenDeliveryMethodIdMissing_throws() {
         var builder = ShippingRate.builder()
-                .firstItemRate(Money.of("12.99", "PLN"))
-                .nextItemRate(Money.of("2.00", "PLN")).maxQuantityPerPackage(10);
+                .firstItemRate(Money.of("12.99", "PLN")).maxQuantityPerPackage(10);
         assertMessage("ShippingRate.deliveryMethodId is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
@@ -475,23 +473,15 @@ class ShippingBuildersTest {
     @Test
     void rateBuilder_whenFirstItemRateMissing_throws() {
         var builder = ShippingRate.builder().deliveryMethodId(METHOD_ID)
-                .nextItemRate(Money.of("2.00", "PLN")).maxQuantityPerPackage(10);
+                .maxQuantityPerPackage(10);
         assertMessage("ShippingRate.firstItemRate is required",
-                assertThrows(IllegalStateException.class, builder::build));
-    }
-
-    @Test
-    void rateBuilder_whenNextItemRateMissing_throws() {
-        var builder = ShippingRate.builder().deliveryMethodId(METHOD_ID)
-                .firstItemRate(Money.of("12.99", "PLN")).maxQuantityPerPackage(10);
-        assertMessage("ShippingRate.nextItemRate is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
 
     @Test
     void rateBuilder_whenMaxQuantityMissing_throws() {
         var builder = ShippingRate.builder().deliveryMethodId(METHOD_ID)
-                .firstItemRate(Money.of("12.99", "PLN")).nextItemRate(Money.of("2.00", "PLN"));
+                .firstItemRate(Money.of("12.99", "PLN"));
         assertMessage("ShippingRate.maxQuantityPerPackage is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }
@@ -499,17 +489,22 @@ class ShippingBuildersTest {
     // ---- ShippingRateSetRequestBuilder ----
 
     private static final String SET_NAME = "Domestic rates";
+    private static final String LEGAL_RATE_SET_NAME_PREFIX = "Café rates no. 1, parcel-courier. ";
+    private static final String BRACKETED_RATE_SET_NAME = "[A-seed] rates";
+    private static final String ALPHA_3_COUNTRY = "POL";
+    private static final int MAX_RATE_SET_NAME = 64;
 
     @Test
     void rateSetBuilder_requiredFieldsOnly_buildsWithNullOptionals() {
-        // when
+        // when — an ELECTRONIC set is the minimal valid shape (no dispatch country)
         ShippingRateSetRequest request = ShippingRateSetRequest.builder()
-                .name(SET_NAME).rates(List.of(minimalRate().build())).build();
+                .name(SET_NAME).type(RateSetType.ELECTRONIC)
+                .rates(List.of(minimalRate().build())).build();
 
         // then
         assertEquals(SET_NAME, request.name());
+        assertEquals(RateSetType.ELECTRONIC, request.type());
         assertEquals(1, request.rates().size());
-        assertNull(request.type());
         assertNull(request.dispatchCountry());
     }
 
@@ -529,7 +524,7 @@ class ShippingBuildersTest {
     void rateSetBuilder_toBuilder_preservesFields() {
         // given
         ShippingRateSetRequest original = ShippingRateSetRequest.builder()
-                .name(SET_NAME).type(RateSetType.PHYSICAL)
+                .name(SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(COUNTRY_CODE)
                 .rates(List.of(minimalRate().build())).build();
 
         // when
@@ -547,8 +542,110 @@ class ShippingBuildersTest {
     }
 
     @Test
+    void rateSetBuilder_whenNameAtMaxLengthFromAllowedCharacters_builds() {
+        // given — 64 characters: letters (with a diacritic), digits, hyphen, dot, comma, spaces
+        String longestName = LEGAL_RATE_SET_NAME_PREFIX
+                + FILLER.repeat(MAX_RATE_SET_NAME - LEGAL_RATE_SET_NAME_PREFIX.length());
+
+        // when
+        ShippingRateSetRequest request = ShippingRateSetRequest.builder()
+                .name(longestName).type(RateSetType.ELECTRONIC)
+                .rates(List.of(minimalRate().build())).build();
+
+        // then — the name survives verbatim at the limit
+        assertEquals(longestName, request.name());
+        assertEquals(MAX_RATE_SET_NAME, request.name().length());
+    }
+
+    @Test
+    void rateSetBuilder_whenNameTooLong_throws() {
+        // given
+        var builder = ShippingRateSetRequest.builder()
+                .name(FILLER.repeat(MAX_RATE_SET_NAME + 1)).type(RateSetType.ELECTRONIC)
+                .rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.name must be at most 64 characters",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenNameHasDisallowedCharacters_throws() {
+        // given — square brackets are outside the server's allowed set (live-verified 2026-11-01)
+        var builder = ShippingRateSetRequest.builder()
+                .name(BRACKETED_RATE_SET_NAME).type(RateSetType.ELECTRONIC)
+                .rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.name may only contain letters, numbers, hyphens,"
+                        + " dots, commas and spaces",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenTypeMissing_throws() {
+        // given
+        var builder = ShippingRateSetRequest.builder()
+                .name(SET_NAME).rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.type is required",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenTypeUnknown_throws() {
+        // given
+        var builder = ShippingRateSetRequest.builder()
+                .name(SET_NAME).type(RateSetType.UNKNOWN).rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.type must be PHYSICAL or ELECTRONIC"
+                        + " (UNKNOWN is a read-only sentinel)",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenPhysicalWithoutDispatchCountry_throws() {
+        // given
+        var builder = ShippingRateSetRequest.builder()
+                .name(SET_NAME).type(RateSetType.PHYSICAL).rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.dispatchCountry is required for a PHYSICAL rate set",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenPhysicalWithBlankDispatchCountry_throws() {
+        // given
+        var builder = ShippingRateSetRequest.builder()
+                .name(SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(BLANK)
+                .rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.dispatchCountry is required for a PHYSICAL rate set",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
+    void rateSetBuilder_whenDispatchCountryTooLong_throws() {
+        // given — the spec caps dispatchCountry at an ISO 3166-1 alpha-2 code
+        var builder = ShippingRateSetRequest.builder()
+                .name(SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(ALPHA_3_COUNTRY)
+                .rates(List.of(minimalRate().build()));
+
+        // when / then
+        assertMessage("ShippingRateSetRequest.dispatchCountry must be at most 2 characters",
+                assertThrows(IllegalStateException.class, builder::build));
+    }
+
+    @Test
     void rateSetBuilder_whenRatesEmpty_throws() {
-        var builder = ShippingRateSetRequest.builder().name(SET_NAME);
+        // given
+        var builder = ShippingRateSetRequest.builder().name(SET_NAME).type(RateSetType.ELECTRONIC);
+
+        // when / then
         assertMessage("ShippingRateSetRequest.rates is required",
                 assertThrows(IllegalStateException.class, builder::build));
     }

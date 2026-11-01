@@ -29,6 +29,7 @@ import java.util.Objects;
  *
  * @since 0.3.0
  */
+@SuppressWarnings("removal") // implements the sub-facade Allegro is withdrawing; removed together with it
 public final class TurnoverDiscountsImpl implements TurnoverDiscounts {
 
     private static final String OP_LIST = "list turnover discounts";

@@ -4,10 +4,9 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.CreateShippingRatesSetUsingPOST201ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetShippingRatesSetUsingGET200ResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ModifyShippingRatesSetUsingPUT200ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesSetRaw;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -18,9 +17,11 @@ import org.jspecify.annotations.Nullable;
  *
  * @param id the rate-set identifier
  * @param name the seller's name for the set
- * @param type what kind of goods the set prices, or {@code null} when the server
- *     omits it
+ * @param type what kind of goods the set prices; {@link RateSetType#UNKNOWN} for a
+ *     value this release does not model (or a legacy set the server returns
+ *     without one — older physical sets predate the field)
  * @param dispatchCountry ISO country the rates dispatch from, or {@code null}
+ *     (Allegro returns it for physical sets only)
  * @param lastModified when the set was last changed (ISO-8601 string), or {@code null}
  * @param rates the per-method rate rows; never {@code null}, possibly empty
  * @param features management flags for the set, or {@code null} (absent on the
@@ -31,7 +32,7 @@ import org.jspecify.annotations.Nullable;
 public record ShippingRateSet(
         String id,
         String name,
-        @Nullable RateSetType type,
+        RateSetType type,
         @Nullable String dispatchCountry,
         @Nullable String lastModified,
         List<ShippingRate> rates,
@@ -41,7 +42,10 @@ public record ShippingRateSet(
         rates = List.copyOf(rates);
     }
 
-    /** Map the {@code GET /sale/shipping-rates/{id}} DTO to the public record. */
+    /**
+     * Map the {@code GET /sale/shipping-rates/{id}} DTO — the only response that
+     * carries the management {@code features} — to the public record.
+     */
     public static ShippingRateSet from(GetShippingRatesSetUsingGET200ResponseRaw raw) {
         return assemble(raw.getId(), raw.getName(),
                 raw.getType() == null ? null : raw.getType().getValue(),
@@ -49,27 +53,25 @@ public record ShippingRateSet(
                 raw.getFeatures() == null ? null : RateSetFeatures.from(raw.getFeatures()));
     }
 
-    /** Map the {@code POST /sale/shipping-rates} response DTO to the public record. */
-    public static ShippingRateSet from(CreateShippingRatesSetUsingPOST201ResponseRaw raw) {
+    /**
+     * Map the DTO the {@code POST /sale/shipping-rates} and
+     * {@code PUT /sale/shipping-rates/{id}} responses share (no {@code features})
+     * to the public record.
+     */
+    public static ShippingRateSet from(ShippingRatesSetRaw raw) {
         return assemble(raw.getId(), raw.getName(),
                 raw.getType() == null ? null : raw.getType().getValue(),
                 raw.getDispatchCountry(), raw.getLastModified(), raw.getRates(), null);
     }
 
-    /** Map the {@code PUT /sale/shipping-rates/{id}} response DTO to the public record. */
-    public static ShippingRateSet from(ModifyShippingRatesSetUsingPUT200ResponseRaw raw) {
-        return assemble(raw.getId(), raw.getName(),
-                raw.getType() == null ? null : raw.getType().getValue(),
-                raw.getDispatchCountry(), raw.getLastModified(), raw.getRates(), null);
-    }
-
-    // The three response DTOs (GET/POST/PUT) share this shape but no supertype, so
-    // each factory extracts its own fields and delegates the common assembly here.
+    // The GET response DTO repeats the shared set shape plus `features` without a
+    // supertype, so each factory extracts its own fields and delegates the common
+    // assembly here. `type` is spec-required, but legacy physical sets predate the
+    // field, so an absent value reads as UNKNOWN instead of failing the read.
     private static ShippingRateSet assemble(String id, String name, @Nullable String typeWire,
             @Nullable String dispatchCountry, @Nullable String lastModified,
             @Nullable List<ShippingRateRaw> ratesRaw, @Nullable RateSetFeatures features) {
-        return new ShippingRateSet(id, name,
-                typeWire == null ? null : RateSetType.fromWire(typeWire),
+        return new ShippingRateSet(id, name, RateSetType.fromWire(typeWire),
                 dispatchCountry, lastModified, rates(ratesRaw), features);
     }
 

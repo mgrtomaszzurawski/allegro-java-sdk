@@ -72,7 +72,6 @@ public final class ShippingConfigExample {
                                     ShippingRate.builder()
                                             .deliveryMethodId(deliveryMethodId)
                                             .firstItemRate(Money.of("12.99", "PLN"))
-                                            .nextItemRate(Money.of("2.00", "PLN"))
                                             .maxQuantityPerPackage(10)
                                             .maxPackageWeight(new Weight("30.0", "KILOGRAMS"))
                                             .build()))

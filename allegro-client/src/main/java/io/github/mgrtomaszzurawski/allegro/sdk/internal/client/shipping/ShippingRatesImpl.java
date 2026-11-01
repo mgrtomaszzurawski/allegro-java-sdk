@@ -4,11 +4,10 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.CreateShippingRatesSetUsingPOST201ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfShippingRatestUsingGET200ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfShippingRatestUsingGET200ResponseShippingRatesInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetShippingRatesSetUsingGET200ResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ModifyShippingRatesSetUsingPUT200ResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesSetRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.ShippingRates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingRateSet;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingRateSetRequest;
@@ -53,20 +52,25 @@ public final class ShippingRatesImpl implements ShippingRates {
         return ShippingRateSet.from(raw);
     }
 
+    // jsonBodyPartial (not jsonBody): create and update share the generated ShippingRatesSetRaw,
+    // whose nullable `id`/`lastModified` (ignored by Allegro on write) and the rows' unset optional
+    // weight/time objects would otherwise go out as explicit nulls — the NON_EMPTY writer sends only
+    // what the request set (the body id on update is set, so it stays).
     @Override
     public ShippingRateSet create(ShippingRateSetRequest request) {
-        CreateShippingRatesSetUsingPOST201ResponseRaw created = http.postJsonAuthenticated(
-                ApiPaths.SHIPPING_RATES, request.toCreateRaw(),
-                CreateShippingRatesSetUsingPOST201ResponseRaw.class, OP_CREATE);
+        ShippingRatesSetRaw created = http.request(OP_CREATE)
+                .post(ApiPaths.SHIPPING_RATES)
+                .jsonBodyPartial(request.toCreateRaw())
+                .fetch(ShippingRatesSetRaw.class);
         return ShippingRateSet.from(created);
     }
 
     @Override
     public ShippingRateSet update(String rateSetId, ShippingRateSetRequest request) {
-        ModifyShippingRatesSetUsingPUT200ResponseRaw updated = http.putJsonAuthenticated(
-                ApiPaths.subPath(ApiPaths.SHIPPING_RATES, rateSetId),
-                request.toUpdateRaw(rateSetId),
-                ModifyShippingRatesSetUsingPUT200ResponseRaw.class, OP_UPDATE);
+        ShippingRatesSetRaw updated = http.request(OP_UPDATE)
+                .put(ApiPaths.subPath(ApiPaths.SHIPPING_RATES, rateSetId))
+                .jsonBodyPartial(request.toUpdateRaw(rateSetId))
+                .fetch(ShippingRatesSetRaw.class);
         return ShippingRateSet.from(updated);
     }
 

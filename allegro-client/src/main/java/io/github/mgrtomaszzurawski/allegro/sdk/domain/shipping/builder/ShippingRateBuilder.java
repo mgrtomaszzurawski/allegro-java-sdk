@@ -12,8 +12,10 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Fluent builder for one {@link ShippingRate} row. The delivery method, the
- * maximum quantity per package, and the first- and next-item rates are required;
- * the package-weight limit and dispatch-time range are optional.
+ * maximum quantity per package and the first-item rate are required; the
+ * package-weight limit and dispatch-time range are optional. Allegro charges
+ * nothing for further items in the same parcel, so there is no per-further-item
+ * rate to set.
  *
  * @since 0.3.0
  */
@@ -22,11 +24,9 @@ public final class ShippingRateBuilder {
     private static final String FIELD_DELIVERY_METHOD_ID = "ShippingRate.deliveryMethodId";
     private static final String FIELD_MAX_QUANTITY = "ShippingRate.maxQuantityPerPackage";
     private static final String FIELD_FIRST_ITEM_RATE = "ShippingRate.firstItemRate";
-    private static final String FIELD_NEXT_ITEM_RATE = "ShippingRate.nextItemRate";
 
     private @Nullable String deliveryMethodId;
     private @Nullable Money firstItemRate;
-    private @Nullable Money nextItemRate;
     private @Nullable Integer maxQuantityPerPackage;
     private @Nullable Weight maxPackageWeight;
     private @Nullable ShippingTime shippingTime;
@@ -37,15 +37,9 @@ public final class ShippingRateBuilder {
         return this;
     }
 
-    /** The charge for the first item (required). */
+    /** The charge for the first item, i.e. for the parcel (required). */
     public ShippingRateBuilder firstItemRate(@Nullable Money value) {
         this.firstItemRate = value;
-        return this;
-    }
-
-    /** The charge for each further item (required). */
-    public ShippingRateBuilder nextItemRate(@Nullable Money value) {
-        this.nextItemRate = value;
         return this;
     }
 
@@ -77,11 +71,9 @@ public final class ShippingRateBuilder {
                 BuilderValidation.requireText(deliveryMethodId, FIELD_DELIVERY_METHOD_ID);
         Money validFirstItemRate =
                 BuilderValidation.requirePresent(firstItemRate, FIELD_FIRST_ITEM_RATE);
-        Money validNextItemRate =
-                BuilderValidation.requirePresent(nextItemRate, FIELD_NEXT_ITEM_RATE);
         Integer validMaxQuantity =
                 BuilderValidation.requirePresent(maxQuantityPerPackage, FIELD_MAX_QUANTITY);
-        return new ShippingRate(validDeliveryMethodId, validFirstItemRate, validNextItemRate,
+        return new ShippingRate(validDeliveryMethodId, validFirstItemRate,
                 validMaxQuantity, maxPackageWeight, shippingTime);
     }
 }
