@@ -12,7 +12,10 @@ import java.util.List;
  * Customer invoices on an order — reached via {@code orders().invoices()}.
  * Declaring an invoice is a two-step flow: {@link #declare} registers the
  * metadata and returns the new invoice id, then {@link #uploadFile} attaches the
- * file bytes to that id.
+ * file bytes to that id. Allegro has deprecated that two-step flow in favour of a
+ * single upload-with-metadata request ({@code POST /order/{orderId}/billing-documents/files});
+ * the single-request wrapper lands in the next coverage pass and the two methods
+ * stay until then.
  *
  * @since 0.6.0
  */
@@ -32,7 +35,12 @@ public interface OrderInvoices {
      * @param orderId the order identifier
      * @param declaration the invoice metadata
      * @return the id Allegro assigned the new invoice
+     * @deprecated Allegro deprecated the two-step invoice flow
+     *     ({@code POST /order/checkout-forms/{id}/invoices}) in favour of a single
+     *     upload-with-metadata request; no removal date is announced. The
+     *     single-request wrapper arrives in the next coverage pass.
      */
+    @Deprecated(since = "0.8.0")
     String declare(String orderId, InvoiceDeclaration declaration);
 
     /**
@@ -41,6 +49,11 @@ public interface OrderInvoices {
      * @param orderId the order identifier
      * @param invoiceId the invoice id returned by {@link #declare}
      * @param file the invoice file bytes; sent as {@code application/pdf}
+     * @deprecated Allegro deprecated the two-step invoice flow
+     *     ({@code PUT /order/checkout-forms/{id}/invoices/{invoiceId}/file}) in favour
+     *     of a single upload-with-metadata request; no removal date is announced. The
+     *     single-request wrapper arrives in the next coverage pass.
      */
+    @Deprecated(since = "0.8.0")
     void uploadFile(String orderId, String invoiceId, byte[] file);
 }
