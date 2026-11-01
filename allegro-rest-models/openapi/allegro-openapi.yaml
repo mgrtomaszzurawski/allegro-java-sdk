@@ -71,11 +71,13 @@ tags:
   - name: Fulfillment Products
   - name: Fulfillment Returns
   - name: Fulfillment Removal
+  - name: Fulfillment Warehouse
   - name: Tax Identification Number
   - name: Responsible persons
   - name: Responsible producers
   - name: Conversions
   - name: Deposits
+  - name: Ingredients
 
 x-tagGroups:
   - name: Offer
@@ -101,6 +103,7 @@ x-tagGroups:
       - Classifieds
       - Pricing
       - Deposits
+      - Ingredients
   - name: Orders
     tags:
       - Order management
@@ -128,6 +131,7 @@ x-tagGroups:
       - Fulfillment Products
       - Fulfillment Returns
       - Fulfillment Removal
+      - Fulfillment Warehouse
       - Tax Identification Number
   - name: Affiliate
     tags:
@@ -243,6 +247,36 @@ paths:
                                   <td>MultipleProductsFoundException</td>
                                   <td>foundProductsIds</td>
                                   <td>IDs of existing products that were matched to provided product id (GTIN or MPN).</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="3">ProductValidationException</td>
+                                  <td>missingParameterNames</td>
+                                  <td>Names of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                  <!-- ProductValidationException -->
+                                  <td>missingParameterIds</td>
+                                  <td>Identifiers of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                  <!-- ProductValidationException -->
+                                  <td>categoryId</td>
+                                  <td>Category id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="3">ConstraintViolationException.MissingRequiredParameters</td>
+                                  <td>missingParameterNames</td>
+                                  <td>Names of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                  <!-- ConstraintViolationException.MissingRequiredParameters -->
+                                  <td>missingParameterIds</td>
+                                  <td>Identifiers of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                  <!-- ConstraintViolationException.MissingRequiredParameters -->
+                                  <td>productId</td>
+                                  <td>ID of an existing product that was matched to your request, but has parameter deficiencies</td>
                               </tr>
                               <tr>
                                   <td rowspan="5">CATEGORY_MISMATCH</td>
@@ -439,7 +473,7 @@ paths:
                               <tr>
                                   <td rowspan="2">UnknownProductOfferPartException</td>
                                   <td>requestedPart</td>
-                                  <td>Requested offer part which was is not supported</td>
+                                  <td>Requested offer part which is not supported</td>
                               </tr>
                               <tr>
                                   <!-- UnknownProductOfferPartException -->
@@ -741,6 +775,393 @@ paths:
                                 <td>IDs of existing products that were matched to provided product id (GTIN or MPN).</td>
                               </tr>
                               <tr>
+                                <td rowspan="3">ProductValidationException</td>
+                                <td>missingParameterNames</td>
+                                <td>Names of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                <!-- ProductValidationException -->
+                                <td>missingParameterIds</td>
+                                <td>Identifiers of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                <!-- ProductValidationException -->
+                                <td>categoryId</td>
+                                <td>Category id related to the error</td>
+                              </tr>
+                              <tr>
+                                <td rowspan="3">ConstraintViolationException.MissingRequiredParameters</td>
+                                <td>missingParameterNames</td>
+                                <td>Names of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                <!-- ConstraintViolationException.MissingRequiredParameters -->
+                                <td>missingParameterIds</td>
+                                <td>Identifiers of missing required parameters</td>
+                              </tr>
+                              <tr>
+                                <!-- ConstraintViolationException.MissingRequiredParameters -->
+                                <td>productId</td>
+                                <td>ID of an existing product that was matched to your request, but has parameter deficiencies</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="5">CATEGORY_MISMATCH</td>
+                                  <td>requestedCategoryName</td>
+                                  <td>Name of the requested category in the offer</td>
+                              </tr>
+                              <tr>
+                                  <td>requestedCategoryId</td>
+                                  <td>ID of the requested category in the offer</td>
+                              </tr>
+                              <tr>
+                                  <td>existingCategoryName</td>
+                                  <td>Name of the existing category in the product</td>
+                              </tr>
+                              <tr>
+                                  <td>existingCategoryId</td>
+                                  <td>ID of the existing category in the product</td>
+                              </tr>
+                              <tr>
+                                  <td>existingProductId</td>
+                                  <td>ID of the existing product.</td>
+                              </tr>
+                              <!-- Following part was generated by "metadata-extractor" util in SPOA -->
+                              <tr>
+                                  <td>DefaultImpliedWarrantyNotFoundException</td>
+                                  <td>defaultName</td>
+                                  <td>Name to be selected if none provided</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="3">InvalidDictionaryParameter</td>
+                                  <td>dictionaryValue</td>
+                                  <td>Requested invalid value</td>
+                              </tr>
+                              <tr>
+                                  <!-- InvalidDictionaryParameter -->
+                                  <td>parameterId</td>
+                                  <td>Parameter ID in which the value does not exist</td>
+                              </tr>
+                              <tr>
+                                  <!-- InvalidDictionaryParameter -->
+                                  <td>parameterName</td>
+                                  <td>Parameter name</td>
+                              </tr>
+                              <tr>
+                                  <td>AdditionalServicesGroupNotFoundException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">DictionaryParameterIdsAndValuesNotMatch</td>
+                                  <td>parameterId</td>
+                                  <td>Parameter ID in which number of requested values and ids don't match</td>
+                              </tr>
+                              <tr>
+                                  <!-- DictionaryParameterIdsAndValuesNotMatch -->
+                                  <td>parameterName</td>
+                                  <td>Parameter name</td>
+                              </tr>
+                              <tr>
+                                  <td>GallerySizeException</td>
+                                  <td>gallerySizeLimit</td>
+                                  <td>Max number of images in this request</td>
+                              </tr>
+                              <tr>
+                                  <td>UnsupportedLanguageException</td>
+                                  <td>availableLocales</td>
+                                  <td>Comma-separated list of supported locales</td>
+                              </tr>
+                              <tr>
+                                  <td>UploadImageRequestTimeoutException</td>
+                                  <td>imageUrl</td>
+                                  <td>Requested image URL</td>
+                              </tr>
+                              <tr>
+                                  <td>NotUniqueSizeTableException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name which was not found in your settings</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">DictionaryParameterValueNotFound</td>
+                                  <td>parameterName</td>
+                                  <td>Parameter name to which requested value was not matched</td>
+                              </tr>
+                              <tr>
+                                  <!-- DictionaryParameterValueNotFound -->
+                                  <td>requestedDictionaryValue</td>
+                                  <td>Requested value</td>
+                              </tr>
+                              <tr>
+                                  <td>CompatibilityListCategoryNotSupportedException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested compatibility list name</td>
+                              </tr>
+                              <tr>
+                                  <td>BaseMarketplaceInAdditionalMarketplacesException</td>
+                                  <td>baseMarketplace</td>
+                                  <td>Code of the base marketplace which should not have been sent</td>
+                              </tr>
+                              <tr>
+                                  <td>ContactNotFoundException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested contact name</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">DictionaryParameterValueNotUnique</td>
+                                  <td>parameterName</td>
+                                  <td>Parameter name related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- DictionaryParameterValueNotUnique -->
+                                  <td>requestedDictionaryValue</td>
+                                  <td>Repeated dictionary value</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">DictionaryParameterIdNotFound</td>
+                                  <td>parameterId</td>
+                                  <td>Parameter id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- DictionaryParameterIdNotFound -->
+                                  <td>parameterName</td>
+                                  <td>Parameter name related to the error</td>
+                              </tr>
+                              <tr>
+                                  <td>WarrantyNotUniqueException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested warranty name that is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td>UnsupportedAdditionalMarketplaceException</td>
+                                  <td>supportedAdditionalMarketplaces</td>
+                                  <td>Code of requested marketplace that is not supported</td>
+                              </tr>
+                              <tr>
+                                  <td>ProductNotFoundException</td>
+                                  <td>productId</td>
+                                  <td>Requested product id which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>CATEGORY_NOT_EXISTS</td>
+                                  <td>categoryId</td>
+                                  <td>Requested category id which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>FundraisingCampaignNotFoundException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested campaign name which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>WholesalePriceListNotFoundException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested price-list which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">ImpliedWarrantyNotFoundException</td>
+                                  <td>defaultName</td>
+                                  <td>Default name which would match automatically</td>
+                              </tr>
+                              <tr>
+                                  <!-- ImpliedWarrantyNotFoundException -->
+                                  <td>requestedName</td>
+                                  <td>Requested name of implied warranty which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>NotUniqueWholesalePriceListException</td>
+                                  <td>wholesalePriceList</td>
+                                  <td>Requested name of price list which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td>FundraisingCampaignNotUniqueException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of campaign which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">ParameterNameNotFoundException</td>
+                                  <td>categoryId</td>
+                                  <td>Category id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- ParameterNameNotFoundException -->
+                                  <td>parameterName</td>
+                                  <td>Requested parameter name which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">ReturnPolicyNotFoundException</td>
+                                  <td>defaultName</td>
+                                  <td>Default name which would match automatically</td>
+                              </tr>
+                              <tr>
+                                  <!-- ReturnPolicyNotFoundException -->
+                                  <td>requestedName</td>
+                                  <td>Requested name of policy which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">UnknownProductOfferPartException</td>
+                                  <td>requestedPart</td>
+                                  <td>Requested offer part which is not supported</td>
+                              </tr>
+                              <tr>
+                                  <!-- UnknownProductOfferPartException -->
+                                  <td>validParts</td>
+                                  <td>Valid parts of the product offer</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">ParameterNameNotUniqueException</td>
+                                  <td>categoryId</td>
+                                  <td>Category id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- ParameterNameNotUniqueException -->
+                                  <td>parameterName</td>
+                                  <td>Requested parameter name which is not unique</td>
+                              </tr>
+                              <tr>
+                                  <td>SizeTableNotFoundException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested size table name which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>NotUniqueAdditionalServicesGroupException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of additional services group which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">ShippingRatesNotFoundException</td>
+                                  <td>defaultName</td>
+                                  <td>Default name which would match automatically</td>
+                              </tr>
+                              <tr>
+                                  <!-- ShippingRatesNotFoundException -->
+                                  <td>requestedName</td>
+                                  <td>Requested name of shipping rates which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>IncompleteParameterDefinition</td>
+                                  <td>parameterId</td>
+                                  <td>Parameter id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">CompatibilityListUnsupportedItemsTypeException</td>
+                                  <td>categoryId</td>
+                                  <td>Category id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- CompatibilityListUnsupportedItemsTypeException -->
+                                  <td>requestedItemType</td>
+                                  <td>Requested item type which is not supported</td>
+                              </tr>
+                              <tr>
+                                  <td>INVALID_CATEGORY_ID</td>
+                                  <td>categoryId</td>
+                                  <td>Requested category id which is not valid</td>
+                              </tr>
+                              <tr>
+                                  <td>ReturnPolicyNotUniqueException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of return policy which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="2">ParameterIdNotFoundException</td>
+                                  <td>categoryId</td>
+                                  <td>Category id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- ParameterIdNotFoundException -->
+                                  <td>parameterId</td>
+                                  <td>Requested parameter id which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>WarrantyNotFoundException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of warranty which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>DefaultReturnPolicyNotFoundException</td>
+                                  <td>defaultName</td>
+                                  <td>Default name which would match automatically</td>
+                              </tr>
+                              <tr>
+                                  <td>CompatibilityListUnknownItemsTypeException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested type of the item which is not supported</td>
+                              </tr>
+                              <tr>
+                                  <td>ContactNotUniqueException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of contact which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td>OfferNotFoundException</td>
+                                  <td>offerId</td>
+                                  <td>Requested offer id which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>UserNotFoundException</td>
+                                  <td>userId</td>
+                                  <td>Requested user id which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td>DefaultShippingRatesNotFoundException</td>
+                                  <td>defaultName</td>
+                                  <td>Default name which would match automatically</td>
+                              </tr>
+                              <tr>
+                                  <td>NonUniqueShippingRatesException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of shipping rates which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="3">ParameterCategoryException</td>
+                                  <td>parameterId</td>
+                                  <td>Parameter id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- ParameterCategoryException -->
+                                  <td>parameterName</td>
+                                  <td>Parameter name related to the error</td>
+                              </tr>
+                              <tr>
+                                  <!-- ParameterCategoryException -->
+                                  <td>requestedParameterType</td>
+                                  <td>Requested parameter type which is not valid</td>
+                              </tr>
+                              <tr>
+                                  <td>PublicationTasksNotFoundException</td>
+                                  <td>commandId</td>
+                                  <td>Requested command id which was not found</td>
+                              </tr>
+                              <tr>
+                                  <td rowspan="5">TransactionTaxSettingsNotFoundException</td>
+                                  <td>requestedTaxCountry</td>
+                                  <td>Requested tax country which was not found</td>
+                              </tr>
+                              <tr>
+                                  <!-- TransactionTaxSettingsNotFoundException -->
+                                  <td>requestedTaxExemption</td>
+                                  <td>Requested tax exemption which was not found</td>
+                              </tr>
+                              <tr>
+                                  <!-- TransactionTaxSettingsNotFoundException -->
+                                  <td>requestedTaxRate</td>
+                                  <td>Requested tax rate which was not found</td>
+                              </tr>
+                              <tr>
+                                  <!-- TransactionTaxSettingsNotFoundException -->
+                                  <td>requestedTaxSubject</td>
+                                  <td>Requested tax subject which was not found</td>
+                              </tr>
+                              <tr>
+                                  <!-- TransactionTaxSettingsNotFoundException -->
+                                  <td>taxSettingsId</td>
+                                  <td>Tax settings id related to the error</td>
+                              </tr>
+                              <tr>
+                                  <td>ImpliedWarrantyNotUniqueException</td>
+                                  <td>requestedName</td>
+                                  <td>Requested name of implied warranty which is repeated in your configuration</td>
+                              </tr>
+                              <tr>
                                 <td>NO_SAFETY_INFORMATION_OPTION_NOT_ALLOWED</td>
                                 <td>productSet.safetyInformation</td>
                                 <td>Usage of NO_SAFETY_INFORMATION option is not allowed</td>
@@ -764,7 +1185,7 @@ paths:
         - User's offer information
       summary: 'Get all data of the particular product-offer'
       description:
-        'Use this resource to retrieve all data of the particular product-offer. Read more: <a href="../../tutorials/jak-jednym-requestem-wystawic-oferte-powiazana-z-produktem-D7Kj9gw4xFA#asynchroniczne-procesowanie" target="_blank">PL</a> / <a href="../../tutorials/list-offer-assigned-product-one-request-D7Kj9M71Bu6#asynchronous-processing" target="_blank">EN</a>.'
+        'Use this resource to retrieve all data of the particular product-offer. Read more: <a href="../../tutorials/jak-jednym-requestem-wystawic-oferte-powiazana-z-produktem-D7Kj9gw4xFA#procesowanie-oferty" target="_blank">PL</a> / <a href="../../tutorials/list-offer-assigned-product-one-request-D7Kj9M71Bu6#offer-processing" target="_blank">EN</a>.'
       operationId: getProductOffer
       parameters:
         - name: offerId
@@ -908,7 +1329,7 @@ paths:
       summary: 'Check the processing status of a POST or PATCH request'
       description:
         'The URI for the resource given by Location header of POST /sale/product-offers and PATCH /sale/product-offers/{offerId}.
-        Use this resource to check processing status of a POST or PATCH request. Read more: <a href="../../tutorials/jak-jednym-requestem-wystawic-oferte-powiazana-z-produktem-D7Kj9gw4xFA#publikacja-oferty-w-asynchronicznym-api" target="_blank">PL</a> / <a href="../../tutorials/list-offer-assigned-product-one-request-D7Kj9M71Bu6#offer-publication-in-asynchronous-api" target="_blank">EN</a>.'
+        Use this resource to check processing status of a POST or PATCH request. Read more: <a href="../../tutorials/jak-jednym-requestem-wystawic-oferte-powiazana-z-produktem-D7Kj9gw4xFA#procesowanie-oferty" target="_blank">PL</a> / <a href="../../tutorials/list-offer-assigned-product-one-request-D7Kj9M71Bu6#offer-processing" target="_blank">EN</a>.'
       operationId: getProductOfferProcessingStatus
       parameters:
         - name: offerId
@@ -1851,6 +2272,12 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/TaskReport'
+        '400':
+          description: Bad request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
         '401':
           description: Unauthorized
         '403':
@@ -3959,7 +4386,7 @@ paths:
       tags:
         - Flexible bundles
       summary: Delete flexible bundle by ID
-      description: 'Use this resource to delete flexible bundle by its unique identifier.'
+      description: 'Use this resource to delete flexible bundle by its unique identifier. Read more: <a href="../../tutorials/jak-zarzadzac-rabatami-promocjami-yPya2mj6zUP#usun-wybrany-zestaw" target="_blank">PL</a> / <a href="../../tutorials/how-to-manage-rebates-and-promotions-g05avdL0vT4#delete-a-selected-bundle" target="_blank">EN</a>.'
       operationId: deleteFlexibleBundleUsingDELETE
       parameters:
         - name: bundleId
@@ -4657,26 +5084,12 @@ paths:
         - allegro:api:sale:offers:write
   /sale/turnover-discount/{marketplaceId}:
     put:
+      deprecated: true
       tags:
         - Rebates and promotions
       summary: "Create/modify turnover discount for marketplace"
       description: >-
-        Create or modify the turnover discount for the specified marketplace.
-        Currently, the only supported marketplace is `allegro-business-cz`.
-        <br/>
-        Turnover discount is assigned to all offers available on the given marketplace.
-        Only B2B users will see and be eligible for this discount.
-        In order to create a turnover discount definition, you also have to be a B2B user.
-        <br/>
-        Created turnover discount becomes visible for B2B users with the first day of the next month.
-        Since that day, B2B users begin cumulating their spending on your offers they purchased.
-        Turnover cumulated within the month translate into appropriate percentage of the discount for all orders of your offers in the following month.
-        <br/>
-        Turnover discount created in a given month is susceptible for change only until the end of that month.
-        After that, as mentioned before, turnover discount becomes available for the users and can no longer be modified instantly.
-        Modifying turnover discount in such case will result in creation of the new definition of the discount.
-        This new definition will become available for the users on the same basis that the previously created one, with the start of the next month.
-        Also, similarly, newly created definition can be modified only until the the end of the month. Read more: <a href="../../tutorials/jak-zarzadzac-rabatami-promocjami-yPya2mj6zUP#utworz-lub-edytuj-rabat-obrotowy" target="_blank">PL</a> / <a href="../..//tutorials/how-to-manage-rebates-and-promotions-g05avdL0vT4#create-or-edit-turnover-discount" target="_blank">EN</a>.
+        You cannot create or modify a turnover-based discount. Turnover-based discounts are about to be withdrawn from the platform. Any existing discounts will be removed automatically. This resource is deprecated and will be removed on November 2, 2026.
       operationId: createOrModifyTurnoverDiscountUsingPUT
       security:
         - bearer-token-for-user:
@@ -4749,12 +5162,13 @@ paths:
                 $ref: '#/components/schemas/ErrorsHolder'
   /sale/turnover-discount:
     get:
+      deprecated: true
       tags:
         - Rebates and promotions
       summary: "Get the list of turnover discounts"
       description: >-
         Get a list of turnover discounts for all supported marketplaces. Read more: <a href="../../tutorials/jak-zarzadzac-rabatami-promocjami-yPya2mj6zUP#pobierz-liste-rabatow-obrotowych" target="_blank">PL</a> / <a href="../../tutorials/how-to-manage-rebates-and-promotions-g05avdL0vT4#retrieve-the-list-of-turnover-discounts" target="_blank">EN</a>.
-        Currently, the only supported marketplace is `allegro-business-cz`.
+        Currently, the only supported marketplace is `allegro-business-cz`. This resource is deprecated and will be removed on November 2, 2026.
         <br/>
         Turnover discount for the marketplace can have one of the three statuses:
 
@@ -4914,12 +5328,13 @@ paths:
                 $ref: '#/components/schemas/ErrorsHolder'
   /sale/turnover-discount/{marketplaceId}/deactivate:
     put:
+      deprecated: true
       tags:
         - Rebates and promotions
       summary: "Deactivate turnover discount for marketplace"
       description: >-
         Deactivate turnover discount for a given marketplace. Read more: <a href="../../tutorials/jak-zarzadzac-rabatami-promocjami-yPya2mj6zUP#deaktywuj-rabat-obrotowy" target="_blank">PL</a> / <a href="../../tutorials/how-to-manage-rebates-and-promotions-g05avdL0vT4#deactivate-turnover-discount" target="_blank">EN</a>.
-        Currently, the only supported marketplace is `allegro-business-cz`.
+        Currently, the only supported marketplace is `allegro-business-cz`. This resource is deprecated and will be removed on November 2, 2026.
         <br/>
         Turnover discount will stop being cumulated with the end of the current month.
         Discount based on cumulated turnover will stop being applied with the end of the next month.
@@ -5221,6 +5636,12 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/TaskReport'
+        '400':
+          description: Bad request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
         '401':
           description: Unauthorized
         '403':
@@ -5390,6 +5811,12 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/TaskReport'
+        '400':
+          description: Bad request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
         '401':
           description: Unauthorized
         '404':
@@ -5553,6 +5980,12 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/TaskWithSubjectReport'
+        '400':
+          description: Bad request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
         '401':
           description: Unauthorized
         '404':
@@ -5720,6 +6153,12 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/TaskReport'
+        '400':
+          description: Bad request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
         '401':
           description: Unauthorized
         '404':
@@ -5886,6 +6325,12 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/TaskReport'
+        '400':
+          description: Bad request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
         '401':
           description: Unauthorized
         '403':
@@ -7268,51 +7713,14 @@ paths:
         content:
           application/vnd.allegro.public.v1+json:
             schema:
-              allOf:
-                - $ref: "#/components/schemas/ShippingRatesSet"
-                - type: object
-                  properties:
-                    type:
-                      type: string
-                      nullable: true
-                      example: 'PHYSICAL'
-                      enum:
-                        - PHYSICAL
-                        - ELECTRONIC
-                      description: >-
-                        Whether the shipping rates set is physical or electronic.
-                        Note that passing the `PHYSICAL` type in the payload will result in creating a new custom shipping price list based on the specified dispatch country.
-                    dispatchCountry:
-                      type: string
-                      nullable: true
-                      maxLength: 2
-                      example: 'PL'
-                      description: The dispatch country code in ISO 3166-1 alfa-2 format. It must be passed if the `PHYSICAL` type is provided.
+              $ref: "#/components/schemas/ShippingRatesSet"
       responses:
         '201':
           description: OK
           content:
             application/vnd.allegro.public.v1+json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ShippingRatesSet"
-                  - type: object
-                    properties:
-                      type:
-                        type: string
-                        nullable: true
-                        example: 'PHYSICAL'
-                        enum:
-                          - PHYSICAL
-                          - ELECTRONIC
-                        description: >-
-                          Whether the shipping rates set is physical or electronic.
-                      dispatchCountry:
-                        type: string
-                        nullable: true
-                        maxLength: 2
-                        example: 'PL'
-                        description: The dispatch country code in ISO 3166-1 alfa-2 format.
+                $ref: "#/components/schemas/ShippingRatesSet"
         '400':
           description: Bad request
           content:
@@ -7374,21 +7782,6 @@ paths:
                   - $ref: "#/components/schemas/ShippingRatesSet"
                   - type: object
                     properties:
-                      type:
-                        type: string
-                        nullable: true
-                        enum:
-                          - PHYSICAL
-                          - ELECTRONIC
-                        description: >-
-                          Whether the shipping rates set is physical or electronic.
-                          Note that this field is returned for all electronic shipping rates and for the physical shipping rates created via a new custom shipping price list form in [delivery-settings](https://salescenter.allegro.com/delivery-settings) or API with this new field explicitly provided.
-                      dispatchCountry:
-                        type: string
-                        nullable: true
-                        maxLength: 2
-                        example: "PL"
-                        description: The dispatch country code in ISO 3166-1 alfa-2 format, returned only for shipping rates of the `PHYSICAL` type.
                       features:
                         type: object
                         properties:
@@ -7410,7 +7803,7 @@ paths:
                       isFulfillment: false
                     rates:
                       - deliveryMethod:
-                          id: 758fcd59-fbfa-4453-ae07-4800d72c2ca5
+                          id: 03f26351-f683-4db2-8895-f2c599280e3c
                         maxQuantityPerPackage: 6
                         maxPackageWeight:
                           value: '19.000'
@@ -7418,13 +7811,10 @@ paths:
                         firstItemRate:
                           amount: '12.00'
                           currency: PLN
-                        nextItemRate:
-                          amount: '0.00'
-                          currency: PLN
                         shippingTime:
                           from: P1D
-                          to: P20D
-                    lastModified: '2018-04-05T12:20:23.974Z'
+                          to: P1D
+                    lastModified: '2026-04-05T12:20:23.974Z'
         '401':
           description: Authentication required
           content:
@@ -7481,52 +7871,14 @@ paths:
         content:
           application/vnd.allegro.public.v1+json:
             schema:
-              allOf:
-                - $ref: "#/components/schemas/ShippingRatesSet"
-                - type: object
-                  properties:
-                    type:
-                      type: string
-                      nullable: true
-                      enum:
-                        - PHYSICAL
-                        - ELECTRONIC
-                      description: >-
-                        Whether the shipping rates set is physical or electronic.
-                        Optional field, if provided, it must match the value returned by the <a href="#operation/getShippingRatesSetUsingGET" target="_blank">"get the details of a shipping rates set" resource</a>.
-                    dispatchCountry:
-                      type: string
-                      nullable: true
-                      maxLength: 2
-                      example: "PL"
-                      description: >-
-                        The dispatch country code in ISO 3166-1 alfa-2 format.
-                        Optional field, if provided, it must match the value returned by the <a href="#operation/getShippingRatesSetUsingGET" target="_blank">"get the details of a shipping rates set" resource</a>.
+              $ref: "#/components/schemas/ShippingRatesSet"
       responses:
         '200':
           description: OK
           content:
             application/vnd.allegro.public.v1+json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ShippingRatesSet"
-                  - type: object
-                    properties:
-                      type:
-                        type: string
-                        nullable: true
-                        enum:
-                          - PHYSICAL
-                          - ELECTRONIC
-                        description: >-
-                          Whether the shipping rates set is physical or electronic.
-                      dispatchCountry:
-                        type: string
-                        nullable: true
-                        maxLength: 2
-                        example: "PL"
-                        description: >-
-                          The dispatch country code in ISO 3166-1 alfa-2 format.
+                $ref: "#/components/schemas/ShippingRatesSet"
         '400':
           description: Bad request
           content:
@@ -8319,6 +8671,77 @@ paths:
               $ref: '#/components/schemas/CreateResponsiblePersonRequest'
         required: true
   /sale/responsible-persons/{id}:
+    get:
+      tags:
+        - Responsible persons
+      summary: "Get responsible person"
+      description:
+        'Use this resource to get a responsible person for the compliance of the product with EU regulations. Read more: <a href="../../tutorials/jak-zarzadzac-kontem-danymi-uzytkownika-ZM9YAKgPgi2#osoba-odpowiedzialna-za-zgodnosc-produktu-z-przepisami-unijnymi" target="_blank">PL</a> / <a href="../../tutorials/account-and-user-data-management-jn9vBjqjnsw#responsible-persons-for-the-compliance-of-the-product-with-eu-regulations" target="_blank">EN</a>.'
+      operationId: responsiblePersonGET
+      parameters:
+        - name: id
+          in: path
+          description: Responsible person ID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Accept
+          in: header
+          description: Acceptable representation of the response.
+          required: true
+          example: "application/vnd.allegro.public.v1+json"
+          schema:
+            type: string
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Expected language of messages.
+          example: pl-PL
+          schema:
+            type: string
+            format: BCP-47 language code
+            enum:
+              - en-US
+              - pl-PL
+              - uk-UA
+              - sk-SK
+              - cs-CZ
+              - hu-HU
+      security:
+        - bearer-token-for-user:
+            - allegro:api:sale:settings:read
+      responses:
+        '200':
+          description: OK
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ResponsiblePersonResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
     put:
       tags:
         - Responsible persons
@@ -8736,6 +9159,79 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateResponsibleProducerRequest'
         required: true
+    delete:
+      tags:
+        - Responsible producers
+      summary: "Delete responsible producer"
+      description:
+        'Use this resource to delete a responsible producer created by you. The responsible producer can be deleted only if it is not assigned to any offer, otherwise the request is rejected and the responsible producer is not deleted. Read more: <a href="../../tutorials/jak-zarzadzac-kontem-danymi-uzytkownika-ZM9YAKgPgi2#dane-teleadresowe-producenta" target="_blank">PL</a> / <a href="../../tutorials/account-and-user-data-management-jn9vBjqjnsw#responsible-producers-contact-information" target="_blank">EN</a>.'
+      operationId: responsibleProducerDELETE
+      parameters:
+        - name: id
+          in: path
+          description: Responsible producer ID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Accept
+          in: header
+          description: Acceptable representation of the response.
+          required: true
+          example: "application/vnd.allegro.public.v1+json"
+          schema:
+            type: string
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Expected language of messages.
+          example: pl-PL
+          schema:
+            type: string
+            format: BCP-47 language code
+            enum:
+              - en-US
+              - pl-PL
+              - uk-UA
+              - sk-SK
+              - cs-CZ
+              - hu-HU
+      security:
+        - bearer-token-for-user:
+            - allegro:api:sale:settings:write
+      responses:
+        '204':
+          description: Responsible producer successfully deleted.
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '404':
+          description: Not Found. The responsible producer does not exist or was not created by you.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '409':
+          description: Conflict. The responsible producer is assigned to at least one offer (`RESPONSIBLE_PRODUCER_IN_USE`) and was not deleted. Remove the assignment and retry the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '422':
+          description: Unprocessable Entity. The ID is not a valid UUID (`INVALID_UUID`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
   /sale/delivery-methods:
     get:
       tags:
@@ -8875,24 +9371,6 @@ paths:
                                   type: string
                                   description: ISO 4217 currency code.
                                   example: "PLN"
-                            nextItemRate:
-                              type: object
-                              description: Rules for the shipping cost of another item in the parcel.
-                              properties:
-                                min:
-                                  type: string
-                                  description: Lower limit for the rate.
-                                  example: "0.00"
-                                  maxLength: 15
-                                max:
-                                  type: string
-                                  description: Upper limit for the rate.
-                                  example: "8.99"
-                                  maxLength: 15
-                                currency:
-                                  type: string
-                                  description: ISO 4217 currency code.
-                                  example: "PLN"
                             shippingTime:
                               type: object
                               description: Rules for the shipping time.
@@ -8916,13 +9394,13 @@ paths:
                 response:
                   value:
                     deliveryMethods:
-                      - id: 758fcd59-fbfa-4453-ae07-4800d72c2ca5
-                        name: List polecony priorytetowy
+                      - id: 03f26351-f683-4db2-8895-f2c599280e3c
+                        name: Allegro Kurier DPD (AD)
                         marketplaces:
                           - "allegro-pl"
                         paymentPolicy: IN_ADVANCE
-                        allegroEndorsed: false
-                        dispatchCountry: null
+                        allegroEndorsed: true
+                        dispatchCountry: PL
                         destinationCountry: PL
                         shippingRatesConstraints:
                           allowed: true
@@ -8930,22 +9408,18 @@ paths:
                             max: 999999
                           maxPackageWeight:
                             supported: true
-                            min: '1.000'
-                            max: '30.000'
+                            min: '5.000'
+                            max: '700.000'
                             unit: 'KILOGRAM'
                           firstItemRate:
                             min: '0.00'
-                            max: '100000000.00'
-                            currency: PLN
-                          nextItemRate:
-                            min: '0.00'
-                            max: '100000000.00'
+                            max: '14.99'
                             currency: PLN
                           shippingTime:
                             default:
                               from: PT24H
-                              to: PT48H
-                            customizable: true
+                              to: PT24H
+                            customizable: false
         '401':
           description: Authentication required.
           content:
@@ -9204,7 +9678,7 @@ paths:
           description: Additional service group or translation not found
       security:
         - bearer-token-for-user:
-            - allegro:api:sale:offers:write
+            - allegro:api:sale:settings:write
 
   /sale/size-tables/{tableId}:
     get:
@@ -10324,6 +10798,15 @@ paths:
               - sk-SK
               - cs-CZ
               - hu-HU
+        - name: isAiCoCreated
+          in: query
+          required: false
+          description: >-
+            Sets the uploaded image to be marked as "AI".
+            For a JSON request body (`application/vnd.allegro.public.v1+json`), this flag can also be provided in the request body.
+            If both the query parameter and the request body are provided, their values must not conflict, otherwise a `400` response is returned.
+          schema:
+            type: boolean
       servers:
         - url: https://upload.{environment}
           variables:
@@ -10341,6 +10824,20 @@ paths:
                 $ref: '#/components/schemas/OfferImageUploadResponse'
         '400':
           description: Syntactically incorrect request
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+              examples:
+                isAiCoCreated-conflict:
+                  summary: Conflicting isAiCoCreated values
+                  value:
+                    errors:
+                      - code: "IsAiCoCreatedConflict"
+                        message: "isAiCoCreated conflict"
+                        userMessage: "Conflict of isAiCoCreated flag in query parameter and JSON body."
+                        details: ''
+                        path: ''
         '401':
           description: Invalid or missing bearer token
         '403':
@@ -11241,7 +11738,8 @@ paths:
       tags:
         - Order management
       summary: "Post new invoice"
-      description: 'Use to add new invoice metadata. Before you send an invoice file, you need to initialize the invoice instance with the required parameters. Read more: <a href="../../tutorials/jak-obslugiwac-zamowienia-GRaj0qyvwtR#jak-dodac-fakture-do-zamowienia" target="_blank">PL</a> / <a href="../../tutorials/process-orders-PgPMlWDr8Cv#add-an-invoice-to-the-order" target="_blank">EN</a>.'
+      description: 'Use to add new invoice metadata. Before you send an invoice file, you need to initialize the invoice instance with the required parameters. Read more: <a href="../../tutorials/jak-obslugiwac-zamowienia-GRaj0qyvwtR#jak-dodac-fakture-do-zamowienia" target="_blank">PL</a> / <a href="../../tutorials/process-orders-PgPMlWDr8Cv#how-to-add-an-invoice-to-orders" target="_blank">EN</a>.'
+      deprecated: true
       operationId: addOrderInvoicesMetadata
       parameters:
         - name: id
@@ -11314,6 +11812,7 @@ paths:
       summary: "Upload invoice file"
       description: 'Use to upload invoice file to match created invoice metadata. Read more: <a href="../../tutorials/jak-obslugiwac-zamowienia-GRaj0qyvwtR#jak-dodac-fakture-do-zamowienia" target="_blank">PL</a> / <a href="../../tutorials/process-orders-PgPMlWDr8Cv#add-an-invoice-to-the-order" target="_blank">EN</a>.'
       operationId: uploadOrderInvoiceFile
+      deprecated: true
       parameters:
         - name: id
           in: path
@@ -11360,7 +11859,101 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorsHolder'
         '409':
-          description: Invoice with given id already has invoice file uploaded
+          description: Invoice with given id already has invoice file uploaded or identical file has been already uploaded
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+              examples:
+                File already uploaded:
+                  value:
+                    errors:
+                      - code: FILE-UPLOADED
+                        details: null
+                        message: 'File for given invoice [ea5f05c8-d95e-4f8d-8fbf-c7b66719a034] has been already uploaded'
+                        path: '/order/checkout-forms/ce540871-e70a-439d-b0f8-755b5709aaf0/invoices/ea5f05c8-d95e-4f8d-8fbf-c7b66719a034/file'
+                        userMessage: 'File for given invoice [ea5f05c8-d95e-4f8d-8fbf-c7b66719a034] has been already uploaded'
+                Duplicated file:
+                  value:
+                    errors:
+                      - code: DUPLICATED-FILE
+                        details: null
+                        message: 'File with identical content already exists in order [ce540871-e70a-439d-b0f8-755b5709aaf0]'
+                        path: '/order/checkout-forms/ce540871-e70a-439d-b0f8-755b5709aaf0/invoices/ea5f05c8-d95e-4f8d-8fbf-c7b66719a034/file'
+                        userMessage: 'File with identical content already exists in order [ce540871-e70a-439d-b0f8-755b5709aaf0]'
+        '413':
+          description: The file is too large. Max file size is 3MB
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '422':
+          description: Uploaded file is empty, is not a PDF or files count limit has been reached for order
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+      security:
+        - bearer-token-for-user:
+            - allegro:api:orders:write
+  /order/{orderId}/billing-documents/files:
+    post:
+      tags:
+        - Order management
+      summary: "Upload invoice file with metadata in a single request"
+      description: 'Use to add an invoice to the order in a single request - the invoice file together with its metadata are sent together, instead of the two-step flow (add invoice metadata, then upload invoice file). Read more: <a href="../../tutorials/jak-obslugiwac-zamowienia-GRaj0qyvwtR#jak-dodac-fakture-do-zamowienia" target="_blank">PL</a> / <a href="../../tutorials/process-orders-PgPMlWDr8Cv#how-to-add-an-invoice-to-orders" target="_blank">EN</a>.'
+      operationId: uploadOrderInvoiceFileWithMetadata
+      parameters:
+        - name: orderId
+          in: path
+          description: Order identifier.
+          required: true
+          schema:
+            type: string
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Expected language of messages.
+          example: en-US
+          schema:
+            type: string
+            format: BCP-47 language code
+            enum:
+              - en-US
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewOrderInvoiceFileWithMetadata'
+        description: request
+        required: true
+      responses:
+        '201':
+          description: Invoice created successfully
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/CheckFormsNewOrderInvoiceId'
+        '400':
+          description: Invoice number is required for this order
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '403':
+          description: You do not have permission to access this order
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '404':
+          description: Order with given id does not exist
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '409':
+          description: Order with given id already has an invoice with the same file name, or an invoice file has already been uploaded for this order
           content:
             application/vnd.allegro.public.v1+json:
               schema:
@@ -11372,7 +11965,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorsHolder'
         '422':
-          description: Uploaded file is empty or order's payment is rejected
+          description: Some of the provided data is invalid (e.g. invoice number too long, invalid file name, empty file, file content is not a valid PDF) or order does not allow an invoice or order's payment is rejected or the maximum number of invoices for this order has been reached.
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+        '429':
+          description: You're trying to add another invoice too fast. Wait a few seconds before adding the next one.
           content:
             application/vnd.allegro.public.v1+json:
               schema:
@@ -14835,16 +15434,6 @@ paths:
         You can use *Location* provided in header of the response to track your application status.
         Application will be removed after 30 days when status of the application was changed form PROCESSED or DECLINED.
 
-        Fees will be charged in accordance with Annex No. 1 to the
-          <a href="https://allegro.pl/regulaminy/regulamin-strefy-okazji-9dGVAPB69In"
-            target="_blank">Daily deals zone terms and conditions</a>.
-
-        By using this resource you agree to the
-          <a href="https://allegro.pl/regulaminy/regulamin-strefy-okazji-9dGVAPB69In"
-            target="_blank">Daily deals zone terms and conditions</a>
-        or
-          <a href="https://allegro.pl/regulaminy/regulamin-programu-bonusowego-prowizja-nawet-0-5-0KPkAE7wkcv"
-            target="_blank">Commission discount terms and conditions</a>.
         Read more: <a href="../../tutorials/jak-przypisac-oferte-kampanii-GRaj0q6Gwuy#zglos-oferte-do-kampanii" target="_blank">PL</a> / <a href="../../tutorials/how-to-submit-offers-to-campaigns-AgGjd6EmyH4#submit-offer-to-a-campaign" target="_blank">EN</a>.
       operationId: postBadges
       parameters:
@@ -15108,20 +15697,19 @@ paths:
                       - offer:
                           id: '2091846836'
                         campaign:
-                          id: 'SUBSIDY'
-                          name: 'Allegro Cena'
+                          id: 'SMART_DEALS_PL'
+                          name: 'Tygodniowe Smart! okazje'
                         publication:
-                          type: 'SINCE'
-                          from: '2019-05-08T05:54:46.966Z'
-                          to: null
+                          type: 'WITHIN'
+                          from: '2026-08-27T22:00:00.000Z'
+                          to: '2026-09-03T21:59:59.999Z'
                         prices:
-                          subsidy:
-                            targetPrice:
-                              amount: '10.00'
-                              currency: 'PLN'
-                            sellerPrice:
-                              amount: '15.00'
-                              currency: 'PLN'
+                          market:
+                            amount: '20.00'
+                            currency: 'PLN'
+                          bargain:
+                            amount: '15.00'
+                            currency: 'PLN'
                         process:
                           status: 'WAITING_FOR_PUBLICATION'
                           rejectionReasons: [ ]
@@ -16038,7 +16626,7 @@ paths:
         - name: marketplaceId
           in: query
           required: false
-          description: "The marketplace ID where operation was made. By default the marketplace ID where the user is registered. **Note:** Business marketplace is not a separate user's billing and defaults back to the main marketplace for given country."
+          description: The marketplace ID where the operation took place. By default, this is the marketplace ID where the user is registered. **Note:** The Business marketplace is not separate - it defaults to the main marketplace for the given country.
           example: "allegro-pl"
           schema:
             type: string
@@ -16070,8 +16658,14 @@ paths:
         - name: offer.id
           in: query
           required: false
-          description: Offer ID by which billing entries are filtered.
-          example: "12345"
+          description: Offer ID by which billing entries are filtered. Can be either a numeric ID or a UUID.
+          examples:
+            numeric:
+              summary: Numeric offer ID
+              value: "12345"
+            uuid:
+              summary: UUID offer ID
+              value: "5f3e8a3c-2b7d-4c1e-9a6f-8d2b4e7c1a90"
           schema:
             type: string
         - name: order.id
@@ -16495,6 +17089,7 @@ paths:
         Use this resource to retrieve two order characteristics.
         The first is a pre-populated request body for creating a shipment in SwA.
         The second is a list of possible delivery types for processing the order, including their limits.
+        Read more: <a href="../../tutorials/jak-zarzadzac-przesylkami-przez-wysylam-z-allegro-LRVjK7K21sY#jak-pobrac-proponowane-dane-i-ustawienia-dostawy-dla-zamowienia" target="_blank">PL</a> / <a href="../../tutorials/how-to-manage-parcels-via-ship-with-allegro-ZM9YAyGKWTV#how-to-retrieve-the-proposed-delivery-details-and-settings-for-an-order" target="_blank">EN</a>.
       operationId: getDeliveryProposals
       parameters:
         - name: orderId
@@ -17628,13 +18223,13 @@ paths:
         - Tax settings
       summary: 'Get all tax settings for category'
       description: >-
-        Use this resource to receive tax settings for given category.
+        Use this resource to receive tax settings for a given leaf category.
         Based on received settings you may set VAT tax settings for your offers. Read more: <a href="../../tutorials/jak-jednym-requestem-wystawic-oferte-powiazana-z-produktem-D7Kj9gw4xFA#opcje-faktury-i-stawki-vat" target="_blank">PL</a> / <a href="../../tutorials/list-offer-assigned-product-one-request-D7Kj9M71Bu6#invoice-and-vat-settings" target="_blank">EN</a>.
       operationId: getTaxSettingsForCategory
       parameters:
         - name: category.id
           in: query
-          description: An identifier of a category for which all available tax settings will be returned.
+          description: An identifier of a leaf category for which all available tax settings will be returned.
           required: true
           schema:
             type: string
@@ -18563,7 +19158,6 @@ paths:
                   status: "NEW"
                   createdAt: "2023-02-09T10:15:30.000Z"
                   updatedAt: "2023-02-09T10:15:30.000Z"
-                  errors: []
           headers:
             location:
               description: The location of the created submit offer command (URI).
@@ -19291,7 +19885,7 @@ paths:
             default: 20
         - name: offset
           in: query
-          description: Index of the first returned thread from all results.
+          description: Index of the first returned thread from all results. Available only for content version 'application/vnd.allegro.public.v1+json'.
           required: false
           schema:
             type: integer
@@ -19299,6 +19893,53 @@ paths:
             minimum: 0
             maximum: 15000000
             default: 0
+        - name: page.id
+          in: query
+          description: ID of the page of threads to retrieve. Available only for content version 'application/vnd.allegro.beta.v1+json'.
+          required: false
+          schema:
+            type: string
+        - name: read
+          in: query
+          description: Filters threads by read status. Available only for content version 'application/vnd.allegro.beta.v1+json'.
+          required: false
+          schema:
+            type: boolean
+        - name: status
+          in: query
+          description: Filters threads by status. Available only for content version 'application/vnd.allegro.beta.v1+json'.
+          required: false
+          schema:
+            type: string
+            enum:
+              - OPEN
+              - CLOSED
+        - name: type
+          in: query
+          description: >-
+            Filters threads by their type. Available only for content version
+            'application/vnd.allegro.beta.v1+json'. If omitted, threads of all
+            types are returned. If you pass multiple values, the response
+            includes threads whose type matches any of them.
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              description: >-
+                Thread type: `COMMON` - standard conversation; `POST_PURCHASE_ISSUE`
+                - post-purchase issue thread. Available only for content version
+                'application/vnd.allegro.beta.v1+json'.
+              enum:
+                - COMMON
+                - POST_PURCHASE_ISSUE
+        - name: orderId
+          in: query
+          description: Filters POST_PURCHASE_ISSUE threads by order identifier. Available only for content version 'application/vnd.allegro.beta.v1+json'.
+          required: false
+          schema:
+            type: string
         - name: Accept-Language
           in: header
           required: false
@@ -19321,6 +19962,48 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/ThreadsList'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/ThreadsListVBeta1'
+              examples:
+                common:
+                  summary: List of COMMON threads
+                  value:
+                    threads:
+                      - id: 'Z9qK7mVt2RcX8eLp4NaW1HsD6fBy3JuG0iOo5AbCkYQ'
+                        type: COMMON
+                        read: false
+                        createdAt: '2020-08-26T12:00:00.000Z'
+                        lastMessageDateTime: '2020-08-26T12:52:04.000Z'
+                        participants:
+                          - role: USER
+                            login: user1
+                          - role: USER
+                            login: user2
+                        status: OPEN
+                    nextPage: null
+                postPurchaseIssue:
+                  summary: List of POST_PURCHASE_ISSUE threads
+                  value:
+                    threads:
+                      - id: 'L1H4FmWRwD5lAEInohQoEGWQR71RfBpEmHqeKZSXdhW'
+                        type: POST_PURCHASE_ISSUE
+                        read: false
+                        createdAt: '2026-06-02T09:00:00.000Z'
+                        lastMessageDateTime: '2026-06-02T10:00:00.000Z'
+                        participants:
+                          - role: BUYER
+                            login: BuyerLogin
+                          - role: SELLER
+                            login: SellerLogin
+                        orders:
+                          - id: '29738e61-7f6a-11e8-ac45-09db60ede9d6'
+                            offers:
+                              - id: '82398120310'
+                                quantity: 1
+                        subType: PRODUCT_INCONSISTENT_WITH_THE_OFFER
+                        status: OPEN
+                    nextPage: null
         '401':
           description: User not authorized
         '422':
@@ -19364,6 +20047,44 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/Thread'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/ThreadVBeta1'
+              examples:
+                common:
+                  summary: COMMON thread
+                  value:
+                    id: 'Z9qK7mVt2RcX8eLp4NaW1HsD6fBy3JuG0iOo5AbCkYQ'
+                    type: COMMON
+                    read: false
+                    createdAt: '2020-08-26T12:00:00.000Z'
+                    lastMessageDateTime: '2020-08-26T12:52:04.000Z'
+                    participants:
+                      - role: USER
+                        login: user1
+                      - role: USER
+                        login: user2
+                    status: OPEN
+                postPurchaseIssue:
+                  summary: POST_PURCHASE_ISSUE thread
+                  value:
+                    id: 'L1H4FmWRwD5lAEInohQoEGWQR71RfBpEmHqeKZSXdhW'
+                    type: POST_PURCHASE_ISSUE
+                    read: false
+                    createdAt: '2026-06-02T09:00:00.000Z'
+                    lastMessageDateTime: '2026-06-02T10:00:00.000Z'
+                    participants:
+                      - role: BUYER
+                        login: BuyerLogin
+                      - role: SELLER
+                        login: SellerLogin
+                    orders:
+                      - id: '29738e61-7f6a-11e8-ac45-09db60ede9d6'
+                        offers:
+                          - id: '82398120310'
+                            quantity: 1
+                    subType: PRODUCT_INCONSISTENT_WITH_THE_OFFER
+                    status: OPEN
         '401':
           description: User not authorized
         '404':
@@ -19386,6 +20107,9 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/Thread'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/ThreadReadFlagVBeta1'
         '401':
           description: User not authorized
         '403':
@@ -19423,6 +20147,9 @@ paths:
           application/vnd.allegro.public.v1+json:
             schema:
               $ref: '#/components/schemas/ThreadReadFlag'
+          application/vnd.allegro.beta.v1+json:
+            schema:
+              $ref: '#/components/schemas/ThreadReadFlagVBeta1'
   /messaging/messages:
     post:
       tags:
@@ -19456,6 +20183,9 @@ paths:
           application/vnd.allegro.public.v1+json:
             schema:
               $ref: '#/components/schemas/NewMessage'
+          application/vnd.allegro.beta.v1+json:
+            schema:
+              $ref: '#/components/schemas/NewMessageVBeta1'
       responses:
         '201':
           description: Message successfully written
@@ -19463,6 +20193,9 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/Message'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/MessageVBeta1'
         '401':
           description: Authentication required
         '422':
@@ -19496,7 +20229,7 @@ paths:
             default: 20
         - name: offset
           in: query
-          description: Index of the first returned message from all results.
+          description: Index of the first returned message from all results. Available only for content version 'application/vnd.allegro.public.v1+json'.
           required: false
           schema:
             type: integer
@@ -19506,7 +20239,7 @@ paths:
             default: 0
         - name: before
           in: query
-          description: Message creation date before filter parameter (exclusive) - cannot be used with offset.
+          description: Message creation date before filter parameter (exclusive) - cannot be used with offset. Available only for content version 'application/vnd.allegro.public.v1+json'.
           example: "2020-11-13T12:45:20.818Z"
           required: false
           schema:
@@ -19514,12 +20247,18 @@ paths:
             format: date-time
         - name: after
           in: query
-          description: Message creation date after filter parameter (exclusive).
+          description: Message creation date after filter parameter (exclusive). Available only for content version 'application/vnd.allegro.public.v1+json'.
           example: "2020-11-13T12:45:20.818Z"
           required: false
           schema:
             type: string
             format: date-time
+        - name: page.id
+          in: query
+          description: ID of the page of messages to retrieve. Available only for content version 'application/vnd.allegro.beta.v1+json'.
+          required: false
+          schema:
+            type: string
         - name: Accept-Language
           in: header
           required: false
@@ -19542,6 +20281,9 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/MessagesList'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/MessagesListVBeta1'
         '401':
           description: User not authorized
         '403':
@@ -19586,6 +20328,9 @@ paths:
           application/vnd.allegro.public.v1+json:
             schema:
               $ref: '#/components/schemas/NewMessageInThread'
+          application/vnd.allegro.beta.v1+json:
+            schema:
+              $ref: '#/components/schemas/NewMessageInThread'
         required: true
       responses:
         '201':
@@ -19594,6 +20339,9 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/Message'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/MessageVBeta1'
         '401':
           description: User not authorized
         '403':
@@ -19602,6 +20350,14 @@ paths:
           description: Thread not found
         '422':
           description: Validation errors
+          content:
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/ErrorsHolder'
+              example:
+                errors:
+                  - code: THREAD_CLOSED
+                    message: Cannot add a message to a closed POST_PURCHASE_ISSUE thread.
   '/messaging/messages/{messageId}':
     get:
       tags:
@@ -19641,15 +20397,19 @@ paths:
             application/vnd.allegro.public.v1+json:
               schema:
                 $ref: '#/components/schemas/Message'
+            application/vnd.allegro.beta.v1+json:
+              schema:
+                $ref: '#/components/schemas/MessageVBeta1'
         '401':
           description: User not authorized
         '404':
           description: Message not found
     delete:
+      deprecated: true
       tags:
         - Message Center
       summary: 'Delete single message'
-      description: 'Use this resource to delete message with provided identifier. Read more: <a href="../../tutorials/jak-zarzadzac-centrum-wiadomosci-XxWm2K890Fk#usuniecie-wiadomosci" target="_blank">PL</a> / <a href="../../tutorials/how-to-manage-the-message-center-g05avyGlZUW#delete-a-message" target="_blank">EN</a>.'
+      description: 'Use this resource to delete message with provided identifier. This resource is deprecated and will be removed in the future. Read more: <a href="../../tutorials/jak-zarzadzac-centrum-wiadomosci-XxWm2K890Fk#usuniecie-wiadomosci" target="_blank">PL</a> / <a href="../../tutorials/how-to-manage-the-message-center-g05avyGlZUW#delete-a-message" target="_blank">EN</a>.'
       operationId: deleteMessageDELETE
       security:
         - bearer-token-for-user:
@@ -19716,12 +20476,18 @@ paths:
           application/vnd.allegro.public.v1+json:
             schema:
               $ref: '#/components/schemas/NewAttachmentDeclaration'
+          application/vnd.allegro.beta.v1+json:
+            schema:
+              $ref: '#/components/schemas/NewAttachmentDeclaration'
         required: true
       responses:
         '201':
           description: Attachment declaration successfully added
           content:
             application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/MessageAttachmentId'
+            application/vnd.allegro.beta.v1+json:
               schema:
                 $ref: '#/components/schemas/MessageAttachmentId'
         '401':
@@ -19800,6 +20566,9 @@ paths:
           description: Attachment succesfully uploaded.
           content:
             application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/MessageAttachmentId'
+            application/vnd.allegro.beta.v1+json:
               schema:
                 $ref: '#/components/schemas/MessageAttachmentId'
         '401':
@@ -20482,8 +21251,7 @@ paths:
     put:
       summary: 'Update Advance Ship Notice'
       description: >-
-        Use this resource to update an Advance Ship Notice. Any content property update will clear labels property.
-        Use Create labels command to create new labels for provided content.
+        Use this resource to update an Advance Ship Notice.
 
         If a client wants to update read-only property, an error is returned (only in cases when sent value will be
         different than actual on the server). Read more: <a href="../../tutorials/one-fulfillment-by-allegro-0ADwgOLqWSw#uzupelnij-dane-o-awizo" target="_blank">PL</a> / <a href="../../one-fulfillment-by-allegro-4R9dXyMPlc9#complete-the-data-of-advance-ship-notice" target="_blank">EN</a>.
@@ -20649,7 +21417,7 @@ paths:
   /fulfillment/advance-ship-notices/{id}/labels:
     get:
       summary: 'Get labels for Advance Ship Notice'
-      description: 'Use this resource to get labels for Advance Ship Notice after being created with "create labels command". Read more: <a href="../../tutorials/one-fulfillment-by-allegro-0ADwgOLqWSw#wygeneruj-oznaczenia-na-kartony" target="_blank">PL</a> / <a href="../../tutorials/one-fulfillment-by-allegro-4R9dXyMPlc9#create-labels-for-boxes" target="_blank">EN</a>.'
+      description: 'Use this resource to get labels for Advance Ship Notice. Read more: <a href="../../tutorials/one-fulfillment-by-allegro-0ADwgOLqWSw#pobierz-oznaczenia-na-awizo" target="_blank">PL</a> / <a href="../../tutorials/one-fulfillment-by-allegro-4R9dXyMPlc9#download-labels-for-asn" target="_blank">EN</a>.'
       tags:
         - Advance Ship Notices
       operationId: getAdvanceShipNoticeLabels
@@ -20900,7 +21668,7 @@ paths:
       summary: 'Update submitted Advance Ship Notice'
       description: >-
         Use this resource to update already submitted Advance Ship Notice. Update is allowed only when Advance Ship Notice is in "IN_TRANSIT" status.
-        Handling unit's amount property update clears labels property. Use Create labels command to create new labels for provided content. Read more: <a href="../../tutorials/one-fulfillment-by-allegro-0ADwgOLqWSw#edytuj-zakonczone-awizo" target="_blank">PL</a> / <a href="../../tutorials/one-fulfillment-by-allegro-4R9dXyMPlc9#edit-advance-ship-notice" target="_blank">EN</a>.
+        Read more: <a href="../../tutorials/one-fulfillment-by-allegro-0ADwgOLqWSw#edytuj-zakonczone-awizo" target="_blank">PL</a> / <a href="../../tutorials/one-fulfillment-by-allegro-4R9dXyMPlc9#edit-advance-ship-notice" target="_blank">EN</a>.
       operationId: updateSubmittedAdvanceShipNotice
       parameters:
         - name: id
@@ -21297,6 +22065,46 @@ paths:
         - bearer-token-for-user:
             - allegro:api:fulfillment:read
 
+  /fulfillment/warehouse:
+    get:
+      summary: 'Get seller warehouse'
+      description: 'Use this resource to get the warehouse assigned to the seller.'
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Expected language of messages.
+          example: en-US
+          schema:
+            type: string
+            format: BCP-47 language code
+            enum:
+              - en-US
+              - pl-PL
+              - uk-UA
+              - sk-SK
+              - cs-CZ
+              - hu-HU
+      responses:
+        '200':
+          description: Returns the warehouse assigned to the seller.
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/FulfillmentWarehouse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Warehouse assignment not found.
+      tags:
+        - Fulfillment Warehouse
+      operationId: getFulfillmentWarehouse
+      security:
+        - bearer-token-for-user:
+            - allegro:api:fulfillment:read
+
   /fulfillment/tax-id:
     post:
       summary: 'Add tax identification number'
@@ -21638,7 +22446,11 @@ paths:
   /deposit/types:
     get:
       summary: 'Get deposit types'
-      description: 'Use this resource to get deposit types available when creating an offer. Read more: <a href="../../news/1-pazdziernika-2025-dostosujemy-allegro-api-do-rozporzadzenia-o-systemie-kaucyjnym-m0mLB4XM9Ib" target="_blank">PL</a> / <a href="../../news/on-october-1-2025-we-will-adapt-Allegro-API-to-the-deposit-system-regulation-m0mLB4XM9Ib" target="_blank">EN</a>.'
+      description: >-
+        Use this resource to get enabled deposit types available when creating an offer.
+        The pricing mode determines whether the deposit has a fixed catalog price (`FIXED`)
+        or requires a seller-provided price in the configured currency (`CUSTOM`).
+        Read more: <a href="../../news/1-pazdziernika-2025-dostosujemy-allegro-api-do-rozporzadzenia-o-systemie-kaucyjnym-m0mLB4XM9Ib" target="_blank">PL</a> / <a href="../../news/on-october-1-2025-we-will-adapt-Allegro-API-to-the-deposit-system-regulation-m0mLB4XM9Ib" target="_blank">EN</a>.
       responses:
         '200':
           description: Returns deposit types available to use when creating an offer.
@@ -21674,6 +22486,54 @@ paths:
       security:
         - bearer-token-for-user:
             - allegro:api:sale:offers:read
+  /ingredients/parse:
+    post:
+      summary: 'Parse product ingredients'
+      description: >-
+        Use this resource to parse raw, free-text ingredients declarations into structured ingredient lists for one or more products.
+        Every submitted product text is parsed independently. The response contains parsed items together with errors and warnings
+        detected for each product.
+      requestBody:
+        required: true
+        content:
+          application/vnd.allegro.public.v1+json:
+            schema:
+              $ref: '#/components/schemas/ParseIngredientsRequest'
+      responses:
+        '200':
+          description: Returns parsing results (items, errors and warnings) for every requested product.
+          content:
+            application/vnd.allegro.public.v1+json:
+              schema:
+                $ref: '#/components/schemas/ParseIngredientsResponse'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      tags:
+        - Ingredients
+      operationId: parseIngredients
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Expected language of messages.
+          example: en-US
+          schema:
+            type: string
+            format: BCP-47 language code
+            enum:
+              - en-US
+              - pl-PL
+              - uk-UA
+              - sk-SK
+              - cs-CZ
+              - hu-HU
+      security:
+        - bearer-token-for-user:
+            - allegro:api:sale:offers:write
 components:
   securitySchemes:
     bearer-token-for-user:
@@ -21847,20 +22707,45 @@ components:
             id:
               type: string
               description: Three-letter code of the billing type of the returned billing entry.
-              example: 'LIS'
+              example: 'XOR'
             name:
               type: string
               description: Billing type of the returned billing entry.
                 This type is translated based on the value of the "Accept-Language" header.
-                By default a message in English is returned.
-              example: 'Listing fee'
+                By default a message in Polish is returned.
+              example: 'One Courier Allegro Delivery additional fee'
+            group:
+              type: object
+              description: Group the billing type belongs to.
+              properties:
+                id:
+                  type: string
+                  description: Technical identifier of the billing type group.
+                  example: 'delivery-services'
+                name:
+                  type: string
+                  description: Name of the billing type group.
+                    This value is translated based on the value of the "Accept-Language" header.
+                    By default a message in Polish is returned.
+                  example: 'Delivery'
+        asset:
+          type: string
+          description: 'Type of the recorded billing operation: debit or credit.'
+          example: 'DEBIT'
+          enum:
+            - 'DEBIT'
+            - 'CREDIT'
+        marketplaceId:
+          type: string
+          description: The marketplace ID where operation was made.
+          example: 'allegro-pl'
         offer:
           type: object
           description: Offer associated with the returned billing entry.
           properties:
             id:
               type: string
-              description: ID of the offer associated with the billing entry.
+              description: ID of the offer associated with the billing entry. Can be either a numeric ID or a UUID.
               example: '12345678'
             name:
               type: string
@@ -21934,7 +22819,7 @@ components:
                 type: string
                 description: The display name for the additional information type.
                   This value is translated based on the "Accept-Language" header.
-                  By default a message in English is returned.
+                  By default a message in Polish is returned.
                 example: 'Name of additional service'
               value:
                 type: string
@@ -22233,10 +23118,12 @@ components:
           description: >-
             Type of the refund disposition.
             - `RETURN` - buyer return,
-            - `BOUNCE` - operational return.
+            - `BOUNCE` - operational return,
+            - `REPLACEMENT` - fewer items shipped than ordered.
           enum:
             - RETURN
             - BOUNCE
+            - REPLACEMENT
         refund:
           $ref: '#/components/schemas/FulfillmentRefundDispositionRefund'
         stockStatus:
@@ -22246,12 +23133,14 @@ components:
             - `SELLABLE` - item returns to sellable stock,
             - `NON_SELLABLE` - item designated for removal process or disposal,
             - `MISSING` - expected item was not found in parcel,
-            - `ITEM_MISMATCH` - same product but different serial numbers.
+            - `ITEM_MISMATCH` - same product but different serial numbers,
+            - `NOT_APPLICABLE` - used for REPLACEMENT type.
           enum:
             - SELLABLE
             - NON_SELLABLE
             - MISSING
             - ITEM_MISMATCH
+            - NOT_APPLICABLE
         verificationStatus:
           type: string
           nullable: true
@@ -22688,7 +23577,7 @@ components:
       properties:
         phoneNumber:
           type: string
-          example: '333444555'
+          example: '+48333444555'
     PaymentsSurcharge:
       type: object
       properties:
@@ -23441,7 +24330,7 @@ components:
         type:
           type: string
           nullable: true
-          description: 'One of the type COUNTRY_SAME_QUANTITY or COUNTRY_DELIVERY_SAME_QUANTITY'
+          description: 'One of the types COUNTRY_SAME_QUANTITY, COUNTRY_DELIVERY_SAME_QUANTITY or COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY.'
         availableDeliveryMethods:
           type: array
           nullable: true
@@ -24805,13 +25694,20 @@ components:
           enum:
             - COUNTRY_SAME_QUANTITY
             - COUNTRY_DELIVERY_SAME_QUANTITY
+            - COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY
           example: 'COUNTRY_SAME_QUANTITY'
-          description: 'Constraint type. COUNTRY_SAME_QUANTITY is used by additional services that are realised before shipping (e.g. GIFT_WRAP), while COUNTRY_DELIVERY_SAME_QUANTITY is for additional services that are realised in delivery (e.g. CARRY_IN).'
+          description: 'Constraint type. COUNTRY_SAME_QUANTITY is used by additional services that are realised before shipping (e.g. GIFT_WRAP), while COUNTRY_DELIVERY_SAME_QUANTITY is for additional services that are realised in delivery (e.g. CARRY_IN). COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY additionally restricts the service to specific offer categories (e.g. ALLEGRO_TV_CARRY_IN).'
         deliveryMethods:
           type: array
           items:
             $ref: '#/components/schemas/JustId'
-          description: 'This is used by additional services that are realised in transport (e.g. CARRY_IN), and this field exists together with COUNTRY_DELIVERY_SAME_QUANTITY constraint type. It describes which delivery methods can realise particular service.'
+          description: 'This is used by additional services that are realised in transport (e.g. CARRY_IN), and this field exists together with COUNTRY_DELIVERY_SAME_QUANTITY or COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint type. It describes which delivery methods can realise particular service.'
+        categories:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/JustId'
+          description: 'Offer categories for which the additional service is available. This field exists only for the COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY constraint type.'
     ContactRequest:
       type: object
       properties:
@@ -25596,6 +26492,13 @@ components:
             URL of the image.
             It has to contain domain name, not an IP address.
             Currently we support http and https protocols. When using https the certificate chain needs to be valid.
+        isAiCoCreated:
+          type: boolean
+          nullable: true
+          description: >-
+            Sets the uploaded image to be marked as "AI". Optional - can be omitted or set to true/false.
+            If the `isAiCoCreated` query parameter is also provided, its value must not conflict with this field,
+            otherwise a `400` response is returned.
     OfferImageUploadResponse:
       type: object
       properties:
@@ -27041,6 +27944,7 @@ components:
                 - EMPTY_STOCK
                 - PRODUCT_DETACHMENT
                 - ERROR
+                - VISIBILITY
               description: >-
                 Indicates the reason for ending the offer:
                 - `USER` - offer ended by the seller.
@@ -27051,6 +27955,7 @@ components:
                   if the base marketplace of offer requires full productization.
                 - `ERROR` - offer ended due to internal problem with offer publication. The publication command responded with
                   success status, but further processing failed.
+                - `VISIBILITY` - offer ended because it doesn't qualify for visibility in any marketplace.
     OfferDuration:
       type: string
       example: PT24H
@@ -27899,19 +28804,7 @@ components:
           description: >-
             Rate for the first item in the parcel for the given delivery method.
             The rate amount and currency must comply with the shippingRatesConstraints.firstItemRate restrictions described in the delivery-methods resource.
-          properties:
-            amount:
-              type: string
-              description: Amount
-            currency:
-              type: string
-              description: ISO 4217 currency code
-        nextItemRate:
-          type: object
-          description: >-
-            Deprecated. Rate for every other item, after the first, in the same parcel for the given delivery method.
-            In case of shipping rates with no specified type, the rate amount and currency must comply with the shippingRatesConstraints.nextItemRate restrictions described in the delivery-methods resource.
-            In case of shipping rates of the `PHYSICAL` or `ELECTRONIC` type, the rate amount must be "0.00".
+            Note that there is no additional payment for any subsequent item in the parcel.
           properties:
             amount:
               type: string
@@ -27935,7 +28828,6 @@ components:
         - deliveryMethod
         - firstItemRate
         - maxQuantityPerPackage
-        - nextItemRate
     ShippingRates:
       type: object
       properties:
@@ -27971,6 +28863,21 @@ components:
           description: >-
             User defined name of the shipping rates set.
             It may only contain: letters, numbers, hyphens, dots, commas and spaces.
+        type:
+          type: string
+          nullable: false
+          example: 'PHYSICAL'
+          enum:
+            - PHYSICAL
+            - ELECTRONIC
+          description: >-
+            Whether the shipping rates set is physical or electronic. Note that once a shipping rates set is created, it cannot be changed later.
+        dispatchCountry:
+          type: string
+          nullable: true
+          maxLength: 2
+          example: 'PL'
+          description: The dispatch country code in ISO 3166-1 alfa-2 format. It must be passed if the `PHYSICAL` type is provided. Note that once a shipping rates set is created, it cannot be changed later.
         rates:
           type: array
           items:
@@ -27983,6 +28890,8 @@ components:
             ISO 8601 format.
             When creating (Post) or updating (Put) a shipping rates set the field is ignored.
       required:
+        - name
+        - type
         - rates
     DeliverySettingsResponse:
       type: object
@@ -29960,6 +30869,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CheckoutFormPaymentReference'
+        codBookedPayments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutFormCodBookedPayment'
         note:
           $ref: '#/components/schemas/CheckoutFormNoteReference'
         marketplace:
@@ -30015,7 +30928,7 @@ components:
         phoneNumber:
           type: string
           description: Phone number
-          example: "123123123"
+          example: "+48123123123"
         preferences:
           $ref: '#/components/schemas/BuyerPreferencesReference'
         address:
@@ -30100,6 +31013,29 @@ components:
         - AF
         - OFFLINE
         - EPT
+    CheckoutFormCodBookedPayment:
+      type: object
+      required:
+        - paymentId
+        - paidAmount
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+          description: COD payment id.
+          example: "0f8f1d13-7e9e-11e8-9b00-c5b0dfb78ea6"
+        shipmentId:
+          type: string
+          description: Shipment id of the COD package.
+          example: "ba88f0fb-acf3-438a-877e-580da50c0874"
+        paidAmount:
+          $ref: '#/components/schemas/Price'
+        paidAt:
+          type: string
+          format: date-time
+          description: ISO date and time when the COD payment was confirmed.
+          example: "2018-01-05T10:23:43.123Z"
+      description: The cash on delivery (COD) collected payment detailed information.
     CheckoutFormFulfillment:
       type: object
       properties:
@@ -30218,7 +31154,7 @@ components:
         phoneNumber:
           type: string
           description: Phone number
-          example: "123123123"
+          example: "+48123123123"
         modifiedAt:
           type: string
           description: Address modification date
@@ -30503,7 +31439,20 @@ components:
             $ref: '#/components/schemas/LineItemDiscount'
         serialNumbers:
           $ref: '#/components/schemas/CheckoutFormLineItemSerialNumbers'
+        allegroAds:
+          $ref: '#/components/schemas/LineItemAllegroAds'
       description: Order item
+    LineItemAllegroAds:
+      type: object
+      nullable: true
+      required:
+        - attributed
+      properties:
+        attributed:
+          type: boolean
+          description: Indicates whether the purchase of this line item was attributed to an Allegro Ads campaign.
+          example: true
+      description: Information about Allegro Ads related to the line item.
     LineItemDeposit:
       type: object
       required:
@@ -30860,6 +31809,17 @@ components:
         id:
           type: string
           example: '56ae349d-8045-4bb3-adcc-7cf6fb420f61'
+    NewOrderInvoiceFileWithMetadata:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Invoice file in a binary format (PDF only)
+        invoiceNumber:
+          type: string
     NewOrderBillingDocumentLink:
       type: object
       required:
@@ -31888,8 +32848,8 @@ components:
           items:
             $ref: '#/components/schemas/AiCoCreatedImage'
           description: >-
-            List of images declared as generated using artificial intelligence.
-            If an image is not present in this list, it was not declared as AI-generated.
+            List of images to be labeled as "AI" during the initial upload. 
+            If an image is not present in this list, it will not be labeled as "AI".
       description: Information about content declared as generated using AI.
     ProductAiCoCreatedContent:
       allOf:
@@ -32073,6 +33033,7 @@ components:
                     - $ref: '#/components/schemas/ProductSetElementSafetyInformationRequest'
                     - $ref: '#/components/schemas/MarketedBeforeGPSRObligation'
                     - $ref: '#/components/schemas/ProductSetElementDeposits'
+                    - $ref: '#/components/schemas/ProductSetElementCompositionRequest'
             b2b:
               $ref: '#/components/schemas/B2b'
             attachments:
@@ -32128,6 +33089,7 @@ components:
                   - $ref: '#/components/schemas/ProductSetElementSafetyInformationRequest'
                   - $ref: '#/components/schemas/MarketedBeforeGPSRObligation'
                   - $ref: '#/components/schemas/ProductSetElementDeposits'
+                  - $ref: '#/components/schemas/ProductSetElementCompositionRequest'
             b2b:
               $ref: '#/components/schemas/B2b'
             attachments:
@@ -32216,6 +33178,7 @@ components:
                   - $ref: '#/components/schemas/ProductSetElementSafetyInformationResponse'
                   - $ref: '#/components/schemas/MarketedBeforeGPSRObligation'
                   - $ref: '#/components/schemas/ProductSetElementDeposits'
+                  - $ref: '#/components/schemas/ProductSetElementCompositionResponse'
             id:
               type: string
               example: "12394584234"
@@ -32616,6 +33579,19 @@ components:
           format: int32
           example: 1
           description: Total amount of deposits of given type in this product.
+        price:
+          allOf:
+            - $ref: '#/components/schemas/Price'
+          description: >-
+            Seller-provided price of a single deposit. Required for deposit types with `pricingMode` set to `CUSTOM`;
+            the currency must match the type's `currency` returned by GET /deposit/types.
+            The amount must be nonnegative and use the precision supported by that currency.
+            For deposit types with `pricingMode` set to `FIXED`, omit this field or set it to null
+            when submitting a deposit; providing a price object is rejected.
+            In responses, this field is returned only for `CUSTOM` deposits and omitted for `FIXED` deposits.
+          example:
+            amount: '123.45'
+            currency: PLN
       description: Deposits configuration included in product.
 
     ProductSetElementDeposits:
@@ -32627,6 +33603,67 @@ components:
             $ref: "#/components/schemas/ProductDeposit"
           description: Array of different deposits that are added to given product.
 
+    Ingredient:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: 'Aqua'
+          description: Name of the ingredient.
+      description: A single ingredient used in a product composition component.
+
+    Component:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          example: 'Cream'
+          description: Optional name of the component. It is required when the product contains more than one component.
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+          description: Array of ingredients included in this component.
+      description: A single component of the product composition.
+
+    ProductSetElementCompositionRequest:
+      type: object
+      properties:
+        composition:
+          type: object
+          nullable: true
+          properties:
+            components:
+              type: array
+              items:
+                $ref: '#/components/schemas/Component'
+              description: Array of components the product composition consists of.
+          description: Composition of the product, consisting of components and their ingredients.
+
+    ProductSetElementCompositionResponse:
+      type: object
+      properties:
+        composition:
+          type: object
+          nullable: true
+          properties:
+            mode:
+              type: string
+              enum:
+                - MANUAL
+                - AUTO
+              example: 'MANUAL'
+              description: >-
+                Indicates whether the composition was provided manually (`MANUAL`) or generated automatically (`AUTO`).
+            components:
+              type: array
+              items:
+                $ref: '#/components/schemas/Component'
+              description: Array of components the product composition consists of.
+          description: Composition of the product, consisting of components and their ingredients.
 
     ProductOfferResponse:
       type: object
@@ -36462,7 +37499,7 @@ components:
             errors:
               type: array
               items:
-                $ref: '#/components/schemas/ErrorsHolder'
+                $ref: '#/components/schemas/Error'
     AlleDiscountWithdrawCommandRequest:
       type: object
       properties:
@@ -36572,7 +37609,7 @@ components:
             errors:
               type: array
               items:
-                $ref: '#/components/schemas/ErrorsHolder'
+                $ref: '#/components/schemas/Error'
     AlleDiscountListEligibleResponse:
       type: object
       properties:
@@ -36917,6 +37954,33 @@ components:
       required:
         - login
         - avatarUrl
+    MessageAuthorVBeta1:
+      type: object
+      properties:
+        role:
+          type: string
+          description: >-
+            Author role: `SELLER` represents the seller; `BUYER` represents the buyer;
+            `USER` is a legacy role used when a user initiates contact by email and their
+            role in the thread is unknown (for purchase-related questions about transactions
+            made on the platform, the role is known). `CONSULTANT` represents an Allegro
+            advisor. `SYSTEM` represents chat events, such as a chat being opened or closed,
+            or an advisor joining. `CHATBOT` represents a process-related message shown on
+            the marketplace as "Automatic message from Allegro"; it helps users navigate
+            processes such as filing a complaint or post purchase problem.
+          enum:
+            - BUYER
+            - SELLER
+            - USER
+            - CONSULTANT
+            - CHATBOT
+            - SYSTEM
+        login:
+          type: string
+          nullable: true
+          example: 'AllegroLogin'
+      required:
+        - role
     MessageAuthor:
       type: object
       properties:
@@ -36929,6 +37993,131 @@ components:
       required:
         - login
         - isInterlocutor
+    ThreadVBeta1:
+      type: object
+      required:
+        - id
+        - read
+        - type
+        - createdAt
+        - lastMessageDateTime
+        - participants
+        - status
+      properties:
+        id:
+          type: string
+          example: 'L1H4FmWRwD5lAEInohQoEGWQR71RfBpEmHqeKZSXdhW'
+        read:
+          type: boolean
+          example: false
+        type:
+          type: string
+          description: >-
+            Thread type: `COMMON` - standard conversation; `POST_PURCHASE_ISSUE`
+            - post-purchase issue thread.
+            Available only for content version 'application/vnd.allegro.beta.v1+json'.
+          enum:
+            - COMMON
+            - POST_PURCHASE_ISSUE
+        createdAt:
+          type: string
+          format: date-time
+          example: '2020-08-25T10:52:04Z'
+        lastMessageDateTime:
+          type: string
+          format: date-time
+          example: '2020-08-26T12:52:04Z'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreadParticipantVBeta1'
+        orders:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/ThreadOrderVBeta1'
+        subType:
+          type: string
+          nullable: true
+          description: >-
+            Reason for the post-purchase issue:
+            `PRODUCT_INCONSISTENT_WITH_THE_OFFER` - product does not match the offer description,
+            photos, or parameters;
+            `PRODUCT_ARRIVED_DAMAGED` - product arrived damaged;
+            `DEFECT_DETECTED_DURING_USE` - defect detected during use;
+            `NO_PRODUCT_IN_THE_SHIPMENT` - product missing from the shipment;
+            `MISSING_PRODUCT_ELEMENTS` - product elements, such as screws, missing;
+            `PACKAGE_DELAYED` - package delayed;
+            `PACKAGE_DAMAGED` - package damaged;
+            `PACKAGE_LOST` - package lost;
+            `OTHER` - reason not listed;
+            `NO_REFUND` - refund not received after order cancellation or return;
+            `SELLER_DOES_NOT_WANT_TO_ACCEPT_RETURN` - seller refuses to accept the return;
+            `PROBLEM_WITH_SENDING_PRODUCT_BACK` - problem returning the product;
+            `NO_DOCUMENTATIONS` - proof of purchase, instructions, or warranty missing;
+            `PROBLEM_WITH_WITHDRAWAL_CANCELLATION_OF_PURCHASE` - problem with withdrawal from
+            or cancellation of the purchase.
+          enum:
+            - PRODUCT_INCONSISTENT_WITH_THE_OFFER
+            - PRODUCT_ARRIVED_DAMAGED
+            - DEFECT_DETECTED_DURING_USE
+            - NO_PRODUCT_IN_THE_SHIPMENT
+            - MISSING_PRODUCT_ELEMENTS
+            - PACKAGE_DELAYED
+            - PACKAGE_DAMAGED
+            - PACKAGE_LOST
+            - OTHER
+            - NO_REFUND
+            - SELLER_DOES_NOT_WANT_TO_ACCEPT_RETURN
+            - PROBLEM_WITH_SENDING_PRODUCT_BACK
+            - NO_DOCUMENTATIONS
+            - PROBLEM_WITH_WITHDRAWAL_CANCELLATION_OF_PURCHASE
+        status:
+          type: string
+          enum:
+            - OPEN
+            - CLOSED
+    ThreadParticipantVBeta1:
+      type: object
+      properties:
+        role:
+          type: string
+          description: >-
+            Participant role: `SELLER` represents the seller; `BUYER` represents the buyer.
+            `USER` is a legacy role used when a user initiates contact by email and their
+            role in the thread is unknown. For purchase-related questions about transactions
+            made on the platform, the participant's role is known.
+          enum:
+            - BUYER
+            - SELLER
+            - USER
+        login:
+          type: string
+      required:
+        - role
+        - login
+    ThreadOrderVBeta1:
+      type: object
+      properties:
+        id:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreadOrderOfferVBeta1'
+      required:
+        - id
+        - offers
+    ThreadOrderOfferVBeta1:
+      type: object
+      properties:
+        id:
+          type: string
+        quantity:
+          type: integer
+      required:
+        - id
+        - quantity
     Thread:
       type: object
       required:
@@ -36956,6 +38145,25 @@ components:
           example: '88ae369b-8f65-4fc4-9c77-bedf604a2e2'
       required:
         - id
+    ThreadsListVBeta1:
+      type: object
+      properties:
+        threads:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreadVBeta1'
+        nextPage:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              example: 'cD0yMDI2LTA2LTAyVDEyOjEwOjAwWjtzPTEwMDQ='
+          required:
+            - id
+      required:
+        - threads
+        - nextPage
     ThreadsList:
       type: object
       properties:
@@ -36983,6 +38191,14 @@ components:
           example: 'false'
       required:
         - read
+    ThreadReadFlagVBeta1:
+      type: object
+      properties:
+        read:
+          type: boolean
+          example: false
+      required:
+        - read
     MessageOffer:
       type: object
       nullable: true
@@ -36990,6 +38206,15 @@ components:
         id:
           type: string
           example: '82398120310'
+      required:
+        - id
+    MessageOrderVBeta1:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+          example: '88ae369b-8f65-4fc4-9c77-bedf604a2e2'
       required:
         - id
     MessageOrder:
@@ -37000,6 +38225,13 @@ components:
           example: '88ae369b-8f65-4fc4-9c77-bedf604a2e2'
       required:
         - id
+    MessageRelatedObjectVBeta1:
+      type: object
+      properties:
+        offer:
+          $ref: '#/components/schemas/MessageOffer'
+        order:
+          $ref: '#/components/schemas/MessageOrderVBeta1'
     MessageRelatedObject:
       type: object
       properties:
@@ -37040,6 +38272,92 @@ components:
       required:
         - fileName
         - status
+    MessageAttachmentInfoVBeta1:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '97dc0b60-2da4-4247-92ba-b748630ba0f6'
+        fileName:
+          type: string
+          example: 'exampleName.jpeg'
+        mimeType:
+          type: string
+          example: 'image/jpeg'
+        url:
+          type: string
+          example: 'https://upload.allegro.pl/message-center/message-attachments/97dc0b60-2da4-4247-92ba-b748630ba0f6'
+        status:
+          type: string
+          enum:
+            - NEW
+            - SAFE
+            - UNSAFE
+            - EXPIRED
+          example: 'NEW'
+      required:
+        - id
+        - fileName
+        - status
+    MessageVBeta1:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '97dc0b60-2da4-4247-92ba-b748630ba0f6'
+        status:
+          type: string
+          enum:
+            - VERIFYING
+            - BLOCKED
+            - DELIVERED
+            - INTERACTING
+            - DISMISSED
+          example: DELIVERED
+        type:
+          type: string
+          enum:
+            - ASK_QUESTION
+            - MAIL
+            - MESSAGE_CENTER
+          example: MESSAGE_CENTER
+        createdAt:
+          type: string
+          format: date-time
+          example: '2020-08-26T12:52:04Z'
+        author:
+          $ref: '#/components/schemas/MessageAuthorVBeta1'
+        text:
+          type: string
+          example: 'Sample message'
+        subject:
+          type: string
+          example: 'Sample subject'
+          nullable: true
+        relatesTo:
+          $ref: '#/components/schemas/MessageRelatedObjectVBeta1'
+        hasAdditionalAttachments:
+          type: boolean
+          example: false
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageAttachmentInfoVBeta1'
+        additionalInformation:
+          $ref: '#/components/schemas/MessageAdditionalInformation'
+
+      required:
+        - id
+        - status
+        - type
+        - createdAt
+        - author
+        - text
+        - subject
+        - relatesTo
+        - hasAdditionalAttachments
+        - attachments
+        - additionalInformation
     Message:
       type: object
       properties:
@@ -37088,7 +38406,6 @@ components:
             $ref: '#/components/schemas/MessageAttachmentInfo'
         additionalInformation:
           $ref: '#/components/schemas/MessageAdditionalInformation'
-
       required:
         - id
         - status
@@ -37100,6 +38417,25 @@ components:
         - relatesTo
         - hasAdditionalAttachments
         - attachments
+    MessagesListVBeta1:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageVBeta1'
+        nextPage:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              example: 'cD0yMDI2LTA2LTAyVDEyOjEwOjAwWjtzPTEwMDQ='
+          required:
+            - id
+      required:
+        - messages
+        - nextPage
     MessagesList:
       type: object
       properties:
@@ -37165,6 +38501,26 @@ components:
           nullable: true
         order:
           $ref: '#/components/schemas/MessageOrder'
+      required:
+        - recipient
+        - text
+        - order
+    NewMessageVBeta1:
+      type: object
+      properties:
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        text:
+          type: string
+          maxLength: 2000
+          example: 'Sample message'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageAttachmentId'
+          nullable: true
+        order:
+          $ref: '#/components/schemas/MessageOrderVBeta1'
       required:
         - recipient
         - text
@@ -37373,15 +38729,6 @@ components:
         scheduledForReclassification:
           type: boolean
           description: Indicates whether that particular offer is set to be reclassified in the next 24 hours
-        smartDeliveryMethods:
-          type: array
-          description: Delivery methods marked with Smart! label
-          items:
-            $ref: '#/components/schemas/SmartDeliveryMethod'
-          example:
-            - id: 2488f7b7-5d1c-4d65-b85c-4cbcf253fd93
-            - id: c3066682-97a3-42fe-9eb5-3beeccab840c
-          deprecated: true
         conditions:
           type: array
           description: >-
@@ -37404,43 +38751,15 @@ components:
               fulfilled:
                 type: boolean
                 description: Indicates whether this condition is met
-              passedDeliveryMethods:
-                type: array
-                description: Set of delivery methods that meet this condition. May be null if the condition does not apply to delivery methods.
-                deprecated: true
-                items:
-                  $ref: '#/components/schemas/DeliveryMethodId'
-              failedDeliveryMethods:
-                type: array
-                description: Set of delivery methods that fail to meet this condition. May be null if the condition does not apply to delivery methods.
-                deprecated: true
-                items:
-                  $ref: '#/components/schemas/DeliveryMethodId'
           example:
             - code: deliveryMethodPrices
               name: Zgodność z cennikiem
               description: Wymagamy aby metody dostawy były zgodne z cennikiem.
               fulfilled: true
-              passedDeliveryMethods:
-                - id: 2488f7b7-5d1c-4d65-b85c-4cbcf253fd93
-                - id: c3066682-97a3-42fe-9eb5-3beeccab840c
-                - id: 259b5c7a-9056-4c74-80ec-8bdc50cb0413
-                - id: 08e2ef8e-90c8-49db-8970-d6c2773f1530
-              failedDeliveryMethods:
-                - id: b20ef9e1-faa2-4f25-9032-adbea23e5cb9
-                - id: 9081532b-5ad3-467d-80bc-9252982e9dd8
-                - id: 98f86f81-0018-41c5-ac83-073a56fc7021
-                - id: 5d9c7838-e05f-4dec-afdd-58e884170ba7
             - code: returnPaidBy
               name: Koszty zwrotu
               description: Oferta musi mieć politykę zwrotu. Zagraniczne metody dostawy są zaklasyfikowane tylko jeśli koszt zwrotu jest pokryty przez sprzedającego.
               fulfilled: true
-              passedDeliveryMethods:
-                - id: 2488f7b7-5d1c-4d65-b85c-4cbcf253fd93
-                - id: c3066682-97a3-42fe-9eb5-3beeccab840c
-              failedDeliveryMethods:
-                - id: 259b5c7a-9056-4c74-80ec-8bdc50cb0413
-                - id: 08e2ef8e-90c8-49db-8970-d6c2773f1530
     SmartSellerClassificationReport:
       type: object
       properties:
@@ -38126,6 +39445,44 @@ components:
           type: string
           description: Tax identification number verification status. Only the ACCEPTED status allows you to send products to the Allegro Warehouse.
           example: 'ACCEPTED'
+    FulfillmentWarehouse:
+      type: object
+      description: Represents the warehouse assigned to the seller.
+      properties:
+        id:
+          type: string
+          description: The warehouse identifier.
+          example: 'ADM-01'
+        name:
+          type: string
+          description: The warehouse name.
+          example: 'Magazyn Allegro'
+        location:
+          $ref: '#/components/schemas/FulfillmentWarehouseLocation'
+    FulfillmentWarehouseLocation:
+      type: object
+      description: The address of the warehouse.
+      properties:
+        street:
+          type: string
+          description: The warehouse street address.
+          example: 'Adamów 50'
+        city:
+          type: string
+          description: The warehouse city.
+          example: 'Adamów'
+        countryCode:
+          type: string
+          description: The warehouse country code in ISO 3166-1 alpha-2 format.
+          example: 'PL'
+        postCode:
+          type: string
+          description: The warehouse postal code.
+          example: '05-825'
+        province:
+          type: string
+          description: The province code.
+          example: 'MAZOWIECKIE'
     DeclaredAsnVolume:
       type: number
       description: Total volume of all items declared by the merchant for delivery to the warehouse as part of the advance shipment notice, in cubic centimeters.
@@ -38591,9 +39948,10 @@ components:
           description: Email address. For receiver, must be a valid buyer email generated by Allegro (eg. hamu7udk3p+17454c1b6@allegromail.pl).
           example: 'email@mail.com'
         phone:
+          pattern: '^(\+|00)[1-9]\d{0,2}([ -]*\d){7,14}$'
           type: string
-          description: Cell phone
-          example: '500600700'
+          description: Phone number with an international prefix starting with `+` or `00`.
+          example: '+48500600700'
     ShipmentCreateCommandDto:
       required:
         - input
@@ -38803,7 +40161,6 @@ components:
             #/components/schemas/PickupCreateRequestDto
     PickupCreateRequestDto:
       required:
-        - pickupDateProposalId
         - shipmentIds
         - address
       type: object
@@ -38815,37 +40172,14 @@ components:
           items:
             type: string
             example: 'ba88f0fb-acf3-438a-877e-580da50c0874'
-        pickupDateProposalId:
-          type: string
-          deprecated: true
-          description: Internal pickup proposal ID. Required if pickupTime not provided.
-          example: '2023071210001300'
         pickupTime:
           $ref: '#/components/schemas/PickupTimeDto'
         address:
           $ref: '#/components/schemas/PickupAddressDto'
-    PickupDateProposalDto:
-      required:
-        - id
-        - name
-      type: object
-      properties:
-        id:
-          type: string
-          description: Internal pickup proposal ID.
-          example: '2023071210001300'
-        name:
-          type: string
-          description: Human readable name of pickup proposal.
-          example: '2023-07-12 10:00-13:00'
-        description:
-          type: string
-          description: Additional information for pickup proposal.
-          example: 'Odbiór A'
     PickupTimeDto:
       required:
         - date
-      description: Pickup time date proposal. Required if pickupDateProposalId not provided.
+      description: Pickup time date proposal.
       type: object
       properties:
         date:
@@ -38886,12 +40220,6 @@ components:
         shipmentId:
           type: string
           example: 'ba88f0fb-acf3-438a-877e-580da50c0874'
-        proposalItems:
-          type: array
-          deprecated: true
-          items:
-            $ref: >-
-              #/components/schemas/PickupDateProposalDto
         pickupTimes:
           type: array
           items:
@@ -39600,7 +40928,7 @@ components:
         phoneNumber:
           type: string
           description: Phone number of responsible person. This field is optional.
-          example: "123123123"
+          example: "+48123123123"
           maxLength: 30
         formUrl:
           type: string
@@ -39724,7 +41052,7 @@ components:
         phoneNumber:
           type: string
           description: Phone number of responsible producer. This field is optional.
-          example: "123123123"
+          example: "+48123123123"
           maxLength: 30
         formUrl:
           type: string
@@ -40231,6 +41559,13 @@ components:
           description: Not present if role is ADMIN, SYSTEM or FULFILLMENT
         role:
           type: string
+          description: |
+            Role of the message author in the post purchase issue:
+            - `BUYER` - the buyer involved in the dispute or claim.
+            - `SELLER` - the seller involved in the dispute or claim.
+            - `ADMIN` - an Allegro employee or bot providing support in the dispute or claim.
+            - `SYSTEM` - a system-generated entry, for example about resolving or reopening a dispute.
+            - `FULFILLMENT` - an Allegro Fulfillment administrator working for the Allegro warehouse.
           enum:
             - BUYER
             - SELLER
@@ -40361,6 +41696,20 @@ components:
     DepositTypeResponse:
       type: object
       description: Deposit types available to use during creating an offer
+      example:
+        deposits:
+          - id: 5e8a9e73-7e55-4896-bd8a-9c430413e808
+            name: Reusable glass bottles up to 1.5 liters
+            marketplaceId: allegro-pl
+            pricingMode: FIXED
+            price:
+              amount: '1.0'
+              currency: PLN
+          - id: 7b1a8690-83a5-4bcd-b968-fc77bb278323
+            name: Core automotive component
+            marketplaceId: allegro-pl
+            pricingMode: CUSTOM
+            currency: PLN
       properties:
         deposits:
           type: array
@@ -40382,5 +41731,135 @@ components:
           example: Reusable glass bottles up to 1.5 liters
         marketplaceId:
           $ref: '#/components/schemas/MarketplaceId'
+        pricingMode:
+          type: string
+          enum:
+            - FIXED
+            - CUSTOM
+          description: >-
+            Determines how the deposit price is provided.
+            `FIXED` uses the catalog price returned in `price`.
+            `CUSTOM` requires a seller-provided price in the currency returned in `currency`.
+          example: FIXED
         price:
-          $ref: '#/components/schemas/Price'
+          allOf:
+            - $ref: '#/components/schemas/Price'
+          description: Fixed catalog price. Returned only for `FIXED` deposit types and omitted for `CUSTOM` deposit types.
+        currency:
+          type: string
+          format: ISO 4217
+          description: >-
+            Currency required for the seller-provided deposit price, as a 3-letter ISO 4217 code.
+            Returned only for `CUSTOM` deposit types and omitted for `FIXED` deposit types.
+          example: PLN
+
+    ParseIngredientsRequest:
+      type: object
+      required:
+        - products
+      properties:
+        categoryId:
+          type: string
+          description: The category ID of the offer.
+          example: '5363'
+        products:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ProductIngredientsRequest'
+          description: List of products for which raw ingredients text should be parsed. Must not be empty.
+    ProductIngredientsRequest:
+      type: object
+      required:
+        - ingredients
+      properties:
+        productId:
+          type: string
+          format: uuid
+          nullable: true
+          description: >-
+            Optional identifier of the product the ingredients belong to. At most one product in a request may omit
+            this field. When provided, it must not be blank.
+          example: '0e810d4a-bbee-495c-8979-866bb06d3904'
+        ingredients:
+          type: string
+          description: >-
+            Raw, free-text ingredients declaration to parse. May describe a single ingredients list, or multiple
+            named components separated by newlines, each in the `name:\n ingredient1, ingredient2, ...` format.
+          example: 'shampoo:\n aqua, sodium chloride, parfum\n conditioner:\n glycerin, niacinamide'
+    ParseIngredientsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductParseResult'
+          description: Parsing result for every product submitted in the request, in the same order.
+    ProductParseResult:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+          description: Identifier of the product this parsing result refers to.
+          example: '0e810d4a-bbee-495c-8979-866bb06d3904'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParsedItemResponse'
+          description: Components successfully parsed out of the submitted ingredients text.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseDiagnosticResponse'
+          description: Errors that prevented parts of the ingredients text from being parsed.
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseDiagnosticResponse'
+          description: Non-critical issues found during parsing, e.g. an ingredient unknown to the ingredients collection.
+    ParsedItemResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Name of the parsed component. May be null if the text describes a single, unnamed ingredients list.
+          example: 'shampoo'
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParsedIngredientResponse'
+          description: Ingredients parsed for this component.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseDiagnosticResponse'
+          description: Errors detected while parsing this component.
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseDiagnosticResponse'
+          description: Non-critical issues detected while parsing this component.
+    ParsedIngredientResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the parsed ingredient.
+          example: 'aqua'
+    ParseDiagnosticResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Machine-readable diagnostic code, e.g. `UNKNOWN_INGREDIENT`, `DUPLICATE_INGREDIENT_NAME`, `EMPTY_INGREDIENTS`.
+          example: 'UNKNOWN_INGREDIENT'
+        message:
+          type: string
+          description: Human-readable, localized diagnostic message. Localized based on the `Accept-Language` header.
+          example: 'Ingredient is not present in the known ingredients collection'
+        context:
+          type: string
+          description: Fragment of the submitted text (e.g. the offending ingredient or component name) the diagnostic refers to.
+          example: 'Unknownium'
