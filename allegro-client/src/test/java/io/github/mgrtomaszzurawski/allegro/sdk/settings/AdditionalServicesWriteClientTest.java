@@ -73,6 +73,10 @@ class AdditionalServicesWriteClientTest {
     private static final String CONSTRAINT_TYPE_BEFORE_SHIPPING = "COUNTRY_SAME_QUANTITY";
     private static final String CONSTRAINT_TYPE_IN_DELIVERY = "COUNTRY_DELIVERY_SAME_QUANTITY";
     private static final String DELIVERY_METHOD_ID = "6d5f38c3-e05c-4a5e-b8da-1234567890ab";
+    private static final String TV_CARRY_IN_DEFINITION_ID = "ALLEGRO_TV_CARRY_IN";
+    private static final String CONSTRAINT_TYPE_IN_DELIVERY_FOR_CATEGORIES =
+            "COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY";
+    private static final String CATEGORY_ID = "cat-tv-sets";
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","token_type":"bearer","expires_in":%d,"scope":"sale:settings:write"}
@@ -174,6 +178,41 @@ class AdditionalServicesWriteClientTest {
                     .withRequestBody(matchingJsonPath(
                             "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods[0].id",
                             equalTo(DELIVERY_METHOD_ID))));
+        }
+    }
+
+    @Test
+    void createGroup_whenCategoryLimitedConstraint_sendsTypeMethodsAndCategories(
+            WireMockRuntimeInfo wmInfo) {
+        // given
+        stubToken();
+        stubFor(post(urlPathEqualTo(GROUPS_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK).withBody(GROUP_RESPONSE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+            // when
+            allegro.settings().additionalServices().createGroup(
+                    AdditionalServicesGroupRequest.builder()
+                            .name(GROUP_NAME)
+                            .language(LANGUAGE)
+                            .addService(AdditionalServiceRequest.of(TV_CARRY_IN_DEFINITION_ID, DESCRIPTION,
+                                    ServiceConfigurationRequest.of(Money.of(AMOUNT, CURRENCY),
+                                            ServiceConstraintRequest.inDeliveryForCategories(
+                                                    CONSTRAINT_COUNTRY, List.of(DELIVERY_METHOD_ID),
+                                                    List.of(CATEGORY_ID)))))
+                            .build());
+
+            // then — spec-derived: the category-limited constraint type carries both lists
+            verify(1, postRequestedFor(urlPathEqualTo(GROUPS_PATH))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.type",
+                            equalTo(CONSTRAINT_TYPE_IN_DELIVERY_FOR_CATEGORIES)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.deliveryMethods[0].id",
+                            equalTo(DELIVERY_METHOD_ID)))
+                    .withRequestBody(matchingJsonPath(
+                            "$.additionalServices[0].configurations[0].constraintCriteria.categories[0].id",
+                            equalTo(CATEGORY_ID))));
         }
     }
 

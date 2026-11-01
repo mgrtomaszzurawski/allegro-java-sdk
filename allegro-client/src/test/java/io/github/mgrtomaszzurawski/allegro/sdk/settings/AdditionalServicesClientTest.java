@@ -27,6 +27,7 @@ import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservice
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServiceCategory;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.AdditionalServicesGroup;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.GroupTranslations;
+import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.ServiceConstraint;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.ServiceConstraintType;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.settings.additionalservices.model.TranslationType;
 import io.github.mgrtomaszzurawski.allegro.sdk.exception.AllegroNotFoundException;
@@ -63,6 +64,10 @@ class AdditionalServicesClientTest {
     private static final String AMOUNT = "5.00";
     private static final String CURRENCY = "PLN";
     private static final String TRACE_ID = "4631702648f0524e";
+    private static final String CATEGORY_CONSTRAINT_TYPE = "COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY";
+    private static final String CATEGORY_DELIVERY_METHOD_ID = "dm-tv-carry-in";
+    private static final String CATEGORY_ID = "cat-tv-sets";
+    private static final int CONFIGURATION_COUNT = 2;
 
     private static final String TOKEN_RESPONSE = """
             {"access_token":"%s","expires_in":%d}
@@ -76,8 +81,12 @@ class AdditionalServicesClientTest {
              "seller":{"id":"111332841"},
              "additionalServices":[{"definition":{"id":"%s"},"description":"%s",
                "configurations":[{"constraintCriteria":{"country":"PL","type":"COUNTRY_SAME_QUANTITY"},
+                 "price":{"amount":"%s","currency":"%s"}},
+                 {"constraintCriteria":{"country":"PL","type":"%s",
+                   "deliveryMethods":[{"id":"%s"}],"categories":[{"id":"%s"}]},
                  "price":{"amount":"%s","currency":"%s"}}]}]}
-            """.formatted(GROUP_ID, GROUP_NAME, LANGUAGE, DEFINITION_ID, DESCRIPTION, AMOUNT, CURRENCY);
+            """.formatted(GROUP_ID, GROUP_NAME, LANGUAGE, DEFINITION_ID, DESCRIPTION, AMOUNT, CURRENCY,
+                    CATEGORY_CONSTRAINT_TYPE, CATEGORY_DELIVERY_METHOD_ID, CATEGORY_ID, AMOUNT, CURRENCY);
     private static final String TRANSLATIONS_RESPONSE = """
             {"translations":[{"language":"%s","additionalServices":{"type":"MANUAL",
               "translation":[{"definition":{"id":"%s"},"description":"%s"}]}}]}
@@ -167,13 +176,20 @@ class AdditionalServicesClientTest {
             AdditionalService service = group.services().get(0);
             assertEquals(DEFINITION_ID, service.definitionId());
             assertEquals(DESCRIPTION, service.description());
-            assertEquals(1, service.configurations().size());
+            assertEquals(CONFIGURATION_COUNT, service.configurations().size());
             assertNotNull(service.configurations().get(0).constraint());
             assertEquals("PL", service.configurations().get(0).constraint().country());
             assertEquals(ServiceConstraintType.COUNTRY_SAME_QUANTITY,
                     service.configurations().get(0).constraint().type());
             assertNotNull(service.configurations().get(0).price());
             assertEquals(AMOUNT, service.configurations().get(0).price().amount());
+            // the category-limited delivery constraint maps its type, methods and categories
+            ServiceConstraint categoryConstraint = service.configurations().get(1).constraint();
+            assertNotNull(categoryConstraint);
+            assertEquals(ServiceConstraintType.COUNTRY_DELIVERY_CATEGORY_SAME_QUANTITY,
+                    categoryConstraint.type());
+            assertEquals(List.of(CATEGORY_DELIVERY_METHOD_ID), categoryConstraint.deliveryMethodIds());
+            assertEquals(List.of(CATEGORY_ID), categoryConstraint.categoryIds());
             verify(1, getRequestedFor(urlEqualTo(GROUP_PATH)));
         }
     }
