@@ -7,6 +7,7 @@ package io.github.mgrtomaszzurawski.allegro.sdk.shipping;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -17,6 +18,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,6 +82,14 @@ class ShippingRatesClientTest {
     private static final String DISPATCH_COUNTRY = "PL";
     private static final String TYPE_PHYSICAL = "PHYSICAL";
     private static final String NEW_SET_NAME = "New rates";
+
+    // spec-derived: a legacy physical set returned without `type`/`dispatchCountry`
+    private static final String LEGACY_SET_WITHOUT_TYPE = """
+            {"id":"%s","name":"%s","lastModified":"2026-07-18T12:00:00Z",
+             "rates":[{"deliveryMethod":{"id":"%s"},"maxQuantityPerPackage":%d,
+               "firstItemRate":{"amount":"%s","currency":"%s"}}],
+             "features":{"managedByAllegro":false,"isFulfillment":false}}
+            """.formatted(RATE_SET_ID, SET_NAME, METHOD_ID, MAX_QUANTITY, FIRST_AMOUNT, CURRENCY);
 
     private static final String BAD_REQUEST_BODY = """
             {"errors":[{"code":"RateInvalid","message":"first item rate is invalid",\
@@ -165,6 +175,30 @@ class ShippingRatesClientTest {
             assertEquals(MAX_QUANTITY, rate.maxQuantityPerPackage());
             assertEquals(WEIGHT_UNIT, rate.maxPackageWeight().unit());
             assertEquals("24", rate.shippingTime().fromTime());
+        }
+    }
+
+    @Test
+    void get_whenLegacySetWithoutType_mapsTypeToUnknown(WireMockRuntimeInfo wmInfo) {
+        // given — spec-derived: the pre-2026-11 spec documented physical sets created before the
+        // `type` field existed as returned without it (the field is required since 2026-11)
+        stubToken();
+        stubFor(get(urlEqualTo(RATE_SET_PATH))
+                .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
+                        .withBody(LEGACY_SET_WITHOUT_TYPE)));
+
+        try (AllegroClient allegro = client(wmInfo)) {
+
+            // when
+            ShippingRateSet rateSet = allegro.shipping().rates().get(RATE_SET_ID);
+
+            // then — the absent type reads fail-soft as UNKNOWN, the rest of the set still maps
+            assertEquals(RateSetType.UNKNOWN, rateSet.type());
+            assertNull(rateSet.dispatchCountry());
+            assertEquals(SET_NAME, rateSet.name());
+            assertEquals(1, rateSet.rates().size());
+            assertEquals(METHOD_ID, rateSet.rates().get(0).deliveryMethodId());
+            verify(1, getRequestedFor(urlEqualTo(RATE_SET_PATH)));
         }
     }
 

@@ -9,8 +9,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * What kind of goods a shipping-rate set prices.
  *
- * <p>Fail-soft on read (an unmodelled server value maps to {@link #UNKNOWN}) and
- * strict on write ({@link #UNKNOWN} cannot be serialized).
+ * <p>Fail-soft on read (an unmodelled or absent server value maps to
+ * {@link #UNKNOWN}) and strict on write ({@link #UNKNOWN} cannot be serialized).
  *
  * @since 0.3.0
  */
@@ -22,7 +22,11 @@ public enum RateSetType {
     /** Rates for electronic (non-shipped) goods. */
     ELECTRONIC,
 
-    /** A value returned by the server that this SDK release does not model. */
+    /**
+     * A value this SDK release does not model, or a legacy set Allegro returns
+     * without a type (physical sets created before the field existed). Read-only —
+     * cannot be sent.
+     */
     UNKNOWN;
 
     private static final String ERR_UNKNOWN =

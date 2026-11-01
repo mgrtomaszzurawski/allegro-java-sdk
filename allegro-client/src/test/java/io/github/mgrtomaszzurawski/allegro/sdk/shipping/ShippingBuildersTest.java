@@ -49,6 +49,7 @@ class ShippingBuildersTest {
     private static final String OPEN_FROM = "08:00";
     private static final String OPEN_TO = "16:00";
     private static final String FILLER = "x";
+    private static final String BLANK = " ";
 
     private static final int MAX_NAME = 80;
     private static final int MAX_EXTERNAL_ID = 80;
@@ -602,7 +603,7 @@ class ShippingBuildersTest {
     @Test
     void rateSetBuilder_whenPhysicalWithBlankDispatchCountry_throws() {
         var builder = ShippingRateSetRequest.builder()
-                .name(SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(" ")
+                .name(SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(BLANK)
                 .rates(List.of(minimalRate().build()));
         assertMessage("ShippingRateSetRequest.dispatchCountry is required for a PHYSICAL rate set",
                 assertThrows(IllegalStateException.class, builder::build));

@@ -59,6 +59,10 @@ import org.junit.jupiter.api.Test;
  * submitted offer streams (mapping + lazy pagination + filters), the submit and
  * withdraw command state machines (poll to terminal, failure, timeout), and the
  * mandatory error-path table (TESTING.md §1).
+ *
+ * <p>Command fixtures (submit/withdraw status and the FAILED {@code output.errors[]},
+ * flat since the 2026-11 spec) are spec-derived — a live cycle needs an enrolled
+ * campaign; tracked in the E2E debt ledger.
  */
 @WireMockTest
 class AlleDiscountClientTest {
@@ -480,7 +484,7 @@ class AlleDiscountClientTest {
             // when
             AlleDiscountSubmitResult result = allegro.campaigns().alleDiscount().submitOffer(request);
 
-            // then — FAILED is terminal; the nested error code and message map through
+            // then — FAILED is terminal; the flat output.errors[] code and message map through
             assertEquals(AlleDiscountCommandStatus.FAILED, result.status());
             assertEquals(1, result.errors().size());
             assertEquals(TEST_FAIL_CODE, result.errors().get(0).code());
