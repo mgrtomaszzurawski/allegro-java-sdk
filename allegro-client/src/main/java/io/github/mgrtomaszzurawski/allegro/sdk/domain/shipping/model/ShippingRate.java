@@ -7,7 +7,6 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateDeliveryMethodRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateFirstItemRateRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateMaxPackageWeightRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateNextItemRateRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRateShippingTimeRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
@@ -16,14 +15,14 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One row of a shipping-rate set: it prices a single {@code deliveryMethodId} —
- * the flat rate for the first item, the incremental rate per further item, and
- * optional package-weight / quantity / dispatch-time constraints.
+ * the flat rate for the parcel, charged once for the first item (Allegro no
+ * longer prices further items in the same parcel), plus optional
+ * package-weight / quantity / dispatch-time constraints.
  *
  * @param deliveryMethodId the delivery method this row prices (see
  *     {@code shipping.deliveryMethods()})
- * @param firstItemRate the charge for the first item; {@code null} only if the
- *     server sends the (spec-required) rate object without an amount
- * @param nextItemRate the charge for each further item; {@code null} only if the
+ * @param firstItemRate the charge for the first item — and, since Allegro dropped
+ *     per-further-item pricing, for the whole parcel; {@code null} only if the
  *     server sends the (spec-required) rate object without an amount
  * @param maxQuantityPerPackage the most items a single package may hold, or {@code null}
  * @param maxPackageWeight the heaviest a single package may be, or {@code null}
@@ -34,7 +33,6 @@ import org.jspecify.annotations.Nullable;
 public record ShippingRate(
         String deliveryMethodId,
         @Nullable Money firstItemRate,
-        @Nullable Money nextItemRate,
         @Nullable Integer maxQuantityPerPackage,
         @Nullable Weight maxPackageWeight,
         @Nullable ShippingTime shippingTime) {
@@ -49,7 +47,6 @@ public record ShippingRate(
         return new ShippingRateBuilder()
                 .deliveryMethodId(deliveryMethodId)
                 .firstItemRate(firstItemRate)
-                .nextItemRate(nextItemRate)
                 .maxQuantityPerPackage(maxQuantityPerPackage)
                 .maxPackageWeight(maxPackageWeight)
                 .shippingTime(shippingTime);
@@ -57,17 +54,15 @@ public record ShippingRate(
 
     /**
      * Map the generated Layer-1 DTO to the public immutable record. The delivery
-     * method and the first/next-item rates are spec-required, so they are read
-     * without a defensive null check; the weight, quantity and dispatch-time
-     * constraints are optional.
+     * method and the first-item rate are spec-required, so they are read without
+     * a defensive null check; the weight, quantity and dispatch-time constraints
+     * are optional.
      */
     public static ShippingRate from(ShippingRateRaw raw) {
         ShippingRateFirstItemRateRaw first = raw.getFirstItemRate();
-        ShippingRateNextItemRateRaw next = raw.getNextItemRate();
         return new ShippingRate(
                 raw.getDeliveryMethod().getId(),
                 money(first.getAmount(), first.getCurrency()),
-                money(next.getAmount(), next.getCurrency()),
                 raw.getMaxQuantityPerPackage(),
                 weight(raw.getMaxPackageWeight()),
                 shippingTime(raw.getShippingTime()));
@@ -84,12 +79,6 @@ public record ShippingRate(
             first.setAmount(firstItemRate.amount());
             first.setCurrency(firstItemRate.currency());
             raw.setFirstItemRate(first);
-        }
-        if (nextItemRate != null) {
-            ShippingRateNextItemRateRaw next = new ShippingRateNextItemRateRaw();
-            next.setAmount(nextItemRate.amount());
-            next.setCurrency(nextItemRate.currency());
-            raw.setNextItemRate(next);
         }
         if (maxQuantityPerPackage != null) {
             raw.setMaxQuantityPerPackage(maxQuantityPerPackage);

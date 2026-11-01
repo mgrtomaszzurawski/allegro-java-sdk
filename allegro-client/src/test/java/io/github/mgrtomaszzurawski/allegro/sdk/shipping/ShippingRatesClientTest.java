@@ -48,9 +48,11 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Fixture provenance: the read shape is wire-verified 2026-07-18 (sandbox) —
  * the {@code shipping-rates} demo probe read 7 live sets and a 47-row set in
- * full. The write shape stays contract-pinned here (every sandbox set is
- * Allegro-managed, so a live write could not be exercised); see
- * {@code KNOWN-SERVER-BEHAVIORS.md}.
+ * full — and re-verified 2026-11-01 on the re-vendored spec (no
+ * {@code nextItemRate}; {@code type}/{@code dispatchCountry} on the shared set
+ * schema). The write shape is live-verified 2026-11-01: the probe PUT a
+ * seller-editable set under a marker name, read it back and restored it through
+ * the SDK; see {@code KNOWN-SERVER-BEHAVIORS.md}.
  */
 @WireMockTest
 class ShippingRatesClientTest {
@@ -71,7 +73,6 @@ class ShippingRatesClientTest {
     private static final String MARKETPLACE_PL = "allegro-pl";
     private static final String METHOD_ID = "method-courier";
     private static final String FIRST_AMOUNT = "12.99";
-    private static final String NEXT_AMOUNT = "2.00";
     private static final String CURRENCY = "PLN";
     private static final String WEIGHT_VALUE = "30.0";
     private static final String WEIGHT_UNIT = "KILOGRAMS";
@@ -108,7 +109,6 @@ class ShippingRatesClientTest {
         return ShippingRate.builder()
                 .deliveryMethodId(METHOD_ID)
                 .firstItemRate(Money.of(FIRST_AMOUNT, CURRENCY))
-                .nextItemRate(Money.of(NEXT_AMOUNT, CURRENCY))
                 .maxQuantityPerPackage(MAX_QUANTITY)
                 .maxPackageWeight(new Weight(WEIGHT_VALUE, WEIGHT_UNIT))
                 .build();
@@ -162,7 +162,6 @@ class ShippingRatesClientTest {
             ShippingRate rate = rateSet.rates().get(0);
             assertEquals(METHOD_ID, rate.deliveryMethodId());
             assertEquals(Money.of(FIRST_AMOUNT, CURRENCY), rate.firstItemRate());
-            assertEquals(Money.of(NEXT_AMOUNT, CURRENCY), rate.nextItemRate());
             assertEquals(MAX_QUANTITY, rate.maxQuantityPerPackage());
             assertEquals(WEIGHT_UNIT, rate.maxPackageWeight().unit());
             assertEquals("24", rate.shippingTime().fromTime());
@@ -180,6 +179,7 @@ class ShippingRatesClientTest {
                         equalTo(TestHttpConstants.VND_ALLEGRO_V1))
                 .withRequestBody(matchingJsonPath("$.name", equalTo(NEW_SET_NAME)))
                 .withRequestBody(matchingJsonPath("$.type", equalTo(TYPE_PHYSICAL)))
+                .withRequestBody(matchingJsonPath("$.dispatchCountry", equalTo(DISPATCH_COUNTRY)))
                 .withRequestBody(matchingJsonPath("$.rates[0].deliveryMethod.id", equalTo(METHOD_ID)))
                 .withRequestBody(matchingJsonPath("$.rates[0].firstItemRate.amount",
                         equalTo(FIRST_AMOUNT)))
@@ -214,6 +214,8 @@ class ShippingRatesClientTest {
                         equalTo(TestHttpConstants.BEARER_PREFIX + TEST_TOKEN))
                 .withRequestBody(matchingJsonPath("$.id", equalTo(RATE_SET_ID)))
                 .withRequestBody(matchingJsonPath("$.name", equalTo(NEW_SET_NAME)))
+                .withRequestBody(matchingJsonPath("$.type", equalTo(TYPE_PHYSICAL)))
+                .withRequestBody(matchingJsonPath("$.dispatchCountry", equalTo(DISPATCH_COUNTRY)))
                 .withRequestBody(matchingJsonPath("$.rates[0].deliveryMethod.id", equalTo(METHOD_ID)))
                 .willReturn(aResponse().withStatus(TestHttpConstants.HTTP_OK)
                         .withBodyFile(SET_FIXTURE)));
@@ -225,11 +227,16 @@ class ShippingRatesClientTest {
                     ShippingRateSetRequest.builder()
                             .name(NEW_SET_NAME)
                             .type(RateSetType.PHYSICAL)
+                            .dispatchCountry(DISPATCH_COUNTRY)
                             .rates(List.of(courierRate()))
                             .build());
 
-            // then — the PUT body carried the path id, as Allegro requires
+            // then — the PUT body carried the path id, as Allegro requires, and the
+            // create/update responses map through the shared set DTO
             assertEquals(RATE_SET_ID, updated.id());
+            assertEquals(RateSetType.PHYSICAL, updated.type());
+            assertEquals(DISPATCH_COUNTRY, updated.dispatchCountry());
+            assertEquals(1, updated.rates().size());
             verify(1, putRequestedFor(urlEqualTo(RATE_SET_PATH)));
         }
     }
@@ -246,7 +253,8 @@ class ShippingRatesClientTest {
 
         try (AllegroClient allegro = client(wmInfo)) {
             ShippingRateSetRequest request = ShippingRateSetRequest.builder()
-                    .name(NEW_SET_NAME).rates(List.of(courierRate())).build();
+                    .name(NEW_SET_NAME).type(RateSetType.PHYSICAL).dispatchCountry(DISPATCH_COUNTRY)
+                    .rates(List.of(courierRate())).build();
             var rates = allegro.shipping().rates();
 
             // then — the parsed field error names the offending rate path

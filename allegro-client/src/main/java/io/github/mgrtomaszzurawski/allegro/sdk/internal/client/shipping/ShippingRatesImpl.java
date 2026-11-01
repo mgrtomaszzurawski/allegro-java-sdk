@@ -4,11 +4,10 @@
  */
 package io.github.mgrtomaszzurawski.allegro.sdk.internal.client.shipping;
 
-import io.github.mgrtomaszzurawski.allegro.client.model.CreateShippingRatesSetUsingPOST201ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfShippingRatestUsingGET200ResponseRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetListOfShippingRatestUsingGET200ResponseShippingRatesInnerRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.GetShippingRatesSetUsingGET200ResponseRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ModifyShippingRatesSetUsingPUT200ResponseRaw;
+import io.github.mgrtomaszzurawski.allegro.client.model.ShippingRatesSetRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.ShippingRates;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingRateSet;
 import io.github.mgrtomaszzurawski.allegro.sdk.domain.shipping.model.ShippingRateSetRequest;
@@ -55,18 +54,18 @@ public final class ShippingRatesImpl implements ShippingRates {
 
     @Override
     public ShippingRateSet create(ShippingRateSetRequest request) {
-        CreateShippingRatesSetUsingPOST201ResponseRaw created = http.postJsonAuthenticated(
+        ShippingRatesSetRaw created = http.postJsonAuthenticated(
                 ApiPaths.SHIPPING_RATES, request.toCreateRaw(),
-                CreateShippingRatesSetUsingPOST201ResponseRaw.class, OP_CREATE);
+                ShippingRatesSetRaw.class, OP_CREATE);
         return ShippingRateSet.from(created);
     }
 
     @Override
     public ShippingRateSet update(String rateSetId, ShippingRateSetRequest request) {
-        ModifyShippingRatesSetUsingPUT200ResponseRaw updated = http.putJsonAuthenticated(
+        ShippingRatesSetRaw updated = http.putJsonAuthenticated(
                 ApiPaths.subPath(ApiPaths.SHIPPING_RATES, rateSetId),
                 request.toUpdateRaw(rateSetId),
-                ModifyShippingRatesSetUsingPUT200ResponseRaw.class, OP_UPDATE);
+                ShippingRatesSetRaw.class, OP_UPDATE);
         return ShippingRateSet.from(updated);
     }
 

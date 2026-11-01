@@ -10,7 +10,6 @@
       "maxQuantityPerPackage": 10,
       "maxPackageWeight": { "value": "30.0", "unit": "KILOGRAMS" },
       "firstItemRate": { "amount": "12.99", "currency": "PLN" },
-      "nextItemRate": { "amount": "2.00", "currency": "PLN" },
       "shippingTime": { "from": "24", "to": "48" }
     }
   ],
