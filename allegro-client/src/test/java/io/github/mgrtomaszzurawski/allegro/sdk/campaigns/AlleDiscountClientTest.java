@@ -167,13 +167,19 @@ class AlleDiscountClientTest {
                 + "\"},\"errors\":" + errorsJson + "}}";
     }
 
+    /**
+     * A FAILED command's {@code output.errors}: a flat {@code Error[]} per the
+     * 2026-11 spec (the earlier spec nested it as {@code errors[].errors[]}).
+     * Spec-derived — a live command cycle needs an enrolled campaign (see
+     * {@code KNOWN-SERVER-BEHAVIORS.md}, AlleDiscount).
+     */
     private static String failureErrors() {
-        return "[{\"errors\":[{\"code\":\"" + TEST_FAIL_CODE + "\",\"message\":\"" + TEST_FAIL_MESSAGE + "\"}]}]";
+        return "[{\"code\":\"" + TEST_FAIL_CODE + "\",\"message\":\"" + TEST_FAIL_MESSAGE + "\"}]";
     }
 
     /** A FAILED command error carrying a code but no message (the {@code List.copyOf} NPE case). */
     private static String codeOnlyErrors() {
-        return "[{\"errors\":[{\"code\":\"" + TEST_CODE_ONLY + "\"}]}]";
+        return "[{\"code\":\"" + TEST_CODE_ONLY + "\"}]";
     }
 
     private static String fullPageOfEligible(int count) {

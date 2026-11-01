@@ -6,16 +6,14 @@ package io.github.mgrtomaszzurawski.allegro.sdk.domain.campaigns.model;
 
 import io.github.mgrtomaszzurawski.allegro.client.model.BadgeApplicationRejectionReasonRaw;
 import io.github.mgrtomaszzurawski.allegro.client.model.ErrorRaw;
-import io.github.mgrtomaszzurawski.allegro.client.model.ErrorsHolderRaw;
 import io.github.mgrtomaszzurawski.allegro.sdk.core.Money;
-import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Shared mapping helpers for the campaigns model records: nullable-money assembly,
- * badge rejection-reason list mapping, and command-error flattening (badges,
- * Allegro Prices and AlleDiscount). Package-private — not part of the public surface.
+ * badge rejection-reason list mapping, and AlleDiscount command-error mapping.
+ * Package-private — not part of the public surface.
  */
 final class CampaignMappers {
 
@@ -42,22 +40,14 @@ final class CampaignMappers {
     }
 
     /**
-     * Flatten the doubly-nested command error structure ({@code errors[].errors[]})
-     * to a flat list of coded violations, tolerating absent levels (and a
-     * code-only error whose message the server omitted).
+     * Map an AlleDiscount command's coded error list ({@code output.errors[]}, a
+     * flat {@code Error[]} since the 2026-11 spec — the earlier spec nested it one
+     * level deeper) to violations, tolerating an absent list and a code-only error
+     * whose message the server omitted.
      */
-    static List<ConditionViolation> commandErrorViolations(@Nullable List<ErrorsHolderRaw> holders) {
-        if (holders == null) {
-            return List.of();
-        }
-        List<ConditionViolation> violations = new ArrayList<>();
-        for (ErrorsHolderRaw holder : holders) {
-            if (holder.getErrors() != null) {
-                for (ErrorRaw error : holder.getErrors()) {
-                    violations.add(ConditionViolation.from(error));
-                }
-            }
-        }
-        return List.copyOf(violations);
+    static List<ConditionViolation> commandErrorViolations(@Nullable List<ErrorRaw> errors) {
+        return errors == null
+                ? List.of()
+                : errors.stream().map(ConditionViolation::from).toList();
     }
 }
